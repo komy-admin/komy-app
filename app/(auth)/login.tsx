@@ -16,11 +16,11 @@ export default function LoginScreen() {
       // const response = await loginAPI({ username, password });
       const mockResponse = {
         token: 'fake-token',
-        accountType: 'server' as const,
+        accountType: 'admin' as const,
       };
       
       dispatch(setCredentials(mockResponse));
-      router.replace('/(server)/');
+      router.replace(`/(${mockResponse.accountType})/`);
     } catch (error) {
       console.error(error);
     }

@@ -38,6 +38,7 @@ function AuthenticationGate() {
     
     if (isLoading) return;
 
+    console.log('AuthGate', { token, accountType, segments, isLoading });
     if (!token && !inAuthGroup) {
       router.replace('/login');
     } else if (token && accountType) {
@@ -89,8 +90,8 @@ function RootLayoutNav() {
   }
 
   return (
-    <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-      <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
+    <ThemeProvider value={isDarkColorScheme ? LIGHT_THEME : LIGHT_THEME}>
+      <StatusBar style={isDarkColorScheme ? 'light' : 'light'} />
       <AuthenticationGate />
       <SafeAreaView className="flex-1 bg-background">
         <Stack>
@@ -103,6 +104,18 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="(server)"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="(admin)"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="(cook)"
             options={{
               headerShown: false,
             }}

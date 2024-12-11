@@ -1,5 +1,5 @@
 // app/(server)/index.tsx
-import { View, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable, Dimensions } from 'react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import { Table } from '~/types/table.types';
@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, Text } from '~/components/ui'
 import { tablesApi } from '~/api/tables.api';
 import { getStatusColor, getStatusText } from '~/lib/utils';
 import { router } from 'expo-router';
+import SeatingPlan from '~/components/SeatingPlan';
 
 export default function ServerHome() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['25%', '50%', '90%'], []);
+  const screenHeight = Dimensions.get('window').height;
 
   const [tables, setTables] = useState<Table[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,19 +79,11 @@ export default function ServerHome() {
   ), [tables]);
 
   return (
-    <View className="flex-1 bg-background">
-      {/* Vue principale */}
-      <View className="flex-1 p-4">
-        <Text className="text-xl font-bold mb-4">Plan de Salle</Text>
-        <Card>
-          <CardHeader>
-            <CardTitle>Vue d'ensemble</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <View className="flex-row justify-between">
-            </View>
-          </CardContent>
-        </Card>
+    <View className="flex-1 bg-background maisoutes">
+      <View className="" style={{
+        height : screenHeight * 0.75 - 88,
+      }}>
+        <SeatingPlan tables={tables} onTablePress={handleTablePress} />
       </View>
 
       {/* Bottom Sheet avec style amélioré */}
