@@ -1,5 +1,6 @@
 import '~/global.css';
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Theme, ThemeProvider } from '@react-navigation/native';
 import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
@@ -130,8 +131,10 @@ function RootLayoutNav() {
 // Root component wrapping everything with Redux Provider
 export default function RootLayout() {
   return (
-    <Provider store={store}>
-      <RootLayoutNav />
-    </Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <RootLayoutNav />
+      </Provider>
+    </GestureHandlerRootView>
   );
 }

@@ -35,31 +35,29 @@ function Header() {
 
 export default function ServerLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View className="flex-1 bg-background">
-        <Stack
-          screenOptions={{
-            header: () => <Header />,
-            animation: Platform.OS === 'ios' ? 'none' : 'fade',
-            contentStyle: {
-              backgroundColor: 'transparent',
-            },
+    <View className="flex-1 bg-background">
+      <Stack
+        screenOptions={{
+          header: () => <Header />,
+          animation: Platform.OS === 'ios' ? 'none' : 'fade',
+          contentStyle: {
+            backgroundColor: 'transparent',
+          },
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            title: 'Tables',
           }}
-        >
-          <Stack.Screen
-            name="index"
-            options={{
-              title: 'Tables',
-            }}
-          />
-          <Stack.Screen
-            name="table"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack>
-      </View>
-    </GestureHandlerRootView>
+        />
+        <Stack.Screen
+          name="table"
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack>
+    </View>
   );
 }
