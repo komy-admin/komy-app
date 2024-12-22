@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Starter Base",
-    "slug": "starter-base",
+    "name": "Fork-it-app",
+    "slug": "Fork-it-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -30,6 +30,8 @@
     "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true
+    }, "extra": {
+      "fontFamily": "Mona-Sans"
     }
   }
 }

@@ -9,12 +9,14 @@ interface SidePanelProps {
   title: string;
   width?: number;
   collapsedWidth?: number;
+  style?: object;
 }
 
 export function SidePanel({
+  style,
   children,
   title,
-  width = 300,
+  width = 350,
   collapsedWidth = 0,
 }: SidePanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -38,27 +40,55 @@ export function SidePanel({
     setIsCollapsed(!isCollapsed);
   };
 
+  const getHeaderStyle = () => {
+    if (title === 'Filtrage') {
+      return {
+        backgroundColor: '#F1F1F1',
+      };
+    }
+    return {
+      backgroundColor: '#FFFFFF',
+    };
+  };
+
   return (
-    <Animated.View style={[styles.container, { width: animatedWidth }]}>
-      <Animated.View style={[styles.content, contentStyle]}>
-        <View className='flex flex-row justify-between' style={{
-          backgroundColor: "#F1F1F1",
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-        }}>
-          <Text className='font-bold text-lg'>{title}</Text>
-          <Pressable onPress={toggleCollapse}>
-            <X size={24} color="#666" />
-          </Pressable>
-        </View>
-        {children}
-      </Animated.View>
+    <Animated.View
+      style={[
+        style,
+        styles.container,
+        { width: animatedWidth },
+      ]}
+    >
+      {!isCollapsed && (
+        <Animated.View style={[styles.content, contentStyle]}>
+          <View
+            className="flex flex-row justify-between"
+            style={{
+              width: '100%',
+              height: 50,
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingLeft: 15,
+              paddingRight: 15,
+              ...getHeaderStyle()
+            }}
+          >
+            <View style={{width: 300}}>
+              <Text className="font-bold text-lg" style={{ width:'100%' }}>{title}</Text>
+            </View>
+            <Pressable onPress={toggleCollapse}>
+              <X size={24} color="#2A2E33" />
+            </Pressable>
+          </View>
+          {children}
+        </Animated.View>
+      )}
       <Pressable onPress={toggleCollapse} style={styles.togglePressable}>
         <View style={styles.toggleButton}>
           {isCollapsed ? (
-            <ChevronRight size={24} color="#666" />
+            <ChevronRight size={24} color="#2A2E33" />
           ) : (
-            <ChevronLeft size={24} color="#666" />
+            <ChevronLeft size={24} color="#2A2E33" />
           )}
         </View>
       </Pressable>
@@ -66,17 +96,15 @@ export function SidePanel({
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FBFBFB',
     borderRightWidth: 1,
     borderRightColor: '#e0e0e0',
     zIndex: 1000
   },
   content: {
     flex: 1,
-    backgroundColor: '#FBFBFB',
   },
   togglePressable: {
     position: 'absolute',
@@ -88,9 +116,9 @@ const styles = StyleSheet.create({
   toggleButton: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FBFBFB',
     width: 24,
     height: 24,
+    backgroundColor: '#FBFBFB',
     borderRadius: 0,
     borderTopWidth: 1,
     borderRightWidth: 1,

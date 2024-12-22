@@ -53,7 +53,7 @@ const TableRow = React.forwardRef<TablePrimitive.RowRef, TablePrimitive.RowProps
     <TablePrimitive.Row
       ref={ref}
       className={cn(
-        'flex-row border-border border-b web:transition-colors web:hover:bg-muted/50 web:data-[state=selected]:bg-muted',
+        'flex-row web:hover:bg-muted/50 web:data-[state=selected]:bg-muted',
         className
       )}
       {...props}
@@ -82,7 +82,7 @@ const TableCell = React.forwardRef<TablePrimitive.CellRef, TablePrimitive.CellPr
   ({ className, ...props }, ref) => (
     <TablePrimitive.Cell
       ref={ref}
-      className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)}
+      className={cn('p-3.5 align-middle [&:has([role=checkbox])]:pr-0', className)}
       {...props}
     />
   )

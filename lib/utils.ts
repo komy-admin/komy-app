@@ -31,13 +31,13 @@ export const getStatusText = (status: Status) => {
 
 export const getItemTypeText = (itemType: ItemTypes) => {
   const texts = {
-    [ItemTypes.DRINK]: 'Boisson',
-    [ItemTypes.STARTER]: 'Entrée',
-    [ItemTypes.MAIN]: 'Plat',
-    [ItemTypes.DESSERT]: 'Dessert',
+    [ItemTypes.DRINK]: 'Boissons',
+    [ItemTypes.STARTER]: 'Entrées',
+    [ItemTypes.MAIN]: 'Plats',
+    [ItemTypes.DESSERT]: 'Desserts',
   };
-  return texts[itemType];
-}
+  return texts[itemType] || 'Type inconnu'; // Valeur par défaut pour les cas non définis
+};
 
 export enum DateFormat {
   TIME = 'time',

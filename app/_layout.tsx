@@ -15,6 +15,7 @@ import { setAndroidNavigationBar } from '~/lib/android-navigation-bar';
 import { store } from '~/store'; // Nous allons créer ce fichier
 import { RootState } from '~/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font'
 
 const LIGHT_THEME: Theme = {
   dark: false,
@@ -60,6 +61,9 @@ function RootLayoutNav() {
   const { colorScheme, setColorScheme, isDarkColorScheme } = useColorScheme();
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
 
+  const [fontsLoaded] = useFonts({
+    'Mona-Sans': require('../assets/images/fonts/MonaSans-VariableFont_wdth,wght.ttf'),
+  })
   React.useEffect(() => {
     (async () => {
       const theme = await AsyncStorage.getItem('theme');
@@ -81,11 +85,11 @@ function RootLayoutNav() {
       setAndroidNavigationBar(colorTheme);
       setIsColorSchemeLoaded(true);
     })().finally(() => {
-      SplashScreen.hideAsync();
+      if (fontsLoaded) SplashScreen.hideAsync();
     });
-  }, []);
+  }, [fontsLoaded]);
 
-  if (!isColorSchemeLoaded) {
+  if (!isColorSchemeLoaded || !fontsLoaded) {
     return null;
   }
 

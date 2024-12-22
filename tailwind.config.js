@@ -7,6 +7,9 @@ module.exports = {
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Mona-Sans', 'system-ui', 'sans-serif']
+      },
       colors: {
         success: '#78CEBC',
         error: '#EB5A47',
