@@ -13,6 +13,8 @@ Application mobile développée avec Expo et React Native.
 
 ## 🛠 Installation
 
+Node 22
+
 ```bash
 # Installation des dépendances
 npm install
