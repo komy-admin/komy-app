@@ -9,22 +9,38 @@ import { cn, getItemTypeText } from "~/lib/utils";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Trash2, Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
-import { SingleSelectDropdown } from '~/components/ui/single_select_dropdown_props';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { ItemTable } from "~/components/admin/ItemTable"
 
 export default function MenuPage() {
-  const [value, setValue] = useState(ItemTypes.DRINK);
+  // Table par defaut
+  const [value, setValue] = React.useState(ItemTypes.DRINK);
+  // Informations Menu
+  const [name, setName] = React.useState('');
+  const [price, setPrice] = React.useState<number | ''>('');
+  const defaultOption: Option = {
+    value: '',
+    label: 'Choisissez une catégorie',
+  }
+  type Option = {
+    value: string
+    label: string
+  }
+  const [selectedOption, setSelectedOption] = useState<Option>(defaultOption)
+
+  // Données Menu
   const [menuDrinks, setMenuDrinks] = useState<Item[]>([]);
   const [menuStarters, setMenuStarters] = useState<Item[]>([]);
   const [menuMains, setMenuMains] = useState<Item[]>([]);
   const [menuDesserts, setMenuDesserts] = useState<Item[]>([]);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null)
+
 
   // SidePanel
   const [title, setTitle] = useState('Filtrage') // Titre par défaut
   const [isEditing, setIsEditing] = useState(false) // Indique si on est en train de modifier un article
   const [currentItem, setCurrentItem] = useState<Item | null>(null) // Article en cours de modification
 
+  // Taille columns
   const columnWidths = ['65%', '15%', '15%', '5%'] as DimensionValue[];
 
   useEffect(() => {
@@ -62,24 +78,43 @@ export default function MenuPage() {
     setTitle('Création d’un article')
     setIsEditing(false)
     setCurrentItem(null)
-    setSelectedOption(null)
+    setSelectedOption(defaultOption)
+    setName('')
+    setPrice('')
   }
 
   const handleEditArticle = (item: Item) => {
     setTitle('Modification d’un article')
     setIsEditing(true)
     setCurrentItem(item)
-    setSelectedOption(getItemTypeText(item.itemType))
+    // Trouver la clé de l'enum correspondant à itemType
+    const itemTypeKey = Object.keys(ItemTypes).find(
+      key => ItemTypes[key as keyof typeof ItemTypes] === item.itemType
+    )
+    if (itemTypeKey) {
+      setSelectedOption({
+        value: itemTypeKey, // Exemple : DRINK
+        label: item.itemType, // Exemple : Boissons
+      })
+    }
+    setName(item.name)
+    setPrice(item.price)
   }
 
   const handleCancelEditorCreate = () => {
     setTitle('Filtrage')
     setIsEditing(false)
     setCurrentItem(null)
-    setSelectedOption(null)
+    setSelectedOption(defaultOption)
+    setName('')
+    setPrice('')
   }
 
   const renderSidePanelContent = () => {
+    const itemTypesArray = Object.entries(ItemTypes).map(([key, label]) => ({
+      value: key,
+      label
+    }))
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
@@ -113,43 +148,48 @@ export default function MenuPage() {
           </Text>
           <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection:'column', justifyContent: 'space-between' }}>
             <View>
-              <Text style={{ fontWeight: '300', fontSize: 15, color: '#2A2E33' }}>
-                Nom de l'article
-              </Text>
-              <InputCustom
-                style={{ marginVertical: 2, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF' }}
-                textStyle={{ fontWeight: '300', color: '#2A2E33' }}
-                placeholderStyle={{ color: '#949699' }}
-                value={isEditing && currentItem ? currentItem.name : ''}
+              <Input
+                style={{ marginVertical: 5, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF' }}
+                placeholder='Nom de l’article'
+                value={name}
+                onChangeText={(text: string) => setName(text)}
+                aria-labelledby='inputLabel'
+                aria-errormessage='inputError'
               />
-              <SingleSelectDropdown
-                options={['Entrées', 'Plats', 'Desserts', 'Boissons']}
-                selectedOption={selectedOption}
-                onSelect={setSelectedOption}
-              />
-              <Text style={{ fontWeight: '300', fontSize: 15, color: '#2A2E33' }}>
-                Prix
-              </Text>
-              <InputCustom
-                placeholder="0.00"
-                style={{ marginVertical: 2, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF' }}
-                textStyle={{ fontWeight: '300', color: '#2A2E33' }}
-                placeholderStyle={{ color: '#949699' }}
-                icone={Euro}
-                iconePosition="right"
-                iconeProps={{
-                  strokeWidth: 2,
-                  color: '#696969',
-                  borderLeftWidth: 1,
-                  borderLeftColor: '#D7D7D7',
+              <Select value={selectedOption} onValueChange={(value) => { if (value) { setSelectedOption(value) }
+                }}>
+                <SelectTrigger className='w-100'>
+                  <SelectValue
+                    className='text-foreground text-sm native:text-lg'
+                    placeholder='Choisissez une catégorie'
+                  />
+                </SelectTrigger>
+                <SelectContent className='w-100'>
+                  <SelectGroup>
+                    <SelectLabel>Catégories</SelectLabel>
+                    {itemTypesArray.map(item => (
+                      <SelectItem key={item.value} label={item.label} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <input
+                type="number"
+                placeholder="0.00 €"
+                value={price}
+                onChange={(p) => setPrice(p.target.value === '' ? '' : parseFloat(p.target.value))}
+                style={{
+                  marginTop: '8px',
+                  marginBottom: '8px',
+                  padding: '8px',
+                  border: '1px solid #D7D7D7',
+                  borderRadius: '5px',
+                  backgroundColor: '#FFFFFF',
+                  fontWeight: '300',
+                  color: '#2A2E33',
                 }}
-                containerIconProps={{
-                  borderLeftWidth: 1,
-                  borderLeftColor: '#D7D7D7',
-                  paddingLeft: 8,
-                  height: '100%',
-                }}
-                value={isEditing && currentItem ? `${currentItem.price}` : ''}
               />
             </View>
             <View>

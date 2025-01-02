@@ -1,6 +1,6 @@
 export enum ItemTypes {
-  DRINK = 'drink',
-  STARTER = 'starter',
-  MAIN = 'main',
-  DESSERT = 'dessert',
+  DRINK = "Boissons",
+  STARTER = "Entrées",
+  MAIN = "Plats",
+  DESSERT = "Desserts",
 }

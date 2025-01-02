@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ItemTypes } from '~/types/item-types.enum';
+import { TeamTypes } from "~/types/team-types.enum";
 import { Status } from '~/types/status.enum';
 
 export function cn(...inputs: ClassValue[]) {
@@ -37,6 +38,16 @@ export const getItemTypeText = (itemType: ItemTypes) => {
     [ItemTypes.DESSERT]: 'Desserts',
   };
   return texts[itemType] || 'Type inconnu'; // Valeur par défaut pour les cas non définis
+};
+
+export const getTeamTypeText = (teamType: TeamTypes) => {
+  const texts = {
+    [TeamTypes.ALL]: 'Tous',
+    [TeamTypes.MANAGER]: 'Manager',
+    [TeamTypes.SERVEUR]: 'Serveur',
+    [TeamTypes.CUISTO]: 'Cuisinier',
+  };
+  return texts[teamType] || 'Type inconnu'; // Valeur par défaut pour les cas non définis
 };
 
 export enum DateFormat {
