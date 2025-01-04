@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, Text } from '~/components/ui'
 import { tablesApi } from '~/api/tables.api';
 import { getStatusColor, getStatusText } from '~/lib/utils';
 import { router } from 'expo-router';
-import SeatingPlan from '~/components/SeatingPlan';
+import Room from '~/components/Room/Room';
 
 export default function ServerHome() {
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -83,7 +83,7 @@ export default function ServerHome() {
       <View className="" style={{
         height : screenHeight * 0.75 - 88,
       }}>
-        <SeatingPlan tables={tables} onTablePress={handleTablePress} />
+        <Room tables={tables} onTablePress={handleTablePress} />
       </View>
 
       {/* Bottom Sheet avec style amélioré */}

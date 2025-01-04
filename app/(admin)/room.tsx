@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from "react";
 import { Dimensions, View } from "react-native";
 import { tablesApi } from "~/api/tables.api";
-import SeatingPlan from "~/components/SeatingPlan";
+import Room from "~/components/Room/Room";
 import { SidePanel } from "~/components/SidePanel";
 import { Input, Text } from "~/components/ui";
 import { Table } from "~/types/table.types";
@@ -11,6 +11,7 @@ export default function RoomPage () {
   const screenHeight = Dimensions.get('window').height;
 
   const [tables, setTables] = useState<Table[]>([]);
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,41 +38,55 @@ export default function RoomPage () {
     }
   };
 
- const handleTableUpdate = async (id: string, updates: Partial<Table>) => {
-  try {
-    setTables(prevTables => {
-      const newTables = prevTables.map(table =>
-        table.id === id 
-          ? { 
-              ...table, 
-              ...updates,
-              updatedAt: new Date().toISOString()
-            } 
-          : table
-      );
+  const handleTableUpdate = async (id: string, updates: Partial<Table>) => {
+    try {
+      setTables(prevTables => {
+        const newTables = prevTables.map(table => 
+          table.id === id 
+            ? { 
+                ...table, 
+                ...updates,
+                updatedAt: new Date().toISOString()
+              } 
+            : table
+        );
 
-      AsyncStorage.setItem('tables', JSON.stringify(newTables))
-        .catch(err => console.error('Erreur sauvegarde AsyncStorage:', err));
-        
-      return newTables;
-    });
-  } catch (err) {
-    console.error('Erreur mise à jour table:', err);
+        AsyncStorage.setItem('tables', JSON.stringify(newTables))
+          .catch(err => console.error('Erreur sauvegarde AsyncStorage:', err));
+          
+        return newTables;
+      });
+    } catch (err) {
+      console.error('Erreur mise à jour table:', err);
+    }
+  };
+
+  const handleTablePress = (id: string) => {
+    const table = tables.find(t => t.id === id)
+    if (table) {
+      setSelectedTable(table)
+    }
   }
-};
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <SidePanel title="Filtrage">
         <View style={{ padding: 16 }}>
-          <Input placeholder="Rechercher..." />
+          { selectedTable ? (
+          <View>
+            <Text>Nom de la table</Text>
+            <Input value={selectedTable?.name} />
+          </View>
+            ) : null }
         </View>
       </SidePanel>
       <View style={{ flex: 1, height: screenHeight }}>
-        <SeatingPlan
+        <Room
           tables={tables}
-          onTableUpdate={handleTableUpdate}
           zoom={0.9}
+          editionMode={true}
+          onTablePress={handleTablePress}
+          onTableUpdate={handleTableUpdate}
         />
       </View>
     </View>
