@@ -17,7 +17,7 @@ export default function MenuPage() {
   const [value, setValue] = React.useState(ItemTypes.DRINK);
   // Informations Menu
   const [name, setName] = React.useState('');
-  const [price, setPrice] = React.useState<number | ''>('');
+  const [price, setPrice] = React.useState<number>(0);
   const defaultOption: Option = {
     value: '',
     label: 'Choisissez une catégorie',
@@ -80,7 +80,7 @@ export default function MenuPage() {
     setCurrentItem(null)
     setSelectedOption(defaultOption)
     setName('')
-    setPrice('')
+    setPrice(0)
   }
 
   const handleEditArticle = (item: Item) => {
@@ -107,7 +107,40 @@ export default function MenuPage() {
     setCurrentItem(null)
     setSelectedOption(defaultOption)
     setName('')
-    setPrice('')
+    setPrice(0)
+  }
+
+  const submitArticleAction = async () => {
+    const itemType = selectedOption.value as ItemTypes
+    const item: Item = {
+      id: currentItem?.id,
+      itemType,
+      name,
+      price
+    }
+    try {
+      if (isEditing && item.id) {
+        await itemsApi.updateItem(item?.id, item)
+        setMenuDesserts(menuDesserts.map(d => d.id === item.id ? item : d))
+      } else {
+        const newItem = await itemsApi.createItem(item)
+        setMenuDesserts([...menuDesserts, newItem])
+      }
+      
+      // loadData(itemType)
+      handleCancelEditorCreate()
+    } catch (err) {
+      console.error('Error in submitArticleAction:', err)
+    }
+  }
+
+  const submitArticleDelete = async (id: string) => {
+    try {
+      await itemsApi.deleteItem(id)
+      setMenuDesserts(menuDesserts.filter(d => d.id !== id))
+    } catch (err) {
+      console.error('Error in deleteArticle:', err)
+    }
   }
 
   const renderSidePanelContent = () => {
@@ -179,7 +212,7 @@ export default function MenuPage() {
                 type="number"
                 placeholder="0.00 €"
                 value={price}
-                onChange={(p) => setPrice(p.target.value === '' ? '' : parseFloat(p.target.value))}
+                onChange={(p) => setPrice(p.target.value === '' ? 0 : parseFloat(p.target.value))}
                 style={{
                   marginTop: '8px',
                   marginBottom: '8px',
@@ -194,7 +227,7 @@ export default function MenuPage() {
             </View>
             <View>
               <Button
-                onPress={() => Alert.alert('Sauvegarde', 'Les modifications ont bien été enregistrées.')}
+                onPress={submitArticleAction}
                 style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}>
                 <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
                   {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
@@ -276,16 +309,16 @@ export default function MenuPage() {
             </Button>
           </View>
           <TabsContent value={ItemTypes.DRINK}>
-            <ItemTable data={menuDrinks} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <ItemTable data={menuDrinks} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
           </TabsContent>
           <TabsContent value={ItemTypes.STARTER}>
-            <ItemTable data={menuStarters} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <ItemTable data={menuStarters} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
           </TabsContent>
           <TabsContent value={ItemTypes.MAIN}>
-            <ItemTable data={menuMains} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <ItemTable data={menuMains} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
           </TabsContent>
           <TabsContent value={ItemTypes.DESSERT}>
-            <ItemTable data={menuDesserts} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <ItemTable data={menuDesserts} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
           </TabsContent>
         </Tabs>
       </View>

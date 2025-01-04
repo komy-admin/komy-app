@@ -4,18 +4,18 @@ import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials } from '~/store/auth.slice';
 import { router } from 'expo-router';
+import { authApi } from "~/api/auth.api";
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useAppDispatch();
 
   const handleLogin = async () => {
     try {
-      // Simuler un appel API - À remplacer par votre vrai appel API
-      // const response = await loginAPI({ username, password });
+      const response = await authApi.login({ loginId, password });
       const mockResponse = {
-        token: 'fake-token',
+        token: response.token.token,
         accountType: 'admin' as const,
       };
       
@@ -33,9 +33,9 @@ export default function LoginScreen() {
       </Text>
       
       <Input
-        value={username}
-        onChangeText={setUsername}
-        placeholder="Username"
+        value={loginId}
+        onChangeText={setLoginId}
+        placeholder="login"
         className="mb-4"
       />
       

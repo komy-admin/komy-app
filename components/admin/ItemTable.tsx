@@ -1,5 +1,5 @@
 import React from "react";
-import { DimensionValue } from "react-native";
+import { DimensionValue, Pressable } from "react-native";
 import { Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "~/components/ui";
 import { Item } from "~/types/item.types";
 import { cn } from "~/lib/utils";
@@ -9,9 +9,10 @@ interface ItemTableProps {
   data: Item[];
   columnWidths: DimensionValue[];
   onRowPress?: (item: Item) => void;
+  deleteItem?: (id: string) => void;
 }
 
-export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowPress }) => {
+export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowPress, deleteItem }) => {
   return (
     <Table aria-labelledby="invoice-table">
       <TableHeader>
@@ -92,7 +93,15 @@ export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowP
                 borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
-              <Trash size={22} color="red" fill="red" />
+              <Pressable 
+                onPress={() => {
+                  if (item.id) {
+                    deleteItem?.(item.id);
+                  }
+                }}
+              >
+                <Trash size={22} color="red" fill="red" />
+              </Pressable>
             </TableCell>
           </TableRow>
         ))}

@@ -1,5 +1,5 @@
 import React from "react";
-import { DimensionValue } from "react-native";
+import { DimensionValue, Pressable } from "react-native";
 import { Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "~/components/ui";
 import { Trash } from "lucide-react-native";
 import { Team } from "~/types/team.types";
@@ -9,9 +9,10 @@ interface TeamTableProps {
   data: Team[];
   columnWidths: DimensionValue[];
   onRowPress?: (team: Team) => void;
+  deleteItem?: (id: string) => void;
 }
 
-export const TeamTable: React.FC<TeamTableProps> = ({ data, columnWidths, onRowPress }) => {
+export const TeamTable: React.FC<TeamTableProps> = ({ data, columnWidths, onRowPress, deleteItem }) => {
   return (
     <Table aria-labelledby="team-table">
       <TableHeader>
@@ -48,7 +49,7 @@ export const TeamTable: React.FC<TeamTableProps> = ({ data, columnWidths, onRowP
                 borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
-              <Text style={{ fontSize: 15, color: "#2A2E33", fontWeight: "100" }}>{team.firstname}</Text>
+              <Text style={{ fontSize: 15, color: "#2A2E33", fontWeight: "100" }}>{team.firstName}</Text>
             </TableCell>
             <TableCell
               style={{
@@ -59,7 +60,7 @@ export const TeamTable: React.FC<TeamTableProps> = ({ data, columnWidths, onRowP
                 borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
-              <Text style={{ fontSize: 15, color: "#2A2E33", fontWeight: "100" }}>{team.lastname}</Text>
+              <Text style={{ fontSize: 15, color: "#2A2E33", fontWeight: "100" }}>{team.lastName}</Text>
             </TableCell>
             <TableCell
               style={{
@@ -92,7 +93,15 @@ export const TeamTable: React.FC<TeamTableProps> = ({ data, columnWidths, onRowP
                 borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
-              <Trash size={22} color="red" fill="red" />
+              <Pressable 
+                onPress={() => {
+                  if (team.id) {
+                    deleteItem?.(team.id);
+                  }
+                }}
+              >
+                <Trash size={22} color="red" fill="red" />
+              </Pressable>
             </TableCell>
           </TableRow>
         ))}

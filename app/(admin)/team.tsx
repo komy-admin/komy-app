@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Team } from "~/types/team.types";
 import { TeamTypes } from "~/types/team-types.enum";
 import { teamsApi } from "~/api/teams.api";
-import { getTeamTypeText } from "~/lib/utils";
+import { getTeamTypeText, getEnumValue } from "~/lib/utils";
 import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
@@ -15,10 +15,12 @@ export default function TeamPage() {
   // Table par defaut
   const [value, setValue] = useState(TeamTypes.ALL);
   // Informations Team
-  const [firstname, setFirstName] = React.useState('');
-  const [lastname, setLastName] = React.useState('');
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [phone, setPhone] = React.useState<number | ''>('');
+  const [loginId, setLoginId] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const defaultOption: Option = {
     value: '',
     label: 'Choisissez une rôle',
@@ -53,7 +55,8 @@ export default function TeamPage() {
 
   const loadData = async (teamTypes: TeamTypes) => {
     try {
-      const data = await teamsApi.getTeams(teamTypes);
+      const filter = teamTypes === TeamTypes.ALL ? undefined : teamTypes;
+      const data = await teamsApi.getTeams(filter as any);
       switch (teamTypes) {
         case TeamTypes.ALL:
           setTeamAll(data);
@@ -84,6 +87,8 @@ export default function TeamPage() {
     setLastName('')
     setPhone('')
     setEmail('')
+    setLoginId('')
+    setPassword('')
   }
 
   const handleEditArticle = (team: Team) => {
@@ -91,18 +96,20 @@ export default function TeamPage() {
     setIsEditing(true)
     setCurrentItem(team)
     const teamTypeKey = Object.keys(TeamTypes).find(
-      key => TeamTypes[key as keyof typeof TeamTypes] === team.teamType
+      key => TeamTypes[key as keyof typeof TeamTypes] === team.profil
     )
     if (teamTypeKey) {
       setSelectedOption({
         value: teamTypeKey, // Exemple : MANAGER
-        label: team.teamType, // Exemple : Manager
+        label: team.profil, // Exemple : Manager
       })
     }
-    setFirstName(team.firstname)
-    setLastName(team.lastname)
+    setFirstName(team.firstName)
+    setLastName(team.lastName)
     setPhone(team.phone)
     setEmail(team.email)
+    setLoginId(team.loginId)
+    setPassword(team.password)
   }
 
   const handleCancelEditorCreate = () => {
@@ -114,6 +121,43 @@ export default function TeamPage() {
     setLastName('')
     setPhone('')
     setEmail('')
+    setLoginId('')
+    setPassword('')
+  }
+
+  const submitTeamAction = async () => {
+    const selectedValue = getEnumValue(TeamTypes, selectedOption.value as keyof typeof TeamTypes)
+    const team: Team = {
+      id: currentItem?.id,
+      firstName,
+      lastName,
+      email,
+      phone: phone as number,
+      profil: selectedValue as TeamTypes,
+      loginId: loginId,
+      password: password
+    }
+    try {
+      if (isEditing && team.id) {
+        await teamsApi.updateItem(team?.id, team)
+        setTeamAll(teamAll.map(d => d.id === team.id ? team : d))
+      } else {
+        const newItem = await teamsApi.createItem(team)
+        setTeamAll([...teamAll, newItem])
+      }
+      handleCancelEditorCreate()
+    } catch (err) {
+      console.error('Error in submitArticleAction:', err)
+    }
+  }
+
+  const submitTeamDelete = async (id: string) => {
+    try {
+      await teamsApi.deleteItem(id)
+      setTeamAll(teamAll.filter(d => d.id !== id))
+    } catch (err) {
+      console.error('Error in deleteArticle:', err)
+    }
   }
 
   const renderSidePanelContent = () => {
@@ -160,7 +204,7 @@ export default function TeamPage() {
                 <Input
                   style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
                   placeholder='Prénom'
-                  value={firstname}
+                  value={firstName}
                   onChangeText={(text: string) => setFirstName(text)}
                   aria-labelledby='inputLabel'
                   aria-errormessage='inputError'
@@ -168,7 +212,7 @@ export default function TeamPage() {
                 <Input
                   style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
                   placeholder='Nom'
-                  value={lastname}
+                  value={lastName}
                   onChangeText={(text: string) => setLastName(text)}
                   aria-labelledby='inputLabel'
                   aria-errormessage='inputError'
@@ -186,7 +230,7 @@ export default function TeamPage() {
                   <SelectGroup>
                     <SelectLabel>Rôles</SelectLabel>
                     {teamTypesArray.map(item => (
-                      <SelectItem key={item.value} label={item.label} value={item.value}>
+                      <SelectItem key={item.value} label={getTeamTypeText(item.label as TeamTypes)} value={item.value}>
                         {item.label}
                       </SelectItem>
                     ))}
@@ -203,7 +247,7 @@ export default function TeamPage() {
               />
               <input
                 type="number"
-                placeholder="0.00 €"
+                placeholder="0635504259"
                 value={phone}
                 onChange={(p) => setPhone(p.target.value === '' ? '' : parseFloat(p.target.value))}
                 style={{
@@ -217,10 +261,26 @@ export default function TeamPage() {
                   color: '#2A2E33',
                 }}
               />
+              <Input
+                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+                placeholder='Login'
+                value={loginId}
+                onChangeText={(text: string) => setLoginId(text)}
+                aria-labelledby='inputLabel'
+                aria-errormessage='inputError'
+              />
+              <Input
+                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+                placeholder='Mot de passe'
+                value={password}
+                onChangeText={(text: string) => setPassword(text)}
+                aria-labelledby='inputLabel'
+                aria-errormessage='inputError'
+              />
             </View>
             <View>
               <Button
-                onPress={() => Alert.alert('Sauvegarde', 'Les modifications ont bien été enregistrées.')}
+                onPress={submitTeamAction}
                 style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}>
                 <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
                   {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
@@ -302,16 +362,16 @@ export default function TeamPage() {
             </Button>
           </View>
           <TabsContent value={TeamTypes.ALL}>
-            <TeamTable data={teamAll} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <TeamTable data={teamAll} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
           </TabsContent>
           <TabsContent value={TeamTypes.MANAGER}>
-            <TeamTable data={teamManager} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <TeamTable data={teamManager} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
           </TabsContent>
           <TabsContent value={TeamTypes.SERVEUR}>
-            <TeamTable data={teamServeur} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <TeamTable data={teamServeur} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
           </TabsContent>
           <TabsContent value={TeamTypes.CUISTO}>
-            <TeamTable data={teamCuisinier} columnWidths={columnWidths} onRowPress={handleEditArticle} />
+            <TeamTable data={teamCuisinier} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
           </TabsContent>
         </Tabs>
       </View>

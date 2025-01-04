@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://your-api-url.com/api';
+const BASE_URL = 'http://localhost:3333/api';
 
 export const axiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -21,6 +21,17 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // if (error.response?.status === 401) {
+    //   localStorage.removeItem('token');
+    //   window.location.href = '/login';
+    // }
     return Promise.reject(error);
   }
 );

@@ -50,6 +50,13 @@ export const getTeamTypeText = (teamType: TeamTypes) => {
   return texts[teamType] || 'Type inconnu'; // Valeur par défaut pour les cas non définis
 };
 
+export const getEnumValue = <T extends { [key: string]: string }>(
+  enumObj: T,
+  enumKey: keyof T
+): string => {
+  return enumObj[enumKey];
+};
+
 export enum DateFormat {
   TIME = 'time',
   SHORT_DATE = 'shortDate',

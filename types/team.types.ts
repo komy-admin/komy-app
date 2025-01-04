@@ -1,13 +1,13 @@
 import { TeamTypes } from "./team-types.enum";
 
 export type Team = {
-  id: string;
-  firstname: string;
-  lastname: string;
+  id?: string;
+  accountId?: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: number;
-  teamType: TeamTypes;
-  account: string;
-  createdAt: string;
-  updatedAt: string;
+  profil: TeamTypes;
+  password: string;
+  loginId: string;
 };
