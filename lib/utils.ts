@@ -43,6 +43,8 @@ export const getItemTypeText = (itemType: ItemTypes) => {
 export const getTeamTypeText = (teamType: TeamTypes) => {
   const texts = {
     [TeamTypes.ALL]: 'Tous',
+    [TeamTypes.ADMIN]: 'Admin',
+    [TeamTypes.SUPERADMIN]: 'Super admin',
     [TeamTypes.MANAGER]: 'Manager',
     [TeamTypes.SERVEUR]: 'Serveur',
     [TeamTypes.CUISTO]: 'Cuisinier',

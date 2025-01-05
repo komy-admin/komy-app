@@ -1,18 +1,15 @@
-import { TeamTypes } from '~/types/team-types.enum';
 import { Team } from '~/types/team.types';
-import { axiosInstance } from './axios.config';
-import { mockTeams } from './mocks/team.mock';
+import { axiosInstance } from '~/api/axios.config';
 
 export const teamsApi = {
-  getTeams: async (teamType: TeamTypes): Promise<Team[]> => {
+  getTeams: async (params: any): Promise<{ data: Team[], meta: {} }> => {
     try {
-      const string = teamType ? `?profil=${teamType}` : '';
-      const response = await axiosInstance.get<{ data: Team[], meta: {} }>(`/user${string}`)
+      const response = await axiosInstance.get<{ data: Team[], meta: {} }>(`/user?${params}`)
       const { data, meta } = response.data
-      return data;
+      return { data, meta };
     } catch (err) {
       console.error('Error in getItems:', err);
-      return [];
+      return { data: [], meta: {} };
     }
   },
 

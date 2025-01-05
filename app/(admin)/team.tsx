@@ -2,7 +2,7 @@ import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "re
 import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Team } from "~/types/team.types";
+import { Team, filterTeam } from "~/types/team.types";
 import { TeamTypes } from "~/types/team-types.enum";
 import { teamsApi } from "~/api/teams.api";
 import { getTeamTypeText, getEnumValue } from "~/lib/utils";
@@ -10,6 +10,8 @@ import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { TeamTable } from "~/components/admin/TeamTable"
+import { FilterBar } from '~/components/filters/Filter';
+import { useFilter } from '~/components/filters/useFilter';
 
 export default function TeamPage() {
   // Table par defaut
@@ -18,7 +20,7 @@ export default function TeamPage() {
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
   const [email, setEmail] = React.useState('');
-  const [phone, setPhone] = React.useState<number | ''>('');
+  const [phone, setPhone] = React.useState('');
   const [loginId, setLoginId] = React.useState('');
   const [password, setPassword] = React.useState('');
   const defaultOption: Option = {
@@ -30,33 +32,23 @@ export default function TeamPage() {
     label: string
   }
   const [selectedOption, setSelectedOption] = useState<Option>(defaultOption)
-  
   // Données Team
   const [teamAll, setTeamAll] = useState<Team[]>([]);
   const [teamManager, setTeamManager] = useState<Team[]>([]);
   const [teamServeur, setTeamServeur] = useState<Team[]>([]);
   const [teamCuisinier, setTeamCuisinier] = useState<Team[]>([]);
-  
-  
   // SidePanel
   const [title, setTitle] = useState('Filtrage') // Titre par défaut
   const [isEditing, setIsEditing] = useState(false) // Indique si on est en train de modifier un article
   const [currentItem, setCurrentItem] = useState<Team | null>(null) // Article en cours de modification
-
   // Taille columns
   const columnWidths = ['20%', '20%', '30%', '20%', '10%'] as DimensionValue[];
-
-  useEffect(() => {
-    loadData(TeamTypes.ALL);
-    loadData(TeamTypes.MANAGER);
-    loadData(TeamTypes.SERVEUR);
-    loadData(TeamTypes.CUISTO);
-  }, []);
 
   const loadData = async (teamTypes: TeamTypes) => {
     try {
       const filter = teamTypes === TeamTypes.ALL ? undefined : teamTypes;
-      const data = await teamsApi.getTeams(filter as any);
+      const filterString = filter ? `profil=${filter}` : '';
+      const { data } = await teamsApi.getTeams(filterString);
       switch (teamTypes) {
         case TeamTypes.ALL:
           setTeamAll(data);
@@ -78,8 +70,32 @@ export default function TeamPage() {
     }
   };
 
+  useEffect(() => {
+    loadData(TeamTypes.ALL);
+    loadData(TeamTypes.MANAGER);
+    loadData(TeamTypes.SERVEUR);
+    loadData(TeamTypes.CUISTO);
+  }, []);
+
+  // filtre
+  const {
+    data,
+    loading,
+    error,
+    updateFilter,
+    clearFilters,
+    changePage,
+    queryParams
+  } = useFilter({ config: filterTeam, model: 'user' });
+
+  useEffect(() => { 
+    if (data) {
+      setTeamAll(data.data) 
+    }
+  }, [data]);
+
   const handleCreateArticle = () => {
-    setTitle('Création d’un article')
+    setTitle('Création d\'un article')
     setIsEditing(false)
     setCurrentItem(null)
     setSelectedOption(defaultOption)
@@ -92,7 +108,7 @@ export default function TeamPage() {
   }
 
   const handleEditArticle = (team: Team) => {
-    setTitle('Modification d’un article')
+    setTitle('Modification d\'un article')
     setIsEditing(true)
     setCurrentItem(team)
     const teamTypeKey = Object.keys(TeamTypes).find(
@@ -129,13 +145,13 @@ export default function TeamPage() {
     const selectedValue = getEnumValue(TeamTypes, selectedOption.value as keyof typeof TeamTypes)
     const team: Team = {
       id: currentItem?.id,
+      profil: selectedValue as TeamTypes,
       firstName,
       lastName,
       email,
-      phone: phone as number,
-      profil: selectedValue as TeamTypes,
-      loginId: loginId,
-      password: password
+      phone,
+      loginId,
+      password
     }
     try {
       if (isEditing && team.id) {
@@ -162,7 +178,7 @@ export default function TeamPage() {
 
   const renderSidePanelContent = () => {
     const teamTypesArray = Object.entries(TeamTypes)
-    .filter(([key]) => key !== 'ALL') // Exclut l'option "ALL"
+    .filter(([key]) => key !== 'ALL')
     .map(([key, label]) => ({
       value: key,
       label,
@@ -170,19 +186,16 @@ export default function TeamPage() {
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
-          <InputCustom
-            placeholder="Rechercher..."
-            icone={Search}
-            iconePosition="left"
-            style={{ marginVertical: 10, borderColor: '#EAEAEB' }}
-            iconeProps={{ strokeWidth: 3, color: '#696969' }}
-            textStyle={{ fontWeight: '300', color: '#2A2E33' }}
-            placeholderStyle={{ color: '#949699' }}
+          <FilterBar
+            config={filterTeam}
+            onUpdateFilter={updateFilter}
+            onClearFilters={clearFilters}
+            activeFilters={queryParams.filters || []}
           />
         </View>
       )
     }
-    if (title === 'Création d’un article' || title === 'Modification d’un article') {
+    if (title === 'Création d\'un article' || title === 'Modification d\'un article') {
       return (
         <>
           <Text
@@ -245,21 +258,13 @@ export default function TeamPage() {
                 aria-labelledby='inputLabel'
                 aria-errormessage='inputError'
               />
-              <input
-                type="number"
-                placeholder="0635504259"
-                value={phone}
-                onChange={(p) => setPhone(p.target.value === '' ? '' : parseFloat(p.target.value))}
-                style={{
-                  marginTop: '8px',
-                  marginBottom: '8px',
-                  padding: '8px',
-                  border: '1px solid #D7D7D7',
-                  borderRadius: '5px',
-                  backgroundColor: '#FFFFFF',
-                  fontWeight: '300',
-                  color: '#2A2E33',
-                }}
+              <Input
+                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+                placeholder='0635504259'
+                value={email}
+                onChangeText={(text: string) => setPhone(text)}
+                aria-labelledby='inputLabel'
+                aria-errormessage='inputError'
               />
               <Input
                 style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
@@ -312,7 +317,7 @@ export default function TeamPage() {
         >
           <View className="flex flex-row justify-between w-full" style={{ backgroundColor: '#FBFBFB', height: 50 }}>
             <TabsList className="flex-row w-[500px] h-full">
-              {Object.values(TeamTypes).map((type) => (
+              {Object.values(TeamTypes).filter(type => !['superadmin', 'admin'].includes(type)).map((type) => (
                 <TabsTrigger key={type} value={type} className="flex-1 flex-row h-full">
                   <Text
                     className="pr-2"
