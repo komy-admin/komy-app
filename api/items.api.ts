@@ -1,17 +1,17 @@
-import { ItemTypes } from '~/types/item-types.enum';
+import { ItemTypes } from '~/types/item-type.enum';
 import { Item } from '~/types/item.types';
 // import { mockItems } from './mocks/items.mock';
 import { axiosInstance } from './axios.config';
 
 export const itemsApi = {
-  getItems: async (itemType: ItemTypes): Promise<Item[]> => {
+  getItems: async (params: any): Promise<{ data: Item[], meta: {} }> => {
     try {
-      const response = await axiosInstance.get<{ data: Item[], meta: {} }>(`/item?itemType.name=${itemType}`)
+      const response = await axiosInstance.get<{ data: Item[], meta: {} }>(`/item?${params}`)
       const { data, meta } = response.data
-      return data;
+      return { data, meta };
     } catch (err) {
       console.error('Error in getItems:', err);
-      return [];
+      return { data: [], meta: {} };
     }
   },
 
@@ -34,8 +34,4 @@ export const itemsApi = {
     await axiosInstance.delete(`item/${id}`);
   },
 
-  getItemTypes: async (): Promise<ItemTypes[]> => {
-    const { data } = await axiosInstance.get<ItemTypes[]>('/itemType');
-    return data;
-  }
 };

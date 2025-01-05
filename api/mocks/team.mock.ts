@@ -1,4 +1,4 @@
-import { TeamTypes } from "~/types/team-types.enum";
+import { TeamTypes } from "~/types/team.enum";
 import { Team } from "~/types/team.types";
 
 export const mockTeams: Team[] = [

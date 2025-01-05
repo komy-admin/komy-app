@@ -1,4 +1,4 @@
-import { ItemTypes } from "~/types/item-types.enum";
+import { ItemTypes } from "~/types/item-type.enum";
 import { Item } from "~/types/item.types";
 
 export const mockItems: Item[] = [

@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { itemsApi } from '~/api/items.api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
 import { getItemTypeText } from '~/lib/utils';
-import { ItemTypes } from '~/types/item-types.enum';
+import { ItemTypes } from '~/types/item-type.enum';
 import { Item } from '~/types/item.types';
 
 export default function TableMenu() {

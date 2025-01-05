@@ -1,4 +1,4 @@
-import { ItemTypes } from "./item-types.enum";
+import { ItemTypes } from "./item-type.enum";
 import { Status } from "./status.enum";
 
 export type OrderItem = {

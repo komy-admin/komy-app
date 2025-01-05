@@ -1,4 +1,4 @@
-import { TeamTypes } from "./team-types.enum";
+import { TeamTypes } from "./team.enum";
 import { FilterConfig } from '~/types/filter.types';
 
 export type Team = {

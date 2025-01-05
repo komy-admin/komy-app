@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { ItemTypes } from '~/types/item-types.enum';
-import { TeamTypes } from "~/types/team-types.enum";
+import { ItemTypes } from '~/types/item-type.enum';
+import { TeamTypes } from "~/types/team.enum";
 import { Status } from '~/types/status.enum';
 
 export function cn(...inputs: ClassValue[]) {

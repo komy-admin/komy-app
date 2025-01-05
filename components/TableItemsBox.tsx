@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { DateFormat, formatDate, getItemTypeText, getStatusColor, getStatusText } from '~/lib/utils';
-import { ItemTypes } from '~/types/item-types.enum';
+import { ItemTypes } from '~/types/item-type.enum';
 import { OrderItem } from '~/types/order-item.types';
 import { Status } from '~/types/status.enum';
 import { Button, Separator } from './ui';

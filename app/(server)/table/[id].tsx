@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Table } from '~/types/table.types';
 import { tablesApi } from '~/api/tables.api';
 import { Button, Card, CardContent, CardHeader, CardTitle, Text } from '~/components/ui';
-import { ItemTypes } from '~/types/item-types.enum';
+import { ItemTypes } from '~/types/item-type.enum';
 import { TableItemsBox } from '~/components/TableItemsBox';
 
 export default function TableDetail() {

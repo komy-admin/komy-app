@@ -3,7 +3,7 @@ import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, Ta
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Team, filterTeam } from "~/types/team.types";
-import { TeamTypes } from "~/types/team-types.enum";
+import { TeamTypes } from "~/types/team.enum";
 import { teamsApi } from "~/api/teams.api";
 import { getTeamTypeText, getEnumValue } from "~/lib/utils";
 import { Search, Euro } from "lucide-react-native";

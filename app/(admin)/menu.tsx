@@ -2,8 +2,8 @@ import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "re
 import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Item } from "~/types/item.types";
-import { ItemTypes } from "~/types/item-types.enum";
+import { Item, filterItem } from "~/types/item.types";
+import { ItemTypes } from "~/types/item-type.enum";
 import { itemsApi } from "~/api/items.api";
 import { cn, getItemTypeText } from "~/lib/utils";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +11,10 @@ import { Trash2, Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { ItemTable } from "~/components/admin/ItemTable"
+import { FilterBar } from '~/components/filters/Filter';
+import { useFilter } from '~/components/filters/useFilter';
+import { ItemTypeTypes } from '~/types/item-type.types';
+import { itemTypeApi } from "~/api/itemTypes.api";
 
 export default function MenuPage() {
   // Table par defaut
@@ -52,7 +56,8 @@ export default function MenuPage() {
 
   const loadData = async (itemType: ItemTypes) => {
     try {
-      const data = await itemsApi.getItems(itemType);
+      const filterString = itemType ? `itemType.name=${itemType}` : '';
+      const { data } = await itemsApi.getItems(filterString);
       switch (itemType) {
         case ItemTypes.DRINK:
           setMenuDrinks(data);
@@ -74,8 +79,24 @@ export default function MenuPage() {
     }
   };
 
+  const {
+    data,
+    loading,
+    error,
+    updateFilter,
+    clearFilters,
+    changePage,
+    queryParams
+  } = useFilter({ config: filterItem, model: 'item' });
+
+  useEffect(() => { 
+    if (data) {
+      setMenuDesserts(data.data) 
+    }
+  }, [data]);
+
   const handleCreateArticle = () => {
-    setTitle('Création d’un article')
+    setTitle('Création d\'un article')
     setIsEditing(false)
     setCurrentItem(null)
     setSelectedOption(defaultOption)
@@ -84,10 +105,9 @@ export default function MenuPage() {
   }
 
   const handleEditArticle = (item: Item) => {
-    setTitle('Modification d’un article')
+    setTitle('Modification d\'un article')
     setIsEditing(true)
     setCurrentItem(item)
-    // Trouver la clé de l'enum correspondant à itemType
     const itemTypeKey = Object.keys(ItemTypes).find(
       key => ItemTypes[key as keyof typeof ItemTypes] === item.itemType
     )
@@ -151,14 +171,11 @@ export default function MenuPage() {
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
-          <InputCustom
-            placeholder="Rechercher..."
-            icone={Search}
-            iconePosition="left"
-            style={{ marginVertical: 10, borderColor: '#EAEAEB' }}
-            iconeProps={{ strokeWidth: 3, color: '#696969' }}
-            textStyle={{ fontWeight: '300', color: '#2A2E33' }}
-            placeholderStyle={{ color: '#949699' }}
+          <FilterBar
+            config={filterItem}
+            onUpdateFilter={updateFilter}
+            onClearFilters={clearFilters}
+            activeFilters={queryParams.filters || []}
           />
         </View>
       )

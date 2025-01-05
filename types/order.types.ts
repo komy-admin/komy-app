@@ -1,4 +1,4 @@
-import { ItemTypes } from "./item-types.enum";
+import { ItemTypes } from "./item-type.enum";
 import { OrderItem } from "./order-item.types";
 import { Status } from "./status.enum";
 import { Table } from "./table.types";
