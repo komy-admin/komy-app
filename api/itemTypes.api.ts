@@ -2,7 +2,7 @@ import { ItemTypeTypes } from '~/types/item-type.types';
 import { axiosInstance } from './axios.config';
 
 export const itemTypeApi = {
-  getItemTypes: async (params: any): Promise<{ data: ItemTypeTypes[], meta: {} }> => {
+  getItemTypes: async (params?: any): Promise<{ data: ItemTypeTypes[], meta: {} }> => {
     try {
       const response = await axiosInstance.get<{ data: ItemTypeTypes[], meta: {} }>(`/itemType?${params}`)
       const { data, meta } = response.data

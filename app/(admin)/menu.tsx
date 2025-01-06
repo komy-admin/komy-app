@@ -17,67 +17,47 @@ import { ItemTypeTypes } from '~/types/item-type.types';
 import { itemTypeApi } from "~/api/itemTypes.api";
 
 export default function MenuPage() {
-  // Table par defaut
-  const [value, setValue] = React.useState(ItemTypes.DRINK);
-  // Informations Menu
-  const [name, setName] = React.useState('');
-  const [price, setPrice] = React.useState<number>(0);
-  const defaultOption: Option = {
-    value: '',
-    label: 'Choisissez une catégorie',
-  }
-  type Option = {
-    value: string
-    label: string
-  }
-  const [selectedOption, setSelectedOption] = useState<Option>(defaultOption)
-
-  // Données Menu
-  const [menuDrinks, setMenuDrinks] = useState<Item[]>([]);
-  const [menuStarters, setMenuStarters] = useState<Item[]>([]);
-  const [menuMains, setMenuMains] = useState<Item[]>([]);
-  const [menuDesserts, setMenuDesserts] = useState<Item[]>([]);
-
-
-  // SidePanel
-  const [title, setTitle] = useState('Filtrage') // Titre par défaut
-  const [isEditing, setIsEditing] = useState(false) // Indique si on est en train de modifier un article
-  const [currentItem, setCurrentItem] = useState<Item | null>(null) // Article en cours de modification
-
-  // Taille columns
+  const [title, setTitle] = useState('Filtrage');
+  const [itemTypes, setItemTypes] = useState<ItemTypeTypes[]>([]);
+  const [selectedTab, setSelectedTab] = useState<string>('');
+  const [menuItems, setMenuItems] = useState<{ [key: string]: Item[] }>({});
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState<number>(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentItem, setCurrentItem] = useState<Item | null>(null);
+  const defaultOption = { value: '', label: 'Choisissez une catégorie', id: '' };
+  const [selectedOption, setSelectedOption] = useState(defaultOption);
   const columnWidths = ['65%', '15%', '15%', '5%'] as DimensionValue[];
 
-  useEffect(() => {
-    loadData(ItemTypes.DRINK);
-    loadData(ItemTypes.STARTER);
-    loadData(ItemTypes.MAIN);
-    loadData(ItemTypes.DESSERT);
-  }, []);
-
-  const loadData = async (itemType: ItemTypes) => {
-    try {
-      const filterString = itemType ? `itemType.name=${itemType}` : '';
-      const { data } = await itemsApi.getItems(filterString);
-      switch (itemType) {
-        case ItemTypes.DRINK:
-          setMenuDrinks(data);
-          break;
-        case ItemTypes.STARTER:
-          setMenuStarters(data);
-          break;
-        case ItemTypes.MAIN:
-          setMenuMains(data);
-          break;
-        case ItemTypes.DESSERT:
-          setMenuDesserts(data);
-          break;
-        default:
-          break;
+  const loadAllData = async (types: ItemTypeTypes[]) => {
+    const newMenuItems: { [key: string]: Item[] } = {};
+    for (const type of types) {
+      try {
+        const { data } = await itemsApi.getItems(`itemType.name=${type.name}`);
+        newMenuItems[type.name] = data;
+      } catch (err) {
+        console.error(`Error loading ${type.name} items:`, err);
+        newMenuItems[type.name] = [];
       }
-    } catch (err) {
-      console.error('Error in loadData:', err);
     }
+    setMenuItems(newMenuItems);
   };
+
+  useEffect(() => {
+    const loadItemTypes = async () => {
+      try {
+        const { data } = await itemTypeApi.getItemTypes();
+        setItemTypes(data);
+        if (data.length > 0) {
+          setSelectedTab(data[0].name);
+          await loadAllData(data);
+        }
+      } catch (err) {
+        console.error('Error loading item types:', err);
+      }
+    };
+    loadItemTypes();
+  }, []);
 
   const {
     data,
@@ -91,35 +71,37 @@ export default function MenuPage() {
 
   useEffect(() => { 
     if (data) {
-      setMenuDesserts(data.data) 
+      const filteredType = selectedTab;
+      if (filteredType) {
+        setMenuItems(prev => ({
+          ...prev,
+          [filteredType]: data.data
+        }));
+      }
     }
   }, [data]);
 
   const handleCreateArticle = () => {
-    setTitle('Création d\'un article')
-    setIsEditing(false)
-    setCurrentItem(null)
-    setSelectedOption(defaultOption)
-    setName('')
-    setPrice(0)
-  }
+    setTitle('Création d\'un article');
+    setIsEditing(false);
+    setCurrentItem(null);
+    setSelectedOption(defaultOption);
+    setName('');
+    setPrice(0);
+  };
 
   const handleEditArticle = (item: Item) => {
-    setTitle('Modification d\'un article')
-    setIsEditing(true)
-    setCurrentItem(item)
-    const itemTypeKey = Object.keys(ItemTypes).find(
-      key => ItemTypes[key as keyof typeof ItemTypes] === item.itemType
-    )
-    if (itemTypeKey) {
-      setSelectedOption({
-        value: itemTypeKey, // Exemple : DRINK
-        label: item.itemType, // Exemple : Boissons
-      })
-    }
-    setName(item.name)
-    setPrice(item.price)
-  }
+    setTitle('Modification d\'un article');
+    setIsEditing(true);
+    setCurrentItem(item);
+    setSelectedOption({
+      value: item!.itemType!.name,
+      label: item!.itemType!.name,
+      id: item!.itemType!.id ?? ''
+    });
+    setName(item.name);
+    setPrice(item.price);
+  };
 
   const handleCancelEditorCreate = () => {
     setTitle('Filtrage')
@@ -132,22 +114,28 @@ export default function MenuPage() {
 
   const submitArticleAction = async () => {
     const itemType = selectedOption.value as ItemTypes
-    const item: Item = {
+    let item: Item = {
       id: currentItem?.id,
-      itemType,
+      itemTypeId: selectedOption.id,
       name,
       price
     }
     try {
       if (isEditing && item.id) {
-        await itemsApi.updateItem(item?.id, item)
-        setMenuDesserts(menuDesserts.map(d => d.id === item.id ? item : d))
+        await itemsApi.updateItem(item.id, item);
+        item.itemType = { id: selectedOption.id, name: selectedOption.value };
+        setMenuItems(prev => ({
+          ...prev,
+          [itemType]: prev[itemType].map(i => i.id === item.id ? item : i)
+        }));
       } else {
-        const newItem = await itemsApi.createItem(item)
-        setMenuDesserts([...menuDesserts, newItem])
+        const newItem = await itemsApi.createItem(item);
+        newItem.itemType = { id: selectedOption.id, name: selectedOption.value };
+        setMenuItems(prev => ({
+          ...prev,
+          [itemType]: [...(prev[itemType] || []), newItem]
+        }));
       }
-      
-      // loadData(itemType)
       handleCancelEditorCreate()
     } catch (err) {
       console.error('Error in submitArticleAction:', err)
@@ -156,18 +144,20 @@ export default function MenuPage() {
 
   const submitArticleDelete = async (id: string) => {
     try {
-      await itemsApi.deleteItem(id)
-      setMenuDesserts(menuDesserts.filter(d => d.id !== id))
+      await itemsApi.deleteItem(id);
+      setMenuItems(prev => {
+        const newMenuItems = { ...prev };
+        Object.keys(newMenuItems).forEach(type => {
+          newMenuItems[type] = newMenuItems[type].filter(item => item.id !== id);
+        });
+        return newMenuItems;
+      });
     } catch (err) {
-      console.error('Error in deleteArticle:', err)
+      console.error('Error in deleteArticle:', err);
     }
   }
 
   const renderSidePanelContent = () => {
-    const itemTypesArray = Object.entries(ItemTypes).map(([key, label]) => ({
-      value: key,
-      label
-    }))
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
@@ -180,7 +170,7 @@ export default function MenuPage() {
         </View>
       )
     }
-    if (title === 'Création d’un article' || title === 'Modification d’un article') {
+    if (title === 'Création d\'un article' || title === 'Modification d\'un article') {
       return (
         <>
           <Text
@@ -206,8 +196,21 @@ export default function MenuPage() {
                 aria-labelledby='inputLabel'
                 aria-errormessage='inputError'
               />
-              <Select value={selectedOption} onValueChange={(value) => { if (value) { setSelectedOption(value) }
-                }}>
+              <Select 
+                value={selectedOption} 
+                onValueChange={(value) => {
+                  if (value) {
+                    const itemType = itemTypes.find(type => type.name === value.value);
+                    if (itemType) {
+                      setSelectedOption({
+                        value: itemType.name,
+                        label: itemType.name,
+                        id: itemType.id!
+                      });
+                    }
+                  }
+                }}
+              >
                 <SelectTrigger className='w-100'>
                   <SelectValue
                     className='text-foreground text-sm native:text-lg'
@@ -217,9 +220,13 @@ export default function MenuPage() {
                 <SelectContent className='w-100'>
                   <SelectGroup>
                     <SelectLabel>Catégories</SelectLabel>
-                    {itemTypesArray.map(item => (
-                      <SelectItem key={item.value} label={item.label} value={item.value}>
-                        {item.label}
+                    {itemTypes.map(type => (
+                      <SelectItem 
+                        key={type.id} 
+                        label={type.name} 
+                        value={type.name}
+                      >
+                        {type.name}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -270,38 +277,30 @@ export default function MenuPage() {
       </SidePanel>
       <View style={{ flex: 1 }}>
         <Tabs
-          value={value}
-          onValueChange={(newValue: string) => setValue(newValue as ItemTypes)}
+          value={selectedTab}
+          onValueChange={setSelectedTab}
           className="w-full mx-auto flex-col gap-1.5"
         >
           <View className="flex flex-row justify-between w-full" style={{ backgroundColor: '#FBFBFB', height: 50 }}>
             <TabsList className="flex-row w-[500px] h-full">
-              {Object.values(ItemTypes).map((type) => (
-                <TabsTrigger key={type} value={type} className="flex-1 flex-row h-full">
+              {itemTypes.map((type) => (
+                <TabsTrigger key={type.name} value={type.name} className="flex-1 flex-row h-full">
                   <Text
                     className="pr-2"
-                    style={{ color: value === type ? '#2A2E33' : '#A0A0A0' }}
+                    style={{ color: selectedTab === type.name ? '#2A2E33' : '#A0A0A0' }}
                   >
-                    {getItemTypeText(type)}
+                    {type.name}
                   </Text>
                   <Badge
                     style={{
-                      backgroundColor: value === type ? '#2A2E33' : '#E0E0E0',
+                      backgroundColor: selectedTab === type.name ? '#2A2E33' : '#E0E0E0',
                       borderRadius: 5,
                       paddingHorizontal: 8,
                       paddingVertical: 4,
                     }}
                   >
-                    <Text style={{ color: value === type ? '#FFFFFF' : '#A0A0A0' }}>
-                      {
-                        type === ItemTypes.DRINK
-                          ? menuDrinks.length
-                          : type === ItemTypes.STARTER
-                          ? menuStarters.length
-                          : type === ItemTypes.MAIN
-                          ? menuMains.length
-                          : menuDesserts.length
-                      }
+                    <Text style={{ color: selectedTab === type.name ? '#FFFFFF' : '#A0A0A0' }}>
+                      {menuItems[type.name]?.length || 0}
                     </Text>
                   </Badge>
                 </TabsTrigger>
@@ -325,18 +324,16 @@ export default function MenuPage() {
               </Text>
             </Button>
           </View>
-          <TabsContent value={ItemTypes.DRINK}>
-            <ItemTable data={menuDrinks} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
-          </TabsContent>
-          <TabsContent value={ItemTypes.STARTER}>
-            <ItemTable data={menuStarters} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
-          </TabsContent>
-          <TabsContent value={ItemTypes.MAIN}>
-            <ItemTable data={menuMains} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
-          </TabsContent>
-          <TabsContent value={ItemTypes.DESSERT}>
-            <ItemTable data={menuDesserts} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitArticleDelete}/>
-          </TabsContent>
+          {itemTypes.map((type) => (
+            <TabsContent key={type.name} value={type.name}>
+              <ItemTable
+                data={menuItems[type.name] || []}
+                columnWidths={columnWidths}
+                onRowPress={handleEditArticle}
+                deleteItem={submitArticleDelete}
+              />
+            </TabsContent>
+          ))}
         </Tabs>
       </View>
     </View>

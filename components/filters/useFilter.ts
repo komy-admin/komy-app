@@ -92,7 +92,7 @@ export function useFilter<T>({
   };
 }
 
-async function getData (params: any, model: string): Promise<{ data: any[], meta: {} }> {
+async function getData (params: URLSearchParams, model: string): Promise<{ data: any[], meta: {} }> {
   try {
     const response = await axiosInstance.get<{ data: any[], meta: {} }>(`/${model}?${params}`)
     const { data, meta } = response.data;
