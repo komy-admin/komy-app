@@ -2,7 +2,7 @@ import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "re
 import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Item } from "~/types/item.types";
+import { Item, filterItem } from "~/types/item.types";
 import { ItemTypes } from "~/types/item-type.enum";
 import { itemsApi } from "~/api/items.api";
 import { itemTypeApi } from "~/api/itemTypes.api";
@@ -39,31 +39,6 @@ export default function MenuPage() {
   
   const [selectedOption, setSelectedOption] = useState(defaultOption);
   const columnWidths = ['65%', '15%', '15%', '5%'] as DimensionValue[];
-
-  // Filter configuration
-  const filterItem: FilterConfig<Item>[] = [
-    { 
-      field: 'name', 
-      type: 'text',
-      label: 'Nom'
-    },
-    { 
-      field: 'price', 
-      type: 'number',
-      label: 'Prix',
-      operator: 'between'
-    },
-    { 
-      field: 'itemTypeId', 
-      type: 'select',
-      label: 'Type',
-      operator: 'in',
-      options: itemTypes.map(type => ({ 
-        label: type.name, 
-        value: type.id || '' 
-      })),
-    }
-  ];
 
   const {
     data,
