@@ -2,7 +2,7 @@ import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "re
 import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Item, filterItem } from "~/types/item.types";
+import { Item } from "~/types/item.types";
 import { ItemTypes } from "~/types/item-type.enum";
 import { itemsApi } from "~/api/items.api";
 import { cn, getItemTypeText } from "~/lib/utils";
@@ -15,6 +15,7 @@ import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
 import { ItemTypeTypes } from '~/types/item-type.types';
 import { itemTypeApi } from "~/api/itemTypes.api";
+import { FilterConfig } from '~/types/filter.types';
 
 export default function MenuPage() {
   const [title, setTitle] = useState('Filtrage');
@@ -58,6 +59,28 @@ export default function MenuPage() {
     };
     loadItemTypes();
   }, []);
+
+  const filterItem: FilterConfig<Item>[] = [
+    { 
+      field: 'name', 
+      type: 'text' as const, 
+      label: 'Nom',
+      // operator: 'like' as const
+    },
+    { 
+      field: 'price', 
+      type: 'number' as const, 
+      label: 'Prix',
+      operator: 'between' as const,
+    },
+    { 
+      field: 'itemTypeId', 
+      type: 'select' as const, 
+      label: 'Type',
+      operator: 'in' as const,
+      options: itemTypes.map(type => ({ label: type.name, value: type.id || '' }))
+    }
+  ];
 
   const {
     data,
@@ -118,19 +141,21 @@ export default function MenuPage() {
       id: currentItem?.id,
       itemTypeId: selectedOption.id,
       name,
-      price
+      price,
+      itemType: {
+        id: selectedOption.id,
+        name: selectedOption.value
+      }
     }
     try {
       if (isEditing && item.id) {
         await itemsApi.updateItem(item.id, item);
-        item.itemType = { id: selectedOption.id, name: selectedOption.value };
         setMenuItems(prev => ({
           ...prev,
           [itemType]: prev[itemType].map(i => i.id === item.id ? item : i)
         }));
       } else {
         const newItem = await itemsApi.createItem(item);
-        newItem.itemType = { id: selectedOption.id, name: selectedOption.value };
         setMenuItems(prev => ({
           ...prev,
           [itemType]: [...(prev[itemType] || []), newItem]
@@ -160,7 +185,7 @@ export default function MenuPage() {
   const renderSidePanelContent = () => {
     if (title === 'Filtrage') {
       return (
-        <View style={{ padding: 16 }}>
+        <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection:'column', justifyContent: 'space-between' }}>
           <FilterBar
             config={filterItem}
             onUpdateFilter={updateFilter}

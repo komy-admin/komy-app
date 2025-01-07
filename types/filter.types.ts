@@ -2,11 +2,20 @@ export type FilterOperator = '>' | '>=' | '<' | '<=' | '=' | '!=' | 'like' | 'no
 
 export type FilterType = 'text' | 'number' | 'date' | 'boolean' | 'select';
 
+type NestedPaths<T> = T extends object ? {
+  [K in keyof T]: K extends string
+      ? T[K] extends object
+          ? K | `${K}.${NestedPaths<T[K]>}`
+          : K
+      : never;
+}[keyof T] : never;
+
 export type FilterConfig<T> = {
-  field: keyof T;
+  field: NestedPaths<T>;
   type: FilterType;
   label: string;
   operator?: FilterOperator;
+  options?: { label: string, value: string }[];
 }
 
 export type FilterValue = {

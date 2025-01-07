@@ -1,5 +1,3 @@
-import { ItemTypes } from "./item-type.enum";
-import { FilterConfig } from '~/types/filter.types';
 import { ItemTypeTypes } from '~/types/item-type.types';
 
 export type Item = {
@@ -8,20 +6,6 @@ export type Item = {
   price: number;
   allergens?: string[];
   description?: string;
-  itemType?: ItemTypeTypes;
+  itemType: ItemTypeTypes;
   itemTypeId?: string;
 };
-
-export const filterItem: FilterConfig<Item>[] = [
-  { 
-    field: 'name', 
-    type: 'text' as const, 
-    label: 'Nom',
-    operator: 'like' as const
-  },
-  { 
-    field: 'price', 
-    type: 'number' as const, 
-    label: 'Prix',
-  },
-];
