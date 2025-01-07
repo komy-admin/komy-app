@@ -3,7 +3,7 @@ import { DimensionValue, Pressable } from "react-native";
 import { Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "~/components/ui";
 import { Trash } from "lucide-react-native";
 import { Team } from "~/types/team.types";
-import { cn } from "~/lib/utils";
+import { cn, getTeamTypeText } from "~/lib/utils";
 
 interface TeamTableProps {
   data: Team[];
@@ -17,6 +17,9 @@ export const TeamTable: React.FC<TeamTableProps> = ({ data, columnWidths, onRowP
     <Table aria-labelledby="team-table">
       <TableHeader>
         <TableRow>
+          {/* <TableHead className="px-3 flex justify-end pb-1" style={{ width: columnWidths[0] }}>
+            <Text style={{ fontSize: 16, color: "#AAABAD", fontWeight: "100" }}>Profil</Text>
+          </TableHead> */}
           <TableHead className="px-3 flex justify-end pb-1" style={{ width: columnWidths[0] }}>
             <Text style={{ fontSize: 16, color: "#AAABAD", fontWeight: "100" }}>Prénom</Text>
           </TableHead>
@@ -40,6 +43,17 @@ export const TeamTable: React.FC<TeamTableProps> = ({ data, columnWidths, onRowP
             onPress={() => onRowPress?.(team)}
             style={{ cursor: "pointer" }}
           >
+            {/* <TableCell
+              style={{
+                width: columnWidths[0],
+                borderBottomColor: "#F4F5F5",
+                borderTopColor: "#D7D7D9",
+                borderBottomWidth: 0.5,
+                borderTopWidth: index === 0 ? 0.7 : 0,
+              }}
+            >
+              <Text style={{ fontSize: 15, color: "#2A2E33", fontWeight: "100" }}>{getTeamTypeText(team.profil)}</Text>
+            </TableCell> */}
             <TableCell
               style={{
                 width: columnWidths[0],
