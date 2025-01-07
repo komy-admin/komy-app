@@ -45,8 +45,8 @@ export function useFilter<T>({
   }, [model]);
 
   const updateFilter = useCallback((field: string, value: any, operator?: string) => {
-    const filterConfig = config.find(c => c.field === field);
-    if (!filterConfig) return;
+    // const filterConfig = config.find(c => c.field === field);
+    // if (!filterConfig) return;
 
     // Skip empty values
     if (value === '' || value === null || value === undefined || 

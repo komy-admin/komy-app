@@ -2,9 +2,10 @@ import { Team } from '~/types/team.types';
 import { axiosInstance } from '~/api/axios.config';
 
 export const teamsApi = {
-  getTeams: async (params: any): Promise<{ data: Team[], meta: {} }> => {
+  getTeams: async (params?: any): Promise<{ data: Team[], meta: {} }> => {
     try {
-      const response = await axiosInstance.get<{ data: Team[], meta: {} }>(`/user?${params}`)
+      const queryParams = params ? `/user?${params}` : '/user'
+      const response = await axiosInstance.get<{ data: Team[], meta: {} }>(queryParams)
       const { data, meta } = response.data
       return { data, meta };
     } catch (err) {

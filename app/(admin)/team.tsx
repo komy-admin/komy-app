@@ -14,67 +14,48 @@ import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
 
 export default function TeamPage() {
+  const [activeTab, setActiveTab] = useState<TeamTypes>(TeamTypes.ALL);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   // Table par defaut
   const [value, setValue] = useState(TeamTypes.ALL);
   // Informations Team
-  const [firstName, setFirstName] = React.useState('');
-  const [lastName, setLastName] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [phone, setPhone] = React.useState('');
-  const [loginId, setLoginId] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const defaultOption: Option = {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    loginId: '',
+    password: '',
+  });
+  
+  const defaultOption = {
     value: '',
     label: 'Choisissez une rôle',
-  }
-  type Option = {
-    value: string
-    label: string
-  }
-  const [selectedOption, setSelectedOption] = useState<Option>(defaultOption)
-  // Données Team
-  const [teamAll, setTeamAll] = useState<Team[]>([]);
-  const [teamManager, setTeamManager] = useState<Team[]>([]);
-  const [teamServeur, setTeamServeur] = useState<Team[]>([]);
-  const [teamCuisinier, setTeamCuisinier] = useState<Team[]>([]);
-  // SidePanel
-  const [title, setTitle] = useState('Filtrage') // Titre par défaut
-  const [isEditing, setIsEditing] = useState(false) // Indique si on est en train de modifier un article
-  const [currentItem, setCurrentItem] = useState<Team | null>(null) // Article en cours de modification
-  // Taille columns
+  };
+  
+  const [selectedOption, setSelectedOption] = useState(defaultOption);
+  const [title, setTitle] = useState('Filtrage');
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentItem, setCurrentItem] = useState<Team | null>(null);
+  
   const columnWidths = ['20%', '20%', '30%', '20%', '10%'] as DimensionValue[];
 
-  const loadData = async (teamTypes: TeamTypes) => {
-    try {
-      const filter = teamTypes === TeamTypes.ALL ? undefined : teamTypes;
-      const filterString = filter ? `profil=${filter}` : '';
-      const { data } = await teamsApi.getTeams(filterString);
-      switch (teamTypes) {
-        case TeamTypes.ALL:
-          setTeamAll(data);
-          break;
-        case TeamTypes.MANAGER:
-          setTeamManager(data);
-          break;
-        case TeamTypes.SERVEUR:
-          setTeamServeur(data);
-          break;
-        case TeamTypes.CUISTO:
-          setTeamCuisinier(data);
-          break;
-        default:
-          break;
-      }
-    } catch (err) {
-      console.error('Error in loadData:', err);
-    }
-  };
-
   useEffect(() => {
-    loadData(TeamTypes.ALL);
-    loadData(TeamTypes.MANAGER);
-    loadData(TeamTypes.SERVEUR);
-    loadData(TeamTypes.CUISTO);
+    const loadTeams = async () => {
+      try {
+        setIsLoading(true);
+        const { data } = await teamsApi.getTeams();
+        setTeams(data);
+      } catch (err) {
+        console.error('Error loading teams:', err);
+        Alert.alert('Error', 'Failed to load teams');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTeams();
   }, []);
 
   // filtre
@@ -90,91 +71,96 @@ export default function TeamPage() {
 
   useEffect(() => { 
     if (data) {
-      setTeamAll(data.data) 
+      setTeams(data.data) 
     }
   }, [data]);
 
-  const handleCreateArticle = () => {
-    setTitle('Création d\'un article')
-    setIsEditing(false)
-    setCurrentItem(null)
-    setSelectedOption(defaultOption)
-    setFirstName('')
-    setLastName('')
-    setPhone('')
-    setEmail('')
-    setLoginId('')
-    setPassword('')
-  }
+  const handleCreateTeam = () => {
+    setTitle('Création d\'un utilisateur');
+    setIsEditing(false);
+    setCurrentItem(null);
+    setSelectedOption(defaultOption);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      loginId: '',
+      password: '',
+    });
+  };
 
-  const handleEditArticle = (team: Team) => {
-    setTitle('Modification d\'un article')
-    setIsEditing(true)
-    setCurrentItem(team)
+  const handleEditTeam = (team: Team) => {
+    setTitle('Modification d\'un utilisateur');
+    setIsEditing(true);
+    setCurrentItem(team);
     const teamTypeKey = Object.keys(TeamTypes).find(
       key => TeamTypes[key as keyof typeof TeamTypes] === team.profil
-    )
+    );
+    
     if (teamTypeKey) {
       setSelectedOption({
-        value: teamTypeKey, // Exemple : MANAGER
-        label: team.profil, // Exemple : Manager
-      })
+        value: teamTypeKey,
+        label: team.profil,
+      });
     }
-    setFirstName(team.firstName)
-    setLastName(team.lastName)
-    setPhone(team.phone)
-    setEmail(team.email)
-    setLoginId(team.loginId)
-    setPassword(team.password)
-  }
+    
+    setFormData({
+      firstName: team.firstName,
+      lastName: team.lastName,
+      email: team.email,
+      phone: team.phone,
+      loginId: team.loginId,
+      password: team.password,
+    });
+  };
 
   const handleCancelEditorCreate = () => {
-    setTitle('Filtrage')
-    setIsEditing(false)
-    setCurrentItem(null)
-    setSelectedOption(defaultOption)
-    setFirstName('')
-    setLastName('')
-    setPhone('')
-    setEmail('')
-    setLoginId('')
-    setPassword('')
-  }
-
+    setTitle('Filtrage');
+    setIsEditing(false);
+    setCurrentItem(null);
+    setSelectedOption(defaultOption);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      loginId: '',
+      password: '',
+    });
+  };
   const submitTeamAction = async () => {
-    const selectedValue = getEnumValue(TeamTypes, selectedOption.value as keyof typeof TeamTypes)
+    const selectedValue = getEnumValue(TeamTypes, selectedOption.value as keyof typeof TeamTypes);
     const team: Team = {
       id: currentItem?.id,
       profil: selectedValue as TeamTypes,
-      firstName,
-      lastName,
-      email,
-      phone,
-      loginId,
-      password
-    }
+      ...formData,
+    };
+
     try {
       if (isEditing && team.id) {
-        await teamsApi.updateItem(team?.id, team)
-        setTeamAll(teamAll.map(d => d.id === team.id ? team : d))
+        await teamsApi.updateItem(team.id, team);
+        setTeams(teams.map(t => t.id === team.id ? team : t));
       } else {
-        const newItem = await teamsApi.createItem(team)
-        setTeamAll([...teamAll, newItem])
+        const newItem = await teamsApi.createItem(team);
+        setTeams([...teams, newItem]);
       }
-      handleCancelEditorCreate()
+      handleCancelEditorCreate();
     } catch (err) {
-      console.error('Error in submitArticleAction:', err)
+      console.error('Error in submitTeamAction:', err);
+      Alert.alert('Error', 'Failed to save team');
     }
-  }
+  };
 
   const submitTeamDelete = async (id: string) => {
     try {
-      await teamsApi.deleteItem(id)
-      setTeamAll(teamAll.filter(d => d.id !== id))
+      await teamsApi.deleteItem(id);
+      setTeams(teams.filter(t => t.id !== id));
     } catch (err) {
-      console.error('Error in deleteArticle:', err)
+      console.error('Error in deleteTeam:', err);
+      Alert.alert('Error', 'Failed to delete team');
     }
-  }
+  };
 
   const renderSidePanelContent = () => {
     const teamTypesArray = Object.entries(TeamTypes)
@@ -195,44 +181,40 @@ export default function TeamPage() {
         </View>
       )
     }
-    if (title === 'Création d\'un article' || title === 'Modification d\'un article') {
+    if (title.includes('utilisateur')) {
       return (
         <>
-          <Text
-            style={{
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              fontSize: 14,
-              color: '#2A2E33',
-              backgroundColor: '#F1F1F1',
-              padding: 5,
-              paddingLeft: 16,
-            }}
-          >
+          <Text style={{
+            textTransform: 'uppercase',
+            fontWeight: '700',
+            fontSize: 14,
+            color: '#2A2E33',
+            backgroundColor: '#F1F1F1',
+            padding: 5,
+            paddingLeft: 16,
+          }}>
             Informations
           </Text>
-          <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection:'column', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <View>
               <View className="flex flex-row gap-2">
                 <Input
                   style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
                   placeholder='Prénom'
-                  value={firstName}
-                  onChangeText={(text: string) => setFirstName(text)}
-                  aria-labelledby='inputLabel'
-                  aria-errormessage='inputError'
+                  value={formData.firstName}
+                  onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
                 />
                 <Input
                   style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
                   placeholder='Nom'
-                  value={lastName}
-                  onChangeText={(text: string) => setLastName(text)}
-                  aria-labelledby='inputLabel'
-                  aria-errormessage='inputError'
+                  value={formData.lastName}
+                  onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
                 />
               </View>
-              <Select value={selectedOption} onValueChange={(value) => { if (value) { setSelectedOption(value) }
-                }}>
+              <Select 
+                value={selectedOption} 
+                onValueChange={(value) => { if (value) setSelectedOption(value) }}
+              >
                 <SelectTrigger className='w-100'>
                   <SelectValue
                     className='text-foreground text-sm native:text-lg'
@@ -243,63 +225,49 @@ export default function TeamPage() {
                   <SelectGroup>
                     <SelectLabel>Rôles</SelectLabel>
                     {teamTypesArray.map(item => (
-                      <SelectItem key={item.value} label={getTeamTypeText(item.label as TeamTypes)} value={item.value}>
+                      <SelectItem 
+                        key={item.value} 
+                        label={getTeamTypeText(item.label as TeamTypes)} 
+                        value={item.value}
+                      >
                         {item.label}
                       </SelectItem>
                     ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <Input
-                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-                placeholder='Email'
-                value={email}
-                onChangeText={(text: string) => setEmail(text)}
-                aria-labelledby='inputLabel'
-                aria-errormessage='inputError'
-              />
-              <Input
-                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-                placeholder='0635504259'
-                value={email}
-                onChangeText={(text: string) => setPhone(text)}
-                aria-labelledby='inputLabel'
-                aria-errormessage='inputError'
-              />
-              <Input
-                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-                placeholder='Login'
-                value={loginId}
-                onChangeText={(text: string) => setLoginId(text)}
-                aria-labelledby='inputLabel'
-                aria-errormessage='inputError'
-              />
-              <Input
-                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-                placeholder='Mot de passe'
-                value={password}
-                onChangeText={(text: string) => setPassword(text)}
-                aria-labelledby='inputLabel'
-                aria-errormessage='inputError'
-              />
+              {['email', 'phone', 'loginId', 'password'].map((field) => (
+                <Input
+                  key={field}
+                  style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                  value={formData[field as keyof typeof formData]}
+                  onChangeText={(text: string) => setFormData(prev => ({ ...prev, [field]: text }))}
+                  secureTextEntry={field === 'password'}
+                />
+              ))}
             </View>
             <View>
               <Button
                 onPress={submitTeamAction}
-                style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}>
+                style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
+              >
                 <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
                   {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
                 </Text>
               </Button>
-              <Button onPress={handleCancelEditorCreate} style={{ backgroundColor: '#FBFBFB', borderRadius: 0, marginTop: 5 }}>
-                <Text style={{ color: '#2A2E33', fontWeight: '300', fontSize: 16, textDecorationLine: 'underline'}}>Annuler</Text>
+              <Button 
+                onPress={handleCancelEditorCreate} 
+                style={{ backgroundColor: '#FBFBFB', borderRadius: 0, marginTop: 5 }}
+              >
+                <Text style={{ color: '#2A2E33', fontWeight: '300', fontSize: 16, textDecorationLine: 'underline'}}>
+                  Annuler
+                </Text>
               </Button>
             </View>
-            
           </View>
-        
         </>
-      )
+      );
     }
     return null
   }
@@ -311,45 +279,44 @@ export default function TeamPage() {
       </SidePanel>
       <View style={{ flex: 1 }}>
         <Tabs
-          value={value}
-          onValueChange={(newValue: string) => setValue(newValue as TeamTypes)}
+          value={activeTab}
+          onValueChange={(newValue: string) => {
+             // !!!!
+              if (newValue !== 'Tous') updateFilter('profil', newValue)
+              else updateFilter('profil', '')
+              setActiveTab(newValue as TeamTypes)
+            }
+          }
           className="w-full mx-auto flex-col gap-1.5"
         >
           <View className="flex flex-row justify-between w-full" style={{ backgroundColor: '#FBFBFB', height: 50 }}>
             <TabsList className="flex-row w-[500px] h-full">
-              {Object.values(TeamTypes).filter(type => !['superadmin', 'admin'].includes(type)).map((type) => (
-                <TabsTrigger key={type} value={type} className="flex-1 flex-row h-full">
-                  <Text
-                    className="pr-2"
-                    style={{ color: value === type ? '#2A2E33' : '#A0A0A0' }}
-                  >
-                    {getTeamTypeText(type)}
-                  </Text>
-                  <Badge
-                    style={{
-                      backgroundColor: value === type ? '#2A2E33' : '#E0E0E0',
-                      borderRadius: 5,
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                    }}
-                  >
-                    <Text style={{ color: value === type ? '#FFFFFF' : '#A0A0A0' }}>
-                      {
-                        type === TeamTypes.ALL
-                          ? teamAll.length
-                          : type === TeamTypes.MANAGER
-                          ? teamManager.length
-                          : type === TeamTypes.SERVEUR
-                          ? teamServeur.length
-                          : teamCuisinier.length
-                      }
+              {Object.values(TeamTypes)
+                .filter(type => !['superadmin', 'admin'].includes(type))
+                .map((type) => (
+                  <TabsTrigger key={type} value={type} className="flex-1 flex-row h-full">
+                    <Text
+                      className="pr-2"
+                      style={{ color: activeTab === type ? '#2A2E33' : '#A0A0A0' }}
+                    >
+                      {getTeamTypeText(type)}
                     </Text>
-                  </Badge>
-                </TabsTrigger>
-              ))}
+                    {/* <Badge
+                      style={{
+                        backgroundColor: activeTab === type ? '#2A2E33' : '#E0E0E0',
+                        borderRadius: 5,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <Text style={{ color: activeTab === type ? '#FFFFFF' : '#A0A0A0' }}>
+                      </Text>
+                    </Badge> */}
+                  </TabsTrigger>
+                ))}
             </TabsList>
             <Button
-              onPress={handleCreateArticle}
+              onPress={handleCreateTeam}
               className="w-[200px] h-[50px] flex items-center justify-center"
               style={{ backgroundColor: '#2A2E33', borderRadius: 0 }}
             >
@@ -366,17 +333,13 @@ export default function TeamPage() {
               </Text>
             </Button>
           </View>
-          <TabsContent value={TeamTypes.ALL}>
-            <TeamTable data={teamAll} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
-          </TabsContent>
-          <TabsContent value={TeamTypes.MANAGER}>
-            <TeamTable data={teamManager} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
-          </TabsContent>
-          <TabsContent value={TeamTypes.SERVEUR}>
-            <TeamTable data={teamServeur} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
-          </TabsContent>
-          <TabsContent value={TeamTypes.CUISTO}>
-            <TeamTable data={teamCuisinier} columnWidths={columnWidths} onRowPress={handleEditArticle} deleteItem={submitTeamDelete}/>
+          <TabsContent value={activeTab}>
+            <TeamTable 
+              data={teams}
+              columnWidths={columnWidths}
+              onRowPress={handleEditTeam}
+              deleteItem={submitTeamDelete}
+            />
           </TabsContent>
         </Tabs>
       </View>
