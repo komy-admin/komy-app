@@ -4,9 +4,10 @@ import { Item } from '~/types/item.types';
 import { axiosInstance } from './axios.config';
 
 export const itemsApi = {
-  getItems: async (params: any): Promise<{ data: Item[], meta: {} }> => {
+  getItems: async (params?: any): Promise<{ data: Item[], meta: {} }> => {
     try {
-      const response = await axiosInstance.get<{ data: Item[], meta: {} }>(`/item?${params}`)
+      const queryParams = params ? `/item?${params}` : '/item';
+      const response = await axiosInstance.get<{ data: Item[], meta: {} }>(queryParams)
       const { data, meta } = response.data
       return { data, meta };
     } catch (err) {

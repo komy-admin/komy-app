@@ -15,7 +15,7 @@ interface ItemTableProps {
 export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowPress, deleteItem }) => {
   return (
     <Table aria-labelledby="invoice-table">
-      <TableHeader>
+      <TableHeader style={{ borderBottomWidth: 0.5, borderBottomColor: '#D7D7D9' }}>
         <TableRow>
           <TableHead className="px-3 flex justify-end pb-1" style={{ width: columnWidths[0] }}>
             <Text style={{ fontSize: 16, color: '#AAABAD', fontWeight: '100' }}>Nom</Text>
@@ -41,9 +41,7 @@ export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowP
               style={{
                 width: columnWidths[0],
                 borderBottomColor: '#F4F5F5',
-                borderTopColor: '#D7D7D9',
                 borderBottomWidth: 0.5,
-                borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
               <Text style={{ fontSize: 15, color: '#2A2E33', fontWeight: '100' }}>{item.name}</Text>
@@ -52,9 +50,7 @@ export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowP
               style={{
                 width: columnWidths[1],
                 borderBottomColor: '#F4F5F5',
-                borderTopColor: '#D7D7D9',
                 borderBottomWidth: 0.5,
-                borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
               <Text style={{ fontSize: 15, color: '#2A2E33', fontWeight: '100' }}>{item.price} €</Text>
@@ -63,9 +59,7 @@ export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowP
               style={{
                 width: columnWidths[2],
                 borderBottomColor: '#F4F5F5',
-                borderTopColor: '#D7D7D9',
                 borderBottomWidth: 0.5,
-                borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
               {index === 2 ? (
@@ -88,9 +82,7 @@ export const ItemTable: React.FC<ItemTableProps> = ({ data, columnWidths, onRowP
               style={{
                 width: columnWidths[3],
                 borderBottomColor: '#F4F5F5',
-                borderTopColor: '#D7D7D9',
                 borderBottomWidth: 0.5,
-                borderTopWidth: index === 0 ? 0.7 : 0,
               }}
             >
               <Pressable 

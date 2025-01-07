@@ -41,6 +41,7 @@ const TabsTrigger = React.forwardRef<TabsPrimitive.TriggerRef, TabsPrimitive.Tri
               : 'border-b-4 border-transparent text-gray-500',
             className
           )}
+          style={{  width: 120 }}
           {...props}
         />
       </TextClassContext.Provider>
