@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials } from '~/store/auth.slice';
 import { router } from 'expo-router';
-import { authApi } from "~/api/auth.api";
+import { authApiService } from "~/api/auth.api";
 
 export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
@@ -13,7 +13,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      const response = await authApi.login({ loginId, password });
+      const response = await authApiService.login({ loginId, password });
       const mockResponse = {
         token: response.token.token,
         accountType: 'admin' as const,
