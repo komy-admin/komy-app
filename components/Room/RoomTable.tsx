@@ -159,6 +159,8 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, isEditing, editionM
             left: xStart,
             top: yStart,
             backgroundColor: getTableColor(table),
+            zIndex: isEditing ? 10 : 1,
+            opacity: isEditing ? 0.8 : 1,
             borderWidth: isEditing ? 2 : 0,
             borderColor: '#007AFF',
           },

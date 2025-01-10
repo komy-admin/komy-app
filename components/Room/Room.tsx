@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableWithoutFeedback } from 'react-native';
 import { Table } from '~/types/table.types';
 import { ReactNativeZoomableView, } from '@openspacelabs/react-native-zoomable-view';
 import { RoomGrid } from './RoomGrid';
@@ -9,33 +9,24 @@ const CELL_SIZE = 50;
 const GRID_ROWS = 20;
 const GRID_COLS = 15;
 
-interface RoomProps { 
+interface RoomProps {
   tables: Table[]; 
   zoom?: number;
+  editingTableId?: string
   editionMode?: boolean
   onTableUpdate: (id: string, updates: Partial<Table>) => void;
+  onTableLongPress: (id: string) => void
   onTablePress: (id: string) => void;
 }
 
-const Room: React.FC<RoomProps> = ({ tables, zoom, editionMode = false, onTableUpdate, onTablePress }) => {
+const Room: React.FC<RoomProps> = ({ tables, zoom, editingTableId, editionMode = false, onTableUpdate, onTableLongPress, onTablePress }) => {
   const screenWidth = Dimensions.get('window').width;
   const gridWidth = GRID_COLS * CELL_SIZE;
   const gridHeight = GRID_ROWS * CELL_SIZE;
   const initialZoom = zoom || screenWidth / gridWidth;
 
-  const [isEditingTableId, setIsEditingTableId] = useState<string | null>(null);
-
-  function onTableLongPress(id: string) {
-    if (!editionMode) return
-    if (isEditingTableId === id) {
-      setIsEditingTableId(null);
-    } else {
-      setIsEditingTableId(id);
-    }
-  }
-
-  function getPositionValidity(table: Table) {
-    if (table.id !== isEditingTableId) return true
+  function isPositionValid(table: Table) {
+    if (table.id !== editingTableId) return true
    
     // Vérifie si la table en cours d'édition est en collision avec d'autres tables
     return !tables.some(otherTable => {
@@ -62,6 +53,10 @@ const Room: React.FC<RoomProps> = ({ tables, zoom, editionMode = false, onTableU
     });
   }
 
+  const handleBackgroundPress = () => {
+    onTablePress('');
+  };
+
   return (
     <View style={styles.container}>
       <ReactNativeZoomableView
@@ -73,22 +68,24 @@ const Room: React.FC<RoomProps> = ({ tables, zoom, editionMode = false, onTableU
         contentWidth={gridWidth}
         contentHeight={gridHeight}
       >
-        <View style={[styles.grid, { width: gridWidth, height: gridHeight }]}>
-          <RoomGrid width={gridWidth} height={gridHeight} GRID_COLS={GRID_COLS} GRID_ROWS={GRID_ROWS} CELL_SIZE={CELL_SIZE} />
-          {tables.map(table => (
-            <RoomTable
-              key={table.id}
-              table={table}
-              isEditing={isEditingTableId === table.id}
-              editionMode={editionMode}
-              positionValid={getPositionValidity(table)}
-              CELL_SIZE={CELL_SIZE}
-              onPress={onTablePress}
-              onLongPress={onTableLongPress}
-              onUpdate={onTableUpdate}
-            />
-          ))}
-        </View>
+        <TouchableWithoutFeedback onPress={handleBackgroundPress}>
+          <View style={[styles.grid, { width: gridWidth, height: gridHeight }]}>
+            <RoomGrid width={gridWidth} height={gridHeight} GRID_COLS={GRID_COLS} GRID_ROWS={GRID_ROWS} CELL_SIZE={CELL_SIZE} />
+            {tables.map(table => (
+              <RoomTable
+                key={table.id}
+                table={table}
+                isEditing={editingTableId === table.id}
+                editionMode={editionMode}
+                positionValid={isPositionValid(table)}
+                CELL_SIZE={CELL_SIZE}
+                onPress={onTablePress}
+                onLongPress={onTableLongPress}
+                onUpdate={onTableUpdate}
+              />
+            ))}
+          </View>
+        </TouchableWithoutFeedback>
       </ReactNativeZoomableView>
     </View>
   );

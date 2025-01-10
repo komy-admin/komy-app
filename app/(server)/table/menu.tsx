@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
-import { itemsApi } from '~/api/items.api';
+import { itemApiService } from '~/api/item.api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
 import { getItemTypeText } from '~/lib/utils';
 import { ItemTypes } from '~/types/item-type.enum';
@@ -22,8 +22,7 @@ export default function TableMenu() {
 
   const loadData = async (itemType: ItemTypes) => {
     try {
-      const data = await itemsApi.getItems(itemType);
-      console.log('Data:', data);
+      const { data } = await itemApiService.getAll();
       switch (itemType) {
         case ItemTypes.DRINK:
           setMenuDrinks(data);

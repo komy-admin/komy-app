@@ -2,15 +2,15 @@
 import { Href, Link } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { View, Pressable } from 'react-native';
-import { BookOpen, Users, DoorClosed, Group } from 'lucide-react-native';
+import { BookOpen, Users, DoorClosed, NotepadText, CookingPot } from 'lucide-react-native';
 import { Text } from '../ui';
 
 const NAV_ITEMS = [
-  { href: '/service', icon: Group, label: 'Service' },
- { href: '/menu', icon: Group, label: 'Menu' },
- { href: '/team', icon: Group, label: 'Équipe' },
- { href: '/room', icon: Group, label: 'Salles' },
- { href: '/kitchen', icon: Group, label: 'Cuisine' },
+  { href: '/service', icon: NotepadText, label: 'Service' },
+ { href: '/menu', icon: BookOpen, label: 'Menu' },
+ { href: '/team', icon: Users, label: 'Équipe' },
+ { href: '/room', icon: DoorClosed, label: 'Salles' },
+ { href: '/kitchen', icon: CookingPot, label: 'Cuisine' },
 ];
 
 export function AdminSidebar() {
