@@ -1,41 +1,97 @@
-import { axiosInstance } from './axios.config';
+import { BaseApiService } from './base.api';
 import type { LoginCredentials, RegisterCredentials, AuthResponse } from '~/types/auth.types';
 
-export const authApi = {
-  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+export class AuthApiService extends BaseApiService<AuthResponse> {
+  protected endpoint = '/auth';
+
+  constructor() {
+    super();
+    this.setupAuthInterceptor();
+  }
+
+  private async setToken(token: string): Promise<void> {
+    await this.storage.setItem('token', token);
+  }
+
+  private async removeToken(): Promise<void> {
+    await this.storage.removeItem('token');
+  }
+
+  public async getToken(): Promise<string | null> {
+    return this.storage.getItem('token');
+  }
+
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const { data } = await axiosInstance.post<AuthResponse>('/auth/login', credentials);
-      localStorage.setItem('token', data.token.token);
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/login`,
+        credentials
+      );
+      await this.setToken(data.token.token);
       return data;
     } catch (err) {
       console.error('Error in login:', err);
       throw err;
     }
-  },
+  }
 
-  register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
+  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
-      const { data } = await axiosInstance.post<AuthResponse>('/auth/register', credentials);
-      localStorage.setItem('token', data.token.token);
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/register`,
+        credentials
+      );
+      await this.setToken(data.token.token);
       return data;
     } catch (err) {
       console.error('Error in register:', err);
       throw err;
     }
-  },
+  }
 
-  logout: () => {
-    localStorage.removeItem('token');
-  },
-
-  refreshToken: async (): Promise<AuthResponse> => {
+  async refreshToken(): Promise<AuthResponse> {
     try {
-      const { data } = await axiosInstance.post<AuthResponse>('/auth/refresh');
-      localStorage.setItem('token', data.token.token);
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/refresh`
+      );
+      await this.setToken(data.token.token);
       return data;
     } catch (err) {
       console.error('Error in refreshToken:', err);
       throw err;
     }
-  },
-};
+  }
+
+  logout(): void {
+    this.removeToken();
+  }
+
+  private setupAuthInterceptor(): void {
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+          try {
+            const response = await this.refreshToken();
+            const newToken = response.token.token;
+            
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
+            
+            return this.axiosInstance(originalRequest);
+          } catch (refreshError) {
+            this.logout();
+            return Promise.reject(refreshError);
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+}
+
+export const authApiService = new AuthApiService()

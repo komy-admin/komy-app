@@ -56,7 +56,7 @@ export function SidePanel({
       style={[
         style,
         styles.container,
-        { width: animatedWidth },
+        { width: animatedWidth, maxWidth: animatedWidth },
       ]}
     >
       {!isCollapsed && (

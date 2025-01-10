@@ -3,7 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Table } from '~/types/table.types';
-import { tablesApi } from '~/api/tables.api';
+import { tableApiService } from '~/api/table.api';
 import { Button, Card, CardContent, CardHeader, CardTitle, Text } from '~/components/ui';
 import { ItemTypes } from '~/types/item-type.enum';
 import { TableItemsBox } from '~/components/TableItemsBox';
@@ -28,7 +28,7 @@ export default function TableDetail() {
       setIsLoading(true);
       setError(null);
       console.log('Fetching table with ID:', id);
-      const data = await tablesApi.getById(id as string);
+      const data = await tableApiService.get(id as string);
       setTable(data);
       data?.orders?.forEach((order) => {
         order.orderItems?.forEach((item) => {
@@ -49,12 +49,6 @@ export default function TableDetail() {
               break;
           }
         });
-      })
-      console.log({
-        drinks,
-        starters,
-        mains,
-        desserts
       })
     } catch (err) {
       console.error('Error in loadTable:', err);

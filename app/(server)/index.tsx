@@ -4,7 +4,7 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import { Table } from '~/types/table.types';
 import { Card, CardContent, CardHeader, CardTitle, Text } from '~/components/ui';
-import { tablesApi } from '~/api/tables.api';
+import { tableApiService } from '~/api/table.api';
 import { getStatusColor, getStatusText } from '~/lib/utils';
 import { router } from 'expo-router';
 import Room from '~/components/Room/Room';
@@ -25,7 +25,7 @@ export default function ServerHome() {
   const loadTables = async () => {
     try {
       setIsLoading(true);
-      const data = await tablesApi.getAll();
+      const { data } = await tableApiService.getAll();
       setTables(data);
       setError(null);
     } catch (err) {

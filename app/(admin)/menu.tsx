@@ -2,23 +2,23 @@ import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "re
 import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Item } from "~/types/item.types";
+import { Item, filterItem } from "~/types/item.types";
 import { ItemTypes } from "~/types/item-type.enum";
-import { itemsApi } from "~/api/items.api";
-import { itemTypeApi } from "~/api/itemTypes.api";
+import { itemApiService } from "~/api/item.api";
+import { itemTypeApiService } from "~/api/item-type.api";
 import { cn, getItemTypeText } from "~/lib/utils";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { ItemTable } from "~/components/admin/ItemTable";
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
-import { ItemTypeTypes } from '~/types/item-type.types';
+import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/types/filter.types';
 
 export default function MenuPage() {
   // State management
   const [activeTab, setActiveTab] = useState<string>("ALL");
   const [items, setItems] = useState<Item[]>([]);
-  const [itemTypes, setItemTypes] = useState<ItemTypeTypes[]>([]);
+  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [title, setTitle] = useState('Filtrage');
   const [isEditing, setIsEditing] = useState(false);
@@ -40,31 +40,6 @@ export default function MenuPage() {
   const [selectedOption, setSelectedOption] = useState(defaultOption);
   const columnWidths = ['65%', '15%', '15%', '5%'] as DimensionValue[];
 
-  // Filter configuration
-  const filterItem: FilterConfig<Item>[] = [
-    { 
-      field: 'name', 
-      type: 'text',
-      label: 'Nom'
-    },
-    { 
-      field: 'price', 
-      type: 'number',
-      label: 'Prix',
-      operator: 'between'
-    },
-    { 
-      field: 'itemTypeId', 
-      type: 'select',
-      label: 'Type',
-      operator: 'in',
-      options: itemTypes.map(type => ({ 
-        label: type.name, 
-        value: type.id || '' 
-      })),
-    }
-  ];
-
   const {
     data,
     loading,
@@ -81,8 +56,8 @@ export default function MenuPage() {
       try {
         setIsLoading(true);
         const [itemsResponse, typesResponse] = await Promise.all([
-          itemsApi.getItems(''),
-          itemTypeApi.getItemTypes()
+          itemApiService.getAll(),
+          itemTypeApiService.getAll()
         ]);
         setItems(itemsResponse.data);
         setItemTypes(typesResponse.data);
@@ -157,10 +132,10 @@ export default function MenuPage() {
 
     try {
       if (isEditing && item.id) {
-        await itemsApi.updateItem(item.id, item);
+        await itemApiService.update(item.id, item);
         setItems(items.map(i => i.id === item.id ? item : i));
       } else {
-        const newItem = await itemsApi.createItem(item);
+        const newItem = await itemApiService.create(item);
         setItems([...items, newItem]);
       }
       handleCancelEditorCreate();
@@ -172,7 +147,7 @@ export default function MenuPage() {
 
   const submitItemDelete = async (id: string) => {
     try {
-      await itemsApi.deleteItem(id);
+      await itemApiService.delete(id);
       setItems(items.filter(item => item.id !== id));
     } catch (err) {
       console.error('Error in deleteItem:', err);
@@ -184,7 +159,7 @@ export default function MenuPage() {
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
-          <FilterBar
+          {/* <FilterBar
             config={filterItem}
             onUpdateFilter={updateFilter}
             onClearFilters={() => {
@@ -192,7 +167,7 @@ export default function MenuPage() {
               clearFilters()
             }}
             activeFilters={queryParams.filters || []}
-          />
+          /> */}
         </View>
       );
     }

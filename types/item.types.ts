@@ -1,4 +1,5 @@
 import { ItemTypeTypes } from '~/types/item-type.types';
+import { FilterConfig } from '~/types/filter.types';
 
 export type Item = {
   id?: string;
@@ -9,3 +10,17 @@ export type Item = {
   itemType: ItemTypeTypes;
   itemTypeId?: string;
 };
+
+export const filterItem: FilterConfig<Item>[] = [
+  { 
+    field: 'name', 
+    type: 'text',
+    label: 'Nom',
+  },
+  { 
+    field: 'price', 
+    type: 'number',
+    label: 'Prix',
+    operator: 'between',
+  }
+];

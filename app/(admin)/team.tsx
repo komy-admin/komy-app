@@ -4,7 +4,7 @@ import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Team, filterTeam } from "~/types/team.types";
 import { TeamTypes } from "~/types/team.enum";
-import { teamsApi } from "~/api/teams.api";
+import { teamApiService } from "~/api/team.api";
 import { getTeamTypeText, getEnumValue } from "~/lib/utils";
 import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
@@ -45,7 +45,7 @@ export default function TeamPage() {
     const loadTeams = async () => {
       try {
         setIsLoading(true);
-        const { data } = await teamsApi.getTeams();
+        const { data } = await teamApiService.getAll();
         setTeams(data);
       } catch (err) {
         console.error('Error loading teams:', err);
@@ -139,10 +139,10 @@ export default function TeamPage() {
 
     try {
       if (isEditing && team.id) {
-        await teamsApi.updateItem(team.id, team);
+        await teamApiService.update(team.id, team);
         setTeams(teams.map(t => t.id === team.id ? team : t));
       } else {
-        const newItem = await teamsApi.createItem(team);
+        const newItem = await teamApiService.create(team);
         setTeams([...teams, newItem]);
       }
       handleCancelEditorCreate();
@@ -154,7 +154,7 @@ export default function TeamPage() {
 
   const submitTeamDelete = async (id: string) => {
     try {
-      await teamsApi.deleteItem(id);
+      await teamApiService.delete(id);
       setTeams(teams.filter(t => t.id !== id));
     } catch (err) {
       console.error('Error in deleteTeam:', err);
@@ -172,12 +172,12 @@ export default function TeamPage() {
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
-          <FilterBar
+          {/* <FilterBar
             config={filterTeam}
             onUpdateFilter={updateFilter}
             onClearFilters={clearFilters}
             activeFilters={queryParams.filters || []}
-          />
+          /> */}
         </View>
       )
     }
