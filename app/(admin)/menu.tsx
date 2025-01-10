@@ -159,7 +159,7 @@ export default function MenuPage() {
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
-          <FilterBar
+          {/* <FilterBar
             config={filterItem}
             onUpdateFilter={updateFilter}
             onClearFilters={() => {
@@ -167,7 +167,7 @@ export default function MenuPage() {
               clearFilters()
             }}
             activeFilters={queryParams.filters || []}
-          />
+          /> */}
         </View>
       );
     }
