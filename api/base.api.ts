@@ -1,22 +1,32 @@
 import axios, { AxiosInstance } from "axios";
+import { Platform } from "react-native";
+import { StorageInterface, storageService } from "~/lib/storageService";
 import { QueryParams } from "~/types/filter.types";
 
+const DEV_API_URL = Platform.select({
+  android: 'http://192.168.1.136:3333/api',
+  ios: 'http://192.168.1.136:3333/api',
+  web: 'http://localhost:3333/api'
+});
 export abstract class BaseApiService<T> {
   protected abstract endpoint: string;
   protected axiosInstance: AxiosInstance;
+  protected storage: StorageInterface;
 
   constructor(baseURL: string = 'http://localhost:3333/api') {
     this.axiosInstance = axios.create({
-      baseURL,
+      baseURL: DEV_API_URL ? DEV_API_URL : baseURL,
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
+    this.storage = storageService
+
     // Ajout de l'intercepteur directement dans le constructeur de base
     this.axiosInstance.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('token');
+      async (config) => {
+        const token = await this.storage.getItem('token');
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }

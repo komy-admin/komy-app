@@ -172,12 +172,12 @@ export default function TeamPage() {
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 16 }}>
-          <FilterBar
+          {/* <FilterBar
             config={filterTeam}
             onUpdateFilter={updateFilter}
             onClearFilters={clearFilters}
             activeFilters={queryParams.filters || []}
-          />
+          /> */}
         </View>
       )
     }

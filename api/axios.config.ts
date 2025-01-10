@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { storageService } from '~/lib/storageService';
 
 const BASE_URL = 'http://localhost:3333/api';
 
@@ -10,11 +11,13 @@ export const axiosInstance = axios.create({
   },
 });
 
+const storage = storageService
+
 // Intercepteurs si nécessaire
 axiosInstance.interceptors.request.use(
   (config) => {
     // Ajouter le token par exemple
-    const token = localStorage.getItem('token');
+    const token = storage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

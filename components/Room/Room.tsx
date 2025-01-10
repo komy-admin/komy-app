@@ -54,7 +54,6 @@ const Room: React.FC<RoomProps> = ({ tables, zoom, editingTableId, editionMode =
   }
 
   const handleBackgroundPress = () => {
-    console.log('onelaa')
     onTablePress('');
   };
 

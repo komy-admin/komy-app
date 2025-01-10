@@ -9,16 +9,16 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     this.setupAuthInterceptor();
   }
 
-  private setToken(token: string): void {
-    localStorage.setItem('token', token);
+  private async setToken(token: string): Promise<void> {
+    await this.storage.setItem('token', token);
   }
 
-  private removeToken(): void {
-    localStorage.removeItem('token');
+  private async removeToken(): Promise<void> {
+    await this.storage.removeItem('token');
   }
 
-  public getToken(): string | null {
-    return localStorage.getItem('token');
+  public async getToken(): Promise<string | null> {
+    return this.storage.getItem('token');
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -27,7 +27,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         `${this.endpoint}/login`,
         credentials
       );
-      this.setToken(data.token.token);
+      await this.setToken(data.token.token);
       return data;
     } catch (err) {
       console.error('Error in login:', err);
@@ -41,7 +41,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         `${this.endpoint}/register`,
         credentials
       );
-      this.setToken(data.token.token);
+      await this.setToken(data.token.token);
       return data;
     } catch (err) {
       console.error('Error in register:', err);
@@ -54,7 +54,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       const { data } = await this.axiosInstance.post<AuthResponse>(
         `${this.endpoint}/refresh`
       );
-      this.setToken(data.token.token);
+      await this.setToken(data.token.token);
       return data;
     } catch (err) {
       console.error('Error in refreshToken:', err);
