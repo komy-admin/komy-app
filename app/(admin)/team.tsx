@@ -39,7 +39,7 @@ export default function TeamPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState<Team | null>(null);
   
-  const columnWidths = ['20%', '20%', '30%', '20%', '10%'] as DimensionValue[];
+  const columnWidths = ['15%', '20%', '20%', '20%', '15%', '5%'] as DimensionValue[];
 
   useEffect(() => {
     const loadTeams = async () => {
@@ -272,13 +272,16 @@ export default function TeamPage() {
     return null
   }
 
+  const { width } = useWindowDimensions();
+
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel title={title}>
+      <SidePanel title={title} width={width / 4}>
         {renderSidePanelContent()}
       </SidePanel>
       <View style={{ flex: 1 }}>
         <Tabs
+          style={{ flex: 1 }}
           value={activeTab}
           onValueChange={(newValue: string) => {
              // !!!!
@@ -333,7 +336,7 @@ export default function TeamPage() {
               </Text>
             </Button>
           </View>
-          <TabsContent value={activeTab}>
+          <TabsContent style={{ flex: 1 }} value={activeTab}>
             <TeamTable 
               data={teams}
               columnWidths={columnWidths}

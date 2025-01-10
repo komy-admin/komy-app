@@ -89,4 +89,17 @@ const TableCell = React.forwardRef<TablePrimitive.CellRef, TablePrimitive.CellPr
 );
 TableCell.displayName = 'TableCell';
 
+interface ColumnData {
+  label: string;
+  width: number;
+  key: string;
+}
+interface ForkTableProps {
+  data: any[];
+  columns: ColumnData[];
+}
+const ForkTable = ({ data, columns }: ForkTableProps) => {
+
+}
+
 export { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow };
