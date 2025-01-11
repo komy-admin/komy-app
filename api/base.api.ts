@@ -39,10 +39,10 @@ export abstract class BaseApiService<T> {
   }
 
   // Obtenir tous les éléments avec pagination et filtres optionnels
-  async getAll(params?: QueryParams): Promise<{ data: T[], meta: any }> {
+  async getAll(params?: string): Promise<{ data: T[], meta: any }> {
     try {
-      const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
-      const url = `${this.endpoint}${queryString ? `?${queryString}` : ''}`;
+      // const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
+      const url = `${this.endpoint}${params ? `?${params}` : ''}`;
       const response = await this.axiosInstance.get<{ data: T[], meta: any }>(url);
       return response.data;
     } catch (error) {

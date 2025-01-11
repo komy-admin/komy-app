@@ -21,7 +21,7 @@ export type FilterConfig<T> = {
 export type FilterValue = {
   field: string;
   value: string | number | boolean | Date | (string | number)[] | [number, number];
-  operator: FilterOperator;
+  operator?: FilterOperator;
 }
 
 export interface QueryParams {

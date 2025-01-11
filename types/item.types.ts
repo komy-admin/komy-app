@@ -1,4 +1,4 @@
-import { ItemTypeTypes } from '~/types/item-type.types';
+import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/types/filter.types';
 
 export type Item = {
@@ -7,7 +7,7 @@ export type Item = {
   price: number;
   allergens?: string[];
   description?: string;
-  itemType: ItemTypeTypes;
+  itemType: ItemType;
   itemTypeId?: string;
 };
 
