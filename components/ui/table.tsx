@@ -1,7 +1,10 @@
 import * as TablePrimitive from '@rn-primitives/table';
 import * as React from 'react';
 import { cn } from '~/lib/utils';
-import { TextClassContext } from '~/components/ui/text';
+import { Text, TextClassContext } from '~/components/ui/text';
+import { DimensionValue, Pressable, ScrollView } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { Trash2 } from 'lucide-react-native';
 
 const Table = React.forwardRef<TablePrimitive.RootRef, TablePrimitive.RootProps>(
   ({ className, ...props }, ref) => (
@@ -91,15 +94,98 @@ TableCell.displayName = 'TableCell';
 
 interface ColumnData {
   label: string;
-  width: number;
   key: string;
+  width: string;
 }
 interface ForkTableProps {
   data: any[];
   columns: ColumnData[];
+  onRowPress?: (id : string) => void
+  onRowDelete?: (id: string) => void
 }
-const ForkTable = ({ data, columns }: ForkTableProps) => {
-
+const ForkTable = ({ data, columns, onRowPress, onRowDelete }: ForkTableProps) => {
+  const DELETE_COLUMN_WIDTH = 10;
+  
+  const adjustedColumns = columns.map(col => {
+    if (!onRowDelete) return col;
+    
+    const currentWidth = parseFloat(col.width);
+    const adjustedWidth = (currentWidth / 100) * (100 - DELETE_COLUMN_WIDTH);
+    
+    return {
+      ...col,
+      width: `${adjustedWidth}%`
+    };
+  });
+  return (
+    <Table style={{ flex: 1 }}>
+      <TableHeader>
+        <TableRow>
+          {adjustedColumns.map((column, columnIndex) => (
+            <TableHead 
+              key={`header-${column.key}-${columnIndex}`}
+              style={{ width: column.width as DimensionValue }}
+            >
+              <Text>{ column.label }</Text>
+            </TableHead>
+          ))}
+          {onRowDelete && (
+            <TableHead 
+              key="header-delete"
+              style={{ width: `${DELETE_COLUMN_WIDTH}%` }}
+            />
+          )}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <FlashList
+          data={data}
+          estimatedItemSize={10}
+          showsVerticalScrollIndicator={false}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item, index }) => {
+            return (
+              <TableRow
+                key={`row-${item.id}`}
+                className={cn('active:bg-secondary', index % 2 && 'bg-muted/40 ')}
+                style={{ flex: 1 }}
+              >
+                <Pressable 
+                  onPress={() => onRowPress && onRowPress(item.id)}
+                  style={{ flex: 1}}
+                  className="flex-row items-center justify-center">
+                  {adjustedColumns.map((column, cellIndex) => (
+                    <TableCell 
+                      key={`cell-${item.id}-${column.key}-${cellIndex}`}
+                      style={{ width: column.width as DimensionValue }}
+                    >
+                      <Text>{item[column.key]}</Text>
+                    </TableCell>
+                  ))}
+                  {onRowDelete && (
+                    <TableCell 
+                      key={`cell-delete-${item.id}`}
+                      style={{ width: `${DELETE_COLUMN_WIDTH}%` }}
+                    >
+                      <Pressable
+                        onPress={() => onRowDelete(item.id)}
+                        className="items-center justify-center w-full"
+                      >
+                        <Trash2
+                          size={20} 
+                          className="text-destructive hover:text-destructive/80"
+                        />
+                      </Pressable>
+                    </TableCell>
+                  )}
+                </Pressable>
+              </TableRow>
+            );
+          }}
+        />
+      </TableBody>
+    </Table>
+  )
 }
 
-export { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow };
+export { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow, ForkTable };

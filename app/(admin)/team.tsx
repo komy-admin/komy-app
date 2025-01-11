@@ -1,5 +1,5 @@
 import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
-import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button, } from "~/components/ui";
+import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button, ForkTable, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Team, filterTeam } from "~/types/team.types";
@@ -38,8 +38,6 @@ export default function TeamPage() {
   const [title, setTitle] = useState('Filtrage');
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState<Team | null>(null);
-  
-  const columnWidths = ['15%', '20%', '20%', '20%', '15%', '5%'] as DimensionValue[];
 
   useEffect(() => {
     const loadTeams = async () => {
@@ -90,8 +88,11 @@ export default function TeamPage() {
     });
   };
 
-  const handleEditTeam = (team: Team) => {
+  const handleEditTeam = (id: string) => {
+    console.log('modif', id)
     setTitle('Modification d\'un utilisateur');
+    const team = teams.find(team => team.id === id)
+    if (!team) return
     setIsEditing(true);
     setCurrentItem(team);
     const teamTypeKey = Object.keys(TeamTypes).find(
@@ -274,6 +275,7 @@ export default function TeamPage() {
 
   const { width } = useWindowDimensions();
 
+  const columnWidths = ['15%', '20%', '20%', '20%', '15%', '5%'] as DimensionValue[];
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <SidePanel title={title} width={width / 4}>
@@ -337,11 +339,37 @@ export default function TeamPage() {
             </Button>
           </View>
           <TabsContent style={{ flex: 1 }} value={activeTab}>
-            <TeamTable 
+            <ForkTable 
               data={teams}
-              columnWidths={columnWidths}
+              columns={[
+                {
+                  label: 'Profil',
+                  key: 'profil',
+                  width: '20%',
+                },
+                {
+                  label: 'Prénom',
+                  key: 'firstName',
+                  width: '20%',
+                },
+                {
+                  label: 'Nom',
+                  key: 'lastName',
+                  width: '20%',
+                },
+                {
+                  label: 'Email',
+                  key: 'email',
+                  width: '20%',
+                },
+                {
+                  label: 'Téléphone',
+                  key: 'phone',
+                  width: '20%',
+                },
+              ]}
               onRowPress={handleEditTeam}
-              deleteItem={submitTeamDelete}
+              onRowDelete={submitTeamDelete}
             />
           </TabsContent>
         </Tabs>
