@@ -1,5 +1,5 @@
 import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
-import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button, ForkTable, } from "~/components/ui";
+import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Team, filterTeam } from "~/types/team.types";
@@ -9,7 +9,6 @@ import { getTeamTypeText, getEnumValue } from "~/lib/utils";
 import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
-import { TeamTable } from "~/components/admin/TeamTable"
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
 
@@ -89,7 +88,6 @@ export default function TeamPage() {
   };
 
   const handleEditTeam = (id: string) => {
-    console.log('modif', id)
     setTitle('Modification d\'un utilisateur');
     const team = teams.find(team => team.id === id)
     if (!team) return
@@ -273,9 +271,36 @@ export default function TeamPage() {
     return null
   }
 
-  const { width } = useWindowDimensions();
+  const { width } = useWindowDimensions()
 
-  const columnWidths = ['15%', '20%', '20%', '20%', '15%', '5%'] as DimensionValue[];
+  const teamTableColumns = [
+    {
+      label: 'Profil',
+      key: 'profil',
+      width: '20%',
+    },
+    {
+      label: 'Prénom',
+      key: 'firstName',
+      width: '20%',
+    },
+    {
+      label: 'Nom',
+      key: 'lastName',
+      width: '20%',
+    },
+    {
+      label: 'Email',
+      key: 'email',
+      width: '20%',
+    },
+    {
+      label: 'Téléphone',
+      key: 'phone',
+      width: '20%',
+    },
+  ]
+
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <SidePanel title={title} width={width / 4}>
@@ -341,33 +366,7 @@ export default function TeamPage() {
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             <ForkTable 
               data={teams}
-              columns={[
-                {
-                  label: 'Profil',
-                  key: 'profil',
-                  width: '20%',
-                },
-                {
-                  label: 'Prénom',
-                  key: 'firstName',
-                  width: '20%',
-                },
-                {
-                  label: 'Nom',
-                  key: 'lastName',
-                  width: '20%',
-                },
-                {
-                  label: 'Email',
-                  key: 'email',
-                  width: '20%',
-                },
-                {
-                  label: 'Téléphone',
-                  key: 'phone',
-                  width: '20%',
-                },
-              ]}
+              columns={teamTableColumns}
               onRowPress={handleEditTeam}
               onRowDelete={submitTeamDelete}
             />
