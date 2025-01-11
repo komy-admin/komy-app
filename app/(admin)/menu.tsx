@@ -1,5 +1,6 @@
 import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
 import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button } from "~/components/ui";
+import { NumberInput } from "~/components/ui/input_number";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Item, filterItem } from "~/types/item.types";
@@ -181,6 +182,7 @@ export default function MenuPage() {
             fontSize: 14,
             color: '#2A2E33',
             backgroundColor: '#F1F1F1',
+            marginVertical: 4,
             padding: 5,
             paddingLeft: 16,
           }}>
@@ -231,24 +233,17 @@ export default function MenuPage() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <input
-                type="number"
-                placeholder="0.00 €"
+              <NumberInput
                 value={formData.price}
-                onChange={(e) => setFormData(prev => ({ 
+                onChangeText={(value) => setFormData(prev => ({
                   ...prev, 
-                  price: e.target.value === '' ? 0 : parseFloat(e.target.value)
+                  price: value === null ? 0 : value
                 }))}
-                style={{
-                  marginTop: '8px',
-                  marginBottom: '8px',
-                  padding: '8px',
-                  border: '1px solid #D7D7D7',
-                  borderRadius: '5px',
-                  backgroundColor: '#FFFFFF',
-                  fontWeight: '300',
-                  color: '#2A2E33',
-                }}
+                decimalPlaces={2}
+                min={0}
+                max={1000}
+                currency="€"
+                placeholder="0.00"
               />
             </View>
             <View>

@@ -190,6 +190,7 @@ export default function TeamPage() {
             fontSize: 14,
             color: '#2A2E33',
             backgroundColor: '#F1F1F1',
+            marginVertical: 4,
             padding: 5,
             paddingLeft: 16,
           }}>
