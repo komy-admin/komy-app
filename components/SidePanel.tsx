@@ -41,13 +41,8 @@ export function SidePanel({
   };
 
   const getHeaderStyle = () => {
-    if (title === 'Filtrage') {
-      return {
-        backgroundColor: '#F1F1F1',
-      };
-    }
     return {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: '#F1F1F1',
     };
   };
 
@@ -73,8 +68,8 @@ export function SidePanel({
               ...getHeaderStyle()
             }}
           >
-            <View style={{width: 300}}>
-              <Text className="font-bold text-lg" style={{ width:'100%' }}>{title}</Text>
+            <View style={{flex: 1}}>
+              <Text className="font-bold text-lg" style={{ flex: 1 }}>{title}</Text>
             </View>
             <Pressable onPress={toggleCollapse}>
               <X size={24} color="#2A2E33" />
@@ -98,9 +93,7 @@ export function SidePanel({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FBFBFB',
-    borderRightWidth: 1,
-    borderRightColor: '#e0e0e0',
+    backgroundColor: '#F8F9FA',
     zIndex: 1000
   },
   content: {

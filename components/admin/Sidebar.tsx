@@ -2,15 +2,15 @@
 import { Href, Link } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { View, Pressable } from 'react-native';
-import { BookOpen, Users, DoorClosed, NotepadText, CookingPot } from 'lucide-react-native';
+import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText,} from 'lucide-react-native';
 import { Text } from '../ui';
 
 const NAV_ITEMS = [
-  { href: '/service', icon: NotepadText, label: 'Service' },
- { href: '/menu', icon: BookOpen, label: 'Menu' },
- { href: '/team', icon: Users, label: 'Équipe' },
- { href: '/room', icon: DoorClosed, label: 'Salles' },
- { href: '/kitchen', icon: CookingPot, label: 'Cuisine' },
+  { href: '/service', icon: Grid3X3Icon, label: 'Service' },
+  { href: '/room', icon: LayoutDashboard, label: 'Salles' },
+  { href: '/menu', icon: NotebookText, label: 'Menu' },
+  { href: '/team', icon: Users, label: 'Équipe' },
+  { href: '/kitchen', icon: ChefHat, label: 'Cuisine' },
 ];
 
 export function AdminSidebar() {
@@ -29,7 +29,12 @@ export function AdminSidebar() {
             <View className="flex items-center justify-center rounded-md w-[70px] h-[70px]" style={isActive ? {backgroundColor: '#54575B', opacity: 1} : {}}>
               <Icon 
                 size={30} 
-                color={isActive ? 'white' : 'gray'} 
+                color={isActive ? 'white' : 'gray'}
+                strokeWidth= {1.5} 
+                style={{
+                  marginBottom: 2,
+                  opacity: isActive ? 1 : 0.8,
+                }}
               />
               <Text 
                 className="text-xs mt-1 text-white"

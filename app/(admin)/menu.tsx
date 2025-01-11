@@ -1,5 +1,6 @@
 import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
-import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell, Button } from "~/components/ui";
+import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable } from "~/components/ui";
+import { NumberInput } from "~/components/ui/input_number";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Item, filterItem } from "~/types/item.types";
@@ -8,7 +9,6 @@ import { itemApiService } from "~/api/item.api";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { cn, getItemTypeText } from "~/lib/utils";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
-import { ItemTable } from "~/components/admin/ItemTable";
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
 import { ItemType } from '~/types/item-type.types';
@@ -38,7 +38,6 @@ export default function MenuPage() {
   };
   
   const [selectedOption, setSelectedOption] = useState(defaultOption);
-  const columnWidths = ['65%', '15%', '15%', '5%'] as DimensionValue[];
 
   const {
     data,
@@ -92,8 +91,10 @@ export default function MenuPage() {
     });
   };
 
-  const handleEditItem = (item: Item) => {
+  const handleEditItem = (id: string) => {
     setTitle('Modification d\'un article');
+    const item = items.find(item => item.id === id)
+    if (!item) return
     setIsEditing(true);
     setCurrentItem(item);
     setSelectedOption({
@@ -181,6 +182,7 @@ export default function MenuPage() {
             fontSize: 14,
             color: '#2A2E33',
             backgroundColor: '#F1F1F1',
+            marginVertical: 4,
             padding: 5,
             paddingLeft: 16,
           }}>
@@ -231,24 +233,17 @@ export default function MenuPage() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <input
-                type="number"
-                placeholder="0.00 €"
+              <NumberInput
                 value={formData.price}
-                onChange={(e) => setFormData(prev => ({ 
+                onChangeText={(value) => setFormData(prev => ({
                   ...prev, 
-                  price: e.target.value === '' ? 0 : parseFloat(e.target.value)
+                  price: value === null ? 0 : value
                 }))}
-                style={{
-                  marginTop: '8px',
-                  marginBottom: '8px',
-                  padding: '8px',
-                  border: '1px solid #D7D7D7',
-                  borderRadius: '5px',
-                  backgroundColor: '#FFFFFF',
-                  fontWeight: '300',
-                  color: '#2A2E33',
-                }}
+                decimalPlaces={2}
+                min={0}
+                max={1000}
+                currency="€"
+                placeholder="0.00"
               />
             </View>
             <View>
@@ -277,13 +272,40 @@ export default function MenuPage() {
     return null;
   };
 
+  const { width } = useWindowDimensions()
+  
+  const itemTableColumns = [
+    {
+      label: 'Nom',
+      key: 'name',
+      width: '60%',
+    },
+    {
+      label: 'Prix',
+      key: 'price',
+      width: '20%',
+    },
+    {
+      label: 'Statut',
+      key: 'statut',
+      width: '15%',
+    },
+    {
+      label: '',
+      key: 'delete',
+      width: '5%',
+    },
+
+  ];
+
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel title={title}>
+      <SidePanel title={title} width={width / 5}>
         {renderSidePanelContent()}
       </SidePanel>
       <View style={{ flex: 1 }}>
         <Tabs
+          style={{ flex: 1 }}
           value={activeTab}
           onValueChange={(newValue: string) => {
             if (newValue !== 'ALL') {
@@ -334,12 +356,12 @@ export default function MenuPage() {
               </Text>
             </Button>
           </View>
-          <TabsContent value={activeTab}>
-            <ItemTable 
+          <TabsContent style={{ flex: 1 }} value={activeTab}>
+            <ForkTable 
               data={items}
-              columnWidths={columnWidths}
+              columns={itemTableColumns}
               onRowPress={handleEditItem}
-              deleteItem={submitItemDelete}
+              onRowDelete={submitItemDelete}
             />
           </TabsContent>
         </Tabs>

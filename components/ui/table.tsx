@@ -1,7 +1,10 @@
 import * as TablePrimitive from '@rn-primitives/table';
 import * as React from 'react';
 import { cn } from '~/lib/utils';
-import { TextClassContext } from '~/components/ui/text';
+import { Text, TextClassContext } from '~/components/ui/text';
+import { DimensionValue, Pressable, ScrollView } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { Trash2 } from 'lucide-react-native';
 
 const Table = React.forwardRef<TablePrimitive.RootRef, TablePrimitive.RootProps>(
   ({ className, ...props }, ref) => (
@@ -89,4 +92,101 @@ const TableCell = React.forwardRef<TablePrimitive.CellRef, TablePrimitive.CellPr
 );
 TableCell.displayName = 'TableCell';
 
-export { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow };
+interface ColumnData {
+  label: string;
+  key: string;
+  width: string;
+}
+interface ForkTableProps {
+  data: any[];
+  columns: ColumnData[];
+  onRowPress?: (id : string) => void
+  onRowDelete?: (id: string) => void
+}
+const ForkTable = ({ data, columns, onRowPress, onRowDelete }: ForkTableProps) => {
+  const DELETE_COLUMN_WIDTH = 10;
+  
+  const adjustedColumns = columns.map(col => {
+    if (!onRowDelete) return col;
+    
+    const currentWidth = parseFloat(col.width);
+    const adjustedWidth = (currentWidth / 100) * (100 - DELETE_COLUMN_WIDTH);
+    
+    return {
+      ...col,
+      width: `${adjustedWidth}%`
+    };
+  });
+  return (
+    <Table style={{ flex: 1 }}>
+      <TableHeader style={{ borderBottomWidth: 0.5, borderBottomColor: '#F1F1F1' }}>
+        <TableRow>
+          {adjustedColumns.map((column, columnIndex) => (
+            <TableHead 
+              key={`header-${column.key}-${columnIndex}`}
+              style={{ width: column.width as DimensionValue }}
+              className="px-3 flex justify-end pb-1"
+            >
+              <Text style={{ fontSize: 16, color: '#AAABAD', fontWeight: '100' }}>{ column.label }</Text>
+            </TableHead>
+          ))}
+          {onRowDelete && (
+            <TableHead 
+              key="header-delete"
+              style={{ width: `${DELETE_COLUMN_WIDTH}%` }}
+            />
+          )}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <FlashList
+          data={data}
+          estimatedItemSize={10}
+          showsVerticalScrollIndicator={false}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item, index }) => {
+            return (
+              <TableRow
+                key={`row-${item.id}`}
+                className={cn('active:bg-secondary', index % 2 && 'bg-muted/40 ')}
+                style={{ flex: 1, cursor: 'pointer' }}
+              >
+                <Pressable 
+                  onPress={() => onRowPress && onRowPress(item.id)}
+                  style={{ flex: 1}}
+                  className="flex-row items-center justify-center">
+                  {adjustedColumns.map((column, cellIndex) => (
+                    <TableCell
+                      key={`cell-${item.id}-${column.key}-${cellIndex}`}
+                      style={{ width: column.width as DimensionValue, borderBottomColor: '#F4F5F5', borderBottomWidth: 0.5,}}
+                    >
+                      <Text style={{ fontSize: 15, color: '#2A2E33', fontWeight: '100' }}>{item[column.key]}</Text>
+                    </TableCell>
+                  ))}
+                  {onRowDelete && (
+                    <TableCell 
+                      key={`cell-delete-${item.id}`}
+                      style={{ width: `${DELETE_COLUMN_WIDTH}%` }}
+                    >
+                      <Pressable
+                        onPress={() => onRowDelete(item.id)}
+                        className="items-center justify-center w-full"
+                      >
+                        <Trash2
+                          size={20} 
+                          className="text-destructive hover:text-destructive/80"
+                        />
+                      </Pressable>
+                    </TableCell>
+                  )}
+                </Pressable>
+              </TableRow>
+            );
+          }}
+        />
+      </TableBody>
+    </Table>
+  )
+}
+
+export { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow, ForkTable };
