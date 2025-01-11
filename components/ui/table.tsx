@@ -119,14 +119,15 @@ const ForkTable = ({ data, columns, onRowPress, onRowDelete }: ForkTableProps) =
   });
   return (
     <Table style={{ flex: 1 }}>
-      <TableHeader>
+      <TableHeader style={{ borderBottomWidth: 0.5, borderBottomColor: '#F1F1F1' }}>
         <TableRow>
           {adjustedColumns.map((column, columnIndex) => (
             <TableHead 
               key={`header-${column.key}-${columnIndex}`}
               style={{ width: column.width as DimensionValue }}
+              className="px-3 flex justify-end pb-1"
             >
-              <Text>{ column.label }</Text>
+              <Text style={{ fontSize: 16, color: '#AAABAD', fontWeight: '100' }}>{ column.label }</Text>
             </TableHead>
           ))}
           {onRowDelete && (
@@ -148,18 +149,18 @@ const ForkTable = ({ data, columns, onRowPress, onRowDelete }: ForkTableProps) =
               <TableRow
                 key={`row-${item.id}`}
                 className={cn('active:bg-secondary', index % 2 && 'bg-muted/40 ')}
-                style={{ flex: 1 }}
+                style={{ flex: 1, cursor: 'pointer' }}
               >
                 <Pressable 
                   onPress={() => onRowPress && onRowPress(item.id)}
                   style={{ flex: 1}}
                   className="flex-row items-center justify-center">
                   {adjustedColumns.map((column, cellIndex) => (
-                    <TableCell 
+                    <TableCell
                       key={`cell-${item.id}-${column.key}-${cellIndex}`}
-                      style={{ width: column.width as DimensionValue }}
+                      style={{ width: column.width as DimensionValue, borderBottomColor: '#F4F5F5', borderBottomWidth: 0.5,}}
                     >
-                      <Text>{item[column.key]}</Text>
+                      <Text style={{ fontSize: 15, color: '#2A2E33', fontWeight: '100' }}>{item[column.key]}</Text>
                     </TableCell>
                   ))}
                   {onRowDelete && (

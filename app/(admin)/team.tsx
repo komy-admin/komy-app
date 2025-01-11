@@ -304,7 +304,7 @@ export default function TeamPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel title={title} width={width / 4}>
+      <SidePanel title={title} width={width / 5}>
         {renderSidePanelContent()}
       </SidePanel>
       <View style={{ flex: 1 }}>
