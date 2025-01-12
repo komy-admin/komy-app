@@ -8,7 +8,7 @@ import { TeamApiService, teamApiService } from "~/api/team.api";
 import { getTeamTypeText, getEnumValue } from "~/lib/utils";
 import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
+import { ForkSelect } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
 
@@ -168,18 +168,18 @@ export default function TeamPage() {
       value: key,
       label,
     }));
-    if (title === 'Filtrage') {
-      return (
-        <View style={{ padding: 16 }}>
-          {/* <FilterBar
-            config={filterTeam}
-            onUpdateFilter={updateFilter}
-            onClearFilters={clearFilters}
-            activeFilters={queryParams.filters || []}
-          /> */}
-        </View>
-      )
-    }
+    // if (title === 'Filtrage') {
+    //   return (
+    //     <View style={{ padding: 16 }}>
+    //       {/* <FilterBar
+    //         config={filterTeam}
+    //         onUpdateFilter={updateFilter}
+    //         onClearFilters={clearFilters}
+    //         activeFilters={queryParams.filters || []}
+    //       /> */}
+    //     </View>
+    //   )
+    // }
     if (title.includes('utilisateur')) {
       return (
         <>
@@ -269,7 +269,29 @@ export default function TeamPage() {
         </>
       );
     }
-    return null
+    return (
+      <ForkSelect
+        style={{
+          marginLeft: 10,
+          marginRight: 10
+        }}
+        choices={[
+          {
+            label: 'Choix 1',
+            value: 'choice1',
+          },
+          {
+            label: 'Choix 2',
+            value: 'choice2',
+          }
+        ]}
+        selectedValue={{
+          label: 'Choix 1',
+          value: 'choice1',
+        }}
+        onValueChange={() => {}}
+      />
+    )
   }
 
   const { width } = useWindowDimensions()
