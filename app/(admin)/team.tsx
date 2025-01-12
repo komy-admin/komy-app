@@ -79,7 +79,6 @@ export default function TeamPage() {
 
   const handleEditTeam = (id: string) => {
     setTitle('Modification d\'un utilisateur');
-    // Utilisons data.data au lieu de teams
     const team = data?.data.find(team => team.id === id);
     if (!team) return;
     
@@ -132,11 +131,9 @@ export default function TeamPage() {
     try {
       if (isEditing && team.id) {
         await teamApiService.update(team.id, team);
-        // Rechargeons les données après la mise à jour
         updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
       } else {
         await teamApiService.create(team);
-        // Rechargeons les données après la création
         updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
       }
       handleCancelEditorCreate();
@@ -149,7 +146,6 @@ export default function TeamPage() {
   const submitTeamDelete = async (id: string) => {
     try {
       await teamApiService.delete(id);
-      // Rechargeons les données après la suppression
       updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
     } catch (err) {
       console.error('Error in deleteTeam:', err);
