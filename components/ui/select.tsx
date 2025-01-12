@@ -289,6 +289,14 @@ const ForkSelect: React.FC<SelectProps> = ({
   // } | null>(null);
 
   useEffect(() => {
+    if (selectedValue) {
+      setCurrentValue(selectedValue);
+    } else if (defaultValue) {
+      setCurrentValue(defaultValue);
+    }
+  }, [selectedValue, defaultValue]);
+
+  useEffect(() => {
     Animated.timing(dropdownAnimation, {
       toValue: isOpen ? 1 : 0,
       duration: 200,
@@ -391,7 +399,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
-    padding: 12,
+    padding: 9,
     backgroundColor: 'white',
     flexDirection: 'row',
     justifyContent: 'space-between',

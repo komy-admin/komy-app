@@ -108,9 +108,9 @@ export function NumberInput({
 
 const styles = StyleSheet.create({
   input: {
-    marginTop: 8,
-    marginBottom: 8,
-    padding: 8,
+    // marginTop: 8,
+    // marginBottom: 8,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#D7D7D7',
     borderRadius: 5,
