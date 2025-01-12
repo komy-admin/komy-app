@@ -1,16 +1,15 @@
 import { useState, useCallback } from 'react';
 import { FilterConfig, QueryParams, PaginatedResponse, FilterOperator } from '~/types/filter.types';
-import { axiosInstance } from '~/api/axios.config';
-
+import { BaseApiService} from "~/api/base.api";
 interface UseFilterProps<T> {
-  model: string;
   config: FilterConfig<T>[];
+  service: BaseApiService<T>;
   defaultParams?: Partial<QueryParams>;
 }
 
 export function useFilter<T>({
   config,
-  model,
+  service,
   defaultParams = { page: 1, limit: 10 }
 }: UseFilterProps<T>) {
   const [data, setData] = useState<PaginatedResponse<T>>({
@@ -26,7 +25,7 @@ export function useFilter<T>({
 
   const fetchData = async (queryString: string): Promise<PaginatedResponse<T>> => {
     const params = new URLSearchParams(queryString);
-    const response = await getData(params, model);
+    const response = await getData(params, service);
     return response;
   };
 
@@ -42,7 +41,7 @@ export function useFilter<T>({
     } finally {
       setLoading(false);
     }
-  }, [model]);
+  }, [service]);
 
   const updateFilter = useCallback((field: string, value: any, operator?: string) => {
     // const filterConfig = config.find(c => c.field === field);
@@ -106,10 +105,10 @@ export function useFilter<T>({
   };
 }
 
-async function getData(params: URLSearchParams, model: string): Promise<PaginatedResponse<any>> {
+async function getData<T>(params: URLSearchParams, service: BaseApiService<T> ): Promise<PaginatedResponse<T>> {
   try {
-    const response = await axiosInstance.get(`/${model}?${params}`);
-    return response.data;
+    const { data, meta } = await service.getAll(params.toString());
+    return { data, meta };
   } catch (err) {
     console.error('Error in getData:', err);
     return { data: [], meta: {} };

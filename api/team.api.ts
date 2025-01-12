@@ -1,6 +1,5 @@
-import { BaseApiService } from "./base.api";
+import { BaseApiService } from "~/api/base.api";
 import { Team } from "~/types/team.types";
-
 export class TeamApiService extends BaseApiService<Team> {
   protected endpoint = '/user';
 }

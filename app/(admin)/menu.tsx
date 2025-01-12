@@ -5,7 +5,7 @@ import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Item, filterItem } from "~/types/item.types";
 import { ItemTypes } from "~/types/item-type.enum";
-import { itemApiService } from "~/api/item.api";
+import { itemApiService, ItemApiService } from "~/api/item.api";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { cn, getItemTypeText } from "~/lib/utils";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
@@ -47,7 +47,7 @@ export default function MenuPage() {
     clearFilters,
     changePage,
     queryParams
-  } = useFilter({ config: filterItem, model: 'item' });
+  } = useFilter({ config: filterItem, service: itemApiService as ItemApiService });
 
   // Load initial data
   useEffect(() => {

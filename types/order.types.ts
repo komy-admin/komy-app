@@ -8,7 +8,8 @@ export type Order = {
   tableId: string;
   table: Table;
   orderItems: OrderItem[];
-  status: string;
+  statusId: string;
+  status: {};
   account: string;
   createdAt: string;
   updatedAt: string;

@@ -4,7 +4,7 @@ import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Team, filterTeam } from "~/types/team.types";
 import { TeamTypes } from "~/types/team.enum";
-import { teamApiService } from "~/api/team.api";
+import { TeamApiService, teamApiService } from "~/api/team.api";
 import { getTeamTypeText, getEnumValue } from "~/lib/utils";
 import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
@@ -64,7 +64,7 @@ export default function TeamPage() {
     clearFilters,
     changePage,
     queryParams
-  } = useFilter({ config: filterTeam, model: 'user' });
+  } = useFilter({ config: filterTeam, service: teamApiService as TeamApiService });
 
   useEffect(() => { 
     if (data) {
