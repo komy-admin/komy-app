@@ -263,7 +263,7 @@ interface SelectProps {
   selectedValue?: Choice;
   defaultValue?: Choice;
   placeholder?: string;
-  onValueChange?: (choice: Choice) => void;
+  onValueChange: (choice: Choice) => void;
   maxHeight?: number;
   style?: object
 }
@@ -282,14 +282,6 @@ const ForkSelect: React.FC<SelectProps> = ({
   const selectRef = useRef<View>(null);
 
   useEffect(() => {
-    if (selectedValue) {
-      setCurrentValue(selectedValue);
-    } else if (defaultValue) {
-      setCurrentValue(defaultValue);
-    }
-  }, [selectedValue, defaultValue]);
-
-  useEffect(() => {
     Animated.timing(dropdownAnimation, {
       toValue: isOpen ? 1 : 0,
       duration: 200,
@@ -302,7 +294,7 @@ const ForkSelect: React.FC<SelectProps> = ({
   };
 
   const handleSelect = (choice: Choice) => {
-    onValueChange?.(choice);
+    onValueChange(choice);
     setIsOpen(false);
   };
 

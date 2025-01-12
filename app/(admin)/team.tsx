@@ -10,16 +10,14 @@ import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
 import { ForkSelect } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
-import { useFilter } from '~/components/filters/useFilter';
-import { TextInput } from 'react-native';
+import { useFilter } from "~/hooks/useFilter";
 
 export default function TeamPage() {
   const [activeTab, setActiveTab] = useState<TeamTypes>(TeamTypes.ALL);
-  const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Table par defaut
-  const [value, setValue] = useState(TeamTypes.ALL);
-  // Informations Team
+  const [title, setTitle] = useState('Filtrage');
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentItem, setCurrentItem] = useState<Team | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -35,26 +33,6 @@ export default function TeamPage() {
   };
   
   const [selectedOption, setSelectedOption] = useState(defaultOption);
-  const [title, setTitle] = useState('Filtrage');
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentItem, setCurrentItem] = useState<Team | null>(null);
-
-  useEffect(() => {
-    const loadTeams = async () => {
-      try {
-        setIsLoading(true);
-        const { data } = await teamApiService.getAll();
-        setTeams(data);
-      } catch (err) {
-        console.error('Error loading teams:', err);
-        Alert.alert('Error', 'Failed to load teams');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadTeams();
-  }, []);
 
   // filtre
   const {
@@ -65,11 +43,16 @@ export default function TeamPage() {
     clearFilters,
     changePage,
     queryParams
-  } = useFilter({ config: filterTeam, service: teamApiService as TeamApiService });
+  } = useFilter({ config: [...filterTeam, {
+    field: 'profil',
+    type: 'select',
+    label: 'Profile'
+  }], service: teamApiService });
 
-  useEffect(() => { 
+
+  useEffect(() => {
     if (data) {
-      setTeams(data.data) 
+      setIsLoading(false);
     }
   }, [data]);
 
@@ -88,12 +71,21 @@ export default function TeamPage() {
     });
   };
 
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Error', 'Failed to load filtered data');
+    }
+  }, [error]);
+
   const handleEditTeam = (id: string) => {
     setTitle('Modification d\'un utilisateur');
-    const team = teams.find(team => team.id === id)
-    if (!team) return
+    // Utilisons data.data au lieu de teams
+    const team = data?.data.find(team => team.id === id);
+    if (!team) return;
+    
     setIsEditing(true);
     setCurrentItem(team);
+    
     const teamTypeKey = Object.keys(TeamTypes).find(
       key => TeamTypes[key as keyof typeof TeamTypes] === team.profil
     );
@@ -136,14 +128,16 @@ export default function TeamPage() {
       profil: selectedValue as TeamTypes,
       ...formData,
     };
-
+  
     try {
       if (isEditing && team.id) {
         await teamApiService.update(team.id, team);
-        setTeams(teams.map(t => t.id === team.id ? team : t));
+        // Rechargeons les données après la mise à jour
+        updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
       } else {
-        const newItem = await teamApiService.create(team);
-        setTeams([...teams, newItem]);
+        await teamApiService.create(team);
+        // Rechargeons les données après la création
+        updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
       }
       handleCancelEditorCreate();
     } catch (err) {
@@ -151,11 +145,12 @@ export default function TeamPage() {
       Alert.alert('Error', 'Failed to save team');
     }
   };
-
+  
   const submitTeamDelete = async (id: string) => {
     try {
       await teamApiService.delete(id);
-      setTeams(teams.filter(t => t.id !== id));
+      // Rechargeons les données après la suppression
+      updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
     } catch (err) {
       console.error('Error in deleteTeam:', err);
       Alert.alert('Error', 'Failed to delete team');
@@ -182,75 +177,93 @@ export default function TeamPage() {
       )
     }
     if (title.includes('utilisateur')) {
-      return (
-        <>
-          <Text style={{
-            textTransform: 'uppercase',
-            fontWeight: '700',
-            fontSize: 14,
-            color: '#2A2E33',
-            backgroundColor: '#F1F1F1',
-            marginVertical: 4,
-            padding: 5,
-            paddingLeft: 16,
-          }}>
-            Informations
-          </Text>
-          <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <View>
-              <View className="flex flex-row gap-4">
-                <TextInput
-                  value={formData.firstName}
-                  onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
-                  placeholder='Prénom'
-                  className="flex-1"
-                  style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
-                />
-                <TextInput
-                  value={formData.lastName}
-                  onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
-                  placeholder='Nom'
-                  className="flex-1"
-                  style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
-                />
-              </View>
-              <ForkSelect
-                style={{ marginVertical: 8 }}
-                choices={teamTypesArray}
-                selectedValue={selectedOption}
-                onValueChange={(value) => { if (value) setSelectedOption(value) }}
-              />
-              {['email', 'phone', 'loginId', 'password'].map((field) => (
-                <TextInput
-                  key={field}
-                  value={formData[field as keyof typeof formData]}
-                  onChangeText={(text: string) => setFormData(prev => ({ ...prev, [field]: text }))}
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-                  style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
-                />
-              ))}
-            </View>
-            <View>
-              <Button
-                onPress={submitTeamAction}
-                style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
-              >
-                <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
-                  {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
-                </Text>
-              </Button>
-              <Button 
-                onPress={handleCancelEditorCreate} 
-                style={{ backgroundColor: '#FBFBFB', borderRadius: 0, marginTop: 5 }}
-              >
-                <Text style={{ color: '#2A2E33', fontWeight: '300', fontSize: 16, textDecorationLine: 'underline'}}>
-                  Annuler
-                </Text>
-              </Button>
-            </View>
-          </View>
-        </>
-      );
+      // return (
+      //   <>
+      //     <Text style={{
+      //       textTransform: 'uppercase',
+      //       fontWeight: '700',
+      //       fontSize: 14,
+      //       color: '#2A2E33',
+      //       backgroundColor: '#F1F1F1',
+      //       marginVertical: 4,
+      //       padding: 5,
+      //       paddingLeft: 16,
+      //     }}>
+      //       Informations
+      //     </Text>
+      //     <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      //       <View>
+      //         <View className="flex flex-row gap-2">
+      //           <Input
+      //             style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+      //             placeholder='Prénom'
+      //             value={formData.firstName}
+      //             onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
+      //           />
+      //           <Input
+      //             style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+      //             placeholder='Nom'
+      //             value={formData.lastName}
+      //             onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
+      //           />
+      //         </View>
+      //         <Select 
+      //           value={selectedOption} 
+      //           onValueChange={(value) => { if (value) setSelectedOption(value) }}
+      //         >
+      //           <SelectTrigger className='w-100'>
+      //             <SelectValue
+      //               className='text-foreground text-sm native:text-lg'
+      //               placeholder='Choisissez une catégorie'
+      //             />
+      //           </SelectTrigger>
+      //           <SelectContent className='w-100'>
+      //             <SelectGroup>
+      //               <SelectLabel>Rôles</SelectLabel>
+      //               {teamTypesArray.map(item => (
+      //                 <SelectItem 
+      //                   key={item.value} 
+      //                   label={getTeamTypeText(item.label as TeamTypes)} 
+      //                   value={item.value}
+      //                 >
+      //                   {item.label}
+      //                 </SelectItem>
+      //               ))}
+      //             </SelectGroup>
+      //           </SelectContent>
+      //         </Select>
+      //         {['email', 'phone', 'loginId', 'password'].map((field) => (
+      //           <Input
+      //             key={field}
+      //             style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+      //             placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+      //             value={formData[field as keyof typeof formData]}
+      //             onChangeText={(text: string) => setFormData(prev => ({ ...prev, [field]: text }))}
+      //             secureTextEntry={field === 'password'}
+      //           />
+      //         ))}
+      //       </View>
+      //       <View>
+      //         <Button
+      //           onPress={submitTeamAction}
+      //           style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
+      //         >
+      //           <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
+      //             {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
+      //           </Text>
+      //         </Button>
+      //         <Button 
+      //           onPress={handleCancelEditorCreate} 
+      //           style={{ backgroundColor: '#FBFBFB', borderRadius: 0, marginTop: 5 }}
+      //         >
+      //           <Text style={{ color: '#2A2E33', fontWeight: '300', fontSize: 16, textDecorationLine: 'underline'}}>
+      //             Annuler
+      //           </Text>
+      //         </Button>
+      //       </View>
+      //     </View>
+      //   </>
+      // );
     }
   }
 
@@ -294,12 +307,14 @@ export default function TeamPage() {
           style={{ flex: 1 }}
           value={activeTab}
           onValueChange={(newValue: string) => {
-             // !!!!
-              if (newValue !== 'Tous') updateFilter('profil', newValue)
-              else updateFilter('profil', '')
-              setActiveTab(newValue as TeamTypes)
+            setActiveTab(newValue as TeamTypes);
+            if (newValue === TeamTypes.ALL) {
+              clearFilters();
+            } else {
+              console.log('newValue', newValue)
+              updateFilter('profil', newValue, '=');
             }
-          }
+          }}
           className="w-full mx-auto flex-col gap-1.5"
         >
           <View className="flex flex-row justify-between w-full" style={{ backgroundColor: '#FBFBFB', height: 50 }}>
@@ -348,7 +363,7 @@ export default function TeamPage() {
           </View>
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             <ForkTable 
-              data={teams}
+              data={data.data}
               columns={teamTableColumns}
               onRowPress={handleEditTeam}
               onRowDelete={submitTeamDelete}
