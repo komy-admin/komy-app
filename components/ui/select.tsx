@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   selectButton: {
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
+    borderRadius: 5,
     padding: 9,
     backgroundColor: 'white',
     flexDirection: 'row',
