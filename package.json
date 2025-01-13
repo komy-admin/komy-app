@@ -13,7 +13,6 @@
     "postinstall": "npx tailwindcss -i ./global.css -o ./node_modules/.cache/nativewind/global.css"
   },
   "dependencies": {
-    "@adonisjs/transmit-client": "^1.0.0",
     "@gorhom/bottom-sheet": "^5.0.5",
     "@openspacelabs/react-native-zoomable-view": "^2.1.6",
     "@react-native-async-storage/async-storage": "1.23.1",
@@ -53,6 +52,7 @@
     "react-native-web": "~0.19.6",
     "react-native-webview": "^13.12.5",
     "react-redux": "^9.1.2",
+    "socket.io-client": "^4.8.1",
     "tailwind-merge": "^2.2.1",
     "tailwindcss": "3.3.5",
     "tailwindcss-animate": "^1.0.7",
