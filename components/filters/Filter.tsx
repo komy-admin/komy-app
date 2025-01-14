@@ -3,7 +3,7 @@ import { FilterConfig, FilterValue } from '~/types/filter.types';
 import { Input } from "~/components/ui";
 import { View } from 'react-native';
 import { ForkSelect } from '~/components/ui/select';
-import { NumberInput } from "~/components/ui/input_number";
+import { NumberInput } from "~/components/ui/numberInput";
 import { TextInput } from 'react-native';
 interface FilterBarProps<T> {
   config: FilterConfig<T>[];
