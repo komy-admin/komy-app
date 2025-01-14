@@ -1,18 +1,27 @@
 import { Stack, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { View } from "react-native";
+import { useDispatch, useSelector } from 'react-redux';
 import { authApiService } from "~/api/auth.api";
+import { setCredentials } from '~/store/auth.slice';
+import type { RootState } from '~/store';
 
 export default function AuthLayout() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
-  const accountType = '(admin)'
+  const dispatch = useDispatch();
+  const token = useSelector((state: RootState) => state.auth.token);
+  const accountType = '(admin)';
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const userToken = await authApiService.getToken();
-        setToken(userToken);
+        if (userToken) {
+          dispatch(setCredentials({
+            token: userToken,
+            accountType: accountType
+          }));
+        }
       } catch (error) {
         console.error('Erreur lors de la vérification du token:', error);
       }

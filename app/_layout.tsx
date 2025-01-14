@@ -45,7 +45,7 @@ function AuthenticationGate() {
     
     if (!token && !user && !inAuthGroup) {
       // bug ?
-      // router.replace('/login');
+      router.replace('/login');
     } else if (token && accountType && user) {
       if (inAuthGroup) {
         router.replace(`/(${accountType})/`);
