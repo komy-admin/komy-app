@@ -433,7 +433,10 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   selectButtonText: {
-    fontSize: 16,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    minHeight: 30,
+    fontSize: 14,
     color: '#333',
   },
   dropdown: {
@@ -470,7 +473,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
   },
   selectedOptionText: {

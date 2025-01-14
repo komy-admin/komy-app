@@ -13,6 +13,7 @@ import { useFilter } from '~/components/filters/useFilter';
 import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/types/filter.types';
 import { ForkSelect } from '~/components/ui/select';
+import { TextInput } from 'react-native';
 
 export default function MenuPage() {
   // State management
@@ -190,11 +191,11 @@ export default function MenuPage() {
           </Text>
           <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <View>
-              <Input
-                style={{ borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33', marginVertical: 8 }}
-                placeholder="Nom de l'article"
+              <TextInput
                 value={formData.name}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, name: text }))}
+                placeholder="Nom de l'article"
+                style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
               />
               <ForkSelect
                 style={{ marginVertical: 8 }}
@@ -300,7 +301,7 @@ export default function MenuPage() {
           className="w-full mx-auto flex-col gap-1.5"
         >
           <View className="flex flex-row justify-between w-full" style={{ backgroundColor: '#FBFBFB', height: 50 }}>
-            <TabsList className="flex-row h-full" style={{ width: 'auto' }}>
+            <TabsList className="flex-row w-[500px] h-full">
               <TabsTrigger value="ALL" className="flex-1 flex-row h-full">
                 <Text
                   className="pr-2"

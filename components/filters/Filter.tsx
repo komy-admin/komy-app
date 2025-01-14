@@ -4,6 +4,7 @@ import { Input } from "~/components/ui";
 import { View } from 'react-native';
 import { ForkSelect } from '~/components/ui/select';
 import { NumberInput } from "~/components/ui/input_number";
+import { TextInput } from 'react-native';
 interface FilterBarProps<T> {
   config: FilterConfig<T>[];
   onUpdateFilter: (field: string, value: any, operator?: string) => void;
@@ -31,17 +32,14 @@ export function FilterBar<T>({
       case 'text':
         return (
           <View>
-            <Input
-              style={{ borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-              placeholder={`${filter.label.toLowerCase()}`}
+            <TextInput
               value={activeFilters.find(f => f.field === filter.field)?.value as string}
               onChangeText={(text: string) => onUpdateFilter(String(filter.field), text, operator)}
-              aria-labelledby='inputLabel'
-              aria-errormessage='inputError'
+              placeholder={`${filter.label.toLowerCase()}`}
+              style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', padding: 10, color: '#2A2E33' }}
             />
           </View>
         );
-
       case 'number':
         if (operator === 'between') {
           const [min, max] = (value as [number, number]) || [null, null];

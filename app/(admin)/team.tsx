@@ -11,6 +11,7 @@ import { InputCustom } from "~/components/ui/input_custom"
 import { ForkSelect } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
+import { TextInput } from 'react-native';
 
 export default function TeamPage() {
   const [activeTab, setActiveTab] = useState<TeamTypes>(TeamTypes.ALL);
@@ -198,17 +199,19 @@ export default function TeamPage() {
           <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <View>
               <View className="flex flex-row gap-4">
-                <Input
-                  style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-                  placeholder='Prénom'
+                <TextInput
                   value={formData.firstName}
                   onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
+                  placeholder='Prénom'
+                  className="flex-1"
+                  style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
                 />
-                <Input
-                  style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-                  placeholder='Nom'
+                <TextInput
                   value={formData.lastName}
                   onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
+                  placeholder='Nom'
+                  className="flex-1"
+                  style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
                 />
               </View>
               <ForkSelect
@@ -218,13 +221,12 @@ export default function TeamPage() {
                 onValueChange={(value) => { if (value) setSelectedOption(value) }}
               />
               {['email', 'phone', 'loginId', 'password'].map((field) => (
-                <Input
+                <TextInput
                   key={field}
-                  style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
                   value={formData[field as keyof typeof formData]}
                   onChangeText={(text: string) => setFormData(prev => ({ ...prev, [field]: text }))}
-                  secureTextEntry={field === 'password'}
+                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                  style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
                 />
               ))}
             </View>
