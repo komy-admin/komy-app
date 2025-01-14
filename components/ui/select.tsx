@@ -278,8 +278,18 @@ const ForkSelect: React.FC<SelectProps> = ({
   style,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [currentValue, setCurrentValue] = useState(selectedValue || defaultValue);
   const dropdownAnimation = useRef(new Animated.Value(0)).current;
   const selectRef = useRef<View>(null);
+
+
+  useEffect(() => {
+    if (selectedValue) {
+      setCurrentValue(selectedValue);
+    } else if (defaultValue) {
+      setCurrentValue(defaultValue);
+    }
+  }, [selectedValue, defaultValue]);
 
   useEffect(() => {
     Animated.timing(dropdownAnimation, {
@@ -318,7 +328,7 @@ const ForkSelect: React.FC<SelectProps> = ({
         activeOpacity={0.7}
       >
         <Text style={styles.selectButtonText}>
-          {selectedValue ? selectedValue.label : defaultValue ? defaultValue.label : placeholder}
+          {currentValue ? currentValue.label : placeholder}
         </Text>
         <Chevron isOpen={isOpen} />
       </TouchableOpacity>
@@ -340,14 +350,14 @@ const ForkSelect: React.FC<SelectProps> = ({
               <TouchableOpacity
                 style={[
                   styles.option,
-                  selectedValue?.value === item.value && styles.selectedOption,
+                  currentValue?.value === item.value && styles.selectedOption,
                 ]}
                 onPress={() => handleSelect(item)}
               >
                 <Text
                   style={[
                     styles.optionText,
-                    selectedValue?.value === item.value && styles.selectedOptionText,
+                    currentValue?.value === item.value && styles.selectedOptionText,
                   ]}
                 >
                   {item.label}

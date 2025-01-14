@@ -2,14 +2,14 @@ import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "re
 import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, NumberInput } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Item, filterItem } from "~/types/item.types";
+import { Item } from "~/types/item.types";
 import { ItemTypes } from "~/types/item-type.enum";
 import { itemApiService, ItemApiService } from "~/api/item.api";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { cn, getItemTypeText } from "~/lib/utils";
 import { FilterBar } from '~/components/filters/Filter';
 import { ItemType } from '~/types/item-type.types';
-import { FilterConfig } from '~/types/filter.types';
+import { FilterConfig } from '~/hooks/useFilter/types';
 import { ForkSelect } from '~/components/ui/select';
 import { TextInput } from 'react-native';
 import { useFilter } from "~/hooks/useFilter";
@@ -39,6 +39,29 @@ export default function MenuPage() {
   
   const [selectedOption, setSelectedOption] = useState(defaultOption);
 
+  const filterItem: FilterConfig<Item>[] = [
+    { 
+      field: 'name', 
+      type: 'text',
+      label: 'Nom',
+      operator: 'like',
+      show: true
+    },
+    { 
+      field: 'price', 
+      type: 'number',
+      label: 'Prix',
+      operator: 'between',
+      show: true
+    },
+    { 
+      field: 'itemTypeId', 
+      type: 'text',
+      label: 'ItempType',
+      operator: '=',
+      show: false
+    },
+  ];
   const {
     data,
     loading,
@@ -54,12 +77,8 @@ export default function MenuPage() {
     const loadInitialData = async () => {
       try {
         setIsLoading(true);
-        const [itemsResponse, typesResponse] = await Promise.all([
-          itemApiService.getAll(),
-          itemTypeApiService.getAll()
-        ]);
-        setItems(itemsResponse.data);
-        setItemTypes(typesResponse.data);
+        const { data } = await itemTypeApiService.getAll()
+        setItemTypes(data);
       } catch (err) {
         console.error('Error loading initial data:', err);
         Alert.alert('Error', 'Failed to load data');
@@ -72,11 +91,11 @@ export default function MenuPage() {
   }, []);
 
   // Update items when filter data changes
-  useEffect(() => {
-    if (data) {
-      setItems(data.data);
-    }
-  }, [data]);
+  // useEffect(() => {
+  //   if (data) {
+  //     setItems(data.data);
+  //   }
+  // }, [data]);
 
   // Handlers
   const handleCreateItem = () => {
@@ -340,7 +359,7 @@ export default function MenuPage() {
           </View>
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             <ForkTable 
-              data={items}
+              data={data.data}
               columns={itemTableColumns}
               onRowPress={handleEditItem}
               onRowDelete={submitItemDelete}

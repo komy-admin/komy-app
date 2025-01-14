@@ -10,17 +10,3 @@ export type Item = {
   itemType: ItemType;
   itemTypeId?: string;
 };
-
-export const filterItem: FilterConfig<Item>[] = [
-  { 
-    field: 'name', 
-    type: 'text',
-    label: 'Nom',
-  },
-  { 
-    field: 'price', 
-    type: 'number',
-    label: 'Prix',
-    operator: 'between',
-  }
-];

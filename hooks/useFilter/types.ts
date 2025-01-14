@@ -41,6 +41,7 @@ export type FilterConfig<T> = {
   label: string;
   operator?: FilterOperator;
   options?: { label: string, value: string }[];
+  show: boolean
 }
 
 export interface QueryParams {

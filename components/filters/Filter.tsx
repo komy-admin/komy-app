@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { FilterConfig, FilterValue } from '~/types/filter.types';
 import { Input } from "~/components/ui";
 import { View } from 'react-native';
 import { ForkSelect } from '~/components/ui/select';
 import { NumberInput } from "~/components/ui/numberInput";
 import { TextInput } from 'react-native';
+import { FilterConfig, FilterOperator, FilterValue } from "~/hooks/useFilter/types";
 interface FilterBarProps<T> {
   config: FilterConfig<T>[];
-  onUpdateFilter: (field: string, value: any, operator?: string) => void;
+  onUpdateFilter: (field: string, value: any, operator?: FilterOperator) => void;
   onClearFilters: () => void;
   activeFilters: FilterValue[];
 }
@@ -143,7 +143,7 @@ export function FilterBar<T>({
 
   return (
     <View className="">
-      {config.map((filter) => (
+      {config.filter(c => c.show).map((filter) => (
         <View key={String(filter.field)} style={{ marginVertical: 8 }}>
           {renderFilterInput(filter)}
         </View>

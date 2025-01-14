@@ -2,7 +2,7 @@ import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "re
 import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Team, filterTeam } from "~/types/team.types";
+import { Team } from "~/types/team.types";
 import { TeamTypes } from "~/types/team.enum";
 import { TeamApiService, teamApiService } from "~/api/team.api";
 import { getTeamTypeText, getEnumValue } from "~/lib/utils";
@@ -11,6 +11,7 @@ import { InputCustom } from "~/components/ui/input_custom"
 import { ForkSelect } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from "~/hooks/useFilter";
+import { FilterConfig } from "~/hooks/useFilter/types";
 
 export default function TeamPage() {
   const [activeTab, setActiveTab] = useState<TeamTypes>(TeamTypes.ALL);
@@ -34,6 +35,43 @@ export default function TeamPage() {
   
   const [selectedOption, setSelectedOption] = useState(defaultOption);
 
+  const filterTeam: FilterConfig<Team>[] = [
+    { 
+      field: 'firstName', 
+      type: 'text' as const, 
+      label: 'Prénom',
+      operator: 'like' as const,
+      show: true
+    },
+    { 
+      field: 'lastName', 
+      type: 'text' as const, 
+      label: 'Nom',
+      operator: 'like' as const,
+      show: true
+    },
+    { 
+      field: 'email', 
+      type: 'text' as const, 
+      label: 'Email',
+      operator: 'like' as const,
+      show: true
+    },
+    { 
+      field: 'phone', 
+      type: 'text' as const, 
+      label: 'Numéro de téléphone',
+      operator: 'like' as const,
+      show: true
+    },
+    {
+      field: 'profil',
+      type: 'select',
+      label: 'Profile',
+      operator: '=' as const,
+      show: false
+    }
+  ];
   // filtre
   const {
     data,
@@ -43,11 +81,7 @@ export default function TeamPage() {
     clearFilters,
     changePage,
     queryParams
-  } = useFilter({ config: [...filterTeam, {
-    field: 'profil',
-    type: 'select',
-    label: 'Profile'
-  }], service: teamApiService });
+  } = useFilter({ config: filterTeam, service: teamApiService });
 
 
   useEffect(() => {
