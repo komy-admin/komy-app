@@ -11,12 +11,12 @@ import { Provider, useSelector } from 'react-redux';
 import { NAV_THEME } from '~/lib/constants';
 import { useColorScheme } from '~/lib/useColorScheme';
 import { PortalHost } from '@rn-primitives/portal';
-import { ThemeToggle } from '~/components/ThemeToggle';
 import { setAndroidNavigationBar } from '~/lib/android-navigation-bar';
-import { store } from '~/store'; // Nous allons créer ce fichier
+import { store } from '~/store';
 import { RootState } from '~/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFonts } from 'expo-font'
+import { useFonts } from 'expo-font';
+import { AuthProvider, useAuth } from '~/src/contexts/AuthContext';
 
 const LIGHT_THEME: Theme = {
   dark: false,
@@ -34,16 +34,19 @@ function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
   const { token, accountType, isLoading } = useSelector((state: RootState) => state.auth);
+  const { user, loading: authLoading } = useAuth();
 
   React.useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
     
-    if (isLoading) return;
+    if (isLoading || authLoading) return;
 
-    console.log('AuthGate', { token, accountType, segments, isLoading });
-    if (!token && !inAuthGroup) {
-      router.replace('/login');
-    } else if (token && accountType) {
+    console.log('AuthGate', { token, accountType, user, segments, isLoading });
+    
+    if (!token && !user && !inAuthGroup) {
+      // bug ?
+      // router.replace('/login');
+    } else if (token && accountType && user) {
       if (inAuthGroup) {
         router.replace(`/(${accountType})/`);
       } else {
@@ -53,7 +56,7 @@ function AuthenticationGate() {
         }
       }
     }
-  }, [token, accountType, segments, isLoading]);
+  }, [token, accountType, user, segments, isLoading, authLoading]);
 
   return null;
 }
@@ -65,6 +68,7 @@ function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
     'Mona-Sans': require('../assets/images/fonts/MonaSans-VariableFont_wdth,wght.ttf'),
   })
+
   React.useEffect(() => {
     (async () => {
       const theme = await AsyncStorage.getItem('theme');
@@ -132,12 +136,14 @@ function RootLayoutNav() {
   );
 }
 
-// Root component wrapping everything with Redux Provider
+// Root component wrapping everything with Redux Provider and AuthProvider
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
-        <RootLayoutNav />
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
       </Provider>
     </GestureHandlerRootView>
   );

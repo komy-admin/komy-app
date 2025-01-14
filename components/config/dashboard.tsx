@@ -1,10 +1,10 @@
 import { View } from "react-native";
 import { Text } from "~/components/ui";
 
-export default function NotificationsPage () {
+export default function DashboardPage () {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Notifications Page</Text>
+      <Text>DashBoard Page</Text>
     </View>
   );
 

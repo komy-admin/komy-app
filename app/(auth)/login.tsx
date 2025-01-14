@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { Button, Input, Text } from '~/components/ui';
 import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
-import { setCredentials } from '~/store/auth.slice';
+import { setCredentials, setLoading } from '~/store/auth.slice';
 import { router } from 'expo-router';
 import { authApiService } from "~/api/auth.api";
 
@@ -13,16 +13,20 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
+      dispatch(setLoading(true));
       const response = await authApiService.login({ loginId, password });
-      const mockResponse = {
-        token: response.token.token,
-        accountType: 'admin' as const,
-      };
       
-      dispatch(setCredentials(mockResponse));
-      router.replace(`/(${mockResponse.accountType})/`);
+      dispatch(setCredentials({
+        token: response.token.token,
+        accountType: 'admin'
+      }));
+      
+      router.replace('/(admin)/');
     } catch (error) {
       console.error(error);
+      // Gérer l'erreur ici
+    } finally {
+      dispatch(setLoading(false));
     }
   };
 
