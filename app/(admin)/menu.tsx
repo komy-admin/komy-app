@@ -8,11 +8,11 @@ import { ItemTypes } from "~/types/item-type.enum";
 import { itemApiService, ItemApiService } from "~/api/item.api";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { cn, getItemTypeText } from "~/lib/utils";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from '~/components/filters/useFilter';
 import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/types/filter.types';
+import { ForkSelect } from '~/components/ui/select';
 
 export default function MenuPage() {
   // State management
@@ -159,8 +159,8 @@ export default function MenuPage() {
   const renderSidePanelContent = () => {
     if (title === 'Filtrage') {
       return (
-        <View style={{ padding: 16 }}>
-          {/* <FilterBar
+        <View style={{ padding: 15 }}>
+          <FilterBar
             config={filterItem}
             onUpdateFilter={updateFilter}
             onClearFilters={() => {
@@ -168,7 +168,7 @@ export default function MenuPage() {
               clearFilters()
             }}
             activeFilters={queryParams.filters || []}
-          /> */}
+          />
         </View>
       );
     }
@@ -191,13 +191,15 @@ export default function MenuPage() {
           <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <View>
               <Input
-                style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
+                style={{ borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33', marginVertical: 8 }}
                 placeholder="Nom de l'article"
                 value={formData.name}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, name: text }))}
               />
-              <Select 
-                value={selectedOption} 
+              <ForkSelect
+                style={{ marginVertical: 8 }}
+                choices={itemTypes.map(type => ({ label: type.name, value: type.name, id: type.id }))}
+                selectedValue={selectedOption}
                 onValueChange={(value) => {
                   if (value) {
                     const itemType = itemTypes.find(type => type.name === value.value);
@@ -211,29 +213,9 @@ export default function MenuPage() {
                     }
                   }
                 }}
-              >
-                <SelectTrigger className='w-100'>
-                  <SelectValue
-                    className='text-foreground text-sm native:text-lg'
-                    placeholder='Choisissez une catégorie'
-                  />
-                </SelectTrigger>
-                <SelectContent className='w-100'>
-                  <SelectGroup>
-                    <SelectLabel>Catégories</SelectLabel>
-                    {itemTypes.map(type => (
-                      <SelectItem 
-                        key={type.id} 
-                        label={type.name} 
-                        value={type.name}
-                      >
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              />
               <NumberInput
+                style={{ marginVertical: 8 }}
                 value={formData.price}
                 onChangeText={(value) => setFormData(prev => ({
                   ...prev, 

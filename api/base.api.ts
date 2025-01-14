@@ -4,8 +4,10 @@ import { StorageInterface, storageService } from "~/lib/storageService";
 import { QueryParams } from "~/types/filter.types";
 
 const DEV_API_URL = Platform.select({
-  android: 'http://192.168.1.136:3333/api',
-  ios: 'http://192.168.1.136:3333/api',
+  // android: 'http://192.168.1.136:3333/api', // flo
+  // ios: 'http://192.168.1.136:3333/api', // flo
+  android: 'http://192.168.1.67:3333/api', // guillaume
+  ios: 'http://192.168.1.67:3333/api', // guillaume
   web: 'http://localhost:3333/api'
 });
 export abstract class BaseApiService<T> {

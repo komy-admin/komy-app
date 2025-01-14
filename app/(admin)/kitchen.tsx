@@ -3,9 +3,10 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Order } from "~/types/order.types";
 import { orderApiService } from "~/api/order.api";
 import { DateFormat, formatDate } from '~/lib/utils';
-import { Transmit } from '@adonisjs/transmit-client'
 import { MoveRight, MoveLeft, CircleAlert, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Button } from "~/components/ui";
+import { io } from 'socket.io-client';
+import { storageService } from '~/lib/storageService';
 
 // Constantes déplacées en dehors du composant
 const ORDER_STATUS = [
@@ -13,8 +14,6 @@ const ORDER_STATUS = [
   { name: 'En cours', id: 'l03dgl3k9eqlfklpdk1mkd0u', status: 'inProgress', color: 'bg-yellow-300' },
   { name: 'Prêt à servir', id: 'vkguwx74i3hdcb25n7xzqrh6', status: 'ready', color: 'bg-blue-100' },
 ];
-
-const BASE_URL = 'http://localhost:3333';
 
 const statusId = {
   waiting: 'r44s5mffjyt715fiopwgvpo3',
@@ -223,28 +222,26 @@ export default function KitchenPage() {
   }, [loadAllData]);
 
   useEffect(() => {
-    const transmit = new Transmit({ baseUrl: BASE_URL });
-    let subscription: any;
-
-    const subscribe = async () => {
-      subscription = transmit.subscription('global');
-      await subscription.create();
-      
-      subscription.onMessage((data: any) => {
-        console.log('New message:', data);
-        if (typeof data === 'object' && data !== null && 'newOrder' in data) {
-          const newOrder = data.newOrder;
-          setMenuItems(prevItems => ({
-            ...prevItems,
-            [newOrder.statusId]: [...(prevItems[newOrder.statusId] || []), newOrder]
-          }));
-        }
+    const initializeSocket = async () => {
+      // const BASE_URL = 'http://192.168.1.136:3333' // flo
+      const BASE_URL = 'http://192.168.1.67:3333';
+      const socket = io(BASE_URL, { autoConnect: false })
+      const token = await storageService.getItem('token');
+      socket.auth = { token: token };
+      socket.connect()
+      socket.on('newOrder', (data: Order) => {
+        setMenuItems(prevItems => ({
+          ...prevItems,
+          [data.statusId]: [...(prevItems[data.statusId] || []), data]
+        }));
       });
-    };
-    subscribe();
-    return () => {
-      subscription?.delete();
-    };
+      socket.on('disconnect', () => { console.log('Disconnected from socket server') });
+      socket.on('error', (error) => { console.error('Socket error:', error) });
+      return () => {
+        socket.disconnect();
+      };
+    }
+    initializeSocket();
   }, []);
 
   if (isLoading) {
@@ -256,19 +253,17 @@ export default function KitchenPage() {
   }
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      <View className="flex-1 flex-row gap-7 p-7">
-        {ORDER_STATUS.map((status) => (
-          <OrderColumn 
-            key={status.id}
-            title={status.name.toUpperCase()} 
-            orders={menuItems[status.id]} 
-            status={status.status as 'waiting' | 'inProgress' | 'ready'}
-            headerColor={status.color}
-            onStatusChange={handleStatusChange}
-          />
-        ))}
-      </View>
+    <View className="flex-1 flex-row gap-7 p-7 h-full">
+      {ORDER_STATUS.map((status) => (
+        <OrderColumn 
+          key={status.id}
+          title={status.name.toUpperCase()} 
+          orders={menuItems[status.id]} 
+          status={status.status as 'waiting' | 'inProgress' | 'ready'}
+          headerColor={status.color}
+          onStatusChange={handleStatusChange}
+        />
+      ))}
     </View>
   );
 }

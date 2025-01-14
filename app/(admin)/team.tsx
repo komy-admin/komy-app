@@ -168,18 +168,18 @@ export default function TeamPage() {
       value: key,
       label,
     }));
-    // if (title === 'Filtrage') {
-    //   return (
-    //     <View style={{ padding: 16 }}>
-    //       {/* <FilterBar
-    //         config={filterTeam}
-    //         onUpdateFilter={updateFilter}
-    //         onClearFilters={clearFilters}
-    //         activeFilters={queryParams.filters || []}
-    //       /> */}
-    //     </View>
-    //   )
-    // }
+    if (title === 'Filtrage') {
+      return (
+        <View style={{ padding: 15 }}>
+          <FilterBar
+            config={filterTeam}
+            onUpdateFilter={updateFilter}
+            onClearFilters={clearFilters}
+            activeFilters={queryParams.filters || []}
+          />
+        </View>
+      )
+    }
     if (title.includes('utilisateur')) {
       return (
         <>
@@ -197,7 +197,7 @@ export default function TeamPage() {
           </Text>
           <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <View>
-              <View className="flex flex-row gap-2">
+              <View className="flex flex-row gap-4">
                 <Input
                   style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
                   placeholder='Prénom'
@@ -211,31 +211,12 @@ export default function TeamPage() {
                   onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
                 />
               </View>
-              <Select 
-                value={selectedOption} 
+              <ForkSelect
+                style={{ marginVertical: 8 }}
+                choices={teamTypesArray}
+                selectedValue={selectedOption}
                 onValueChange={(value) => { if (value) setSelectedOption(value) }}
-              >
-                <SelectTrigger className='w-100'>
-                  <SelectValue
-                    className='text-foreground text-sm native:text-lg'
-                    placeholder='Choisissez une catégorie'
-                  />
-                </SelectTrigger>
-                <SelectContent className='w-100'>
-                  <SelectGroup>
-                    <SelectLabel>Rôles</SelectLabel>
-                    {teamTypesArray.map(item => (
-                      <SelectItem 
-                        key={item.value} 
-                        label={getTeamTypeText(item.label as TeamTypes)} 
-                        value={item.value}
-                      >
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              />
               {['email', 'phone', 'loginId', 'password'].map((field) => (
                 <Input
                   key={field}
@@ -269,29 +250,6 @@ export default function TeamPage() {
         </>
       );
     }
-    return (
-      <ForkSelect
-        style={{
-          marginLeft: 10,
-          marginRight: 10
-        }}
-        choices={[
-          {
-            label: 'Choix 1',
-            value: 'choice1',
-          },
-          {
-            label: 'Choix 2',
-            value: 'choice2',
-          }
-        ]}
-        selectedValue={{
-          label: 'Choix 1',
-          value: 'choice1',
-        }}
-        onValueChange={() => {}}
-      />
-    )
   }
 
   const { width } = useWindowDimensions()
