@@ -10,15 +10,15 @@ import { storageService } from '~/lib/storageService';
 
 // Constantes déplacées en dehors du composant
 const ORDER_STATUS = [
-  { name: 'En attente', id: 'r44s5mffjyt715fiopwgvpo3', status: 'waiting', color: 'bg-gray-200' },
-  { name: 'En cours', id: 'l03dgl3k9eqlfklpdk1mkd0u', status: 'inProgress', color: 'bg-yellow-300' },
-  { name: 'Prêt à servir', id: 'vkguwx74i3hdcb25n7xzqrh6', status: 'ready', color: 'bg-blue-100' },
+  { name: 'En attente', id: 'fjvjsp0k5zelhw30i6m8zwos', status: 'waiting', color: 'bg-gray-200' },
+  { name: 'En cours', id: 'eh3x22b23jm82xezpli0ciax', status: 'inProgress', color: 'bg-yellow-300' },
+  { name: 'Prêt à servir', id: 'wo0q7lilcx20fls2ekghupkf', status: 'ready', color: 'bg-blue-100' },
 ];
 
 const statusId = {
-  waiting: 'r44s5mffjyt715fiopwgvpo3',
-  inProgress: 'l03dgl3k9eqlfklpdk1mkd0u',
-  ready: 'vkguwx74i3hdcb25n7xzqrh6',
+  waiting: 'fjvjsp0k5zelhw30i6m8zwos',
+  inProgress: 'eh3x22b23jm82xezpli0ciax',
+  ready: 'wo0q7lilcx20fls2ekghupkf',
 };
 
 const statusStyles = {

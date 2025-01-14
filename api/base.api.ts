@@ -65,7 +65,7 @@ export abstract class BaseApiService<T> {
   }
 
   // Créer un nouvel élément
-  async create(data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
+  async create(data: Omit<T, 'id' | 'account' | 'createdAt' | 'updatedAt'>): Promise<T> {
     try {
       const response = await this.axiosInstance.post<T>(this.endpoint, data);
       return response.data;

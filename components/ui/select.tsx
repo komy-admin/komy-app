@@ -278,15 +278,8 @@ const ForkSelect: React.FC<SelectProps> = ({
   style,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentValue, setCurrentValue] = useState(selectedValue || defaultValue);
   const dropdownAnimation = useRef(new Animated.Value(0)).current;
   const selectRef = useRef<View>(null);
-  // const [selectLayout, setSelectLayout] = useState<{
-  //   x: number;
-  //   y: number;
-  //   width: number;
-  //   height: number;
-  // } | null>(null);
 
   useEffect(() => {
     if (selectedValue) {
@@ -304,20 +297,11 @@ const ForkSelect: React.FC<SelectProps> = ({
     }).start();
   }, [isOpen]);
 
-  // const measureSelect = () => {
-  //   if (selectRef.current) {
-  //     selectRef.current.measure((x, y, width, height, pageX, pageY) => {
-  //       setSelectLayout({ x: pageX, y: pageY, width, height });
-  //     });
-  //   }
-  // };
-
   const handlePress = () => {
     setIsOpen(!isOpen);
   };
 
   const handleSelect = (choice: Choice) => {
-    setCurrentValue(choice);
     onValueChange?.(choice);
     setIsOpen(false);
   };
@@ -342,7 +326,7 @@ const ForkSelect: React.FC<SelectProps> = ({
         activeOpacity={0.7}
       >
         <Text style={styles.selectButtonText}>
-          {currentValue ? currentValue.label : placeholder}
+          {selectedValue ? selectedValue.label : defaultValue ? defaultValue.label : placeholder}
         </Text>
         <Chevron isOpen={isOpen} />
       </TouchableOpacity>
@@ -364,14 +348,14 @@ const ForkSelect: React.FC<SelectProps> = ({
               <TouchableOpacity
                 style={[
                   styles.option,
-                  currentValue?.value === item.value && styles.selectedOption,
+                  selectedValue?.value === item.value && styles.selectedOption,
                 ]}
                 onPress={() => handleSelect(item)}
               >
                 <Text
                   style={[
                     styles.optionText,
-                    currentValue?.value === item.value && styles.selectedOptionText,
+                    selectedValue?.value === item.value && styles.selectedOptionText,
                   ]}
                 >
                   {item.label}

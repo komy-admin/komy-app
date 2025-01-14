@@ -1,6 +1,5 @@
 import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
-import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable } from "~/components/ui";
-import { NumberInput } from "~/components/ui/input_number";
+import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, NumberInput } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Item, filterItem } from "~/types/item.types";

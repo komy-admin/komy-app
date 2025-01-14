@@ -5,6 +5,7 @@ export * from './progress';
 export * from './text';
 export * from './tooltip';
 export * from './input';
+export * from './numberInput';
 export * from './select';
 export * from './separator';
 export * from './tabs';
