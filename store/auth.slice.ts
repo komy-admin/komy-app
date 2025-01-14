@@ -1,41 +1,52 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { currentUser } from '~/types/auth.types';
 
-type AccountType = 'server' | 'admin' | 'kitchen';
+interface AuthCredentials {
+  token: string;
+  accountType: string;
+}
 
 interface AuthState {
+  user: currentUser | null;
   token: string | null;
-  accountType: AccountType | null;
+  accountType: string | null;
   isLoading: boolean;
 }
 
 const initialState: AuthState = {
+  user: null,
   token: null,
   accountType: null,
-  isLoading: true,
+  isLoading: false,
 };
 
-export const authSlice = createSlice({
+const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials: (
-      state,
-      action: PayloadAction<{ token: string; accountType: AccountType }>
-    ) => {
+    setCurrentUser: (state, action: PayloadAction<currentUser>) => {
+      state.user = action.payload;
+    },
+    setCredentials: (state, action: PayloadAction<AuthCredentials>) => {
       state.token = action.payload.token;
       state.accountType = action.payload.accountType;
-      state.isLoading = false;
-    },
-    logout: (state) => {
-      state.token = null;
-      state.accountType = null;
-      state.isLoading = false;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
+    logout: (state) => {
+      state.user = null;
+      state.token = null;
+      state.accountType = null;
+    },
   },
 });
 
-export const { setCredentials, logout, setLoading } = authSlice.actions;
+export const { 
+  setCurrentUser, 
+  setCredentials,
+  setLoading,
+  logout 
+} = authSlice.actions;
+
 export default authSlice.reducer;
