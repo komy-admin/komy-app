@@ -1,14 +1,9 @@
 import React, { useEffect, useState }  from 'react'
 import { View, Image, Text, Pressable} from 'react-native'
 import { FileText, Calendar } from 'lucide-react-native'
-import { Href, Link } from 'expo-router'
-import type { currentUser } from '~/types/auth.types'
+import { Href, Link, router } from 'expo-router'
 
-interface TopbarProps {
-  user: currentUser;
-}
-
-export function TopBar({ user }: TopbarProps) {
+export function AdminTopbar() {
   const [currentDate, setCurrentDate] = useState('')
 
   // Fonction pour formater la date
@@ -91,10 +86,12 @@ export function TopBar({ user }: TopbarProps) {
                     fontWeight: '300'
                   }}
                 >
-                    {`${(user.firstName ?? '').charAt(0).toUpperCase() + (user.firstName ?? '').slice(1)} ${(user.lastName ?? '').charAt(0).toUpperCase() + (user.lastName ?? '').slice(1)}`}
+                  Tonton Ugz
+                  {/* {`${(user.firstName ?? '').charAt(0).toUpperCase() + (user.firstName ?? '').slice(1)} ${(user.lastName ?? '').charAt(0).toUpperCase() + (user.lastName ?? '').slice(1)}`} */}
                 </Text>
                 <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                    {(user.profil ?? '').charAt(0).toUpperCase() + (user.profil ?? '').slice(1)}
+                  El SuperAdmin
+                  {/* {(user.profil ?? '').charAt(0).toUpperCase() + (user.profil ?? '').slice(1)} */}
                 </Text>
               </View>
             </View>
