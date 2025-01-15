@@ -1,5 +1,5 @@
 import { BaseApiService } from './base.api';
-import type { LoginCredentials, RegisterCredentials, AuthResponse, currentUser } from '~/types/auth.types';
+import type { LoginCredentials, RegisterCredentials, AuthResponse } from '~/types/auth.types';
 
 export class AuthApiService extends BaseApiService<AuthResponse> {
   protected endpoint = '/auth';
@@ -7,20 +7,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
   constructor() {
     super();
     this.setupAuthInterceptor();
-  }
-
-  private async setCurrentUser(user: currentUser): Promise<void> {
-    await this.storage.setItem('currentUser', JSON.stringify(user));
-  }
-
-  private async removeCurrentUser(): Promise<void> {
-    await this.storage.removeItem('currentUser');
-  }
-
-  public async getCurrentUser(): Promise<currentUser | null> {
-    const userStr = await this.storage.getItem('currentUser');
-    if (!userStr) return null;
-    return JSON.parse(userStr) as currentUser;
   }
 
   private async setToken(token: string): Promise<void> {
@@ -37,32 +23,12 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const { data } = await this.axiosInstance.post<any>(
+      const { data } = await this.axiosInstance.post<AuthResponse>(
         `${this.endpoint}/login`,
         credentials
       );
-
-      const user: currentUser = {
-        id: data.id,
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        profil: data.profil,
-        accountId: data.accountId,
-        loginId: data.loginId
-      };
-      
-      await this.setCurrentUser(user);
       await this.setToken(data.token.token);
-
-      return {
-        accountType: data.profil,
-        token: { token: data.token.token },
-        user
-      };
+      return data;
     } catch (err) {
       console.error('Error in login:', err);
       throw err;
@@ -71,32 +37,12 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
-      const { data } = await this.axiosInstance.post<any>(
+      const { data } = await this.axiosInstance.post<AuthResponse>(
         `${this.endpoint}/register`,
         credentials
       );
-      // Utile ???
-      const user: currentUser = {
-        id: data.id,
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        profil: data.profil,
-        accountId: data.accountId,
-        loginId: data.loginId
-      };
-
-      await this.setCurrentUser(user);
       await this.setToken(data.token.token);
-
-      return {
-        accountType: data.profil,
-        token: { token: data.token.token },
-        user
-      };
+      return data;
     } catch (err) {
       console.error('Error in register:', err);
       throw err;
@@ -116,9 +62,8 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     }
   }
 
-  async logout(): Promise<void> {
-    await this.removeToken();
-    await this.removeCurrentUser();
+  logout(): void {
+    this.removeToken();
   }
 
   private setupAuthInterceptor(): void {
@@ -139,7 +84,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
             
             return this.axiosInstance(originalRequest);
           } catch (refreshError) {
-            await this.logout();
+            this.logout();
             return Promise.reject(refreshError);
           }
         }
@@ -149,4 +94,4 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
   }
 }
 
-export const authApiService = new AuthApiService();
+export const authApiService = new AuthApiService()

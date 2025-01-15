@@ -1,11 +1,6 @@
 import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
 import { User, Lock, Bell, LogOut, PenTool, Database } from 'lucide-react-native';
-import { useAppDispatch } from '~/store/hooks';
-import { logout } from '~/store/auth.slice';
-import { router } from 'expo-router';
-import { storageService } from '~/lib/storageService';
-import type { currentUser } from '~/types/auth.types';
 
 type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications';
 
@@ -19,28 +14,9 @@ const CONFIG_ITEMS = [
 type ConfigSidebarProps = {
   currentSection: ConfigSection;
   onSectionChange: (section: ConfigSection) => void;
-  user: currentUser;
 };
 
-export function ConfigSidebar({ currentSection, onSectionChange, user }: ConfigSidebarProps) {
-  const dispatch = useAppDispatch();
-
-  const handleLogout = async () => {
-    try {
-      // Supprimer les données du stockage local
-      await storageService.removeItem('currentUser');
-      await storageService.removeItem('token');
-      
-      // Nettoyer le state Redux
-      dispatch(logout());
-      
-      // Rediriger vers la page de login
-      router.replace('/(auth)/login');
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-    }
-  };
-
+export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebarProps) {
   return (
     <View style={{ 
       width: '25%', 
@@ -84,14 +60,16 @@ export function ConfigSidebar({ currentSection, onSectionChange, user }: ConfigS
           marginBottom: 4,
           fontWeight: '500'
         }}>
-          {`${(user.firstName ?? '').charAt(0).toUpperCase() + (user.firstName ?? '').slice(1)} ${(user.lastName ?? '').charAt(0).toUpperCase() + (user.lastName ?? '').slice(1)}`}
+          Tonton Ugz
+          {/* {`${(user.firstName ?? '').charAt(0).toUpperCase() + (user.firstName ?? '').slice(1)} ${(user.lastName ?? '').charAt(0).toUpperCase() + (user.lastName ?? '').slice(1)}`} */}
         </Text>
         <Text style={{ 
           fontSize: 14, 
           color: '#64666A',
           fontWeight: '400'
         }}>
-          {(user.profil ?? '').charAt(0).toUpperCase() + (user.profil ?? '').slice(1)}
+          El SuperAdmin
+          {/* {(user.profil ?? '').charAt(0).toUpperCase() + (user.profil ?? '').slice(1)} */}
         </Text>
       </View>
 
@@ -136,7 +114,7 @@ export function ConfigSidebar({ currentSection, onSectionChange, user }: ConfigS
           borderRadius: 8,
           backgroundColor: pressed ? '#FEF2F2' : 'transparent',
         })}
-        onPress={handleLogout}
+        onPress={() => console.log('Déconnexion')}
       >
         <LogOut size={18} color="#DC2626" style={{ marginRight: 12 }} />
         <Text style={{ 
