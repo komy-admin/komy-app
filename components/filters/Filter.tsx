@@ -5,6 +5,7 @@ import { ForkSelect } from '~/components/ui/select';
 import { NumberInput } from "~/components/ui/numberInput";
 import { TextInput } from 'react-native';
 import { FilterConfig, FilterOperator, FilterValue } from "~/hooks/useFilter/types";
+import { Text, Button } from "~/components/ui";
 interface FilterBarProps<T> {
   config: FilterConfig<T>[];
   onUpdateFilter: (field: string, value: any, operator?: FilterOperator) => void;
@@ -149,12 +150,15 @@ export function FilterBar<T>({
         </View>
       ))}
       {activeFilters.length > 0 && (
-        <button
-          onClick={onClearFilters}
-          className="mt-6 px-4 py-2 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
+        <Button
+          onPress={onClearFilters}
+          className="mt-6"
+          style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
         >
-          Effacer les filtres
-        </button>
+          <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
+            Effacer les filtres
+          </Text>
+        </Button>
       )}
     </View>
   );

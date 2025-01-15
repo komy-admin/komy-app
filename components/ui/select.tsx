@@ -421,7 +421,6 @@ const styles = StyleSheet.create({
   selectButtonText: {
     textAlign: 'center',
     textAlignVertical: 'center',
-    minHeight: 30,
     fontSize: 14,
     color: '#333',
   },

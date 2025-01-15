@@ -112,7 +112,7 @@ export default function MenuPage() {
 
   const handleEditItem = (id: string) => {
     setTitle('Modification d\'un article');
-    const item = items.find(item => item.id === id)
+    const item = data.data.find(item => item.id === id)
     if (!item) return
     setIsEditing(true);
     setCurrentItem(item);

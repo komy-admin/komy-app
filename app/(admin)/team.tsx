@@ -12,6 +12,7 @@ import { ForkSelect } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from "~/hooks/useFilter";
 import { FilterConfig } from "~/hooks/useFilter/types";
+import { TextInput } from 'react-native';
 
 export default function TeamPage() {
   const [activeTab, setActiveTab] = useState<TeamTypes>(TeamTypes.ALL);
@@ -200,100 +201,69 @@ export default function TeamPage() {
           <FilterBar
             config={filterTeam}
             onUpdateFilter={updateFilter}
-            onClearFilters={clearFilters}
+            onClearFilters={() => {
+              setActiveTab(TeamTypes.ALL)
+              clearFilters()
+            }}
             activeFilters={queryParams.filters || []}
           />
         </View>
       )
     }
     if (title.includes('utilisateur')) {
-      // return (
-      //   <>
-      //     <Text style={{
-      //       textTransform: 'uppercase',
-      //       fontWeight: '700',
-      //       fontSize: 14,
-      //       color: '#2A2E33',
-      //       backgroundColor: '#F1F1F1',
-      //       marginVertical: 4,
-      //       padding: 5,
-      //       paddingLeft: 16,
-      //     }}>
-      //       Informations
-      //     </Text>
-      //     <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-      //       <View>
-      //         <View className="flex flex-row gap-2">
-      //           <Input
-      //             style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-      //             placeholder='Prénom'
-      //             value={formData.firstName}
-      //             onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
-      //           />
-      //           <Input
-      //             style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-      //             placeholder='Nom'
-      //             value={formData.lastName}
-      //             onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
-      //           />
-      //         </View>
-      //         <Select 
-      //           value={selectedOption} 
-      //           onValueChange={(value) => { if (value) setSelectedOption(value) }}
-      //         >
-      //           <SelectTrigger className='w-100'>
-      //             <SelectValue
-      //               className='text-foreground text-sm native:text-lg'
-      //               placeholder='Choisissez une catégorie'
-      //             />
-      //           </SelectTrigger>
-      //           <SelectContent className='w-100'>
-      //             <SelectGroup>
-      //               <SelectLabel>Rôles</SelectLabel>
-      //               {teamTypesArray.map(item => (
-      //                 <SelectItem 
-      //                   key={item.value} 
-      //                   label={getTeamTypeText(item.label as TeamTypes)} 
-      //                   value={item.value}
-      //                 >
-      //                   {item.label}
-      //                 </SelectItem>
-      //               ))}
-      //             </SelectGroup>
-      //           </SelectContent>
-      //         </Select>
-      //         {['email', 'phone', 'loginId', 'password'].map((field) => (
-      //           <Input
-      //             key={field}
-      //             style={{ marginVertical: 8, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', paddingVertical: 20, color: '#2A2E33' }}
-      //             placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-      //             value={formData[field as keyof typeof formData]}
-      //             onChangeText={(text: string) => setFormData(prev => ({ ...prev, [field]: text }))}
-      //             secureTextEntry={field === 'password'}
-      //           />
-      //         ))}
-      //       </View>
-      //       <View>
-      //         <Button
-      //           onPress={submitTeamAction}
-      //           style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
-      //         >
-      //           <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
-      //             {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
-      //           </Text>
-      //         </Button>
-      //         <Button 
-      //           onPress={handleCancelEditorCreate} 
-      //           style={{ backgroundColor: '#FBFBFB', borderRadius: 0, marginTop: 5 }}
-      //         >
-      //           <Text style={{ color: '#2A2E33', fontWeight: '300', fontSize: 16, textDecorationLine: 'underline'}}>
-      //             Annuler
-      //           </Text>
-      //         </Button>
-      //       </View>
-      //     </View>
-      //   </>
-      // );
+      return (
+        <>
+          <Text style={{
+            textTransform: 'uppercase',
+            fontWeight: '700',
+            fontSize: 14,
+            color: '#2A2E33',
+            backgroundColor: '#F1F1F1',
+            marginVertical: 4,
+            padding: 5,
+            paddingLeft: 16,
+          }}>
+            Informations
+          </Text>
+          <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <View>
+              <ForkSelect
+                style={{ marginVertical: 8 }}
+                choices={teamTypesArray}
+                selectedValue={selectedOption}
+                onValueChange={(value) => { if (value) setSelectedOption(value) }}
+              />
+              {['firstName', 'lastName', 'email', 'phone', 'loginId', 'password'].map((field) => (
+                <TextInput
+                  key={field}
+                  value={formData[field as keyof typeof formData]}
+                  onChangeText={(text: string) => setFormData(prev => ({ ...prev, [field]: text }))}
+                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                  style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
+                />
+              ))}
+            </View>
+            <View>
+              <Button
+                onPress={submitTeamAction}
+                style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
+              >
+                <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
+                  {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
+                </Text>
+              </Button>
+              <Button 
+                onPress={handleCancelEditorCreate} 
+                style={{ backgroundColor: '#FBFBFB', borderRadius: 0, marginTop: 5 }}
+              >
+                <Text style={{ color: '#2A2E33', fontWeight: '300', fontSize: 16, textDecorationLine: 'underline'}}>
+                  Annuler
+                </Text>
+              </Button>
+            </View>
+          </View>
+        </>
+      );
     }
   }
 
@@ -359,17 +329,6 @@ export default function TeamPage() {
                     >
                       {getTeamTypeText(type)}
                     </Text>
-                    {/* <Badge
-                      style={{
-                        backgroundColor: activeTab === type ? '#2A2E33' : '#E0E0E0',
-                        borderRadius: 5,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                      }}
-                    >
-                      <Text style={{ color: activeTab === type ? '#FFFFFF' : '#A0A0A0' }}>
-                      </Text>
-                    </Badge> */}
                   </TabsTrigger>
                 ))}
             </TabsList>
