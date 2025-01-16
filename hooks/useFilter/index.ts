@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { FilterQueryBuilder } from './query-builder';
-import type { UseFilterProps, FilterState } from './types';
+import type { UseFilterProps, FilterState, FilterOperator, FilterValue, QueryParams } from './types';
 import { debounce } from 'lodash';
-import { FilterOperator, FilterValue, QueryParams } from '~/types/filter.types';
 
 export function useFilter<T>({
   service,
   config,
-  defaultParams = { page: 1, limit: 10 }
+  defaultParams = { page: 1, perPage: 10 }
 }: UseFilterProps<T>) {
   const [state, setState] = useState<FilterState<T>>({
     data: { data: [], meta: {} },

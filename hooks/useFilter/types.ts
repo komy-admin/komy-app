@@ -12,7 +12,7 @@ export interface FilterState<T> {
   error: Error | null;
   queryParams: {
     page?: number;
-    limit?: number;
+    perPage?: number;
     filters: FilterValue[];
   };
 }
@@ -40,13 +40,14 @@ export type FilterConfig<T> = {
   type: FilterType;
   label: string;
   operator?: FilterOperator;
+  defaultValue?: string | number | boolean | (string | number)[] | Date | [number, number];
   options?: { label: string, value: string }[];
   show: boolean
 }
 
 export interface QueryParams {
   page?: number;
-  limit?: number;
+  perPage?: number;
   filters?: FilterValue[];
   // sort?: {
   //   field: string;

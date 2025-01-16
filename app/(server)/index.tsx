@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, Text } from '~/components/ui'
 import { tableApiService } from '~/api/table.api';
 import { getStatusColor, getStatusText } from '~/lib/utils';
 import { router } from 'expo-router';
-import Room from '~/components/Room/Room';
+import RoomComponent from '~/components/Room/Room';
+import { Status } from '~/types/status.enum';
 
 export default function ServerHome() {
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -36,12 +37,12 @@ export default function ServerHome() {
     }
   };
 
-  const handleTablePress = (tableId: string) => {
-    console.log('Attempting navigation to:', tableId);
+  const handleTablePress = (table: Table | null) => {
+    if (!table) return;
     try {
       router.push({
         pathname: "/table/[id]",
-        params: { id: tableId }
+        params: { id: table.id }
       });
     } catch (error) {
       console.error('Navigation error:', error);
@@ -55,11 +56,11 @@ export default function ServerHome() {
         {tables.map((table) => (
           <Pressable
             key={table.id}
-            onPress={() => handleTablePress(table.id)}
+            onPress={() => handleTablePress(table)}
           >
             <Card
               className="mb-3 border border-gray-200"
-              style={{backgroundColor: getStatusColor(table.status)}}>
+              style={{backgroundColor: getStatusColor(Status.DRAFT)}}>
               <CardContent className="flex-row justify-between items-center py-3">
                 <View>
                   <Text className="font-medium">Table {table.name}</Text>
@@ -67,7 +68,7 @@ export default function ServerHome() {
                 </View>
                 <View className="px-3 py-1 rounded-full bg-white">
                   <Text className="text-sm">
-                    {getStatusText(table.status)}
+                    {getStatusText(Status.DRAFT)}
                   </Text>
                 </View>
               </CardContent>
@@ -83,7 +84,7 @@ export default function ServerHome() {
       <View className="" style={{
         height : screenHeight * 0.75 - 88,
       }}>
-        <Room tables={tables} onTablePress={handleTablePress} />
+        <RoomComponent tables={tables} onTablePress={handleTablePress} onTableLongPress={handleTablePress} onTableUpdate={() => {}} />
       </View>
 
       {/* Bottom Sheet avec style amélioré */}

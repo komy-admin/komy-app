@@ -1,7 +1,8 @@
 export enum Status {
+  DRAFT = 'draft',
+  PENDING = 'pending',
+  INPROGRESS = 'inprogress',
   READY = 'ready',
-  PREPARING = 'preparing',
-  SERVED = 'served',
+  TERMINATED = 'terminated',
   ERROR = 'error',
-  FREE = 'free',
 }

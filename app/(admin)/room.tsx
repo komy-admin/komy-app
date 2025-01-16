@@ -19,12 +19,14 @@ export default function RoomPage () {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newRoomWidth, setNewRoomWidth] = useState(10)
+  const [newRoomHeight, setNewRoomHeight] = useState(10)
 
   useEffect(() => {
-    loadTables();
+    initData();
   }, []);
 
-  const loadTables = async () => {
+  const initData = async () => {
     try {
       setIsLoading(true);
       const { data } = await roomApiService.getAll();
@@ -70,18 +72,18 @@ export default function RoomPage () {
   }
   };
 
-  const handleTablePress = (id: string) => {
-    const table = tables.find(t => t.id === id)
-    if (table) {
-      setSelectedTable(table)
-    } else {
-      setSelectedTable(null)
-    }
+  const handleTablePress = (table: Table | null) => {
+    setSelectedTable(table)
   }
 
   const handleAddTable = async () => {
+    function generateName() {
+      const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+      return `${letter}${number}`;
+  }
     const tableToCreate = {
-      name: Date.now().toString().slice(-5),
+      name: generateName(),
       xStart: 5,
       yStart: 5,
       width: 2,
@@ -125,11 +127,13 @@ export default function RoomPage () {
   }
 
   const createRoom = async () => {
-    const newRoom = await roomApiService.create({ name: newRoomName, tables: [], number: 1 })
+    const newRoom = await roomApiService.create({ name: newRoomName, tables: [], width: newRoomWidth, height: newRoomHeight })
     setRooms([...rooms, newRoom])
     setCurrentRoom(newRoom)
     setTables([])
     setNewRoomName("")
+    setNewRoomWidth(10)
+    setNewRoomHeight(10)
   }
 
   return (
@@ -168,9 +172,9 @@ export default function RoomPage () {
                 <Text>Nom</Text>
                 <Input value={currentRoom?.name} />
                 <Text>Largeur</Text>
-                <NumberInput value={10} decimalPlaces={0} onChangeText={() => {}} />
-                <Text>Longueur</Text>
-                <NumberInput value={10} decimalPlaces={0} onChangeText={() => {}} />
+                <NumberInput value={newRoomWidth} decimalPlaces={0} onChangeText={(value) => {setNewRoomHeight(value!)}} />
+                <Text>Hauteur</Text>
+                <NumberInput value={newRoomHeight} decimalPlaces={0} onChangeText={(value) => {setNewRoomHeight(value!)}} />
               </View>
               <Button
                 onPress={deleteRoom}

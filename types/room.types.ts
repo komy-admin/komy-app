@@ -4,6 +4,8 @@ export type Room = {
   id: string;
   name: string;
   number?: number;
+  width: number;
+  height: number;
   tables: Table[];
   account: string;
   createdAt: string;

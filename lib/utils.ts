@@ -8,13 +8,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const getMostImportantStatus = (statuses: Status[]) => {
+  const order = [
+    Status.DRAFT,
+    Status.TERMINATED,
+    Status.INPROGRESS,
+    Status.PENDING,
+    Status.READY,
+    Status.ERROR,
+  ];
+  return statuses.reduce((acc, status) => {
+    const accIndex = order.indexOf(acc);
+    const statusIndex = order.indexOf(status);
+    return accIndex > statusIndex ? acc : status;
+  }, Status.DRAFT);
+}
+
 export const getStatusColor = (status: Status) => {
   const colors = {
     [Status.READY]: '#D7E3FC',
-    [Status.PREPARING]: '#F9F1C8',
-    [Status.SERVED]: '#B7E1CC',
+    [Status.PENDING]: '#F9F1C8',
+    [Status.INPROGRESS]: '#B7E1CC',
     [Status.ERROR]: '#F7BFB5',
-    [Status.FREE]: '#EBEBEB',
+    [Status.TERMINATED]: '#EBEBEB',
+    [Status.DRAFT]: '#EBEBEB',
   };
   return colors[status as keyof typeof colors] || colors.error;
 }
@@ -22,10 +39,11 @@ export const getStatusColor = (status: Status) => {
 export const getStatusText = (status: Status) => {
   const texts = {
     [Status.READY]: 'Prêt',
-    [Status.PREPARING]: 'En préparation',
-    [Status.SERVED]: 'Servi',
+    [Status.PENDING]: 'En préparation',
+    [Status.INPROGRESS]: 'Servi',
     [Status.ERROR]: 'Erreur',
-    [Status.FREE]: 'Libre',
+    [Status.TERMINATED]: 'Terminé',
+    [Status.DRAFT]: 'En attente',
   };
   return texts[status];
 }

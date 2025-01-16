@@ -1,4 +1,4 @@
 export type ItemType = {
-  id?: string;
+  id: string;
   name: string;
 };
