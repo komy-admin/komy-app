@@ -11,3 +11,4 @@ export * from './separator';
 export * from './tabs';
 export * from './badge';
 export * from './table';
+export * from './loader';

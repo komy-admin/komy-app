@@ -14,7 +14,7 @@ const AVAILABLE_STATUSES = [
   Status.PENDING,
   Status.READY,
   Status.INPROGRESS,
-  Status.TERMINATED,
+  // Status.TERMINATED,
 ];
 
 export default function StatusSelector({ 

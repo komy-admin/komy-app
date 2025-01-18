@@ -19,6 +19,10 @@ export class FilterQueryBuilder {
       searchParams.append('perPage', String(params.perPage));
     }
 
+    if (params.sort) {
+      searchParams.append('sort', `${params.sort.field}:${params.sort.direction}`);
+    }
+
     return searchParams.toString();
   }
 

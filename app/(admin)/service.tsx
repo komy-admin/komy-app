@@ -31,6 +31,7 @@ export default function ServicePage () {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null)
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
   const [showMenu, setShowMenu] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     initData();
@@ -46,7 +47,7 @@ export default function ServicePage () {
       show: false
     },
     { 
-      field: 'tableId', 
+      field: 'table.roomId', 
       type: 'text',
       label: 'Table',
       operator: '=',
@@ -61,7 +62,7 @@ export default function ServicePage () {
     clearFilters: clearOrderFilters,
     changePage: changeOrderPage,
     queryParams: orderQueryParams
-  } = useFilter({ config: filterOrder, service: orderApiService });
+  } = useFilter({ config: filterOrder, service: orderApiService, defaultParams: { sort: { field: 'updatedAt', direction: 'desc' } } });
 
   const filterItem: FilterConfig<Item>[] = [
     { 
@@ -84,6 +85,7 @@ export default function ServicePage () {
 
   const initData = async () => {
     try {
+      setLoading(true);
       const { data: rooms } = await roomApiService.getAll();
       const { data: itemTypes } = await itemTypeApiService.getAll();
       setRooms(rooms)
@@ -91,15 +93,20 @@ export default function ServicePage () {
       setMenuTabsValue(itemTypes[0]?.id)
       if (!rooms.length) return
       setCurrentRoom(rooms[0])
+      updateOrderFilter('table.roomId', rooms[0].id, '=')
       setTables(rooms[0]?.tables || [])
     } catch (err) {;
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleChangeRoom = (room: Room) => {
+    setCurrentOrder(null)
     setCurrentRoom(room)
     setTables(room.tables)
+    updateOrderFilter('table.roomId', room.id, '=')
   }
 
   const handleTablePress = (table: Table | null) => {
@@ -112,6 +119,8 @@ export default function ServicePage () {
       if (!selectedTable) return;
       const order = await orderApiService.create({ tableId: selectedTable.id, table: selectedTable, orderItems: [], status: Status.DRAFT });
       setCurrentOrder(order)
+      setShowMenu(true)
+      orders.data.push(order)
     } catch (error) {
       console.error(error);
     }
@@ -128,12 +137,27 @@ export default function ServicePage () {
     if (!item) return;
     if (action === 'add') {
       const orderItem = await orderItemApiService.create({ orderId: currentOrder.id, itemId: item.id, status: Status.DRAFT });
-      setCurrentOrder({ ...currentOrder, orderItems: [...currentOrder.orderItems, orderItem] });
+      updateOrder({ ...currentOrder, orderItems: [...currentOrder.orderItems, orderItem] });
     } else if (action === 'remove') {
       const orderItem = currentOrder.orderItems.find(orderItem => orderItem.item.id === itemId);
       if (!orderItem) return;
       orderItemApiService.delete(orderItem.id);
-      setCurrentOrder({ ...currentOrder, orderItems: currentOrder.orderItems.filter(orderItem => orderItem.item.id !== itemId) });
+      updateOrder({ ...currentOrder, orderItems: currentOrder.orderItems.filter(orderItem => orderItem.item.id !== itemId) });
+    }
+  }
+
+  const updateOrder = (order: Order) => {
+    setSelectedTable(order.table)
+    setCurrentOrder(order)
+    orders.data = orders.data.map(o => o.id === order.id ? order : o)
+  }
+
+  const deleteOrder = async (order: Order) => {
+    try {
+      await orderApiService.delete(order.id);
+      updateOrderFilter('table.roomId', currentRoom?.id, '=')
+    } catch (error) {
+      console.error(error);
     }
   }
 
@@ -149,7 +173,7 @@ export default function ServicePage () {
       >
       {currentOrder ? (
         <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between'}}>
-          {(showMenu || currentOrder.orderItems.length === 0) ? (
+          {showMenu ? (
             <>
               <Tabs
                 value={menuTabsValue}
@@ -230,7 +254,7 @@ export default function ServicePage () {
             </>
           ) : (
             <>
-              <OrderView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={(order: Order) => {setCurrentOrder(order)}} />
+              <OrderView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={updateOrder} />
               <View style={{ padding: 16 }}>
                 <Button
                   onPress={() => setShowMenu(true)}
@@ -264,7 +288,7 @@ export default function ServicePage () {
               <ListFilter />
             </Button>
           </View>
-          <OrderList orders={orders.data} onOrderPress={(order) => {setCurrentOrder(order)}} />
+          <OrderList orders={orders.data} onOrderPress={updateOrder} onOrderDelete={deleteOrder} />
         </View>
       )}
       </SidePanel>
