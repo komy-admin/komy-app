@@ -1,5 +1,5 @@
-import { OrderItem } from "./order-item.types";
-import { Status } from "./status.enum";
+import { OrderItem } from "~/types/order-item.types";
+import { Status } from "~/types/status.enum";
 import { Table } from '~/types/table.types';
 
 export type Order = {

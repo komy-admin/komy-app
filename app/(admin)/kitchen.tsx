@@ -6,6 +6,7 @@ import { DateFormat, formatDate } from '~/lib/utils';
 import { MoveRight, MoveLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Button } from "~/components/ui";
 import { useSocket } from '~/hooks/useSocket/useSocket';
+import { Status } from "~/types/status.enum";
 
 const ORDER_STATUS = [
   { name: 'En Attente', status: 'pending', color: 'bg-yellow-200' },
@@ -28,8 +29,8 @@ const StatusBadge = React.memo(({ status }: { status: string }) => {
 
 const OrderCard = React.memo(({ order, status, onStatusChange }: { 
     order: Order;
-    status: string;
-    onStatusChange: (order: Order, newStatus: string) => void; 
+    status: Status;
+    onStatusChange: (order: Order, newStatus: Status) => void; 
   }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const toggleExpanded = useCallback(() => setIsExpanded(prev => !prev), []);
@@ -88,13 +89,13 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
             className="flex flex-row justify-between gap-3"
             style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center'}}
           >
-            {(status === 'inprogress' || status === 'ready') ? (
+            {(status === Status.INPROGRESS || Status.READY) ? (
               <View className="w-1/3">
                 <Button
                   onPress={() =>
-                    status === 'inprogress'
-                      ? onStatusChange(order, 'pending')
-                      : onStatusChange(order, 'inprogress')
+                    status === Status.INPROGRESS
+                      ? onStatusChange(order, Status.PENDING)
+                      : onStatusChange(order, Status.INPROGRESS)
                   }
                   className="mt-2 flex items-center justify-center"
                   style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}
@@ -105,13 +106,13 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
             ) : (
               <View className="w-1/3" />
             )}
-            {(status === 'pending' || status === 'inprogress') && (
+            {(status === Status.PENDING || status === Status.INPROGRESS) && (
               <View className="w-1/3">
                 <Button
                   onPress={() => 
-                    status === 'pending' 
-                      ? onStatusChange(order, 'inprogress') 
-                      : onStatusChange(order, 'ready')
+                    status === Status.PENDING 
+                      ? onStatusChange(order, Status.INPROGRESS) 
+                      : onStatusChange(order, Status.READY)
                   }
                   className="mt-2 flex items-center justify-center"
                   style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}>
@@ -128,9 +129,9 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
 const OrderColumn = React.memo(({ title, orders = [], status, headerColor, onStatusChange }: { 
   title: string; 
   orders: Order[]; 
-  status: string;
+  status: Status;
   headerColor: string;
-  onStatusChange: (order: Order, newStatus: string) => void;
+  onStatusChange: (order: Order, newStatus: Status) => void;
 }) => (
   <View className="flex-1 bg-gray-100 shadow">
     <View className={`${headerColor} flex flex-row justify-center py-3`}>
@@ -178,7 +179,7 @@ export default function KitchenPage() {
   }, []);
 
   const handleStatusChange = useCallback(
-    async (order: Order, newStatus: string) => {
+    async (order: Order, newStatus: Status) => {
       try {
         const response = await orderApiService.update(order.id, { status: newStatus });
         const updatedOrder: Order = response;
@@ -227,7 +228,7 @@ export default function KitchenPage() {
           key={status.status}
           title={status.name.toUpperCase()} 
           orders={menuItems[status.status]} 
-          status={status.status}
+          status={status.status as Status}
           headerColor={status.color}
           onStatusChange={handleStatusChange}
         />
