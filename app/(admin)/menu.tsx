@@ -322,7 +322,6 @@ export default function MenuPage() {
             <TabsList className="flex-row w-[500px] h-full">
               <TabsTrigger value="ALL" className="flex-1 flex-row h-full">
                 <Text
-                  className="pr-2"
                   style={{ color: activeTab === 'ALL' ? '#2A2E33' : '#A0A0A0' }}
                 >
                   Tous
@@ -331,7 +330,6 @@ export default function MenuPage() {
               {itemTypes.map((type) => (
                 <TabsTrigger key={type.id} value={type.id!} className="flex-1 flex-row h-full">
                   <Text
-                    className="pr-2"
                     style={{ color: activeTab === type.id ? '#2A2E33' : '#A0A0A0' }}
                   >
                     {type.name}

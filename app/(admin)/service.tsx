@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pressable, ScrollView, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
+import { Badge, Button, ConfirmDialog, ForkModal, Input, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState } from "react";
 import { Room } from "~/types/room.types";
@@ -21,6 +21,7 @@ import { ItemType } from "~/types/item-type.types";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { orderItemApiService } from "~/api/order-item.api";
 import OrderView from "~/components/Service/OrderItemTypeCards";
+import { set } from 'lodash';
 
 export default function ServicePage () {
   const [currentRoom, setCurrentRoom] = useState<Room | null>();
@@ -31,6 +32,9 @@ export default function ServicePage () {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null)
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
   const [showMenu, setShowMenu] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
+  const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
 
   useEffect(() => {
     initData();
@@ -46,7 +50,7 @@ export default function ServicePage () {
       show: false
     },
     { 
-      field: 'tableId', 
+      field: 'table.roomId', 
       type: 'text',
       label: 'Table',
       operator: '=',
@@ -61,7 +65,7 @@ export default function ServicePage () {
     clearFilters: clearOrderFilters,
     changePage: changeOrderPage,
     queryParams: orderQueryParams
-  } = useFilter({ config: filterOrder, service: orderApiService });
+  } = useFilter({ config: filterOrder, service: orderApiService, defaultParams: { sort: { field: 'updatedAt', direction: 'asc' } } });
 
   const filterItem: FilterConfig<Item>[] = [
     { 
@@ -84,6 +88,7 @@ export default function ServicePage () {
 
   const initData = async () => {
     try {
+      setLoading(true);
       const { data: rooms } = await roomApiService.getAll();
       const { data: itemTypes } = await itemTypeApiService.getAll();
       setRooms(rooms)
@@ -91,15 +96,20 @@ export default function ServicePage () {
       setMenuTabsValue(itemTypes[0]?.id)
       if (!rooms.length) return
       setCurrentRoom(rooms[0])
+      updateOrderFilter('table.roomId', rooms[0].id, '=')
       setTables(rooms[0]?.tables || [])
     } catch (err) {;
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleChangeRoom = (room: Room) => {
+    setCurrentOrder(null)
     setCurrentRoom(room)
     setTables(room.tables)
+    updateOrderFilter('table.roomId', room.id, '=')
   }
 
   const handleTablePress = (table: Table | null) => {
@@ -112,6 +122,8 @@ export default function ServicePage () {
       if (!selectedTable) return;
       const order = await orderApiService.create({ tableId: selectedTable.id, table: selectedTable, orderItems: [], status: Status.DRAFT });
       setCurrentOrder(order)
+      setShowMenu(true)
+      orders.data.push(order)
     } catch (error) {
       console.error(error);
     }
@@ -128,12 +140,27 @@ export default function ServicePage () {
     if (!item) return;
     if (action === 'add') {
       const orderItem = await orderItemApiService.create({ orderId: currentOrder.id, itemId: item.id, status: Status.DRAFT });
-      setCurrentOrder({ ...currentOrder, orderItems: [...currentOrder.orderItems, orderItem] });
+      updateOrder({ ...currentOrder, orderItems: [...currentOrder.orderItems, orderItem] });
     } else if (action === 'remove') {
       const orderItem = currentOrder.orderItems.find(orderItem => orderItem.item.id === itemId);
       if (!orderItem) return;
       orderItemApiService.delete(orderItem.id);
-      setCurrentOrder({ ...currentOrder, orderItems: currentOrder.orderItems.filter(orderItem => orderItem.item.id !== itemId) });
+      updateOrder({ ...currentOrder, orderItems: currentOrder.orderItems.filter(orderItem => orderItem.item.id !== itemId) });
+    }
+  }
+
+  const updateOrder = (order: Order) => {
+    setSelectedTable(order.table)
+    setCurrentOrder(order)
+    orders.data = orders.data.map(o => o.id === order.id ? order : o)
+  }
+
+  const deleteOrder = async (order: Order) => {
+    try {
+      await orderApiService.delete(order.id);
+      updateOrderFilter('table.roomId', currentRoom?.id, '=')
+    } catch (error) {
+      console.error(error);
     }
   }
 
@@ -143,18 +170,21 @@ export default function ServicePage () {
         style={{ flex: 1}}
         title={currentOrder ? `Commande ${currentOrder.table.name}` : 'Service'}
         {...(currentOrder && { onBack: () => {
-          setCurrentOrder(null)
-          setSelectedTable(null)
+          if (showMenu) setShowMenu(false)
+          else {
+            setCurrentOrder(null)
+            setSelectedTable(null)
+          }
         }})}
       >
       {currentOrder ? (
         <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between'}}>
-          {(showMenu || currentOrder.orderItems.length === 0) ? (
+          {showMenu ? (
             <>
               <Tabs
                 value={menuTabsValue}
                 onValueChange={(newValue: string) => setMenuTabsValue(newValue)}
-                className='w-full max-w-[400px] mx-auto flex-col gap-1.5'
+                className='flex-1 w-full max-w-[400px] mx-auto flex-col gap-1.5'
               >
                 <TabsList className='flex-row w-full'>
                   {itemTypes.map((itemType) => (
@@ -230,11 +260,33 @@ export default function ServicePage () {
             </>
           ) : (
             <>
-              <OrderView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={(order: Order) => {setCurrentOrder(order)}} />
+              <OrderView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={updateOrder} />
               <View style={{ padding: 16 }}>
+                <PopoverButton
+                  style={{ backgroundColor: '#2A2E33' }}
+                  className='w-full h-[50px]'
+                  variant="default"
+                  side="top"
+                  triggerContent={<Text>PLUS D'ACTION</Text>}
+                  popoverContent={
+                    <View className="gap-4">
+                      <View className="gap-2">
+                        <Button variant="outline" onPress={() => setShowReassignModal(true)}>
+                          <Text>Assigner une autre table</Text>
+                        </Button>
+                        <Button variant="outline" onPress={() => console.log('Régler la note')}>
+                          <Text>Régler la note</Text>
+                        </Button>
+                        <Button variant="destructive" onPress={() => setShowDeleteOrderDialog(true)}>
+                          <Text>Supprimer la commande</Text>
+                        </Button>
+                      </View>
+                    </View>
+                  }
+                />
                 <Button
                   onPress={() => setShowMenu(true)}
-                  className="w-full h-[50px] flex items-center justify-center"
+                  className="w-full h-[50px] flex items-center justify-center mt-2"
                   style={{ backgroundColor: '#2A2E33' }}
                 >
                   <Text
@@ -257,14 +309,14 @@ export default function ServicePage () {
         <View style={{ padding: 16, flex: 1 }}>
           <View className='flex-row justify-between items-center'>
             <Button className="rounded-full p-2" variant='outline'>
-              <Grid3X3Icon />
+              <Grid3X3Icon color='black' />
             </Button>
-            <Input className="mx-2 rounded-full" style={{ height: 40 }} placeholder="Rechercher..." />
+            <Input className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
             <Button className="rounded-full p-2" variant='outline'>
-              <ListFilter />
+              <ListFilter color='black' />
             </Button>
           </View>
-          <OrderList orders={orders.data} onOrderPress={(order) => {setCurrentOrder(order)}} />
+          <OrderList orders={orders.data} onOrderPress={updateOrder} onOrderDelete={deleteOrder} />
         </View>
       )}
       </SidePanel>
@@ -325,6 +377,40 @@ export default function ServicePage () {
           onTableUpdate={() => {}}
         />
       </View>
+        {currentOrder && showDeleteOrderDialog && (
+          <ConfirmDialog
+            open={showDeleteOrderDialog}
+            onOpenChange={(value) => {
+              setShowDeleteOrderDialog(value)
+            }}
+            title="Supprimer la commande"
+            content="Êtes-vous sûr de vouloir supprimer cette commande ?"
+            onCancel={() => setShowDeleteOrderDialog(false)}
+            onConfirm={() => {
+              setShowDeleteOrderDialog(false)
+              deleteOrder(currentOrder)
+              setCurrentOrder(null)
+              setSelectedTable(null)
+            }}
+            confirmText="Supprimer"
+            variant="destructive"
+          />
+        )}
+        <ForkModal
+          visible={showReassignModal}
+          onClose={() => setShowReassignModal(false)}
+          maxWidth={800}
+          title="Sélectionner une table"
+        >
+          <RoomComponent
+            tables={tables.filter(table => !orders.data.find(order => order.tableId === table.id))}
+            zoom={0.9}
+            editionMode={false}
+            onTablePress={handleTablePress}
+            onTableLongPress={handleTablePress}
+            onTableUpdate={() => {}}
+          />
+        </ForkModal>
     </View>
   );
 

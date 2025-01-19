@@ -43,7 +43,7 @@ const OrderItemsGroup = ({ itemType, orderItems, isExpanded, onToggle, onUpdateS
     <View style={{ marginBottom: 8 }}>
       <View
         style={[{
-          backgroundColor: getStatusColor(itemStatus),
+          backgroundColor: `${getStatusColor(itemStatus)}80`,
           borderRadius: 12,
           overflow: 'hidden',
         }]}

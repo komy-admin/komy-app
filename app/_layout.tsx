@@ -98,7 +98,6 @@ function RootLayoutNav() {
     <ThemeProvider value={isDarkColorScheme ? LIGHT_THEME : LIGHT_THEME}>
       <StatusBar style={isDarkColorScheme ? 'light' : 'light'} />
       <AuthenticationGate />
-      <PortalHost />
       <SafeAreaView className="flex-1 bg-background">
         <Stack>
           <Stack.Screen
@@ -127,6 +126,7 @@ function RootLayoutNav() {
             }}
           />
         </Stack>
+        <PortalHost />
       </SafeAreaView>
     </ThemeProvider>
   );

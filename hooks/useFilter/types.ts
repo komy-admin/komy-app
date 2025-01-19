@@ -49,10 +49,10 @@ export interface QueryParams {
   page?: number;
   perPage?: number;
   filters?: FilterValue[];
-  // sort?: {
-  //   field: string;
-  //   direction: 'asc' | 'desc';
-  // };
+  sort?: {
+    field: string;
+    direction: 'asc' | 'desc';
+  };
 }
 
 export interface PaginatedResponse<T> {
