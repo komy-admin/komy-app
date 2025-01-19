@@ -1,51 +1,35 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Order } from "~/types/order.types";
 import { orderApiService } from "~/api/order.api";
 import { DateFormat, formatDate } from '~/lib/utils';
-import { MoveRight, MoveLeft, CircleAlert, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { MoveRight, MoveLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Button } from "~/components/ui";
-import { io } from 'socket.io-client';
-import { storageService } from '~/lib/storageService';
+import { useSocket } from '~/hooks/useSocket/useSocket';
 
-// Constantes déplacées en dehors du composant
 const ORDER_STATUS = [
-  { name: 'En attente', id: 'fjvjsp0k5zelhw30i6m8zwos', status: 'waiting', color: 'bg-gray-200' },
-  { name: 'En cours', id: 'eh3x22b23jm82xezpli0ciax', status: 'inProgress', color: 'bg-yellow-300' },
-  { name: 'Prêt à servir', id: 'wo0q7lilcx20fls2ekghupkf', status: 'ready', color: 'bg-blue-100' },
+  { name: 'En Attente', status: 'pending', color: 'bg-yellow-200' },
+  { name: 'En cours', status: 'inprogress', color: 'bg-blue-100' },
+  { name: 'Prêt à servir', status: 'ready', color: 'bg-green-100' },
 ];
 
-const statusId = {
-  waiting: 'fjvjsp0k5zelhw30i6m8zwos',
-  inProgress: 'eh3x22b23jm82xezpli0ciax',
-  ready: 'wo0q7lilcx20fls2ekghupkf',
+const getStatusInfo = (status: string) => {
+  return ORDER_STATUS.find(s => s.status === status) || ORDER_STATUS[0];
 };
 
-const statusStyles = {
-  waiting: 'bg-gray-200 text-gray-700',
-  inProgress: 'bg-yellow-200 text-yellow-800',
-  ready: 'bg-blue-100 text-blue-800',
-};
-
-const statusTexts = {
-  waiting: 'En attente',
-  inProgress: 'En cours',
-  ready: 'Prêt',
-};
-
-const StatusBadge = React.memo(({ status }: { status: keyof typeof statusStyles }) => {
-
+const StatusBadge = React.memo(({ status }: { status: string }) => {
+  const statusInfo = getStatusInfo(status);
   return (
-    <View className={`shadow px-2 py-1 ${statusStyles[status] || statusStyles.waiting}`}>
-      <Text className="text-xs font-medium">{statusTexts[status] || ''}</Text>
+    <View className={`shadow px-2 py-1 ${statusInfo.color}`}>
+      <Text className="text-xs font-medium">{statusInfo.name}</Text>
     </View>
   );
 });
 
 const OrderCard = React.memo(({ order, status, onStatusChange }: { 
     order: Order;
-    status: keyof typeof statusStyles;
-    onStatusChange: (order: Order, newStatus: 'waiting' | 'inProgress' | 'ready') => void; 
+    status: string;
+    onStatusChange: (order: Order, newStatus: string) => void; 
   }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const toggleExpanded = useCallback(() => setIsExpanded(prev => !prev), []);
@@ -55,7 +39,7 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
         <View className="p-3">
           <View className="flex-row justify-between items-start mb-2.5 pb-2.5 border-b border-gray-100">
             <Text className="text-gray-900 text-sm font-medium">{order.id}</Text>
-            <Text className="text-gray-600 text-sm">{order?.orderItems?.length || 0} ARTICLE{order?.orderItems?.length  > 1 ? 'S' : ''}</Text>
+            <Text className="text-gray-600 text-sm">{order?.orderItems?.length || 0} ARTICLE{order?.orderItems?.length > 1 ? 'S' : ''}</Text>
           </View>
           
           <View className="w-full flex-row items-start justify-between">
@@ -88,8 +72,6 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
               <View className="p-4">
                 {order?.orderItems?.length ? order.orderItems.map((orderItem, index) => (
                   <View key={index} className="flex-row items-center mb-2">
-                    {/* <View className={`w-5 h-5 border mr-3 items-center justify-center`}>
-                    </View> */}
                     <Text className="text-sm mr-3">-</Text>
                     <View>
                       <Text className="text-gray-800 text-sm">{orderItem.item.name}</Text>
@@ -106,13 +88,13 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
             className="flex flex-row justify-between gap-3"
             style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center'}}
           >
-            {(status === 'ready' || status === 'inProgress') ? (
+            {(status === 'inprogress' || status === 'ready') ? (
               <View className="w-1/3">
                 <Button
                   onPress={() =>
-                    status === 'ready'
-                      ? onStatusChange(order, 'inProgress')
-                      : onStatusChange(order, 'waiting')
+                    status === 'inprogress'
+                      ? onStatusChange(order, 'pending')
+                      : onStatusChange(order, 'inprogress')
                   }
                   className="mt-2 flex items-center justify-center"
                   style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}
@@ -123,16 +105,17 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
             ) : (
               <View className="w-1/3" />
             )}
-            {(status === 'waiting' || status === 'inProgress') && (
+            {(status === 'pending' || status === 'inprogress') && (
               <View className="w-1/3">
                 <Button
-                  onPress={() => status === 'waiting' ? onStatusChange(order, 'inProgress') : onStatusChange(order, 'ready')}
+                  onPress={() => 
+                    status === 'pending' 
+                      ? onStatusChange(order, 'inprogress') 
+                      : onStatusChange(order, 'ready')
+                  }
                   className="mt-2 flex items-center justify-center"
                   style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}>
-                  <MoveRight
-                    size={24} 
-                    color={'black'}
-                  />
+                  <MoveRight size={24} color={'black'} />
                 </Button>
               </View>
             )}
@@ -145,12 +128,12 @@ const OrderCard = React.memo(({ order, status, onStatusChange }: {
 const OrderColumn = React.memo(({ title, orders = [], status, headerColor, onStatusChange }: { 
   title: string; 
   orders: Order[]; 
-  status: 'waiting' | 'inProgress' | 'ready';
+  status: string;
   headerColor: string;
-  onStatusChange: (order: Order, newStatus: 'waiting' | 'inProgress' | 'ready') => void;
+  onStatusChange: (order: Order, newStatus: string) => void;
 }) => (
   <View className="flex-1 bg-gray-100 shadow">
-    <View className={` ${headerColor} flex flex-row justify-center py-3`}>
+    <View className={`${headerColor} flex flex-row justify-center py-3`}>
       <Text className="font-bold text-sm">{title} : {orders?.length || 0} </Text>
     </View>
     <ScrollView className="flex-1 flex-column p-3">
@@ -168,7 +151,8 @@ const OrderColumn = React.memo(({ title, orders = [], status, headerColor, onSta
 ));
 
 export default function KitchenPage() {
-  const [menuItems, setMenuItems] = useState<{ [key: string]: Order[] }>({});
+  const socket = useSocket();
+  const [menuItems, setMenuItems] = useState<Record<string, Order[]>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   const loadAllData = useCallback(async () => {
@@ -177,11 +161,11 @@ export default function KitchenPage() {
       const newMenuItems = await Promise.all(
         ORDER_STATUS.map(async (type) => {
           try {
-            const { data } = await orderApiService.getAll(`statusId=${type.id}`);
-            return [type.id, data];
+            const { data } = await orderApiService.getAll(`status=${type.status}`);
+            return [type.status, data];
           } catch (err) {
             console.error(`Error loading ${type.name} items:`, err);
-            return [type.id, []];
+            return [type.status, []];
           }
         })
       );
@@ -194,21 +178,19 @@ export default function KitchenPage() {
   }, []);
 
   const handleStatusChange = useCallback(
-    async (order: Order, newStatus: 'waiting' | 'inProgress' | 'ready') => {
+    async (order: Order, newStatus: string) => {
       try {
-        const statusValue = statusId[newStatus];
-        await orderApiService.update(order.id, { statusId: statusValue })
-        const response = await orderApiService.update(order.id, { statusId: statusValue });
+        const response = await orderApiService.update(order.id, { status: newStatus });
         const updatedOrder: Order = response;
         setMenuItems((prevItems) => {
-          const oldStatusId = order.statusId;
-          const updatedOldList = (prevItems[oldStatusId] || []).filter((o) => o.id !== order.id);
-          const updatedNewList = [ ...(prevItems[statusValue] || []), updatedOrder ];
+          const oldStatus: string = order.status as string;
+          const updatedOldList = (prevItems[oldStatus] || []).filter((o) => o.id !== order.id);
+          const updatedNewList = [...(prevItems[newStatus] || []), updatedOrder];
           return {
             ...prevItems,
-            [oldStatusId]: updatedOldList,
-            [statusValue]: updatedNewList,
-          };1
+            [oldStatus]: updatedOldList,
+            [newStatus]: updatedNewList,
+          };
         });
       } catch (err) {
         console.error('Failed to update order status', err);
@@ -222,27 +204,13 @@ export default function KitchenPage() {
   }, [loadAllData]);
 
   useEffect(() => {
-    const initializeSocket = async () => {
-      // const BASE_URL = 'http://192.168.1.136:3333' // flo
-      const BASE_URL = 'http://192.168.1.67:3333';
-      const socket = io(BASE_URL, { autoConnect: false })
-      const token = await storageService.getItem('token');
-      socket.auth = { token: token };
-      socket.connect()
-      socket.on('newOrder', (data: Order) => {
-        setMenuItems(prevItems => ({
-          ...prevItems,
-          [data.statusId]: [...(prevItems[data.statusId] || []), data]
-        }));
-      });
-      socket.on('disconnect', () => { console.log('Disconnected from socket server') });
-      socket.on('error', (error) => { console.error('Socket error:', error) });
-      return () => {
-        socket.disconnect();
-      };
-    }
-    initializeSocket();
-  }, []);
+    socket?.onOrderUpdate((order: Order) => {
+      setMenuItems(prevItems => ({
+        ...prevItems,
+        [order.status as string]: [...(prevItems[order.status as string] || []), order]
+      }));
+    });
+  }, [socket]);
 
   if (isLoading) {
     return (
@@ -256,10 +224,10 @@ export default function KitchenPage() {
     <View className="flex-1 flex-row gap-7 p-7 h-full">
       {ORDER_STATUS.map((status) => (
         <OrderColumn 
-          key={status.id}
+          key={status.status}
           title={status.name.toUpperCase()} 
-          orders={menuItems[status.id]} 
-          status={status.status as 'waiting' | 'inProgress' | 'ready'}
+          orders={menuItems[status.status]} 
+          status={status.status}
           headerColor={status.color}
           onStatusChange={handleStatusChange}
         />
