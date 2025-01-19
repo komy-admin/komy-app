@@ -324,7 +324,6 @@ export default function TeamPage() {
                 .map((type) => (
                   <TabsTrigger key={type} value={type} className="flex-1 flex-row h-full">
                     <Text
-                      className="pr-2"
                       style={{ color: activeTab === type ? '#2A2E33' : '#A0A0A0' }}
                     >
                       {getTeamTypeText(type)}

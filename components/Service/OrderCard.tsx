@@ -92,13 +92,13 @@
 //   },
 // });
 
-import { Alert, Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import { useCallback, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react-native';
-import { ConfirmDialog } from '../ui/dialog';
+import { ConfirmDialog } from '../ui';
 
 interface OrderCardProps {
   order: Order;
@@ -137,7 +137,6 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
     (event: PanGestureHandlerGestureEvent) => {
       const { translationX } = event.nativeEvent;
       swipeRef.current = translationX;
-      console.log(translationX);
       
       if (translationX <= 0 && translationX >= (SWIPE_THRESHOLD - 10)) {
         translateX.setValue(translationX);
@@ -148,7 +147,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
 
   const onGestureEnd = useCallback(() => {
     if (swipeRef.current <= SWIPE_THRESHOLD) {
-      showDeleteConfirmation();
+      setShowDeleteDialog(true);
     } else {
       resetPosition();
     }

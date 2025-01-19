@@ -108,6 +108,7 @@ export function SidePanel({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: '#F8F9FA',
     zIndex: 1000
   },
@@ -129,8 +130,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   centeredTitle: {
+    flex: 1,
     textAlign: 'center',
-    width: '100%',
   },
   backButton: {
     padding: 4,

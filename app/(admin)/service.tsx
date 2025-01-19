@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pressable, ScrollView, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
+import { Badge, Button, ConfirmDialog, ForkModal, Input, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState } from "react";
 import { Room } from "~/types/room.types";
@@ -21,6 +21,7 @@ import { ItemType } from "~/types/item-type.types";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { orderItemApiService } from "~/api/order-item.api";
 import OrderView from "~/components/Service/OrderItemTypeCards";
+import { set } from 'lodash';
 
 export default function ServicePage () {
   const [currentRoom, setCurrentRoom] = useState<Room | null>();
@@ -32,6 +33,8 @@ export default function ServicePage () {
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
+  const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
 
   useEffect(() => {
     initData();
@@ -62,7 +65,7 @@ export default function ServicePage () {
     clearFilters: clearOrderFilters,
     changePage: changeOrderPage,
     queryParams: orderQueryParams
-  } = useFilter({ config: filterOrder, service: orderApiService, defaultParams: { sort: { field: 'updatedAt', direction: 'desc' } } });
+  } = useFilter({ config: filterOrder, service: orderApiService, defaultParams: { sort: { field: 'updatedAt', direction: 'asc' } } });
 
   const filterItem: FilterConfig<Item>[] = [
     { 
@@ -167,8 +170,11 @@ export default function ServicePage () {
         style={{ flex: 1}}
         title={currentOrder ? `Commande ${currentOrder.table.name}` : 'Service'}
         {...(currentOrder && { onBack: () => {
-          setCurrentOrder(null)
-          setSelectedTable(null)
+          if (showMenu) setShowMenu(false)
+          else {
+            setCurrentOrder(null)
+            setSelectedTable(null)
+          }
         }})}
       >
       {currentOrder ? (
@@ -178,7 +184,7 @@ export default function ServicePage () {
               <Tabs
                 value={menuTabsValue}
                 onValueChange={(newValue: string) => setMenuTabsValue(newValue)}
-                className='w-full max-w-[400px] mx-auto flex-col gap-1.5'
+                className='flex-1 w-full max-w-[400px] mx-auto flex-col gap-1.5'
               >
                 <TabsList className='flex-row w-full'>
                   {itemTypes.map((itemType) => (
@@ -256,9 +262,31 @@ export default function ServicePage () {
             <>
               <OrderView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={updateOrder} />
               <View style={{ padding: 16 }}>
+                <PopoverButton
+                  style={{ backgroundColor: '#2A2E33' }}
+                  className='w-full h-[50px]'
+                  variant="default"
+                  side="top"
+                  triggerContent={<Text>PLUS D'ACTION</Text>}
+                  popoverContent={
+                    <View className="gap-4">
+                      <View className="gap-2">
+                        <Button variant="outline" onPress={() => setShowReassignModal(true)}>
+                          <Text>Assigner une autre table</Text>
+                        </Button>
+                        <Button variant="outline" onPress={() => console.log('Régler la note')}>
+                          <Text>Régler la note</Text>
+                        </Button>
+                        <Button variant="destructive" onPress={() => setShowDeleteOrderDialog(true)}>
+                          <Text>Supprimer la commande</Text>
+                        </Button>
+                      </View>
+                    </View>
+                  }
+                />
                 <Button
                   onPress={() => setShowMenu(true)}
-                  className="w-full h-[50px] flex items-center justify-center"
+                  className="w-full h-[50px] flex items-center justify-center mt-2"
                   style={{ backgroundColor: '#2A2E33' }}
                 >
                   <Text
@@ -281,11 +309,11 @@ export default function ServicePage () {
         <View style={{ padding: 16, flex: 1 }}>
           <View className='flex-row justify-between items-center'>
             <Button className="rounded-full p-2" variant='outline'>
-              <Grid3X3Icon />
+              <Grid3X3Icon color='black' />
             </Button>
-            <Input className="mx-2 rounded-full" style={{ height: 40 }} placeholder="Rechercher..." />
+            <Input className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
             <Button className="rounded-full p-2" variant='outline'>
-              <ListFilter />
+              <ListFilter color='black' />
             </Button>
           </View>
           <OrderList orders={orders.data} onOrderPress={updateOrder} onOrderDelete={deleteOrder} />
@@ -349,6 +377,40 @@ export default function ServicePage () {
           onTableUpdate={() => {}}
         />
       </View>
+        {currentOrder && showDeleteOrderDialog && (
+          <ConfirmDialog
+            open={showDeleteOrderDialog}
+            onOpenChange={(value) => {
+              setShowDeleteOrderDialog(value)
+            }}
+            title="Supprimer la commande"
+            content="Êtes-vous sûr de vouloir supprimer cette commande ?"
+            onCancel={() => setShowDeleteOrderDialog(false)}
+            onConfirm={() => {
+              setShowDeleteOrderDialog(false)
+              deleteOrder(currentOrder)
+              setCurrentOrder(null)
+              setSelectedTable(null)
+            }}
+            confirmText="Supprimer"
+            variant="destructive"
+          />
+        )}
+        <ForkModal
+          visible={showReassignModal}
+          onClose={() => setShowReassignModal(false)}
+          maxWidth={800}
+          title="Sélectionner une table"
+        >
+          <RoomComponent
+            tables={tables.filter(table => !orders.data.find(order => order.tableId === table.id))}
+            zoom={0.9}
+            editionMode={false}
+            onTablePress={handleTablePress}
+            onTableLongPress={handleTablePress}
+            onTableUpdate={() => {}}
+          />
+        </ForkModal>
     </View>
   );
 

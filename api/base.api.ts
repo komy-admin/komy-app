@@ -3,10 +3,10 @@ import { Platform } from "react-native";
 import { StorageInterface, storageService } from "~/lib/storageService";
 
 const DEV_API_URL = Platform.select({
-  // android: 'http://192.168.1.136:3333/api', // flo
-  // ios: 'http://192.168.1.136:3333/api', // flo
-  android: 'http://192.168.1.67:3333/api', // guillaume
-  ios: 'http://192.168.1.67:3333/api', // guillaume
+  android: 'http://192.168.1.136:3333/api', // flo
+  ios: 'http://192.168.1.136:3333/api', // flo
+  // android: 'http://192.168.1.67:3333/api', // guillaume
+  // ios: 'http://192.168.1.67:3333/api', // guillaume
   web: 'http://localhost:3333/api'
 });
 export abstract class BaseApiService<T> {
