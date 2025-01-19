@@ -11,3 +11,7 @@ export * from './separator';
 export * from './tabs';
 export * from './badge';
 export * from './table';
+export * from './loader';
+export * from './dialog';
+export * from './popover';
+export * from './modal';

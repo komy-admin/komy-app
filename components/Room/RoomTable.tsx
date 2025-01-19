@@ -1,21 +1,23 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Animated, PanResponder, Pressable, StyleSheet, View } from "react-native";
 import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
+import { Status } from "~/types/status.enum";
 
 interface TableViewProps {
   table: Table;
+  status?: Status;
   isEditing: boolean;
   editionMode: boolean;
   positionValid: boolean;
   CELL_SIZE: number;
-  onPress: (id: string) => void;
-  onLongPress: (id: string) => void;
+  onPress: (table: Table) => void;
+  onLongPress: (table: Table) => void;
   onUpdate: (id: string, updates: Partial<Table>) => void;
 }
 
-export const RoomTable: React.FC<TableViewProps> = ({ table, isEditing, editionMode, positionValid, CELL_SIZE, onPress, onLongPress, onUpdate }) => {
+export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, editionMode, positionValid, CELL_SIZE, onPress, onLongPress, onUpdate }) => {
   const lastValidWidth = useRef(table.width);
   const lastValidHeight = useRef(table.height);
   const lastValidXStart = useRef(table.xStart);
@@ -140,14 +142,14 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, isEditing, editionM
     if (editionMode) {
       return positionValid ? '#A9C3C6' : '#F45B69'
     } else {
-      return getStatusColor(table.status)
+      return status ? getStatusColor(status) : '#B6CCCD';
     }
   }
 
   return (
     <Pressable
-      onPress={() => onPress(table.id)}
-      onLongPress={() => onLongPress(table.id)}
+      onPress={() => onPress(table)}
+      onLongPress={() => onLongPress(table)}
       delayLongPress={500}
     >
       <Animated.View
@@ -168,7 +170,7 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, isEditing, editionM
       >
         <Text style={styles.tableText}>{table.name}</Text>
         
-        {isEditing && (
+        {isEditing && editionMode && (
           <>
             <Animated.View
               {...dragPanResponder.panHandlers}

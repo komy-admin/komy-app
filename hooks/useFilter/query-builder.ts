@@ -1,4 +1,4 @@
-import { QueryParams, FilterOperator } from '~/types/filter.types';
+import { QueryParams, FilterOperator } from './types';
 
 export class FilterQueryBuilder {
   static build(params: QueryParams): string {
@@ -15,8 +15,12 @@ export class FilterQueryBuilder {
     if (params.page) {
       searchParams.append('page', String(params.page));
     }
-    if (params.limit) {
-      searchParams.append('limit', String(params.limit));
+    if (params.perPage) {
+      searchParams.append('perPage', String(params.perPage));
+    }
+
+    if (params.sort) {
+      searchParams.append('sort', `${params.sort.field}:${params.sort.direction}`);
     }
 
     return searchParams.toString();

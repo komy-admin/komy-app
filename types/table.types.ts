@@ -11,7 +11,6 @@ export type Table = {
   roomId: string;
   orders: Order[];
   seats: number;
-  status: Status;
   account: string;
   createdAt: string;
   updatedAt: string;

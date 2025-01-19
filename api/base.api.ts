@@ -1,13 +1,12 @@
 import axios, { AxiosInstance } from "axios";
 import { Platform } from "react-native";
 import { StorageInterface, storageService } from "~/lib/storageService";
-import { QueryParams } from "~/types/filter.types";
 
 const DEV_API_URL = Platform.select({
-  // android: 'http://192.168.1.136:3333/api', // flo
-  // ios: 'http://192.168.1.136:3333/api', // flo
-  android: 'http://192.168.1.67:3333/api', // guillaume
-  ios: 'http://192.168.1.67:3333/api', // guillaume
+  android: 'http://192.168.1.136:3333/api', // flo
+  ios: 'http://192.168.1.136:3333/api', // flo
+  // android: 'http://192.168.1.67:3333/api', // guillaume
+  // ios: 'http://192.168.1.67:3333/api', // guillaume
   web: 'http://localhost:3333/api'
 });
 export abstract class BaseApiService<T> {
@@ -65,7 +64,7 @@ export abstract class BaseApiService<T> {
   }
 
   // Créer un nouvel élément
-  async create(data: Omit<T, 'id' | 'account' | 'createdAt' | 'updatedAt'>): Promise<T> {
+  async create(data: Partial<T>): Promise<T> {
     try {
       const response = await this.axiosInstance.post<T>(this.endpoint, data);
       return response.data;

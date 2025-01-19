@@ -4,6 +4,7 @@ import { Table } from '~/types/table.types';
 import { ReactNativeZoomableView, } from '@openspacelabs/react-native-zoomable-view';
 import { RoomGrid } from './RoomGrid';
 import { RoomTable } from './RoomTable';
+import { Order } from '~/types/order.types';
 
 const CELL_SIZE = 50;
 const GRID_ROWS = 20;
@@ -11,15 +12,16 @@ const GRID_COLS = 15;
 
 interface RoomProps {
   tables: Table[]; 
+  orders?: Order[];
   zoom?: number;
   editingTableId?: string
   editionMode?: boolean
   onTableUpdate: (id: string, updates: Partial<Table>) => void;
-  onTableLongPress: (id: string) => void
-  onTablePress: (id: string) => void;
+  onTableLongPress: (table: Table | null) => void
+  onTablePress: (table: Table | null) => void;
 }
 
-const Room: React.FC<RoomProps> = ({ tables, zoom, editingTableId, editionMode = false, onTableUpdate, onTableLongPress, onTablePress }) => {
+const Room: React.FC<RoomProps> = ({ tables, orders, zoom, editingTableId, editionMode = false, onTableUpdate, onTableLongPress, onTablePress }) => {
   const screenWidth = Dimensions.get('window').width;
   const gridWidth = GRID_COLS * CELL_SIZE;
   const gridHeight = GRID_ROWS * CELL_SIZE;
@@ -54,7 +56,7 @@ const Room: React.FC<RoomProps> = ({ tables, zoom, editingTableId, editionMode =
   }
 
   const handleBackgroundPress = () => {
-    onTablePress('');
+    onTablePress(null);
   };
 
   return (
@@ -75,6 +77,7 @@ const Room: React.FC<RoomProps> = ({ tables, zoom, editingTableId, editionMode =
               <RoomTable
                 key={table.id}
                 table={table}
+                status={orders?.find(order => order.tableId === table.id)?.status}
                 isEditing={editingTableId === table.id}
                 editionMode={editionMode}
                 positionValid={isPositionValid(table)}

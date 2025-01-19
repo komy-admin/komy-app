@@ -1,7 +1,6 @@
-// components/SidePanel.tsx
 import React, { useState } from 'react';
 import { View, Pressable, Animated, StyleSheet } from 'react-native';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, X, ArrowLeft } from 'lucide-react-native';
 import { Text } from './ui';
 
 interface SidePanelProps {
@@ -10,6 +9,7 @@ interface SidePanelProps {
   width?: number;
   collapsedWidth?: number;
   style?: object;
+  onBack?: () => void;
 }
 
 export function SidePanel({
@@ -18,6 +18,7 @@ export function SidePanel({
   title,
   width = 350,
   collapsedWidth = 0,
+  onBack,
 }: SidePanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const animatedWidth = React.useRef(new Animated.Value(width)).current;
@@ -68,12 +69,26 @@ export function SidePanel({
               ...getHeaderStyle()
             }}
           >
-            <View style={{flex: 1}}>
-              <Text className="font-bold text-lg" style={{ flex: 1 }}>{title}</Text>
+            <View style={onBack ? styles.headerCenter : styles.headerLeft}>
+              {onBack ? (
+                <>
+                  <Pressable onPress={onBack} style={styles.backButton}>
+                    <ArrowLeft size={24} color="#2A2E33" />
+                  </Pressable>
+                  <Text className="font-bold text-lg" style={styles.centeredTitle}>{title}</Text>
+                  <Pressable onPress={toggleCollapse}>
+                    <X size={24} color="#2A2E33" />
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <Text className="font-bold text-lg">{title}</Text>
+                  <Pressable onPress={toggleCollapse}>
+                    <X size={24} color="#2A2E33" />
+                  </Pressable>
+                </>
+              )}
             </View>
-            <Pressable onPress={toggleCollapse}>
-              <X size={24} color="#2A2E33" />
-            </Pressable>
           </View>
           {children}
         </Animated.View>
@@ -93,11 +108,33 @@ export function SidePanel({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: '#F8F9FA',
     zIndex: 1000
   },
   content: {
     flex: 1,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  centeredTitle: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  backButton: {
+    padding: 4,
   },
   togglePressable: {
     position: 'absolute',
