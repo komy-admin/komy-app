@@ -145,13 +145,13 @@ const OrderItemsGroup = ({ itemType, orderItems, isExpanded, onToggle, onUpdateS
   );
 };
 
-interface OrderViewProps {
+interface OrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
   onStatusUpdate: (order: Order) => void;
 }
 
-export default function OrderView({ order, itemTypes, onStatusUpdate }: OrderViewProps) {
+export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: OrderDetailViewProps) {
   const [expandedTypes, setExpandedTypes] = useState<string[]>([]);
 
   const toggleExpanded = (typeId: string) => {

@@ -20,7 +20,7 @@ import { Status } from "~/types/status.enum";
 import { ItemType } from "~/types/item-type.types";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { orderItemApiService } from "~/api/order-item.api";
-import OrderView from "~/components/Service/OrderItemTypeCards";
+import OrderDetailView from "~/components/Service/OrderDetailView";
 import { set } from 'lodash';
 
 export default function ServicePage () {
@@ -260,7 +260,7 @@ export default function ServicePage () {
             </>
           ) : (
             <>
-              <OrderView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={updateOrder} />
+              <OrderDetailView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={updateOrder} />
               <View style={{ padding: 16 }}>
                 <PopoverButton
                   style={{ backgroundColor: '#2A2E33' }}
