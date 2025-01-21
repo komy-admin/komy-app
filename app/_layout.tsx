@@ -1,31 +1,14 @@
 import '~/global.css';
-
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Theme, ThemeProvider } from '@react-navigation/native';
-import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Stack } from 'expo-router';
+import { SplashScreen, useRouter, useSegments } from 'expo-router';
 import * as React from 'react';
-import { Platform } from 'react-native';
 import { Provider, useSelector } from 'react-redux';
-import { NAV_THEME } from '~/lib/constants';
-import { useColorScheme } from '~/lib/useColorScheme';
 import { PortalHost } from '@rn-primitives/portal';
-import { ThemeToggle } from '~/components/ThemeToggle';
-import { setAndroidNavigationBar } from '~/lib/android-navigation-bar';
-import { store } from '~/store'; // Nous allons créer ce fichier
+import { store } from '~/store';
 import { RootState } from '~/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFonts } from 'expo-font'
-
-const LIGHT_THEME: Theme = {
-  dark: false,
-  colors: NAV_THEME.light,
-};
-const DARK_THEME: Theme = {
-  dark: true,
-  colors: NAV_THEME.dark,
-};
+import { useFonts } from 'expo-font';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -40,7 +23,6 @@ function AuthenticationGate() {
     
     if (isLoading) return;
 
-    console.log('AuthGate', { token, accountType, segments, isLoading });
     if (!token && !inAuthGroup) {
       router.replace('/login');
     } else if (token && accountType) {
@@ -59,80 +41,54 @@ function AuthenticationGate() {
 }
 
 function RootLayoutNav() {
-  const { colorScheme, setColorScheme, isDarkColorScheme } = useColorScheme();
-  const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
-
   const [fontsLoaded] = useFonts({
     'Mona-Sans': require('../assets/images/fonts/MonaSans-VariableFont_wdth,wght.ttf'),
-  })
+  });
+
   React.useEffect(() => {
-    (async () => {
-      const theme = await AsyncStorage.getItem('theme');
-      if (Platform.OS === 'web') {
-        document.documentElement.classList.add('bg-background');
-      }
-      if (!theme) {
-        AsyncStorage.setItem('theme', colorScheme);
-        setIsColorSchemeLoaded(true);
-        return;
-      }
-      const colorTheme = theme === 'dark' ? 'light' : 'light';
-      if (colorTheme !== colorScheme) {
-        setColorScheme(colorTheme);
-        setAndroidNavigationBar(colorTheme);
-        setIsColorSchemeLoaded(true);
-        return;
-      }
-      setAndroidNavigationBar(colorTheme);
-      setIsColorSchemeLoaded(true);
-    })().finally(() => {
-      if (fontsLoaded) SplashScreen.hideAsync();
-    });
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
   }, [fontsLoaded]);
 
-  if (!isColorSchemeLoaded || !fontsLoaded) {
+  if (!fontsLoaded) {
     return null;
   }
 
   return (
-    <ThemeProvider value={isDarkColorScheme ? LIGHT_THEME : LIGHT_THEME}>
-      <StatusBar style={isDarkColorScheme ? 'light' : 'light'} />
+    <SafeAreaView className="flex-1 bg-background">
       <AuthenticationGate />
-      <SafeAreaView className="flex-1 bg-background">
-        <Stack>
-          <Stack.Screen
-            name="(auth)/login"
-            options={{
-              title: 'Login',
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="(server)"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="(admin)"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="(cook)"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack>
-        <PortalHost />
-      </SafeAreaView>
-    </ThemeProvider>
+      <Stack>
+        <Stack.Screen
+          name="(auth)/login"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="(server)"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="(admin)"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="(cook)"
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack>
+      <PortalHost />
+    </SafeAreaView>
   );
 }
 
-// Root component wrapping everything with Redux Provider
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
