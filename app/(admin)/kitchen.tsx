@@ -1,217 +1,114 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text } from 'react-native';
 import { Order } from "~/types/order.types";
 import { orderApiService } from "~/api/order.api";
-import { DateFormat, formatDate } from '~/lib/utils';
-import { MoveRight, MoveLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { Button } from "~/components/ui";
+import { getMostImportantStatus } from '~/lib/utils';
 import { useSocket } from '~/hooks/useSocket/useSocket';
 import { Status } from "~/types/status.enum";
+import { EventType } from '~/hooks/useSocket/types';
+import { orderItemApiService } from '~/api/order-item.api';
+import OrderColumn from '~/components/Kitchen/OrderColumn';
+import { OrderItem } from '~/types/order-item.types';
 
-const ORDER_STATUS = [
-  { name: 'En Attente', status: 'pending', color: 'bg-yellow-200' },
-  { name: 'En cours', status: 'inprogress', color: 'bg-blue-100' },
-  { name: 'Prêt à servir', status: 'ready', color: 'bg-green-100' },
+const AVAILABLE_STATUSES = [
+  Status.PENDING,
+  Status.INPROGRESS,
+  Status.READY,
 ];
 
-const getStatusInfo = (status: string) => {
-  return ORDER_STATUS.find(s => s.status === status) || ORDER_STATUS[0];
-};
+function useOrderGrouping(fetchedOrders: Order[], fetchedOrderItems: OrderItem[]) {
+  const groupedOrders = useMemo(() => {
+    const orderMap = new Map();
+    
+    fetchedOrderItems.forEach(item => {
+      const order = fetchedOrders.find(o => o.id === item.orderId);
+      if (!order) return;
+      
+      const key = `${order.id}-${item.status}`;
+      if (!orderMap.has(key)) {
+        orderMap.set(key, { ...order, status: item.status, orderItems: [item] });
+      } else {
+        orderMap.get(key).orderItems.push(item);
+      }
+    });
 
-const StatusBadge = React.memo(({ status }: { status: string }) => {
-  const statusInfo = getStatusInfo(status);
-  return (
-    <View className={`shadow px-2 py-1 ${statusInfo.color}`}>
-      <Text className="text-xs font-medium">{statusInfo.name}</Text>
-    </View>
-  );
-});
+    return orderMap;
+  }, [fetchedOrders, fetchedOrderItems]);
 
-const OrderCard = React.memo(({ order, status, onStatusChange }: { 
-    order: Order;
-    status: Status;
-    onStatusChange: (order: Order, newStatus: Status) => void; 
-  }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const toggleExpanded = useCallback(() => setIsExpanded(prev => !prev), []);
-
-    return (
-      <View className="bg-white shadow mb-3">
-        <View className="p-3">
-          <View className="flex-row justify-between items-start mb-2.5 pb-2.5 border-b border-gray-100">
-            <Text className="text-gray-900 text-sm font-medium">{order.id}</Text>
-            <Text className="text-gray-600 text-sm">{order?.orderItems?.length || 0} ARTICLE{order?.orderItems?.length > 1 ? 'S' : ''}</Text>
-          </View>
-          
-          <View className="w-full flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className="text-gray-900 font-bold mb-1">
-                Table {order?.table?.name}
-              </Text>
-              <Text className="text-gray-500 text-xs flex-wrap">
-                Commande lancé à {formatDate(order.createdAt, DateFormat.TIME)}
-              </Text>
-            </View>
-            <View className="flex-row items-center ml-2">
-              <StatusBadge status={status}/>
-              <TouchableOpacity 
-                onPress={toggleExpanded}
-                className="ml-2"
-              >
-                <View>
-                  {isExpanded ? (
-                    <ChevronUp size={24} color="#2A2E33" />
-                  ) : (
-                    <ChevronDown size={24} color="#2A2E33" />
-                  )}
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-          {isExpanded && (
-            <>
-              <View className="p-4">
-                {order?.orderItems?.length ? order.orderItems.map((orderItem, index) => (
-                  <View key={index} className="flex-row items-center mb-2">
-                    <Text className="text-sm mr-3">-</Text>
-                    <View>
-                      <Text className="text-gray-800 text-sm">{orderItem.item.name}</Text>
-                      <Text className="text-gray-500 text-xs">{orderItem.note}</Text>
-                    </View>
-                  </View>
-                )) :
-                  <Text className="text-gray-500 text-sm">Aucun article</Text>
-                }
-              </View>
-            </>
-          )}
-          <View
-            className="flex flex-row justify-between gap-3"
-            style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center'}}
-          >
-            {(status === Status.INPROGRESS || Status.READY) ? (
-              <View className="w-1/3">
-                <Button
-                  onPress={() =>
-                    status === Status.INPROGRESS
-                      ? onStatusChange(order, Status.PENDING)
-                      : onStatusChange(order, Status.INPROGRESS)
-                  }
-                  className="mt-2 flex items-center justify-center"
-                  style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}
-                >
-                  <MoveLeft size={24} color="black" />
-                </Button>
-              </View>
-            ) : (
-              <View className="w-1/3" />
-            )}
-            {(status === Status.PENDING || status === Status.INPROGRESS) && (
-              <View className="w-1/3">
-                <Button
-                  onPress={() => 
-                    status === Status.PENDING 
-                      ? onStatusChange(order, Status.INPROGRESS) 
-                      : onStatusChange(order, Status.READY)
-                  }
-                  className="mt-2 flex items-center justify-center"
-                  style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}>
-                  <MoveRight size={24} color={'black'} />
-                </Button>
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
-    );
-});
-
-const OrderColumn = React.memo(({ title, orders = [], status, headerColor, onStatusChange }: { 
-  title: string; 
-  orders: Order[]; 
-  status: Status;
-  headerColor: string;
-  onStatusChange: (order: Order, newStatus: Status) => void;
-}) => (
-  <View className="flex-1 bg-gray-100 shadow">
-    <View className={`${headerColor} flex flex-row justify-center py-3`}>
-      <Text className="font-bold text-sm">{title} : {orders?.length || 0} </Text>
-    </View>
-    <ScrollView className="flex-1 flex-column p-3">
-      {orders && orders.length > 0 ? (
-        orders.map((order) => (
-          <OrderCard key={order.id} order={order} status={status} onStatusChange={onStatusChange}/>
-        ))
-      ) : (
-        <View className="flex-1 flex items-center">
-          <Text>Aucune commande à afficher</Text>
-        </View>
-      )}
-    </ScrollView>
-  </View>
-));
+  return groupedOrders;
+}
 
 export default function KitchenPage() {
-  const socket = useSocket();
-  const [menuItems, setMenuItems] = useState<Record<string, Order[]>>({});
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
 
+  const { on, emit } = useSocket();
+
+  const groupedOrders = useOrderGrouping(orders, orderItems);
+
   const loadAllData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const newMenuItems = await Promise.all(
-        ORDER_STATUS.map(async (type) => {
-          try {
-            const { data } = await orderApiService.getAll(`status=${type.status}`);
-            return [type.status, data];
-          } catch (err) {
-            console.error(`Error loading ${type.name} items:`, err);
-            return [type.status, []];
-          }
-        })
-      );
-      setMenuItems(Object.fromEntries(newMenuItems));
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    const [ordersData, orderItemsData] = await Promise.all([
+      orderApiService.getAll(`status[operator]=in&${AVAILABLE_STATUSES.map((s) => `status[values]=${s}`).join('&')}&perPage=100`),
+      orderItemApiService.getAll(`status[operator]=in&${AVAILABLE_STATUSES.map((s) => `status[values]=${s}`).join('&')}&perPage=100`)
+    ]);
+    
+    setOrders(ordersData.data);
+    setOrderItems(orderItemsData.data);
   }, []);
 
-  const handleStatusChange = useCallback(
-    async (order: Order, newStatus: Status) => {
-      try {
-        const response = await orderApiService.update(order.id, { status: newStatus });
-        const updatedOrder: Order = response;
-        setMenuItems((prevItems) => {
-          const oldStatus: string = order.status as string;
-          const updatedOldList = (prevItems[oldStatus] || []).filter((o) => o.id !== order.id);
-          const updatedNewList = [...(prevItems[newStatus] || []), updatedOrder];
-          return {
-            ...prevItems,
-            [oldStatus]: updatedOldList,
-            [newStatus]: updatedNewList,
-          };
-        });
-      } catch (err) {
-        console.error('Failed to update order status', err);
+  useEffect(() => {
+    on(EventType.ORDER_ITEMS_PENDING, async ({ orderItems }) => {
+      console.log('Received ORDER_ITEMS_PENDING event:', orderItems);
+      setOrderItems(prevItems => [...prevItems.filter(i => !orderItems.map(x => x.id).includes(i.id)), ...orderItems]);
+      for (const orderItem of orderItems) {
+        const order = orders.find(o => o.id === orderItem.orderId);
+        if (!order) {
+          const newOrder = await orderApiService.get(orderItem.orderId);
+          setOrders(prevOrders => [...prevOrders, newOrder]);
+        }
       }
-    },
-    []
-  );
-
-  useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
-
-  useEffect(() => {
-    socket?.onOrderUpdate((order: Order) => {
-      setMenuItems(prevItems => ({
-        ...prevItems,
-        [order.status as string]: [...(prevItems[order.status as string] || []), order]
-      }));
     });
-  }, [socket]);
+   }, []);
+
+  useEffect(() => {
+    loadAllData().then(() => setIsLoading(false));
+  }, []);
+
+  const handleStatusChange = async (order: Order, newStatus: Status) => {
+    try {
+      await orderItemApiService.updateManyStatus(order.orderItems.map(oi => oi.id), newStatus)
+   
+      const updatedItems = orderItems.map(item => 
+        order.orderItems.some(orderItem => orderItem.id === item.id)
+          ? { ...item, status: newStatus }
+          : item
+      );
+      
+      const allOrderItems = updatedItems.filter(item => item.orderId === order.id);
+      const calculatedNewOrderStatus = getMostImportantStatus(allOrderItems.map(item => item.status));
+      
+      setOrderItems(updatedItems);
+      
+      if (order.status !== calculatedNewOrderStatus) {
+        await orderApiService.update(order.id, { status: calculatedNewOrderStatus });
+        setOrders(prevOrders => prevOrders.map(o => 
+          o.id === order.id ? { ...o, status: calculatedNewOrderStatus } : o
+        ));
+      }
+   
+      // await emit(EventType.UPDATE_ORDER_STATUS, {
+      //   orderId: order.id,
+      //   orderStatus: calculatedNewOrderStatus,
+      //   orderItemIds: order.orderItems.map(item => item.id),
+      //   orderItemStatus: newStatus,
+      // });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      throw error;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -223,13 +120,12 @@ export default function KitchenPage() {
 
   return (
     <View className="flex-1 flex-row gap-7 p-7 h-full">
-      {ORDER_STATUS.map((status) => (
-        <OrderColumn 
-          key={status.status}
-          title={status.name.toUpperCase()} 
-          orders={menuItems[status.status]} 
-          status={status.status as Status}
-          headerColor={status.color}
+      {AVAILABLE_STATUSES.map((status, index) => (
+        <OrderColumn
+          key={status}
+          orders={Array.from(groupedOrders.values())
+            .filter(order => order.status === status)} 
+          status={status}
           onStatusChange={handleStatusChange}
         />
       ))}

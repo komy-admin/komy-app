@@ -225,9 +225,8 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  Dimensions,
   Animated,
-  TouchableWithoutFeedback,
+  Pressable,
 } from 'react-native';
 
 const Chevron = ({ isOpen }: { isOpen: boolean }) => {
@@ -316,9 +315,9 @@ const ForkSelect: React.FC<SelectProps> = ({
   return (
     <>
     {isOpen && (
-      <TouchableWithoutFeedback onPress={() => setIsOpen(false)}>
+      <Pressable onPress={() => setIsOpen(false)}>
         <View style={StyleSheet.absoluteFill} />
-      </TouchableWithoutFeedback>
+      </Pressable>
     )}
     
     <View ref={selectRef} style={{...styles.container, ...style}} collapsable={false}>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { Table } from '~/types/table.types';
 import { ReactNativeZoomableView, } from '@openspacelabs/react-native-zoomable-view';
 import { RoomGrid } from './RoomGrid';
@@ -70,7 +70,7 @@ const Room: React.FC<RoomProps> = ({ tables, orders, zoom, editingTableId, editi
         contentWidth={gridWidth}
         contentHeight={gridHeight}
       >
-        <TouchableWithoutFeedback onPress={handleBackgroundPress}>
+        <Pressable onPress={handleBackgroundPress}>
           <View style={[styles.grid, { width: gridWidth, height: gridHeight }]}>
             <RoomGrid width={gridWidth} height={gridHeight} GRID_COLS={GRID_COLS} GRID_ROWS={GRID_ROWS} CELL_SIZE={CELL_SIZE} />
             {tables.map(table => (
@@ -88,7 +88,7 @@ const Room: React.FC<RoomProps> = ({ tables, orders, zoom, editingTableId, editi
               />
             ))}
           </View>
-        </TouchableWithoutFeedback>
+        </Pressable>
       </ReactNativeZoomableView>
     </View>
   );

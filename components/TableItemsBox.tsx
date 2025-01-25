@@ -16,15 +16,14 @@ interface TableItemsBoxProps {
 export const TableItemsBox: React.FC<TableItemsBoxProps> = ({ items, itemType, style }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  console.log('TableItemsBox:', items);
-
   const calculateGlobalStatus = (items: OrderItem[]): Status => {
-    if (items.length === 0) return Status.FREE;
+    if (items.length === 0) return Status.DRAFT;
     if (items.some(item => item.status === Status.ERROR)) return Status.ERROR;
     if (items.some(item => item.status === Status.READY)) return Status.READY;
-    if (items.some(item => item.status === Status.PREPARING)) return Status.PREPARING;
+    if (items.some(item => item.status === Status.PENDING)) return Status.PENDING;
+    if (items.some(item => item.status === Status.INPROGRESS)) return Status.INPROGRESS;
     if (items.some(item => item.status === Status.SERVED)) return Status.SERVED;
-    return Status.FREE;
+    return Status.DRAFT;
   };
 
   const globalStatus = calculateGlobalStatus(items);

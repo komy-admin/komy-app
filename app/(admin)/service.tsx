@@ -22,6 +22,10 @@ import { itemTypeApiService } from "~/api/item-type.api";
 import { orderItemApiService } from "~/api/order-item.api";
 import OrderDetailView from "~/components/Service/OrderDetailView";
 import { set } from 'lodash';
+import { OrderItem } from '~/types/order-item.types';
+import { getMostImportantStatus } from '~/lib/utils';
+import { useSocket } from '~/hooks/useSocket/useSocket';
+import { EventType } from '~/hooks/useSocket/types';
 
 export default function ServicePage () {
   const [currentRoom, setCurrentRoom] = useState<Room | null>();
@@ -85,6 +89,45 @@ export default function ServicePage () {
     changePage: changeItemPage,
     queryParams: itemQueryParams
   } = useFilter({ config: filterItem, service: itemApiService, defaultParams: { page: 1, perPage: 100 } });
+
+  const { on, emit } = useSocket();
+  
+  useEffect(() => {
+    on(EventType.ORDER_ITEMS_INPROGRESS, ({ orderItemIds }) => {
+      console.log('Received ORDER_ITEMS_INPROGRESS event:', orderItemIds);
+      console.log('ORDERS BEFORE:', orders)
+      orders.data = orders.data.map(order => {
+        const updatedOrderItems = order.orderItems.map(orderItem => {
+          if (orderItemIds.includes(orderItem.id)) {
+            console.log('IF 1')
+            return { ...orderItem, status: Status.INPROGRESS };
+          }
+          return orderItem;
+        });
+        return { ...order, orderItems: updatedOrderItems };
+      });
+      console.log('ORDERS AFTER:', orders)
+      setTables(tables.map(table => {
+        const order = orders.data.find(order => order.tableId === table.id);
+        return order ? { ...table, orders: [order] } : table;
+      }));
+    });
+  }, []);
+
+  useEffect(() => {
+    on(EventType.ORDER_ITEMS_READY, ({ orderItemIds }) => {
+      console.log('Received ORDER_ITEMS_READY event:', orderItemIds);
+      orders.data = orders.data.map(order => {
+        const updatedOrderItems = order.orderItems.map(orderItem => {
+          if (orderItemIds.includes(orderItem.id)) {
+            return { ...orderItem, status: Status.READY };
+          }
+          return orderItem;
+        });
+        return { ...order, orderItems: updatedOrderItems };
+      });
+    });
+  }, []);
 
   const initData = async () => {
     try {
@@ -162,6 +205,23 @@ export default function ServicePage () {
     } catch (error) {
       console.error(error);
     }
+  }
+
+  const handleStatusUpdate = async (orderItems: OrderItem[], status: Status) => {
+    if (!currentOrder) return;
+    const orderItemsIds = orderItems.map(orderItem => orderItem.id);
+    await orderItemApiService.updateManyStatus(orderItemsIds, status);
+    const updatedItems = currentOrder?.orderItems.map(orderItem => {
+      if (orderItems.includes(orderItem)) {
+        return { ...orderItem, status };
+      }
+      return orderItem;
+    });
+    const mostImportantStatus = getMostImportantStatus(updatedItems.map(orderItem => orderItem.status));
+    const updatedOrder = await orderApiService.update(currentOrder.id, {
+      status: mostImportantStatus
+    });
+    updateOrder(updatedOrder);
   }
 
   return (
@@ -260,7 +320,7 @@ export default function ServicePage () {
             </>
           ) : (
             <>
-              <OrderDetailView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={updateOrder} />
+              <OrderDetailView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={handleStatusUpdate} />
               <View style={{ padding: 16 }}>
                 <PopoverButton
                   style={{ backgroundColor: '#2A2E33' }}
