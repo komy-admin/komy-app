@@ -21,6 +21,7 @@ export interface UseFilterProps<T> {
   service: BaseApiService<T>;
   config: FilterConfig<T>[];
   defaultParams?: Partial<QueryParams>;
+  onDataChange: (data: PaginatedResponse<T>) => void;
 }
 
 export type FilterOperator = '>' | '>=' | '<' | '<=' | '=' | '!=' | 'like' | 'not like' | 'in' | 'not in' | 'between' | 'not between' | 'isNull' | 'isNotNull';
@@ -48,7 +49,7 @@ export type FilterConfig<T> = {
 export interface QueryParams {
   page?: number;
   perPage?: number;
-  filters?: FilterValue[];
+  filters: FilterValue[];
   sort?: {
     field: string;
     direction: 'asc' | 'desc';

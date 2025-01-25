@@ -44,8 +44,6 @@ export default function KitchenPage() {
 
   const [isLoading, setIsLoading] = useState(true);
 
-  const { on, emit } = useSocket();
-
   const groupedOrders = useOrderGrouping(orders, orderItems);
 
   const loadAllData = useCallback(async () => {
@@ -57,6 +55,8 @@ export default function KitchenPage() {
     setOrders(ordersData.data);
     setOrderItems(orderItemsData.data);
   }, []);
+
+  const { on } = useSocket();
 
   useEffect(() => {
     on(EventType.ORDER_ITEMS_PENDING, async ({ orderItems }) => {

@@ -62,15 +62,21 @@ export default function MenuPage() {
       show: false
     },
   ];
-  const {
-    data,
-    loading,
-    error,
-    updateFilter,
-    clearFilters,
-    changePage,
-    queryParams
-  } = useFilter({ config: filterItem, service: itemApiService as ItemApiService });
+  // const {
+  //   data,
+  //   loading,
+  //   error,
+  //   updateFilter,
+  //   clearFilters,
+  //   changePage,
+  //   queryParams
+  // } = useFilter({ config: filterItem, service: itemApiService as ItemApiService });
+
+  const { updateFilter, loading, clearFilters, queryParams } = useFilter<Item>({
+    config: filterItem,
+    service: itemApiService,
+    onDataChange: (response) => setItems(response.data)
+  });
 
   // Load initial data
   useEffect(() => {
@@ -112,7 +118,7 @@ export default function MenuPage() {
 
   const handleEditItem = (id: string) => {
     setTitle('Modification d\'un article');
-    const item = data.data.find(item => item.id === id)
+    const item = items.find(item => item.id === id)
     if (!item) return
     setIsEditing(true);
     setCurrentItem(item);
@@ -141,8 +147,9 @@ export default function MenuPage() {
   };
 
   const submitItemAction = async () => {
+    if (!currentItem) return;
     const item: Item = {
-      id: currentItem?.id,
+      id: currentItem.id,
       ...formData,
       itemType: {
         id: selectedOption.id,
@@ -357,7 +364,7 @@ export default function MenuPage() {
           </View>
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             <ForkTable 
-              data={data.data}
+              data={items}
               columns={itemTableColumns}
               onRowPress={handleEditItem}
               onRowDelete={submitItemDelete}

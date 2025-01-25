@@ -6,17 +6,15 @@ import { debounce } from 'lodash';
 export function useFilter<T>({
   service,
   config,
-  defaultParams = { page: 1, perPage: 10 }
+  defaultParams = { page: 1, perPage: 10 },
+  onDataChange
 }: UseFilterProps<T>) {
-  const [state, setState] = useState<FilterState<T>>({
-    data: { data: [], meta: {} },
-    loading: false,
-    error: null,
-    queryParams: {
-      ...defaultParams,
-      filters: []
-    }
+  const [queryParams, setQueryParams] = useState<QueryParams>({
+    ...defaultParams,
+    filters: []
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     loadData({
@@ -26,23 +24,17 @@ export function useFilter<T>({
   }, []);
 
   const loadData = useCallback(async (params: QueryParams) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
     try {
       const queryString = FilterQueryBuilder.build(params);
       const response = await service.getAll(queryString);
-      setState(prev => ({
-        ...prev,
-        data: response,
-        loading: false
-      }));
+      onDataChange(response);
+      setLoading(false);
     } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err : new Error('Une erreur est survenue'),
-        loading: false
-      }));
+      setError(err instanceof Error ? err : new Error('Une erreur est survenue'));
+      setLoading(false);
     }
-  }, [service]);
+  }, [service, onDataChange]);
 
   const debouncedLoadData = useCallback(
     debounce((params: QueryParams) => loadData(params), 300),
@@ -50,71 +42,66 @@ export function useFilter<T>({
   );
 
   const updateFilter = useCallback((field: string, value: unknown, operator?: FilterOperator) => {
-    // Validation du filtre
     const filterConfig = config.find(c => c.field === field);
     if (!filterConfig) {
       console.warn(`Filter configuration not found for field: ${field}`);
       return;
     }
-  
-    setState(prev => {
-      if (value === '' || value === null || value === undefined || 
-          (Array.isArray(value) && value.length === 0)) {
-        // Suppression du filtre
-        const newParams = {
-          ...prev.queryParams,
-          page: 1,
-          filters: prev.queryParams.filters.filter(f => f.field !== field)
-        };
-        debouncedLoadData(newParams);
-        return { ...prev, queryParams: newParams };
-      }
-  
-      // Création/mise à jour du filtre
-      const newFilter: FilterValue = {
-        field,
-        value: value as FilterValue['value'],
-        operator
-      };
-  
+ 
+    if (value === '' || value === null || value === undefined || 
+        (Array.isArray(value) && value.length === 0)) {
       const newParams = {
-        ...prev.queryParams,
+        ...queryParams,
         page: 1,
-        filters: [
-          ...prev.queryParams.filters.filter(f => f.field !== field),
-          newFilter
-        ]
+        filters: queryParams.filters.filter(f => f.field !== field)
       };
-      
+      setQueryParams(newParams);
       debouncedLoadData(newParams);
-      return { ...prev, queryParams: newParams };
-    });
-  }, [config, debouncedLoadData]);
+      return;
+    }
+ 
+    const newFilter: FilterValue = {
+      field,
+      value: value as FilterValue['value'],
+      operator
+    };
+ 
+    const newParams = {
+      ...queryParams,
+      page: 1,
+      filters: [
+        ...queryParams.filters.filter(f => f.field !== field),
+        newFilter
+      ]
+    };
+    
+    setQueryParams(newParams);
+    debouncedLoadData(newParams);
+  }, [config, queryParams, debouncedLoadData]);
 
   const clearFilters = useCallback(() => {
-    setState(prev => {
-      const newParams = {
-        ...prev.queryParams,
-        page: 1,
-        filters: []
-      };
-      loadData(newParams);
-      return { ...prev, queryParams: newParams };
-    });
-  }, [loadData]);
+    const newParams = {
+      ...queryParams,
+      page: 1,
+      filters: []
+    };
+    setQueryParams(newParams);
+    loadData(newParams);
+  }, [queryParams, loadData]);
 
   const changePage = useCallback((page: number) => {
-    setState(prev => {
-      const newParams = { ...prev.queryParams, page };
-      loadData(newParams);
-      return { ...prev, queryParams: newParams };
-    });
-  }, [loadData]);
+    const newParams = { ...queryParams, page };
+    setQueryParams(newParams);
+    loadData(newParams);
+  }, [queryParams, loadData]);
 
   return {
-    ...state,
+    loading,
+    error,
+    queryParams,
     updateFilter,
     clearFilters,
     changePage
   };
+ 
 }

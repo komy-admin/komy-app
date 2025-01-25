@@ -4,7 +4,7 @@ import { SocketConfig, EventType, SocketEvents } from './types';
 import { storageService } from '~/lib/storageService';
 
 class SocketService {
-  private socket: Socket | null = null;
+  public socket: Socket | null = null;
   private static instance: SocketService | null = null;
   private config: SocketConfig;
 

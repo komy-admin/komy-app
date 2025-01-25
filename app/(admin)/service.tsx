@@ -21,11 +21,11 @@ import { ItemType } from "~/types/item-type.types";
 import { itemTypeApiService } from "~/api/item-type.api";
 import { orderItemApiService } from "~/api/order-item.api";
 import OrderDetailView from "~/components/Service/OrderDetailView";
-import { set } from 'lodash';
 import { OrderItem } from '~/types/order-item.types';
 import { getMostImportantStatus } from '~/lib/utils';
 import { useSocket } from '~/hooks/useSocket/useSocket';
 import { EventType } from '~/hooks/useSocket/types';
+import { get } from 'lodash';
 
 export default function ServicePage () {
   const [currentRoom, setCurrentRoom] = useState<Room | null>();
@@ -39,13 +39,14 @@ export default function ServicePage () {
   const [loading, setLoading] = useState<boolean>(true);
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
+  const [items, setItems] = useState<Item[]>([]);
 
   useEffect(() => {
     initData();
   }, []);
 
 
-  const filterOrder: FilterConfig<Order>[] = [
+  const filterOrderConfig: FilterConfig<Order>[] = [
     { 
       field: 'status', 
       type: 'text',
@@ -61,17 +62,26 @@ export default function ServicePage () {
       show: false
     },
   ];
-  const {
-    data: orders,
-    loading: ordersLoading,
-    error: ordersError,
-    updateFilter: updateOrderFilter,
-    clearFilters: clearOrderFilters,
-    changePage: changeOrderPage,
-    queryParams: orderQueryParams
-  } = useFilter({ config: filterOrder, service: orderApiService, defaultParams: { sort: { field: 'updatedAt', direction: 'asc' } } });
+  // const {
+  //   data: orders,
+  //   loading: ordersLoading,
+  //   error: ordersError,
+  //   updateFilter: updateOrderFilter,
+  //   clearFilters: clearOrderFilters,
+  //   changePage: changeOrderPage,
+  //   queryParams: orderQueryParams
+  // } = useFilter({ config: filterOrder, service: orderApiService, defaultParams: { sort: { field: 'updatedAt', direction: 'asc' } } });
 
-  const filterItem: FilterConfig<Item>[] = [
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  const { updateFilter: updateOrderFilter, loading: ordersLoading } = useFilter<Order>({
+    config: filterOrderConfig,
+    service: orderApiService,
+    defaultParams: { sort: { field: 'updatedAt', direction: 'asc' } },
+    onDataChange: (response) => setOrders(response.data)
+  });
+
+  const filterItemConfig: FilterConfig<Item>[] = [
     { 
       field: 'itemTypeId', 
       type: 'text',
@@ -80,54 +90,70 @@ export default function ServicePage () {
       show: false
     },
   ];
-  const {
-    data: items,
-    loading: itemsLoading,
-    error: itemsError,
-    updateFilter: updateItemFilter,
-    clearFilters: clearItemFilters,
-    changePage: changeItemPage,
-    queryParams: itemQueryParams
-  } = useFilter({ config: filterItem, service: itemApiService, defaultParams: { page: 1, perPage: 100 } });
+  // const {
+  //   data: items,
+  //   loading: itemsLoading,
+  //   error: itemsError,
+  //   updateFilter: updateItemFilter,
+  //   clearFilters: clearItemFilters,
+  //   changePage: changeItemPage,
+  //   queryParams: itemQueryParams
+  // } = useFilter({ config: filterItem, service: itemApiService, defaultParams: { page: 1, perPage: 100 } });
 
-  const { on, emit } = useSocket();
+  const { updateFilter: updateItemFilter, loading: itemsLoading } = useFilter<Item>({
+    config: filterItemConfig,
+    service: itemApiService,
+    defaultParams: { page: 1, perPage: 100 },
+    onDataChange: (response) => setItems(response.data)
+  });
+
+  const { on } = useSocket();
   
   useEffect(() => {
     on(EventType.ORDER_ITEMS_INPROGRESS, ({ orderItemIds }) => {
-      console.log('Received ORDER_ITEMS_INPROGRESS event:', orderItemIds);
-      console.log('ORDERS BEFORE:', orders)
-      orders.data = orders.data.map(order => {
-        const updatedOrderItems = order.orderItems.map(orderItem => {
-          if (orderItemIds.includes(orderItem.id)) {
-            console.log('IF 1')
-            return { ...orderItem, status: Status.INPROGRESS };
-          }
-          return orderItem;
+      setOrders(prevOrders => {
+        const newOrders = prevOrders.map(order => {
+          const updatedOrderItems = order.orderItems.map(orderItem => {
+            if (orderItemIds.includes(orderItem.id)) {
+              return { ...orderItem, status: Status.INPROGRESS };
+            }
+            return orderItem;
+          });
+          return { ...order, orderItems: updatedOrderItems, status: getMostImportantStatus(updatedOrderItems.map(orderItem => orderItem.status)) };
         });
-        return { ...order, orderItems: updatedOrderItems };
-      });
-      console.log('ORDERS AFTER:', orders)
-      setTables(tables.map(table => {
-        const order = orders.data.find(order => order.tableId === table.id);
-        return order ? { ...table, orders: [order] } : table;
-      }));
-    });
-  }, []);
 
-  useEffect(() => {
-    on(EventType.ORDER_ITEMS_READY, ({ orderItemIds }) => {
-      console.log('Received ORDER_ITEMS_READY event:', orderItemIds);
-      orders.data = orders.data.map(order => {
-        const updatedOrderItems = order.orderItems.map(orderItem => {
-          if (orderItemIds.includes(orderItem.id)) {
-            return { ...orderItem, status: Status.READY };
-          }
-          return orderItem;
-        });
-        return { ...order, orderItems: updatedOrderItems };
+        console.log('newOrders', newOrders);
+        
+        setTables(prevTables => prevTables.map(table => {
+          const order = newOrders.find(order => order.tableId === table.id);
+          return order ? { ...table, orders: [order] } : table;
+        }));
+        
+        return newOrders;
       });
     });
-  }, []);
+
+    on(EventType.ORDER_ITEMS_READY, ({ orderItemIds }) => {
+      setOrders(prevOrders => {
+        const newOrders = prevOrders.map(order => {
+          const updatedOrderItems = order.orderItems.map(orderItem => {
+            if (orderItemIds.includes(orderItem.id)) {
+              return { ...orderItem, status: Status.READY };
+            }
+            return orderItem;
+          });
+          return { ...order, orderItems: updatedOrderItems, status: getMostImportantStatus(updatedOrderItems.map(orderItem => orderItem.status)) };
+        });
+        
+        setTables(prevTables => prevTables.map(table => {
+          const order = newOrders.find(order => order.tableId === table.id);
+          return order ? { ...table, orders: [order] } : table;
+        }));
+        
+        return newOrders;
+      });
+    });
+  }, [orders]);
 
   const initData = async () => {
     try {
@@ -157,7 +183,7 @@ export default function ServicePage () {
 
   const handleTablePress = (table: Table | null) => {
     setSelectedTable(table)
-    setCurrentOrder(orders.data.find(order => order.tableId === table?.id) || null)
+    setCurrentOrder(orders.find(order => order.tableId === table?.id) || null)
   }
 
   const createOrder = async () => {
@@ -166,7 +192,7 @@ export default function ServicePage () {
       const order = await orderApiService.create({ tableId: selectedTable.id, table: selectedTable, orderItems: [], status: Status.DRAFT });
       setCurrentOrder(order)
       setShowMenu(true)
-      orders.data.push(order)
+      setOrders([...orders, order])
     } catch (error) {
       console.error(error);
     }
@@ -179,7 +205,7 @@ export default function ServicePage () {
 
   const onUpdateQuantity = async (itemId: string, action: 'remove' | 'add') => {
     if (!currentOrder) return;
-    const item = items.data.find(item => item.id === itemId);
+    const item = items.find(item => item.id === itemId);
     if (!item) return;
     if (action === 'add') {
       const orderItem = await orderItemApiService.create({ orderId: currentOrder.id, itemId: item.id, status: Status.DRAFT });
@@ -195,7 +221,7 @@ export default function ServicePage () {
   const updateOrder = (order: Order) => {
     setSelectedTable(order.table)
     setCurrentOrder(order)
-    orders.data = orders.data.map(o => o.id === order.id ? order : o)
+    setOrders(orders.map(o => o.id === order.id ? order : o))
   }
 
   const deleteOrder = async (order: Order) => {
@@ -254,7 +280,7 @@ export default function ServicePage () {
                   ))}
                 </TabsList>
                 <View style={{ flex: 1, paddingHorizontal: 16, marginTop: 8 }}>
-                  {items.data
+                  {items
                     .filter(item => item.itemType.id === menuTabsValue)
                     .map((item) => {
                       const quantity = getItemQuantity(item.id);
@@ -376,7 +402,7 @@ export default function ServicePage () {
               <ListFilter color='black' />
             </Button>
           </View>
-          <OrderList orders={orders.data} onOrderPress={updateOrder} onOrderDelete={deleteOrder} />
+          <OrderList orders={orders} onOrderPress={updateOrder} onOrderDelete={deleteOrder} />
         </View>
       )}
       </SidePanel>
@@ -423,12 +449,12 @@ export default function ServicePage () {
         {selectedTable && (
           <StartOrderCard
             table={selectedTable}
-            order={orders.data.find(order => order.tableId === selectedTable.id)}
+            order={orders.find(order => order.tableId === selectedTable.id)}
             onStartPress={createOrder} />
         )}
         <RoomComponent
           tables={tables}
-          orders={orders.data}
+          orders={orders}
           zoom={0.9}
           editingTableId={selectedTable?.id}
           editionMode={false}
@@ -463,7 +489,7 @@ export default function ServicePage () {
           title="Sélectionner une table"
         >
           <RoomComponent
-            tables={tables.filter(table => !orders.data.find(order => order.tableId === table.id))}
+            tables={tables.filter(table => !orders.find(order => order.tableId === table.id))}
             zoom={0.9}
             editionMode={false}
             onTablePress={handleTablePress}
