@@ -37,8 +37,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }, "extra": {
-      "fontFamily": "Mona-Sans"
+    },
+    "extra": {
+      "fontFamily": "Mona-Sans",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7fda7163-fab5-4b74-81aa-fe8b50e76026"
+      }
     }
   }
 }
