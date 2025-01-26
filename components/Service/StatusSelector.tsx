@@ -14,6 +14,7 @@ const AVAILABLE_STATUSES = [
   Status.DRAFT,
   Status.PENDING,
   Status.READY,
+  Status.SERVED,
   Status.INPROGRESS,
 ];
 

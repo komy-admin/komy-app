@@ -145,13 +145,13 @@ const OrderItemsGroup = ({ itemType, orderItems, isExpanded, onToggle, onUpdateS
   );
 };
 
-interface OrderViewProps {
+interface OrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
-  onStatusUpdate: (order: Order) => void;
+  onStatusUpdate: (orderItems: OrderItem[], status: Status) => void;
 }
 
-export default function OrderView({ order, itemTypes, onStatusUpdate }: OrderViewProps) {
+export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: OrderDetailViewProps) {
   const [expandedTypes, setExpandedTypes] = useState<string[]>([]);
 
   const toggleExpanded = (typeId: string) => {
@@ -164,45 +164,28 @@ export default function OrderView({ order, itemTypes, onStatusUpdate }: OrderVie
 
   // Grouper les orderItems par itemType
   const groupedItems = itemTypes.reduce((acc, itemType) => {
-    const items = order.orderItems.filter(
+    const orderItems = order.orderItems.filter(
       orderItem => orderItem.item.itemType.id === itemType.id
     );
-    if (items.length > 0) {
+    if (orderItems.length > 0) {
       acc[itemType.id] = {
         itemType,
-        items
+        orderItems
       };
     }
     return acc;
-  }, {} as Record<string, { itemType: ItemType; items: OrderItem[] }>);
-
-  const handleUpdateStatus = async (items: OrderItem[], newStatus: Status) => {
-    await Promise.all(
-      items.map(async orderItem => {
-        await orderItemApiService.update(orderItem.id, { status: newStatus });
-      })
-    )
-    const updatedItems = order.orderItems.map(orderItem => {
-      if (items.includes(orderItem)) {
-        return { ...orderItem, status: newStatus };
-      }
-      return orderItem;
-    });
-    const mostImportantStatus = getMostImportantStatus(updatedItems.map(orderItem => orderItem.status));
-    const updatedOrder = await orderApiService.update(order.id, { status: mostImportantStatus });
-    onStatusUpdate(updatedOrder);
-  }
+  }, {} as Record<string, { itemType: ItemType; orderItems: OrderItem[] }>);
 
   return (
     <ScrollView style={{ flex: 1, padding: 16 }}>
-      {Object.values(groupedItems).map(({ itemType, items }) => (
+      {Object.values(groupedItems).map(({ itemType, orderItems }) => (
         <OrderItemsGroup
           key={itemType.id}
           itemType={itemType}
-          orderItems={items}
+          orderItems={orderItems}
           isExpanded={expandedTypes.includes(itemType.id)}
           onToggle={() => toggleExpanded(itemType.id)}
-          onUpdateStatus={(newStatus) => {handleUpdateStatus(items, newStatus )}}
+          onUpdateStatus={(newStatus) => onStatusUpdate(orderItems, newStatus )}
         />
       ))}
     </ScrollView>

@@ -12,6 +12,7 @@ export const getMostImportantStatus = (statuses: Status[]) => {
   const order = [
     Status.DRAFT,
     Status.TERMINATED,
+    Status.SERVED,
     Status.INPROGRESS,
     Status.PENDING,
     Status.READY,
@@ -28,7 +29,8 @@ export const getStatusColor = (status: Status) => {
   const colors = {
     [Status.READY]: '#D7E3FC',
     [Status.PENDING]: '#F9F1C8',
-    [Status.INPROGRESS]: '#B7E1CC',
+    [Status.INPROGRESS]: '#FFD1AD',
+    [Status.SERVED]: '#B7E1CC',
     [Status.ERROR]: '#F7BFB5',
     [Status.TERMINATED]: '#EBEBEB',
     [Status.DRAFT]: '#EBEBEB',
@@ -39,11 +41,12 @@ export const getStatusColor = (status: Status) => {
 export const getStatusText = (status: Status) => {
   const texts = {
     [Status.READY]: 'Prêt',
-    [Status.PENDING]: 'En préparation',
-    [Status.INPROGRESS]: 'Servi',
+    [Status.PENDING]: 'En attente',
+    [Status.INPROGRESS]: 'En préparation',
     [Status.ERROR]: 'Erreur',
+    [Status.SERVED]: 'Servi',
     [Status.TERMINATED]: 'Terminé',
-    [Status.DRAFT]: 'En attente',
+    [Status.DRAFT]: 'Brouillon',
   };
   return texts[status];
 }
@@ -55,7 +58,7 @@ export const getItemTypeText = (itemType: ItemTypes) => {
     [ItemTypes.MAIN]: 'Plats',
     [ItemTypes.DESSERT]: 'Desserts',
   };
-  return texts[itemType] || 'Type inconnu'; // Valeur par défaut pour les cas non définis
+  return texts[itemType] || 'Type inconnu';
 };
 
 export const getTeamTypeText = (teamType: TeamTypes) => {
@@ -67,7 +70,7 @@ export const getTeamTypeText = (teamType: TeamTypes) => {
     [TeamTypes.SERVEUR]: 'Serveur',
     [TeamTypes.CUISTO]: 'Cuisinier',
   };
-  return texts[teamType] || 'Type inconnu'; // Valeur par défaut pour les cas non définis
+  return texts[teamType] || 'Type inconnu';
 };
 
 export const getEnumValue = <T extends { [key: string]: string }>(
