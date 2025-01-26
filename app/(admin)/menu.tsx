@@ -16,6 +16,7 @@ import { useFilter } from "~/hooks/useFilter";
 
 export default function MenuPage() {
   // State management
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ALL");
   const [items, setItems] = useState<Item[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
@@ -37,6 +38,10 @@ export default function MenuPage() {
     id: ''
   };
   
+  const handleBack = () => {
+    setTitle('Filtrage');
+  };
+
   const [selectedOption, setSelectedOption] = useState(defaultOption);
 
   const filterItem: FilterConfig<Item>[] = [
@@ -99,6 +104,9 @@ export default function MenuPage() {
 
   // Handlers
   const handleCreateItem = () => {
+    if (isPanelCollapsed) {
+      setIsPanelCollapsed(false);
+    }
     setTitle('Création d\'un article');
     setIsEditing(false);
     setCurrentItem(null);
@@ -111,6 +119,9 @@ export default function MenuPage() {
   };
 
   const handleEditItem = (id: string) => {
+    if (isPanelCollapsed) {
+      setIsPanelCollapsed(false);
+    }
     setTitle('Modification d\'un article');
     const item = data.data.find(item => item.id === id)
     if (!item) return
@@ -201,7 +212,6 @@ export default function MenuPage() {
             fontSize: 14,
             color: '#2A2E33',
             backgroundColor: '#F1F1F1',
-            marginVertical: 4,
             padding: 5,
             paddingLeft: 16,
           }}>
@@ -301,7 +311,7 @@ export default function MenuPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel title={title} width={width / 5}>
+      <SidePanel title={title} width={width / 4} onBack={title !== 'Filtrage' ? handleBack : undefined} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
         {renderSidePanelContent()}
       </SidePanel>
       <View style={{ flex: 1 }}>
@@ -322,6 +332,7 @@ export default function MenuPage() {
             <TabsList className="flex-row w-[500px] h-full">
               <TabsTrigger value="ALL" className="flex-1 flex-row h-full">
                 <Text
+                  className="pr-2"
                   style={{ color: activeTab === 'ALL' ? '#2A2E33' : '#A0A0A0' }}
                 >
                   Tous
@@ -330,6 +341,7 @@ export default function MenuPage() {
               {itemTypes.map((type) => (
                 <TabsTrigger key={type.id} value={type.id!} className="flex-1 flex-row h-full">
                   <Text
+                    className="pr-2"
                     style={{ color: activeTab === type.id ? '#2A2E33' : '#A0A0A0' }}
                   >
                     {type.name}

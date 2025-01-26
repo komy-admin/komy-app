@@ -152,10 +152,10 @@ export function FilterBar<T>({
       {activeFilters.length > 0 && (
         <Button
           onPress={onClearFilters}
-          className="mt-6"
-          style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
+          className="mt-5"
+          style={{ backgroundColor: '#2A2E33', borderRadius: 5, height: 40, borderColor: '#FFFFFF', borderWidth: 1, opacity: 0.8 }}
         >
-          <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
+          <Text style={{ color: '#FFFFFF', fontWeight: '400', fontSize: 16}}>
             Effacer les filtres
           </Text>
         </Button>

@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Dimensions, TouchableWithoutFeedback } from 'react-native';
 import { Table } from '~/types/table.types';
 import { ReactNativeZoomableView, } from '@openspacelabs/react-native-zoomable-view';
-import { RoomGrid } from './RoomGrid';
-import { RoomTable } from './RoomTable';
+import { RoomGrid } from '~/components/Room/RoomGrid';
+import { RoomTable } from '~/components/Room/RoomTable';
 import { Order } from '~/types/order.types';
 
 const CELL_SIZE = 50;
-const GRID_ROWS = 20;
+const GRID_ROWS = 15;
 const GRID_COLS = 15;
 
 interface RoomProps {
@@ -100,9 +100,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   grid: {
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1,
-    borderColor: '#ddd',
+    backgroundColor: '#FFFFFF',
+
   },
 });
 

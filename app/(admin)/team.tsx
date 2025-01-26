@@ -15,6 +15,7 @@ import { FilterConfig } from "~/hooks/useFilter/types";
 import { TextInput } from 'react-native';
 
 export default function TeamPage() {
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<TeamTypes>(TeamTypes.ALL);
   const [isLoading, setIsLoading] = useState(true);
   const [title, setTitle] = useState('Filtrage');
@@ -34,6 +35,10 @@ export default function TeamPage() {
     label: 'Choisissez une rôle',
   };
   
+  const handleBack = () => {
+    setTitle('Filtrage');
+  };
+
   const [selectedOption, setSelectedOption] = useState(defaultOption);
 
   const filterTeam: FilterConfig<Team>[] = [
@@ -92,6 +97,9 @@ export default function TeamPage() {
   }, [data]);
 
   const handleCreateTeam = () => {
+    if (isPanelCollapsed) {
+      setIsPanelCollapsed(false);
+    }
     setTitle('Création d\'un utilisateur');
     setIsEditing(false);
     setCurrentItem(null);
@@ -113,6 +121,9 @@ export default function TeamPage() {
   }, [error]);
 
   const handleEditTeam = (id: string) => {
+    if (isPanelCollapsed) {
+      setIsPanelCollapsed(false);
+    }
     setTitle('Modification d\'un utilisateur');
     const team = data?.data.find(team => team.id === id);
     if (!team) return;
@@ -219,7 +230,6 @@ export default function TeamPage() {
             fontSize: 14,
             color: '#2A2E33',
             backgroundColor: '#F1F1F1',
-            marginVertical: 4,
             padding: 5,
             paddingLeft: 16,
           }}>
@@ -299,7 +309,7 @@ export default function TeamPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel title={title} width={width / 5}>
+      <SidePanel title={title} width={width / 4} onBack={title !== 'Filtrage' ? handleBack : undefined} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
         {renderSidePanelContent()}
       </SidePanel>
       <View style={{ flex: 1 }}>

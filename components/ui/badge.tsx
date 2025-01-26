@@ -20,7 +20,7 @@ const badgeVariants = cva(
       size: {
         sm: 'px-2 py-0.5',
         md: 'px-2.5 py-1',
-        lg: 'px-3 py-1.5',
+        lg: 'px-3 py-0.5',
       },
       active: {
         true: 'opacity-90',

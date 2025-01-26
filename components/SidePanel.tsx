@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Pressable, Animated, StyleSheet } from 'react-native';
 import { ChevronLeft, ChevronRight, X, ArrowLeft } from 'lucide-react-native';
 import { Text } from './ui';
@@ -10,6 +10,8 @@ interface SidePanelProps {
   collapsedWidth?: number;
   style?: object;
   onBack?: () => void;
+  isCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 export function SidePanel({
@@ -19,9 +21,20 @@ export function SidePanel({
   width = 350,
   collapsedWidth = 0,
   onBack,
+  isCollapsed: controlledIsCollapsed,
+  onCollapsedChange,
 }: SidePanelProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
+  const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
   const animatedWidth = React.useRef(new Animated.Value(width)).current;
+
+  useEffect(() => {
+    Animated.timing(animatedWidth, {
+      toValue: isCollapsed ? collapsedWidth : width,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [isCollapsed, collapsedWidth, width]);
 
   // Hide content when collapsed
   const contentStyle = {
@@ -32,18 +45,17 @@ export function SidePanel({
   };
 
   const toggleCollapse = () => {
-    const toValue = isCollapsed ? width : collapsedWidth;
-    Animated.timing(animatedWidth, {
-      toValue,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-    setIsCollapsed(!isCollapsed);
+    const newCollapsedState = !isCollapsed;
+    if (onCollapsedChange) {
+      onCollapsedChange(newCollapsedState);
+    } else {
+      setInternalIsCollapsed(newCollapsedState);
+    }
   };
 
   const getHeaderStyle = () => {
     return {
-      backgroundColor: '#F1F1F1',
+      backgroundColor: onBack ? '#FFFFFF' : '#F1F1F1',
     };
   };
 

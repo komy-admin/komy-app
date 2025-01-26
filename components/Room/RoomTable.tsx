@@ -38,7 +38,6 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
     yStart.setValue(table.yStart * CELL_SIZE);
   }, [table.width, table.height, table.xStart, table.yStart]);
 
-
   const dragPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -140,9 +139,9 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
 
   const getTableColor = (table: Table) => {
     if (editionMode) {
-      return positionValid ? '#A9C3C6' : '#F45B69'
+      return positionValid ? '#D9D9D9' : '#F4A698'
     } else {
-      return status ? getStatusColor(status) : '#B6CCCD';
+      return status ? getStatusColor(status) : '#D9D9D9';
     }
   }
 
@@ -154,22 +153,42 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
     >
       <Animated.View
         style={[
-          styles.table,
+          styles.tableContainer,
           {
             width: width,
             height: height,
             left: xStart,
             top: yStart,
-            backgroundColor: getTableColor(table),
             zIndex: isEditing ? 10 : 1,
-            opacity: isEditing ? 0.8 : 1,
-            borderWidth: isEditing ? 2 : 0,
-            borderColor: '#007AFF',
           },
         ]}
       >
-        <Text style={styles.tableText}>{table.name}</Text>
+        {/* Chaise du haut */}
+        <View style={[styles.chairContainer, styles.topChairContainer]}>
+          <View style={styles.chair} />
+        </View>
         
+        <View style={styles.innerContainer}>
+          <Animated.View
+            style={[
+              styles.table,
+              {
+                backgroundColor: getTableColor(table),
+                opacity: 1,
+                borderWidth: isEditing ? 3 : 2,
+                borderColor: isEditing ? '#2A2E33' : '#AAAAAA',
+              },
+            ]}
+          >
+            <Text style={styles.tableText}>{table.name}</Text>
+          </Animated.View>
+        </View>
+
+        {/* Chaise du bas */}
+        <View style={[styles.chairContainer, styles.bottomChairContainer]}>
+          <View style={styles.chair} />
+        </View>
+
         {isEditing && editionMode && (
           <>
             <Animated.View
@@ -219,19 +238,61 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
 };
 
 const styles = StyleSheet.create({
-  table: {
+  tableContainer: {
     position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  innerContainer: {
+    width: '100%',
+    height: '100%',
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  table: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 3,
+    margin: 16,
   },
   tableText: {
-    color: 'white',
+    color: '#2A2E33',
     fontWeight: 'bold',
+  },
+  chairContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: -1,
+  },
+  chair: {
+    width: 30,
+    height: 20,
+    backgroundColor: '#D9D9D9',
+    borderRadius: 50,
+  },
+  topChairContainer: {
+    top: 0,
+  },
+  bottomChairContainer: {
+    bottom: 0,
   },
   rightHandleHitArea: {
     position: 'absolute',
-    right: -25,
+    right: -15.5,
     top: '50%',
     width: 50,
     height: 50,
@@ -241,7 +302,7 @@ const styles = StyleSheet.create({
   },
   leftHandleHitArea: {
     position: 'absolute',
-    left: -25,
+    left: -15.5,
     top: '50%',
     width: 50,
     height: 50,
@@ -251,7 +312,7 @@ const styles = StyleSheet.create({
   },
   bottomHandleHitArea: {
     position: 'absolute',
-    bottom: -25,
+    bottom: -15.5,
     left: '50%',
     width: 50,
     height: 50,
@@ -261,7 +322,7 @@ const styles = StyleSheet.create({
   },
   topHandleHitArea: {
     position: 'absolute',
-    top: -25,
+    top: -15.5,
     left: '50%',
     width: 50,
     height: 50,
@@ -270,9 +331,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   handleDot: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#007AFF',
+    width: 15,
+    height: 15,
+    backgroundColor: '#2A2E33',
     borderRadius: 10,
   },
-})
+});
