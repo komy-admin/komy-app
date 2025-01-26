@@ -7,7 +7,8 @@ export function useFilter<T>({
   service,
   config,
   defaultParams = { page: 1, perPage: 10 },
-  onDataChange
+  onDataChange,
+  loadOnMount = true
 }: UseFilterProps<T>) {
   const [queryParams, setQueryParams] = useState<QueryParams>({
     ...defaultParams,
@@ -17,10 +18,12 @@ export function useFilter<T>({
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    loadData({
-      ...defaultParams,
-      filters: []
-    });
+    if (loadOnMount) {
+      loadData({
+        ...defaultParams,
+        filters: defaultParams.filters || []
+      });
+    }
   }, []);
 
   const loadData = useCallback(async (params: QueryParams) => {

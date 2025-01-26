@@ -39,6 +39,7 @@ export default function ServicePage () {
   const [loading, setLoading] = useState<boolean>(true);
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
   useEffect(() => {
@@ -62,23 +63,13 @@ export default function ServicePage () {
       show: false
     },
   ];
-  // const {
-  //   data: orders,
-  //   loading: ordersLoading,
-  //   error: ordersError,
-  //   updateFilter: updateOrderFilter,
-  //   clearFilters: clearOrderFilters,
-  //   changePage: changeOrderPage,
-  //   queryParams: orderQueryParams
-  // } = useFilter({ config: filterOrder, service: orderApiService, defaultParams: { sort: { field: 'updatedAt', direction: 'asc' } } });
-
-  const [orders, setOrders] = useState<Order[]>([]);
 
   const { updateFilter: updateOrderFilter, loading: ordersLoading } = useFilter<Order>({
     config: filterOrderConfig,
     service: orderApiService,
-    defaultParams: { sort: { field: 'updatedAt', direction: 'asc' } },
-    onDataChange: (response) => setOrders(response.data)
+    defaultParams: { sort: { field: 'updatedAt', direction: 'asc' }, perPage: 100 },
+    onDataChange: (response) => setOrders(response.data),
+    loadOnMount: false
   });
 
   const filterItemConfig: FilterConfig<Item>[] = [
@@ -90,15 +81,6 @@ export default function ServicePage () {
       show: false
     },
   ];
-  // const {
-  //   data: items,
-  //   loading: itemsLoading,
-  //   error: itemsError,
-  //   updateFilter: updateItemFilter,
-  //   clearFilters: clearItemFilters,
-  //   changePage: changeItemPage,
-  //   queryParams: itemQueryParams
-  // } = useFilter({ config: filterItem, service: itemApiService, defaultParams: { page: 1, perPage: 100 } });
 
   const { updateFilter: updateItemFilter, loading: itemsLoading } = useFilter<Item>({
     config: filterItemConfig,
@@ -393,16 +375,22 @@ export default function ServicePage () {
         </View>
       ) : (
         <View style={{ padding: 16, flex: 1 }}>
-          <View className='flex-row justify-between items-center'>
-            <Button className="rounded-full p-2" variant='outline'>
-              <Grid3X3Icon color='black' />
-            </Button>
-            <Input className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
-            <Button className="rounded-full p-2" variant='outline'>
-              <ListFilter color='black' />
-            </Button>
-          </View>
-          <OrderList orders={orders} onOrderPress={updateOrder} onOrderDelete={deleteOrder} />
+          {loading ? (
+            <Text>Chargement...</Text>
+          ) : (
+            <>
+              <View className='flex-row justify-between items-center'>
+                <Button className="rounded-full p-2" variant='outline'>
+                  <Grid3X3Icon color='black' />
+                </Button>
+                <Input className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
+                <Button className="rounded-full p-2" variant='outline'>
+                  <ListFilter color='black' />
+                </Button>
+              </View>
+              <OrderList orders={orders} onOrderPress={updateOrder} onOrderDelete={deleteOrder} />
+            </>
+          )}
         </View>
       )}
       </SidePanel>

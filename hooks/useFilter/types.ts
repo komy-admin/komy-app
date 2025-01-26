@@ -22,6 +22,7 @@ export interface UseFilterProps<T> {
   config: FilterConfig<T>[];
   defaultParams?: Partial<QueryParams>;
   onDataChange: (data: PaginatedResponse<T>) => void;
+  loadOnMount?: boolean;
 }
 
 export type FilterOperator = '>' | '>=' | '<' | '<=' | '=' | '!=' | 'like' | 'not like' | 'in' | 'not in' | 'between' | 'not between' | 'isNull' | 'isNotNull';

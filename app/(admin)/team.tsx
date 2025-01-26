@@ -20,6 +20,7 @@ export default function TeamPage() {
   const [title, setTitle] = useState('Filtrage');
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState<Team | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -74,22 +75,18 @@ export default function TeamPage() {
     }
   ];
   // filtre
-  const {
-    data,
-    loading,
-    error,
-    updateFilter,
-    clearFilters,
-    changePage,
-    queryParams
-  } = useFilter({ config: filterTeam, service: teamApiService });
+  const { updateFilter, loading, clearFilters, queryParams, error } = useFilter<Team>({
+    config: filterTeam,
+    service: teamApiService,
+    onDataChange: (response) => setTeams(response.data)
+  });
 
 
   useEffect(() => {
-    if (data) {
+    if (teams) {
       setIsLoading(false);
     }
-  }, [data]);
+  }, [teams]);
 
   const handleCreateTeam = () => {
     setTitle('Création d\'un utilisateur');
@@ -114,7 +111,7 @@ export default function TeamPage() {
 
   const handleEditTeam = (id: string) => {
     setTitle('Modification d\'un utilisateur');
-    const team = data?.data.find(team => team.id === id);
+    const team = teams.find(team => team.id === id);
     if (!team) return;
     
     setIsEditing(true);
@@ -351,7 +348,7 @@ export default function TeamPage() {
           </View>
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             <ForkTable 
-              data={data.data}
+              data={teams}
               columns={teamTableColumns}
               onRowPress={handleEditTeam}
               onRowDelete={submitTeamDelete}
