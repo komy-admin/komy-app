@@ -38,6 +38,7 @@ export function FilterBar<T>({
               onChangeText={(text: string) => onUpdateFilter(String(filter.field), text, operator)}
               placeholder={`${filter.label.toLowerCase()}`}
               style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', padding: 10, color: '#2A2E33' }}
+              placeholderTextColor="#D7D7D7"
             />
           </View>
         );

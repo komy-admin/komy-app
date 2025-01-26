@@ -395,10 +395,14 @@ export default function ServicePage () {
       )}
       </SidePanel>
       <View style={{ flex: 1, height: '100%', position: 'relative' }}>
-        <View className='flex-row w-full justify-between'>
+        <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ 
+              alignItems: 'center',
+              height: '100%'
+            }}
             className='flex-row p-2 flex-1'
           >
             {rooms.map((room, index) => (
@@ -419,7 +423,7 @@ export default function ServicePage () {
           <Button
             onPress={() => {}}
             className="w-[200px] h-[50px] flex items-center justify-center"
-            style={{ backgroundColor: '#2A2E33', borderRadius: 0 }}
+            style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
           >
             <Text
               style={{

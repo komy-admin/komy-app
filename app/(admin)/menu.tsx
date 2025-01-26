@@ -323,7 +323,7 @@ export default function MenuPage() {
       </SidePanel>
       <View style={{ flex: 1 }}>
         <Tabs
-          style={{ flex: 1 }}
+          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
           value={activeTab}
           onValueChange={(newValue: string) => {
             if (newValue !== 'ALL') {
@@ -359,7 +359,7 @@ export default function MenuPage() {
             <Button
               onPress={handleCreateItem}
               className="w-[200px] h-[50px] flex items-center justify-center"
-              style={{ backgroundColor: '#2A2E33', borderRadius: 0 }}
+              style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
             >
               <Text
                 style={{
