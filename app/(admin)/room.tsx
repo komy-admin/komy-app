@@ -367,9 +367,11 @@ export default function RoomPage() {
                     display: 'flex',
                     flexDirection: 'row'
                   }}>
-                  <Text style={{ color: '#ef4444', textDecorationLine: 'underline', fontSize: 15 }}>
-                    Supprimer la salle
-                  </Text>
+                  <View style={{ borderBottomWidth: 1, borderBottomColor: '#ef4444', paddingBottom: 2 }}>
+                    <Text style={{ color: '#ef4444', fontSize: 15 }}>
+                      Supprimer la salle
+                    </Text>
+                  </View>
                 </Button>
               </View>
             </View>
@@ -437,11 +439,15 @@ export default function RoomPage() {
         {renderSidePanelContent()}
       </SidePanel>
       <View style={{ flex: 1, height: '100%', position: 'relative' }}>
-        <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB' }}>
+        <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             className='flex-row p-2 flex-1'
+            contentContainerStyle={{ 
+              alignItems: 'center',
+              height: '100%'
+            }}
           >
             {rooms.map((room, index) => (
               <Pressable
@@ -461,7 +467,7 @@ export default function RoomPage() {
           <Button
             onPress={setCreateRoomPanel}
             className="w-[200px] h-[50px] flex items-center justify-center"
-            style={{ backgroundColor: '#2A2E33', borderRadius: 0 }}
+            style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
           >
             <Text
               style={{

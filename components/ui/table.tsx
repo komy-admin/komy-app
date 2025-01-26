@@ -174,7 +174,7 @@ const ForkTable = ({ data, columns, onRowPress, onRowDelete }: ForkTableProps) =
                       >
                         <Trash2
                           size={20} 
-                          className="text-destructive hover:text-destructive/80"
+                          color="red"
                         />
                       </Pressable>
                     </TableCell>
