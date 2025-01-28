@@ -5,7 +5,7 @@ import { StorageInterface, storageService } from "~/lib/storageService";
 const DEV_API_URL = Platform.select({
   android: `${process.env.EXPO_PUBLIC_API_URL}/api`,
   ios: `${process.env.EXPO_PUBLIC_API_URL}/api`,
-  web: 'http://localhost:3333/api'
+  web: `${process.env.EXPO_PUBLIC_API_URL}/api`,
 });
 export abstract class BaseApiService<T> {
   protected abstract endpoint: string;
