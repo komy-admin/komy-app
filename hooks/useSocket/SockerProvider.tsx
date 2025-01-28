@@ -1,7 +1,6 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { SocketService, socketService } from './socket';
 
-// On type le contexte avec un état de connexion
 interface SocketContextType {
   socket: SocketService | null;
   isConnected: boolean;
@@ -13,7 +12,6 @@ export const SocketContext = createContext<SocketContextType>({
 });
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // On suit l'état de connexion
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -22,7 +20,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         await socketService.connect(process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3333');
         setIsConnected(true);
         
-        // Optionnel : gérer la déconnexion
         socketService.on('disconnect', () => {
           setIsConnected(false);
         });

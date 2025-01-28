@@ -1,11 +1,10 @@
 import { io, Socket } from 'socket.io-client';
-import { SocketEvents } from './types'; // Importez vos types
+import { SocketEvents } from './types';
 import { storageService } from '~/lib/storageService';
 
 export class SocketService {
     private socket: Socket | null = null;
 
-    // Initialiser la connexion
     async connect(url: string) {
       const token = await storageService.getItem('token');
       this.socket = io(url, {
@@ -21,7 +20,6 @@ export class SocketService {
       });
     }
 
-    // Émettre un événement
     emit<K extends keyof SocketEvents>(event: K, payload: SocketEvents[K]) {
         if (this.socket) {
           console.log('Emiting event:', event);
@@ -31,7 +29,6 @@ export class SocketService {
         }
     }
 
-    // Écouter un événement
     on<K extends keyof SocketEvents>(event: K, callback: (payload: SocketEvents[K]) => void) {
         if (this.socket) {
           console.log('Registering event:', event);
@@ -41,7 +38,6 @@ export class SocketService {
         }
     }
 
-    // Arrêter d'écouter un événement
     off<K extends keyof SocketEvents>(event: K, callback?: (payload: SocketEvents[K]) => void) {
         if (this.socket) {
             if (callback) {
@@ -56,7 +52,6 @@ export class SocketService {
         return this.socket?.connected || false;
     }
 
-    // Déconnecter le socket
     disconnect() {
         if (this.socket) {
             this.socket.disconnect();
