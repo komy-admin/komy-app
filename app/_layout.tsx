@@ -9,6 +9,7 @@ import { store } from '~/store';
 import { RootState } from '~/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -93,7 +94,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
-        <RootLayoutNav />
+        <SocketProvider>
+          <RootLayoutNav />
+        </SocketProvider>
       </Provider>
     </GestureHandlerRootView>
   );

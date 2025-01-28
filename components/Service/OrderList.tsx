@@ -1,5 +1,4 @@
-import { Pressable } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
+import { Pressable, ScrollView } from "react-native";
 import { Order } from "~/types/order.types";
 import OrderCard from "./OrderCard";
 

@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Order } from "~/types/order.types";
 import { orderApiService } from "~/api/order.api";
 import { getMostImportantStatus } from '~/lib/utils';
-import { useSocket } from '~/hooks/useSocket/useSocket';
+import { useSocket } from '~/hooks/useSocket';
 import { Status } from "~/types/status.enum";
 import { EventType } from '~/hooks/useSocket/types';
 import { orderItemApiService } from '~/api/order-item.api';
@@ -56,10 +56,11 @@ export default function KitchenPage() {
     setOrderItems(orderItemsData.data);
   }, []);
 
-  const { on } = useSocket();
+  const { socket, isConnected } = useSocket();
 
   useEffect(() => {
-    on(EventType.ORDER_ITEMS_PENDING, async ({ orderItems }) => {
+    if (!isConnected || !socket) return;
+    socket.on(EventType.ORDER_ITEMS_PENDING, async ({ orderItems }: { orderItems: OrderItem[] }) => {
       console.log('Received ORDER_ITEMS_PENDING event:', orderItems);
       setOrderItems(prevItems => [...prevItems.filter(i => !orderItems.map(x => x.id).includes(i.id)), ...orderItems]);
       for (const orderItem of orderItems) {
@@ -70,7 +71,11 @@ export default function KitchenPage() {
         }
       }
     });
-   }, []);
+
+    return () => {
+      socket.off(EventType.ORDER_ITEMS_PENDING);
+    }
+   }, [isConnected, socket]);
 
   useEffect(() => {
     loadAllData().then(() => setIsLoading(false));
