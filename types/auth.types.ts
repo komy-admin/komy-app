@@ -1,3 +1,5 @@
+import { User } from "./user.types";
+
 export interface LoginCredentials {
   loginId: string;
   password: string;
@@ -8,11 +10,7 @@ export interface RegisterCredentials extends LoginCredentials {
   lastName?: string;
 }
 
-export interface AuthResponse {
-  accountType: any;
-  user: currentUser;
-  token: { token: string };
-}
+export type AuthResponse = User & { token: { token: string } };
 
 export interface currentUser {
   id: string;

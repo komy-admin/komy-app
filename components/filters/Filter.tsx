@@ -33,7 +33,7 @@ export function FilterBar<T>({
       case 'text':
         return (
           <View>
-            <TextInput
+            <Input
               value={activeFilters.find(f => f.field === filter.field)?.value as string}
               onChangeText={(text: string) => onUpdateFilter(String(filter.field), text, operator)}
               placeholder={`${filter.label.toLowerCase()}`}

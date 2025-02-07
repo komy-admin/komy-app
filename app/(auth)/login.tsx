@@ -14,41 +14,35 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     try {
       const response = await authApiService.login({ loginId, password });
-      const mockResponse = {
-        token: response.token.token,
-        accountType: 'admin' as const,
-      };
-      
-      dispatch(setCredentials(mockResponse));
-      router.replace(`/(${mockResponse.accountType})/`);
+      dispatch(setCredentials({ token: response.token.token, userProfile: response.profil }));
     } catch (error) {
       console.error(error);
     }
   };
 
   return (
-    <View className="flex-1 justify-center p-4 bg-background">
+    <View className="flex-1 items-center justify-center p-4 bg-background">
       <Text className="text-2xl font-bold text-foreground mb-8 text-center">
-        Restaurant App
+        Fork'it
       </Text>
       
       <Input
         value={loginId}
         onChangeText={setLoginId}
-        placeholder="login"
-        className="mb-4"
+        placeholder="Identifiant"
+        className="mb-4 max-w-md"
       />
       
       <Input
         value={password}
         onChangeText={setPassword}
-        placeholder="Password"
+        placeholder="Mot de passe"
         secureTextEntry
-        className="mb-6"
+        className="mb-6 max-w-md"
       />
       
       <Button variant="default" onPress={handleLogin}>
-        <Text className="text-primary-foreground">Login</Text>
+        <Text className="text-primary-foreground">Se connecter</Text>
       </Button>
     </View>
   );

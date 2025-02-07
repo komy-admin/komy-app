@@ -1,5 +1,5 @@
 import { TeamTypes } from "~/types/team.enum";
-import { Team } from "~/types/team.types";
+import { Team } from "~/types/user.types";
 
 export const mockTeams: Team[] = [
   // MANAGERS

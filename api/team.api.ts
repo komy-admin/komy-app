@@ -1,6 +1,6 @@
 import { BaseApiService } from "~/api/base.api";
-import { Team } from "~/types/team.types";
-export class TeamApiService extends BaseApiService<Team> {
+import { User } from "~/types/user.types";
+export class UserApiService extends BaseApiService<User> {
   protected endpoint = '/user';
 }
-export const teamApiService = new TeamApiService()
+export const userApiService = new UserApiService()

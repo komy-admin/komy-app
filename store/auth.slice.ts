@@ -1,16 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
-type AccountType = 'server' | 'admin' | 'kitchen';
+import { UserProfile } from '~/types/user.types';
 
 interface AuthState {
   token: string | null;
-  accountType: AccountType | null;
+  userProfile: UserProfile | null;
   isLoading: boolean;
 }
 
 const initialState: AuthState = {
   token: null,
-  accountType: null,
+  userProfile: null,
   isLoading: true,
 };
 
@@ -20,15 +19,15 @@ export const authSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ token: string; accountType: AccountType }>
+      action: PayloadAction<{ token: string; userProfile: UserProfile }>
     ) => {
       state.token = action.payload.token;
-      state.accountType = action.payload.accountType;
+      state.userProfile = action.payload.userProfile;
       state.isLoading = false;
     },
     logout: (state) => {
       state.token = null;
-      state.accountType = null;
+      state.userProfile = null;
       state.isLoading = false;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {

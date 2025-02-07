@@ -3,6 +3,7 @@ import { twMerge } from 'tailwind-merge';
 import { ItemTypes } from '~/types/item-type.enum';
 import { TeamTypes } from "~/types/team.enum";
 import { Status } from '~/types/status.enum';
+import { UserProfile } from '~/types/user.types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -61,14 +62,13 @@ export const getItemTypeText = (itemType: ItemTypes) => {
   return texts[itemType] || 'Type inconnu';
 };
 
-export const getTeamTypeText = (teamType: TeamTypes) => {
+export const getUserProfileText = (teamType: UserProfile) => {
   const texts = {
-    [TeamTypes.ALL]: 'Tous',
-    [TeamTypes.ADMIN]: 'Admin',
-    [TeamTypes.SUPERADMIN]: 'Super admin',
-    [TeamTypes.MANAGER]: 'Manager',
-    [TeamTypes.SERVEUR]: 'Serveur',
-    [TeamTypes.CUISTO]: 'Cuisinier',
+    [UserProfile.ADMIN]: 'Admin',
+    [UserProfile.SUPERADMIN]: 'Super admin',
+    [UserProfile.MANAGER]: 'Manager',
+    [UserProfile.SERVER]: 'Serveur',
+    [UserProfile.CHEF]: 'Cuisinier',
   };
   return texts[teamType] || 'Type inconnu';
 };
