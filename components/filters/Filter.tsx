@@ -122,7 +122,7 @@ export function FilterBar<T>({
 
       // case 'select':
       //   if (operator === 'in') {
-      //     <ForkSelect
+      //     <Select
       //       choices={options || []}
       //       selectedValue={selectedOption}
       //       onValueChange={(e) => { 

@@ -163,12 +163,12 @@
 //   value: string;
 //   label: string;
 // }
-// interface ForkSelectProps {
+// interface SelectProps {
 //   defaultValue: SelectValue;
 //   choices: SelectValue[];
 //   selectLabel?: string
 // }
-// const ForkSelect = ({defaultValue, choices, selectLabel }: ForkSelectProps) => {
+// const Select = ({defaultValue, choices, selectLabel }: SelectProps) => {
 //   const insets = useSafeAreaInsets();
 //   const contentInsets = {
 //     top: insets.top,
@@ -214,7 +214,7 @@
 //   SelectSeparator,
 //   SelectTrigger,
 //   SelectValue,
-//   ForkSelect,
+//   Select,
 //   type Option,
 // };
 
@@ -267,7 +267,7 @@ interface SelectProps {
   style?: object
 }
 
-const ForkSelect: React.FC<SelectProps> = ({
+const Select: React.FC<SelectProps> = ({
   choices,
   selectedValue,
   defaultValue,
@@ -465,4 +465,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { ForkSelect };
+export { Select };

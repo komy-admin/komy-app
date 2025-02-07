@@ -8,7 +8,7 @@ import { itemTypeApiService } from "~/api/item-type.api";
 import { FilterBar } from '~/components/filters/Filter';
 import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/hooks/useFilter/types';
-import { ForkSelect } from '~/components/ui/select';
+import { Select } from '~/components/ui/select';
 import { useFilter } from "~/hooks/useFilter";
 
 export default function MenuPage() {
@@ -229,7 +229,7 @@ export default function MenuPage() {
                 placeholder="Nom de l'article"
                 style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
               />
-              <ForkSelect
+              <Select
                 style={{ marginVertical: 8 }}
                 choices={itemTypes.map(type => ({ label: type.name, value: type.name, id: type.id }))}
                 selectedValue={selectedOption}

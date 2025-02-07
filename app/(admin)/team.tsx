@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { userApiService } from "~/api/user.api";
 import { getEnumValue, getUserProfileText } from "~/lib/utils";
-import { ForkSelect } from '~/components/ui/select';
+import { Select } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from "~/hooks/useFilter";
 import { FilterConfig } from "~/hooks/useFilter/types";
@@ -229,7 +229,7 @@ export default function TeamPage() {
           </Text>
           <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <View>
-              <ForkSelect
+              <Select
                 style={{ marginVertical: 8 }}
                 choices={userTypesArray}
                 selectedValue={selectedOption}
