@@ -3,7 +3,7 @@ import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTabl
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { User, UserProfile } from "~/types/user.types";
-import { userApiService } from "~/api/team.api";
+import { userApiService } from "~/api/user.api";
 import { getEnumValue, getUserProfileText } from "~/lib/utils";
 import { Search, Euro } from "lucide-react-native";
 import { InputCustom } from "~/components/ui/input_custom"
@@ -92,7 +92,7 @@ export default function TeamPage() {
     }
   }, [users]);
 
-  const handleCreateTeam = () => {
+  const handleCreateUser = () => {
     if (isPanelCollapsed) {
       setIsPanelCollapsed(false);
     }
@@ -116,7 +116,7 @@ export default function TeamPage() {
     }
   }, [error]);
 
-  const handleEditTeam = (id: string) => {
+  const handleEditUser = (id: string) => {
     if (isPanelCollapsed) {
       setIsPanelCollapsed(false);
     }
@@ -162,7 +162,7 @@ export default function TeamPage() {
       password: '',
     });
   };
-  const submitTeamAction = async () => {
+  const submitUserAction = async () => {
     const selectedValue = getEnumValue(UserProfile, selectedOption.value as keyof typeof UserProfile);
     const user: User = {
       id: currentItem?.id,
@@ -180,8 +180,8 @@ export default function TeamPage() {
       }
       handleCancelEditorCreate();
     } catch (err) {
-      console.error('Error in submitTeamAction:', err);
-      Alert.alert('Error', 'Failed to save team');
+      console.error('Error in submitUserAction:', err);
+      Alert.alert('Error', 'Failed to save user');
     }
   };
   
@@ -190,8 +190,8 @@ export default function TeamPage() {
       await userApiService.delete(id);
       updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
     } catch (err) {
-      console.error('Error in deleteTeam:', err);
-      Alert.alert('Error', 'Failed to delete team');
+      console.error('Error in deleteUser:', err);
+      Alert.alert('Error', 'Failed to delete user');
     }
   };
 
@@ -250,7 +250,7 @@ export default function TeamPage() {
             </View>
             <View>
               <Button
-                onPress={submitTeamAction}
+                onPress={submitUserAction}
                 style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
               >
                 <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
@@ -344,7 +344,7 @@ export default function TeamPage() {
                 ))}
             </TabsList>
             <Button
-              onPress={handleCreateTeam}
+              onPress={handleCreateUser}
               className="w-[200px] h-[50px] flex items-center justify-center"
               style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
             >
@@ -365,7 +365,7 @@ export default function TeamPage() {
             <ForkTable 
               data={users}
               columns={teamTableColumns}
-              onRowPress={handleEditTeam}
+              onRowPress={handleEditUser}
               onRowDelete={submitTeamDelete}
             />
           </TabsContent>

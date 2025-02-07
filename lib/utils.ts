@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ItemTypes } from '~/types/item-type.enum';
-import { TeamTypes } from "~/types/team.enum";
 import { Status } from '~/types/status.enum';
 import { UserProfile } from '~/types/user.types';
 
