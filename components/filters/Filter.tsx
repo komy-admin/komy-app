@@ -1,11 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { Input } from "~/components/ui";
+import React, { useState } from "react";
+import { NumberInput, Text, Button, TextInput } from "~/components/ui";
 import { View } from 'react-native';
-import { ForkSelect } from '~/components/ui/select';
-import { NumberInput } from "~/components/ui/numberInput";
-import { TextInput } from 'react-native';
 import { FilterConfig, FilterOperator, FilterValue } from "~/hooks/useFilter/types";
-import { Text, Button } from "~/components/ui";
 interface FilterBarProps<T> {
   config: FilterConfig<T>[];
   onUpdateFilter: (field: string, value: any, operator?: FilterOperator) => void;
@@ -33,10 +29,10 @@ export function FilterBar<T>({
       case 'text':
         return (
           <View>
-            <Input
+            <TextInput
               value={activeFilters.find(f => f.field === filter.field)?.value as string}
               onChangeText={(text: string) => onUpdateFilter(String(filter.field), text, operator)}
-              placeholder={`${filter.label.toLowerCase()}`}
+              placeholder={`${filter.label}`}
               style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', padding: 10, color: '#2A2E33' }}
               placeholderTextColor="#D7D7D7"
             />
@@ -55,7 +51,7 @@ export function FilterBar<T>({
                 min={0}
                 max={1000}
                 currency="€"
-                placeholder={`${filter.label.toLowerCase()} min `}
+                placeholder={`${filter.label} min `}
               />
               <NumberInput
                 style={{ marginTop: 8 }}
@@ -65,7 +61,7 @@ export function FilterBar<T>({
                 min={0}
                 max={1000}
                 currency="€"
-                placeholder={`${filter.label.toLowerCase()} max `}
+                placeholder={`${filter.label} max `}
               />
             </View>
           );

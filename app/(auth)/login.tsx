@@ -1,9 +1,8 @@
 import { View } from 'react-native';
-import { Button, Input, Text } from '~/components/ui';
+import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials } from '~/store/auth.slice';
-import { router } from 'expo-router';
 import { authApiService } from "~/api/auth.api";
 
 export default function LoginScreen() {
@@ -26,14 +25,14 @@ export default function LoginScreen() {
         Fork'it
       </Text>
       
-      <Input
+      <TextInput
         value={loginId}
         onChangeText={setLoginId}
         placeholder="Identifiant"
         className="mb-4 max-w-md"
       />
       
-      <Input
+      <TextInput
         value={password}
         onChangeText={setPassword}
         placeholder="Mot de passe"

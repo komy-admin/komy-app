@@ -1,17 +1,14 @@
-import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
-import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, } from "~/components/ui";
+import { Alert, useWindowDimensions, View } from "react-native";
+import { TextInput ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { userApiService } from "~/api/user.api";
 import { getEnumValue, getUserProfileText } from "~/lib/utils";
-import { Search, Euro } from "lucide-react-native";
-import { InputCustom } from "~/components/ui/input_custom"
 import { ForkSelect } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from "~/hooks/useFilter";
 import { FilterConfig } from "~/hooks/useFilter/types";
-import { TextInput } from 'react-native';
 
 export default function TeamPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);

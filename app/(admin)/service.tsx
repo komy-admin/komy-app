@@ -1,7 +1,7 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, ConfirmDialog, ForkModal, Input, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
+import { Badge, Button, ConfirmDialog, ForkModal, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text, TextInput } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState } from "react";
 import { Room } from "~/types/room.types";
@@ -368,7 +368,7 @@ export default function ServicePage () {
                 <Button className="rounded-full p-2" variant='outline'>
                   <Grid3X3Icon color='black' />
                 </Button>
-                <Input className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
+                <TextInput className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
                 <Button className="rounded-full p-2" variant='outline'>
                   <ListFilter color='black' />
                 </Button>
