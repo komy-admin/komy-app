@@ -1,0 +1,10 @@
+[
+build
+]
+  command = "npm run build:web"
+  publish = "web-build"
+
+[
+dev
+]
+  command = "npm run dev:web"
