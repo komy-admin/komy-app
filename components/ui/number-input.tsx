@@ -7,7 +7,7 @@ interface NumberInputProps {
   decimalPlaces?: number;
   min?: number;
   max?: number;
-  placeholder?: string;
+  placeholder: string;
   currency?: string;
   style?: object;
 }
@@ -18,7 +18,7 @@ export function NumberInput({
   decimalPlaces = 2,
   min = 0,
   max = Number.MAX_SAFE_INTEGER,
-  placeholder = "0.00",
+  placeholder,
   currency,
   style,
   ...props

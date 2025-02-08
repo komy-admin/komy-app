@@ -74,7 +74,7 @@ export function FilterBar<T>({
             min={0}
             max={1000}
             currency="€"
-            placeholder="0.00"
+            placeholder="Prix"
           />
         );
 
