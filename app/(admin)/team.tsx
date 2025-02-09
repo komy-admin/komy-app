@@ -16,7 +16,7 @@ export default function TeamPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [title, setTitle] = useState('Filtrage');
   const [isEditing, setIsEditing] = useState(false);
-  const [currentItem, setCurrentItem] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -95,7 +95,7 @@ export default function TeamPage() {
     }
     setTitle('Création d\'un utilisateur');
     setIsEditing(false);
-    setCurrentItem(null);
+    setCurrentUser(null);
     setSelectedOption(defaultOption);
     setFormData({
       firstName: '',
@@ -122,7 +122,7 @@ export default function TeamPage() {
     if (!user) return;
     
     setIsEditing(true);
-    setCurrentItem(user);
+    setCurrentUser(user);
     
     const userTypeKey = Object.keys(UserProfile).find(
       key => UserProfile[key as keyof typeof UserProfile] === user.profil
@@ -148,7 +148,7 @@ export default function TeamPage() {
   const handleCancelEditorCreate = () => {
     setTitle('Filtrage');
     setIsEditing(false);
-    setCurrentItem(null);
+    setCurrentUser(null);
     setSelectedOption(defaultOption);
     setFormData({
       firstName: '',
@@ -160,9 +160,11 @@ export default function TeamPage() {
     });
   };
   const submitUserAction = async () => {
+    if (!currentUser) return
     const selectedValue = getEnumValue(UserProfile, selectedOption.value as keyof typeof UserProfile);
     const user: User = {
-      id: currentItem?.id,
+      id: currentUser.id,
+      accountId: currentUser.accountId,
       profil: selectedValue as UserProfile,
       ...formData,
     };

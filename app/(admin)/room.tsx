@@ -332,6 +332,7 @@ export default function RoomPage() {
                     setNewRoomWidth(value!);
                     setHasChanges(true);
                   }}
+                  placeholder='Largeur'
                   style={{ marginVertical: 8 }}
                 />
                 <Text style={{fontSize: 14.5}}>Hauteur</Text>
@@ -342,6 +343,7 @@ export default function RoomPage() {
                     setNewRoomHeight(value!);
                     setHasChanges(true);
                   }}
+                  placeholder='Hauteur'
                   style={{ marginVertical: 8 }}
                 />
               </View>
@@ -397,13 +399,15 @@ export default function RoomPage() {
                   decimalPlaces={0}
                   onChangeText={() => {}}
                   style={{ marginVertical: 8 }}
+                  placeholder='Largeur'
                 />
-                <Text style={{fontSize: 14.5}}>Longueur</Text>
+                <Text style={{fontSize: 14.5}}>Hauteur</Text>
                 <NumberInput
                   value={10}
                   decimalPlaces={0}
                   onChangeText={() => {}}
                   style={{ marginVertical: 8 }}
+                  placeholder='Hauteur'
                 />
               </View>
               <Button

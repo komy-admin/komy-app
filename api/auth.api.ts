@@ -1,6 +1,6 @@
 import { BaseApiService } from './base.api';
 import type { LoginCredentials, RegisterCredentials, AuthResponse } from '~/types/auth.types';
-import { UserProfile } from '~/types/user.types';
+import { User, UserProfile } from '~/types/user.types';
 
 export class AuthApiService extends BaseApiService<AuthResponse> {
   protected endpoint = '/auth';
@@ -26,8 +26,22 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     await this.storage.removeItem('userProfile');
   }
 
+  public async getUserProfile(): Promise<UserProfile | null> {
+    return this.storage.getItem('userProfile') as Promise<UserProfile | null>;
+  }
+
   public async getToken(): Promise<string | null> {
     return this.storage.getItem('token');
+  }
+
+  public async getUserWithToken(): Promise<User> {
+    try {
+      const { data } = await this.axiosInstance.get<User>(`${this.endpoint}/me`);
+      return data;
+    } catch (err) {
+      console.error('Error in getUserWithToken:', err);
+      throw err;
+    }
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {

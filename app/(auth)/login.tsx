@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
-import { setCredentials } from '~/store/auth.slice';
+import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
 
 export default function LoginScreen() {
@@ -12,8 +12,9 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      const response = await authApiService.login({ loginId, password });
-      dispatch(setCredentials({ token: response.token.token, userProfile: response.profil }));
+      const { token, ...user } = await authApiService.login({ loginId, password });
+      dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
+      dispatch(setCurrentUser(user));
     } catch (error) {
       console.error(error);
     }

@@ -7,8 +7,8 @@ export enum UserProfile {
 }
 
 export type User = {
-  id?: string;
-  accountId?: string;
+  id: string;
+  accountId: string;
   firstName: string;
   lastName: string;
   email: string;

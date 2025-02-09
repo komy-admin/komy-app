@@ -10,8 +10,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
-import { setCredentials, setLoading } from '~/store/auth.slice';
+import { setCredentials, setCurrentUser, setLoading } from '~/store/auth.slice';
 import { UserProfile } from '~/types/user.types';
+import { authApiService } from '~/api/auth.api';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -36,7 +37,7 @@ function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
   const dispatch = useDispatch();
-  const { token, userProfile, isLoading } = useSelector((state: RootState) => state.auth);
+  const { token, userProfile, isLoading, currentUser } = useSelector((state: RootState) => state.auth);
 
   React.useEffect(() => {
     const initializeAuth = async () => {
@@ -49,6 +50,10 @@ function AuthenticationGate() {
             token: storedToken,
             userProfile: storedUserProfile as UserProfile
           }));
+          if (!currentUser) {
+            const user = await authApiService.getUserWithToken();
+            dispatch(setCurrentUser(user));
+          }
         } else {
           dispatch(setLoading(false));
         }
@@ -63,8 +68,6 @@ function AuthenticationGate() {
   
   const checkAccess = React.useCallback(() => {
     const currentSegment = segments[0];
-    
-    console.log('Checking access', { token, userProfile, currentSegment, isLoading });
 
     if (isLoading) return;
   
