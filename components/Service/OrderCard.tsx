@@ -1,102 +1,8 @@
-// import { View, Text, StyleSheet } from 'react-native';
-// import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
-// import { Order } from "~/types/order.types";
-// import { Status } from "~/types/status.enum";
-
-// interface OrderCardProps {
-//   order: Order;
-// }
-
-// const getOrderType = (order: Order): string => {
-//   console.log(order);
-//   const statuses = order.orderItems.map(item => item.status);
-//   const mostImportantStatus = getMostImportantStatus(statuses);
-//   return order.orderItems.find(item => item.status === mostImportantStatus)?.item.itemType.name!;
-// };
-
-// export default function OrderCard({ order }: OrderCardProps) {
-//   const statusColor = getStatusColor(order.status);
-//   const statusText = getStatusText(order.status);
-//   const orderType = getOrderType(order);
-
-//   return (
-//     <View style={[styles.container, { backgroundColor: `${statusColor}80` }]}>
-//       <View style={[styles.tableCode, { backgroundColor: statusColor }]}>
-//         <Text style={styles.tableCodeText}>
-//           {order.table.name}
-//         </Text>
-//       </View>
-      
-//       <View style={styles.content}>
-//         <Text style={styles.title}>{orderType}</Text>
-//         <Text style={styles.status}>
-//           {statusText}
-//         </Text>
-//       </View>
-
-//       <View style={styles.rightContent}>
-//         <Text style={styles.time}>{formatDate(order.updatedAt, DateFormat.TIME)}</Text>
-//         <Text style={styles.arrow}>›</Text>
-//       </View>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     padding: 12,
-//     marginVertical: 8,
-//     borderRadius: 12,
-//     borderWidth: 1,
-//     borderColor: '#E5E5E5',
-//   },
-//   tableCode: {
-//     width: 44,
-//     height: 44,
-//     borderRadius: 8,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   tableCodeText: {
-//     color: 'grey',
-//     fontSize: 16,
-//     fontWeight: '600',
-//   },
-//   content: {
-//     flex: 1,
-//     marginLeft: 12,
-//   },
-//   title: {
-//     fontSize: 16,
-//     fontWeight: '600',
-//     color: '#1A1A1A',
-//   },
-//   status: {
-//     fontSize: 14,
-//     marginTop: 4,
-//   },
-//   rightContent: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//   },
-//   time: {
-//     fontSize: 14,
-//     color: '#666666',
-//     marginRight: 8,
-//   },
-//   arrow: {
-//     fontSize: 20,
-//     color: '#666666',
-//   },
-// });
-
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View, Pressable } from 'react-native';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
-import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
-import { useCallback, useRef, useState } from 'react';
+import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import React, { useCallback, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react-native';
 import { ConfirmDialog } from '../ui';
 
@@ -151,16 +57,57 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
     } else {
       resetPosition();
     }
-  }, [showDeleteConfirmation, resetPosition]);
+  }, [resetPosition]);
 
   const deleteIconOpacity = translateX.interpolate({
     inputRange: [SWIPE_THRESHOLD, 0],
     outputRange: [1, 0],
   });
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.wrapper}>
+        <View
+          style={[
+            styles.container,
+            { backgroundColor: `${statusColor}80` },
+          ]}
+        >
+          <View style={[styles.tableCode, { backgroundColor: statusColor }]}>
+            <Text style={styles.tableCodeText}>
+              {order.table.name}
+            </Text>
+          </View>
+          
+          <View style={styles.content}>
+            <Text style={styles.title}>{orderType}</Text>
+            <Text style={styles.status}>
+              {statusText}
+            </Text>
+          </View>
+
+          <View style={styles.rightContent}>
+            <Text style={styles.time}>{formatDate(order.updatedAt, DateFormat.TIME)}</Text>
+            <Text style={styles.arrow}>›</Text>
+          </View>
+        </View>
+
+        <ConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title="Supprimer la commande"
+          content="Êtes-vous sûr de vouloir supprimer cette commande ?"
+          onCancel={() => setShowDeleteDialog(false)}
+          onConfirm={() => onDelete?.(order)}
+          confirmText="Supprimer"
+          variant="destructive"
+        />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.wrapper}>
-      {/* Background delete view */}
+    <GestureHandlerRootView style={styles.wrapper}>
       <Animated.View
         style={[
           styles.deleteBackground,
@@ -172,7 +119,6 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
         <Trash2 color="white" size={24} />
       </Animated.View>
 
-      {/* Card content */}
       <PanGestureHandler
         onGestureEvent={onGestureEvent}
         onEnded={onGestureEnd}
@@ -220,7 +166,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
         confirmText="Supprimer"
         variant="destructive"
       />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -287,4 +233,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#666666',
   },
+  webDeleteButton: {
+    padding: 8,
+    marginRight: 8,
+  }
 });

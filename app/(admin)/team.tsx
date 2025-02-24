@@ -1,27 +1,23 @@
-import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
-import { Input ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, } from "~/components/ui";
+import { Alert, useWindowDimensions, View } from "react-native";
+import { TextInput ,Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
-import { Team } from "~/types/team.types";
-import { TeamTypes } from "~/types/team.enum";
-import { TeamApiService, teamApiService } from "~/api/team.api";
-import { getTeamTypeText, getEnumValue } from "~/lib/utils";
-import { Search, Euro } from "lucide-react-native";
-import { InputCustom } from "~/components/ui/input_custom"
-import { ForkSelect } from '~/components/ui/select';
+import { User, UserProfile } from "~/types/user.types";
+import { userApiService } from "~/api/user.api";
+import { getEnumValue, getUserProfileText } from "~/lib/utils";
+import { Select } from '~/components/ui/select';
 import { FilterBar } from '~/components/filters/Filter';
 import { useFilter } from "~/hooks/useFilter";
 import { FilterConfig } from "~/hooks/useFilter/types";
-import { TextInput } from 'react-native';
 
 export default function TeamPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<TeamTypes>(TeamTypes.ALL);
+  const [activeTab, setActiveTab] = useState<UserProfile | 'all'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [title, setTitle] = useState('Filtrage');
   const [isEditing, setIsEditing] = useState(false);
-  const [currentItem, setCurrentItem] = useState<Team | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -42,7 +38,7 @@ export default function TeamPage() {
 
   const [selectedOption, setSelectedOption] = useState(defaultOption);
 
-  const filterTeam: FilterConfig<Team>[] = [
+  const filterUser: FilterConfig<User>[] = [
     { 
       field: 'firstName', 
       type: 'text' as const, 
@@ -80,26 +76,26 @@ export default function TeamPage() {
     }
   ];
   // filtre
-  const { updateFilter, loading, clearFilters, queryParams, error } = useFilter<Team>({
-    config: filterTeam,
-    service: teamApiService,
-    onDataChange: (response) => setTeams(response.data)
+  const { updateFilter, loading, clearFilters, queryParams, error } = useFilter<User>({
+    config: filterUser,
+    service: userApiService,
+    onDataChange: (response) => setUsers(response.data)
   });
 
 
   useEffect(() => {
-    if (teams) {
+    if (users) {
       setIsLoading(false);
     }
-  }, [teams]);
+  }, [users]);
 
-  const handleCreateTeam = () => {
+  const handleCreateUser = () => {
     if (isPanelCollapsed) {
       setIsPanelCollapsed(false);
     }
     setTitle('Création d\'un utilisateur');
     setIsEditing(false);
-    setCurrentItem(null);
+    setCurrentUser(null);
     setSelectedOption(defaultOption);
     setFormData({
       firstName: '',
@@ -117,42 +113,42 @@ export default function TeamPage() {
     }
   }, [error]);
 
-  const handleEditTeam = (id: string) => {
+  const handleEditUser = (id: string) => {
     if (isPanelCollapsed) {
       setIsPanelCollapsed(false);
     }
     setTitle('Modification d\'un utilisateur');
-    const team = teams.find(team => team.id === id);
-    if (!team) return;
+    const user = users.find(user => user.id === id);
+    if (!user) return;
     
     setIsEditing(true);
-    setCurrentItem(team);
+    setCurrentUser(user);
     
-    const teamTypeKey = Object.keys(TeamTypes).find(
-      key => TeamTypes[key as keyof typeof TeamTypes] === team.profil
+    const userTypeKey = Object.keys(UserProfile).find(
+      key => UserProfile[key as keyof typeof UserProfile] === user.profil
     );
     
-    if (teamTypeKey) {
+    if (userTypeKey) {
       setSelectedOption({
-        value: teamTypeKey,
-        label: team.profil,
+        value: userTypeKey,
+        label: user.profil,
       });
     }
     
     setFormData({
-      firstName: team.firstName,
-      lastName: team.lastName,
-      email: team.email,
-      phone: team.phone,
-      loginId: team.loginId,
-      password: team.password,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      loginId: user.loginId,
+      password: user.password,
     });
   };
 
   const handleCancelEditorCreate = () => {
     setTitle('Filtrage');
     setIsEditing(false);
-    setCurrentItem(null);
+    setCurrentUser(null);
     setSelectedOption(defaultOption);
     setFormData({
       firstName: '',
@@ -163,54 +159,55 @@ export default function TeamPage() {
       password: '',
     });
   };
-  const submitTeamAction = async () => {
-    const selectedValue = getEnumValue(TeamTypes, selectedOption.value as keyof typeof TeamTypes);
-    const team: Team = {
-      id: currentItem?.id,
-      profil: selectedValue as TeamTypes,
+  const submitUserAction = async () => {
+    if (!currentUser) return
+    const selectedValue = getEnumValue(UserProfile, selectedOption.value as keyof typeof UserProfile);
+    const user: User = {
+      id: currentUser.id,
+      accountId: currentUser.accountId,
+      profil: selectedValue as UserProfile,
       ...formData,
     };
   
     try {
-      if (isEditing && team.id) {
-        await teamApiService.update(team.id, team);
+      if (isEditing && user.id) {
+        await userApiService.update(user.id, user);
         updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
       } else {
-        await teamApiService.create(team);
+        await userApiService.create(user);
         updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
       }
       handleCancelEditorCreate();
     } catch (err) {
-      console.error('Error in submitTeamAction:', err);
-      Alert.alert('Error', 'Failed to save team');
+      console.error('Error in submitUserAction:', err);
+      Alert.alert('Error', 'Failed to save user');
     }
   };
   
   const submitTeamDelete = async (id: string) => {
     try {
-      await teamApiService.delete(id);
+      await userApiService.delete(id);
       updateFilter('profil', queryParams.filters?.[0]?.value || '', queryParams.filters?.[0]?.operator);
     } catch (err) {
-      console.error('Error in deleteTeam:', err);
-      Alert.alert('Error', 'Failed to delete team');
+      console.error('Error in deleteUser:', err);
+      Alert.alert('Error', 'Failed to delete user');
     }
   };
 
   const renderSidePanelContent = () => {
-    const teamTypesArray = Object.entries(TeamTypes)
-    .filter(([key]) => key !== 'ALL')
-    .map(([key, label]) => ({
-      value: key,
-      label,
-    }));
+    const userTypesArray = Object.entries(UserProfile)
+      .map(([key, label]) => ({
+        value: key,
+        label,
+      }));
     if (title === 'Filtrage') {
       return (
         <View style={{ padding: 15 }}>
           <FilterBar
-            config={filterTeam}
+            config={filterUser}
             onUpdateFilter={updateFilter}
             onClearFilters={() => {
-              setActiveTab(TeamTypes.ALL)
+              setActiveTab('all');
               clearFilters()
             }}
             activeFilters={queryParams.filters || []}
@@ -234,9 +231,9 @@ export default function TeamPage() {
           </Text>
           <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <View>
-              <ForkSelect
+              <Select
                 style={{ marginVertical: 8 }}
-                choices={teamTypesArray}
+                choices={userTypesArray}
                 selectedValue={selectedOption}
                 onValueChange={(value) => { if (value) setSelectedOption(value) }}
               />
@@ -252,7 +249,7 @@ export default function TeamPage() {
             </View>
             <View>
               <Button
-                onPress={submitTeamAction}
+                onPress={submitUserAction}
                 style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
               >
                 <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
@@ -314,8 +311,8 @@ export default function TeamPage() {
           style={{ flex: 1, backgroundColor: '#FFFFFF' }}
           value={activeTab}
           onValueChange={(newValue: string) => {
-            setActiveTab(newValue as TeamTypes);
-            if (newValue === TeamTypes.ALL) {
+            setActiveTab(newValue as UserProfile | 'all');
+            if (newValue === 'all') {
               clearFilters();
             } else {
               console.log('newValue', newValue)
@@ -326,20 +323,27 @@ export default function TeamPage() {
         >
           <View className="flex flex-row justify-between w-full" style={{ backgroundColor: '#FBFBFB', height: 50 }}>
             <TabsList className="flex-row w-[500px] h-full">
-              {Object.values(TeamTypes)
+                  <TabsTrigger key="all" value="all" className="flex-1 flex-row h-full">
+                    <Text
+                      style={{ color: activeTab === 'all' ? '#2A2E33' : '#A0A0A0' }}
+                    >
+                      Tous
+                    </Text>
+                  </TabsTrigger>
+              {Object.values(UserProfile)
                 .filter(type => !['superadmin', 'admin'].includes(type))
                 .map((type) => (
                   <TabsTrigger key={type} value={type} className="flex-1 flex-row h-full">
                     <Text
                       style={{ color: activeTab === type ? '#2A2E33' : '#A0A0A0' }}
                     >
-                      {getTeamTypeText(type)}
+                      {getUserProfileText(type)}
                     </Text>
                   </TabsTrigger>
                 ))}
             </TabsList>
             <Button
-              onPress={handleCreateTeam}
+              onPress={handleCreateUser}
               className="w-[200px] h-[50px] flex items-center justify-center"
               style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
             >
@@ -358,9 +362,9 @@ export default function TeamPage() {
           </View>
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             <ForkTable 
-              data={teams}
+              data={users}
               columns={teamTableColumns}
-              onRowPress={handleEditTeam}
+              onRowPress={handleEditUser}
               onRowDelete={submitTeamDelete}
             />
           </TabsContent>

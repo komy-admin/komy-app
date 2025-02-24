@@ -1,9 +1,8 @@
 import { View } from 'react-native';
-import { Button, Input, Text } from '~/components/ui';
+import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
-import { setCredentials } from '~/store/auth.slice';
-import { router } from 'expo-router';
+import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
 
 export default function LoginScreen() {
@@ -13,42 +12,37 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      const response = await authApiService.login({ loginId, password });
-      const mockResponse = {
-        token: response.token.token,
-        accountType: 'admin' as const,
-      };
-      
-      dispatch(setCredentials(mockResponse));
-      router.replace(`/(${mockResponse.accountType})/`);
+      const { token, ...user } = await authApiService.login({ loginId, password });
+      dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
+      dispatch(setCurrentUser(user));
     } catch (error) {
       console.error(error);
     }
   };
 
   return (
-    <View className="flex-1 justify-center p-4 bg-background">
+    <View className="flex-1 items-center justify-center p-4 bg-background">
       <Text className="text-2xl font-bold text-foreground mb-8 text-center">
-        Restaurant App
+        Fork'it
       </Text>
       
-      <Input
+      <TextInput
         value={loginId}
         onChangeText={setLoginId}
-        placeholder="login"
-        className="mb-4"
+        placeholder="Identifiant"
+        className="mb-4 max-w-md"
       />
       
-      <Input
+      <TextInput
         value={password}
         onChangeText={setPassword}
-        placeholder="Password"
+        placeholder="Mot de passe"
         secureTextEntry
-        className="mb-6"
+        className="mb-6 max-w-md"
       />
       
       <Button variant="default" onPress={handleLogin}>
-        <Text className="text-primary-foreground">Login</Text>
+        <Text className="text-primary-foreground">Se connecter</Text>
       </Button>
     </View>
   );
