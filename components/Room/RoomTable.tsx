@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, PanResponder, Pressable, StyleSheet, View } from "react-native";
+import { Animated, PanResponder, Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
@@ -17,7 +17,18 @@ interface TableViewProps {
   onUpdate: (id: string, updates: Partial<Table>) => void;
 }
 
-export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, editionMode, positionValid, CELL_SIZE, onPress, onLongPress, onUpdate }) => {
+export const RoomTable: React.FC<TableViewProps> = ({ 
+  table, 
+  status, 
+  isEditing, 
+  editionMode, 
+  positionValid, 
+  CELL_SIZE, 
+  onPress, 
+  onLongPress, 
+  onUpdate 
+}) => {
+  const MIN_CELLS = 2;
   const lastValidWidth = useRef(table.width);
   const lastValidHeight = useRef(table.height);
   const lastValidXStart = useRef(table.xStart);
@@ -27,16 +38,33 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
   const xStart = useRef(new Animated.Value(table.xStart * CELL_SIZE)).current;
   const yStart = useRef(new Animated.Value(table.yStart * CELL_SIZE)).current;
 
+  // const isSizeValid = table.width >= MIN_CELLS && table.height >= MIN_CELLS;
+
   useEffect(() => {
-    lastValidWidth.current = table.width;
-    lastValidHeight.current = table.height;
-    lastValidXStart.current = table.xStart;
-    lastValidYStart.current = table.yStart;
-    width.setValue(table.width * CELL_SIZE);
-    height.setValue(table.height * CELL_SIZE);
-    xStart.setValue(table.xStart * CELL_SIZE);
-    yStart.setValue(table.yStart * CELL_SIZE);
-  }, [table.width, table.height, table.xStart, table.yStart]);
+    if (!positionValid) {
+      // Retour à la dernière position valide
+      onUpdate(table.id, {
+        width: lastValidWidth.current,
+        height: lastValidHeight.current,
+        xStart: lastValidXStart.current,
+        yStart: lastValidYStart.current
+      });
+    } else {
+      // Mise à jour des dernières positions valides
+      lastValidWidth.current = table.width;
+      lastValidHeight.current = table.height;
+      lastValidXStart.current = table.xStart;
+      lastValidYStart.current = table.yStart;
+
+      // Animation vers la nouvelle position
+      Animated.parallel([
+        Animated.spring(width, { toValue: table.width * CELL_SIZE, useNativeDriver: false }),
+        Animated.spring(height, { toValue: table.height * CELL_SIZE, useNativeDriver: false }),
+        Animated.spring(xStart, { toValue: table.xStart * CELL_SIZE, useNativeDriver: false }),
+        Animated.spring(yStart, { toValue: table.yStart * CELL_SIZE, useNativeDriver: false })
+      ]).start();
+    }
+  }, [positionValid, table]);
 
   const dragPanResponder = useRef(
     PanResponder.create({
@@ -52,9 +80,6 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
         const newTableXStart = Math.round(xStart._value / CELL_SIZE);
         const newTableYStart = Math.round(yStart._value / CELL_SIZE);
         
-        lastValidXStart.current = newTableXStart;
-        lastValidYStart.current = newTableYStart;
-        
         onUpdate(table.id, { 
           xStart: newTableXStart,
           yStart: newTableYStart 
@@ -68,15 +93,14 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
-          CELL_SIZE,
+          MIN_CELLS * CELL_SIZE,
           Math.round((lastValidWidth.current * CELL_SIZE + gesture.dx) / CELL_SIZE) * CELL_SIZE
         );
         width.setValue(newWidth);
       },
-      onPanResponderRelease: (_, gesture) => {
+      onPanResponderRelease: () => {
         const newTableWidth = Math.round(width._value / CELL_SIZE);
-        lastValidWidth.current = newTableWidth;
-        onUpdate(table.id, { width: newTableWidth, xStart: lastValidXStart.current });
+        onUpdate(table.id, { width: newTableWidth });
       }
     })
   ).current;
@@ -86,16 +110,19 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
-          CELL_SIZE,
+          MIN_CELLS * CELL_SIZE,
           Math.round((lastValidWidth.current * CELL_SIZE - gesture.dx) / CELL_SIZE) * CELL_SIZE
         );
-        const newXStart = (lastValidXStart.current - ((newWidth / CELL_SIZE) - lastValidWidth.current)) * CELL_SIZE
+        const newXStart = (lastValidXStart.current - ((newWidth / CELL_SIZE) - lastValidWidth.current)) * CELL_SIZE;
         width.setValue(newWidth);
-        xStart.setValue(newXStart)
+        xStart.setValue(newXStart);
       },
-      onPanResponderRelease: (_, gesture) => {
+      onPanResponderRelease: () => {
         const newTableWidth = Math.round(width._value / CELL_SIZE);
-        onUpdate(table.id, { width: newTableWidth, xStart: lastValidXStart.current - (newTableWidth - lastValidWidth.current) });
+        onUpdate(table.id, { 
+          width: newTableWidth, 
+          xStart: lastValidXStart.current - (newTableWidth - lastValidWidth.current) 
+        });
       }
     })
   ).current;
@@ -105,15 +132,14 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
-          CELL_SIZE,
+          MIN_CELLS * CELL_SIZE,
           Math.round((lastValidHeight.current * CELL_SIZE + gesture.dy) / CELL_SIZE) * CELL_SIZE
         );
         height.setValue(newHeight);
       },
-      onPanResponderRelease: (_, gesture) => {
+      onPanResponderRelease: () => {
         const newTableHeight = Math.round(height._value / CELL_SIZE);
-        lastValidHeight.current = newTableHeight; 
-        onUpdate(table.id, { height: newTableHeight, yStart: lastValidYStart.current });
+        onUpdate(table.id, { height: newTableHeight });
       }
     })
   ).current;
@@ -123,57 +149,160 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
-          CELL_SIZE,
+          MIN_CELLS * CELL_SIZE,
           Math.round((lastValidHeight.current * CELL_SIZE - gesture.dy) / CELL_SIZE) * CELL_SIZE
         );
-        const newYStart = (lastValidYStart.current - ((newHeight / CELL_SIZE) - lastValidHeight.current)) * CELL_SIZE
+        const newYStart = (lastValidYStart.current - ((newHeight / CELL_SIZE) - lastValidHeight.current)) * CELL_SIZE;
         height.setValue(newHeight);
-        yStart.setValue(newYStart)
+        yStart.setValue(newYStart);
       },
-      onPanResponderRelease: (_, gesture) => {
+      onPanResponderRelease: () => {
         const newTableHeight = Math.round(height._value / CELL_SIZE);
-        onUpdate(table.id, { height: newTableHeight, yStart: lastValidYStart.current - (newTableHeight - lastValidHeight.current) });
+        onUpdate(table.id, { 
+          height: newTableHeight, 
+          yStart: lastValidYStart.current - (newTableHeight - lastValidHeight.current) 
+        });
       }
     })
   ).current;
 
-  const getTableColor = (table: Table) => {
-    if (editionMode) {
-      return positionValid ? '#D9D9D9' : '#F4A698'
-    } else {
-      return status ? getStatusColor(status) : '#D9D9D9';
+  const getChairsForSide = (position: 'top' | 'right' | 'bottom' | 'left'): number => {
+    if (!table.seats) return 0;
+
+    const horizontalSpace = Math.floor(table.width * CELL_SIZE / (30 + 10));
+    const verticalSpace = Math.floor(table.height * CELL_SIZE / (30 + 10));
+
+    let totalChairs = table.seats;
+    const distribution = {
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0
+    };
+
+    if (totalChairs > 0) { distribution.top = 1; totalChairs--; }
+    if (totalChairs > 0) { distribution.bottom = 1; totalChairs--; }
+    if (totalChairs > 0) { distribution.left = 1; totalChairs--; }
+    if (totalChairs > 0) { distribution.right = 1; totalChairs--; }
+
+    while (totalChairs > 0) {
+      const topSpace = horizontalSpace - distribution.top;
+      const bottomSpace = horizontalSpace - distribution.bottom;
+      const leftSpace = verticalSpace - distribution.left;
+      const rightSpace = verticalSpace - distribution.right;
+
+      const availableSides = [
+        { side: 'top', space: topSpace > 0 ? topSpace : 0 },
+        { side: 'bottom', space: bottomSpace > 0 ? bottomSpace : 0 },
+        { side: 'left', space: leftSpace > 0 ? leftSpace : 0 },
+        { side: 'right', space: rightSpace > 0 ? rightSpace : 0 }
+      ].filter(side => side.space > 0);
+
+      if (availableSides.length === 0) break;
+
+      availableSides.sort((a, b) => b.space - a.space);
+      distribution[availableSides[0].side as keyof typeof distribution]++;
+      totalChairs--;
     }
-  }
+
+    return distribution[position];
+  };
+
+  const renderChairs = (position: 'top' | 'right' | 'bottom' | 'left') => {
+    const chairCount = getChairsForSide(position);
+    if (chairCount === 0) return null;
+
+    const chairs = [];
+    const GAP = 10;
+    const isSide = position === 'left' || position === 'right';
+    
+    const baseContainerStyle: ViewStyle = {
+      position: 'absolute',
+      width: '100%',
+      height: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: -1,
+    };
+
+    const positionStyle: ViewStyle = position === 'top' ? {
+      top: 0
+    } : position === 'bottom' ? {
+      bottom: 0
+    } : position === 'left' ? {
+      left: 0,
+      width: 28,
+      height: '100%'
+    } : {
+      right: 0,
+      width: 28,
+      height: '100%'
+    };
+
+    const containerStyle = {
+      ...baseContainerStyle,
+      ...positionStyle,
+      flexDirection: isSide ? 'column' : 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    };
+
+    for (let i = 0; i < chairCount; i++) {
+      chairs.push(
+        <View
+          key={i}
+          style={{
+            width: isSide ? 20 : 30,
+            height: isSide ? 30 : 20,
+            backgroundColor: '#D9D9D9',
+            borderRadius: 50,
+            marginLeft: !isSide && i > 0 ? GAP : 0,
+            marginTop: isSide && i > 0 ? GAP : 0,
+          }}
+        />
+      );
+    }
+
+    return (
+      <View style={containerStyle}>
+        <View style={{
+          flexDirection: isSide ? 'column' : 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          {chairs}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <Pressable
       onPress={() => onPress(table)}
       onLongPress={() => onLongPress(table)}
       delayLongPress={500}
+      style={{ zIndex: isEditing ? 1000 : 1 }}
     >
       <Animated.View
         style={[
           styles.tableContainer,
           {
-            width: width,
-            height: height,
+            width,
+            height,
             left: xStart,
             top: yStart,
-            zIndex: isEditing ? 10 : 1,
           },
         ]}
       >
-        {/* Chaise du haut */}
-        <View style={[styles.chairContainer, styles.topChairContainer]}>
-          <View style={styles.chair} />
-        </View>
+        {renderChairs('top')}
+        {renderChairs('left')}
         
         <View style={styles.innerContainer}>
           <Animated.View
             style={[
               styles.table,
               {
-                backgroundColor: getTableColor(table),
+                backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
                 opacity: 1,
                 borderWidth: isEditing ? 3 : 2,
                 borderColor: isEditing ? '#2A2E33' : '#AAAAAA',
@@ -184,49 +313,36 @@ export const RoomTable: React.FC<TableViewProps> = ({ table, status, isEditing, 
           </Animated.View>
         </View>
 
-        {/* Chaise du bas */}
-        <View style={[styles.chairContainer, styles.bottomChairContainer]}>
-          <View style={styles.chair} />
-        </View>
+        {renderChairs('right')}
+        {renderChairs('bottom')}
 
         {isEditing && editionMode && (
           <>
             <Animated.View
               {...dragPanResponder.panHandlers}
-              style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                opacity: 0
-              }}
-            >
-              <View style={{
-                width: '100%',
-                height: '100%',
-                opacity: 0
-              }} />
-            </Animated.View>
+              style={styles.dragArea}
+            />
             <Animated.View
               {...rightPanResponder.panHandlers}
-              style={styles.rightHandleHitArea}
+              style={styles.rightHandle}
             >
               <View style={styles.handleDot} />
             </Animated.View>
             <Animated.View
               {...leftPanResponder.panHandlers}
-              style={styles.leftHandleHitArea}
+              style={styles.leftHandle}
             >
               <View style={styles.handleDot} />
             </Animated.View>
             <Animated.View
               {...bottomPanResponder.panHandlers}
-              style={styles.bottomHandleHitArea}
+              style={styles.bottomHandle}
             >
               <View style={styles.handleDot} />
             </Animated.View>
             <Animated.View
               {...topPanResponder.panHandlers}
-              style={styles.topHandleHitArea}
+              style={styles.topHandle}
             >
               <View style={styles.handleDot} />
             </Animated.View>
@@ -264,71 +380,56 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 1,
     elevation: 3,
-    margin: 16,
   },
   tableText: {
     color: '#2A2E33',
     fontWeight: 'bold',
   },
-  chairContainer: {
+  dragArea: {
     position: 'absolute',
     width: '100%',
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: -1,
+    height: '100%',
+    backgroundColor: 'transparent',
   },
-  chair: {
+  rightHandle: {
+    position: 'absolute',
+    right: -5,
+    top: '50%',
     width: 30,
-    height: 20,
-    backgroundColor: '#D9D9D9',
-    borderRadius: 50,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ translateY: -15 }],
   },
-  topChairContainer: {
-    top: 0,
-  },
-  bottomChairContainer: {
-    bottom: 0,
-  },
-  rightHandleHitArea: {
+  leftHandle: {
     position: 'absolute',
-    right: -15.5,
+    left: -5,
     top: '50%',
-    width: 50,
-    height: 50,
-    transform: [{ translateY: -25 }],
+    width: 30,
+    height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    transform: [{ translateY: -15 }],
   },
-  leftHandleHitArea: {
+  bottomHandle: {
     position: 'absolute',
-    left: -15.5,
-    top: '50%',
-    width: 50,
-    height: 50,
-    transform: [{ translateY: -25 }],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomHandleHitArea: {
-    position: 'absolute',
-    bottom: -15.5,
+    bottom: -5,
     left: '50%',
-    width: 50,
-    height: 50,
-    transform: [{ translateX: -25 }],
+    width: 30,
+    height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    transform: [{ translateX: -15 }],
   },
-  topHandleHitArea: {
+  topHandle: {
     position: 'absolute',
-    top: -15.5,
+    top: -5,
     left: '50%',
-    width: 50,
-    height: 50,
-    transform: [{ translateX: -25 }],
+    width: 30,
+    height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    transform: [{ translateX: -15 }],
   },
   handleDot: {
     width: 15,

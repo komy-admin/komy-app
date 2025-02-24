@@ -14,8 +14,12 @@ export const RoomCard: React.FC<RoomCardProps> = ({
   capacity,
   EditMode,
 }) => {
+
   return (
-    <View style={styles.container}>
+    <Pressable 
+      style={styles.container}
+      pointerEvents="box-none"
+    >
       <View style={styles.leftContent}>
         <View style={styles.iconContainer}>
           <Layers size={24} color="#1A1A1A" strokeWidth={1.5} />
@@ -34,7 +38,7 @@ export const RoomCard: React.FC<RoomCardProps> = ({
       >
         <Text style={styles.editButtonText}>Ajouter une table</Text>
       </Pressable>
-    </View>
+    </Pressable>
   );
 };
 
@@ -50,9 +54,9 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     borderColor: '#F1F1F1',
     borderWidth: 2,
-
     elevation: 3,
     margin: 16,
+    pointerEvents: 'box-none',
   },
   leftContent: {
     flexDirection: 'row',
