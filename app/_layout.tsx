@@ -13,6 +13,15 @@ import { storageService } from '~/lib/storageService';
 import { setCredentials, setCurrentUser, setLoading } from '~/store/auth.slice';
 import { UserProfile } from '~/types/user.types';
 import { authApiService } from '~/api/auth.api';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 
 export { ErrorBoundary } from 'expo-router';
 

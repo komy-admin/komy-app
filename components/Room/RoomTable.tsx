@@ -4,6 +4,7 @@ import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
+import { RoomChairs } from "./RoomChairs";
 
 interface TableViewProps {
   table: Table;
@@ -12,6 +13,7 @@ interface TableViewProps {
   editionMode: boolean;
   positionValid: boolean;
   CELL_SIZE: number;
+  currentZoom: number;
   onPress: (table: Table) => void;
   onLongPress: (table: Table) => void;
   onUpdate: (id: string, updates: Partial<Table>) => void;
@@ -23,7 +25,8 @@ export const RoomTable: React.FC<TableViewProps> = ({
   isEditing, 
   editionMode, 
   positionValid, 
-  CELL_SIZE, 
+  CELL_SIZE,
+  currentZoom,
   onPress, 
   onLongPress, 
   onUpdate 
@@ -70,15 +73,15 @@ export const RoomTable: React.FC<TableViewProps> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
-        const newXStart = Math.round((lastValidXStart.current * CELL_SIZE + gesture.dx) / CELL_SIZE) * CELL_SIZE;
-        const newYStart = Math.round((lastValidYStart.current * CELL_SIZE + gesture.dy) / CELL_SIZE) * CELL_SIZE;
+        const newXStart = Math.round((lastValidXStart.current * CELL_SIZE + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
+        const newYStart = Math.round((lastValidYStart.current * CELL_SIZE + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
         
         xStart.setValue(newXStart);
         yStart.setValue(newYStart);
       },
       onPanResponderRelease: (_, gesture) => {
-        const newTableXStart = Math.round(xStart._value / CELL_SIZE);
-        const newTableYStart = Math.round(yStart._value / CELL_SIZE);
+        const newTableXStart = Math.round((xStart as any)._value / CELL_SIZE);
+        const newTableYStart = Math.round((yStart as any)._value / CELL_SIZE);
         
         onUpdate(table.id, { 
           xStart: newTableXStart,
@@ -94,12 +97,12 @@ export const RoomTable: React.FC<TableViewProps> = ({
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidWidth.current * CELL_SIZE + gesture.dx) / CELL_SIZE) * CELL_SIZE
+          Math.round((lastValidWidth.current * CELL_SIZE + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
         width.setValue(newWidth);
       },
       onPanResponderRelease: () => {
-        const newTableWidth = Math.round(width._value / CELL_SIZE);
+        const newTableWidth = Math.round((width as any)._value / CELL_SIZE);
         onUpdate(table.id, { width: newTableWidth });
       }
     })
@@ -111,14 +114,14 @@ export const RoomTable: React.FC<TableViewProps> = ({
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidWidth.current * CELL_SIZE - gesture.dx) / CELL_SIZE) * CELL_SIZE
+          Math.round((lastValidWidth.current * CELL_SIZE - gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
         const newXStart = (lastValidXStart.current - ((newWidth / CELL_SIZE) - lastValidWidth.current)) * CELL_SIZE;
         width.setValue(newWidth);
         xStart.setValue(newXStart);
       },
       onPanResponderRelease: () => {
-        const newTableWidth = Math.round(width._value / CELL_SIZE);
+        const newTableWidth = Math.round((width as any)._value / CELL_SIZE);
         onUpdate(table.id, { 
           width: newTableWidth, 
           xStart: lastValidXStart.current - (newTableWidth - lastValidWidth.current) 
@@ -133,12 +136,12 @@ export const RoomTable: React.FC<TableViewProps> = ({
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidHeight.current * CELL_SIZE + gesture.dy) / CELL_SIZE) * CELL_SIZE
+          Math.round((lastValidHeight.current * CELL_SIZE + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
         height.setValue(newHeight);
       },
       onPanResponderRelease: () => {
-        const newTableHeight = Math.round(height._value / CELL_SIZE);
+        const newTableHeight = Math.round((height as any)._value / CELL_SIZE);
         onUpdate(table.id, { height: newTableHeight });
       }
     })
@@ -150,14 +153,14 @@ export const RoomTable: React.FC<TableViewProps> = ({
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidHeight.current * CELL_SIZE - gesture.dy) / CELL_SIZE) * CELL_SIZE
+          Math.round((lastValidHeight.current * CELL_SIZE - gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
         const newYStart = (lastValidYStart.current - ((newHeight / CELL_SIZE) - lastValidHeight.current)) * CELL_SIZE;
         height.setValue(newHeight);
         yStart.setValue(newYStart);
       },
       onPanResponderRelease: () => {
-        const newTableHeight = Math.round(height._value / CELL_SIZE);
+        const newTableHeight = Math.round((height as any)._value / CELL_SIZE);
         onUpdate(table.id, { 
           height: newTableHeight, 
           yStart: lastValidYStart.current - (newTableHeight - lastValidHeight.current) 
@@ -166,122 +169,12 @@ export const RoomTable: React.FC<TableViewProps> = ({
     })
   ).current;
 
-  const getChairsForSide = (position: 'top' | 'right' | 'bottom' | 'left'): number => {
-    if (!table.seats) return 0;
-
-    const horizontalSpace = Math.floor(table.width * CELL_SIZE / (30 + 10));
-    const verticalSpace = Math.floor(table.height * CELL_SIZE / (30 + 10));
-
-    let totalChairs = table.seats;
-    const distribution = {
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0
-    };
-
-    if (totalChairs > 0) { distribution.top = 1; totalChairs--; }
-    if (totalChairs > 0) { distribution.bottom = 1; totalChairs--; }
-    if (totalChairs > 0) { distribution.left = 1; totalChairs--; }
-    if (totalChairs > 0) { distribution.right = 1; totalChairs--; }
-
-    while (totalChairs > 0) {
-      const topSpace = horizontalSpace - distribution.top;
-      const bottomSpace = horizontalSpace - distribution.bottom;
-      const leftSpace = verticalSpace - distribution.left;
-      const rightSpace = verticalSpace - distribution.right;
-
-      const availableSides = [
-        { side: 'top', space: topSpace > 0 ? topSpace : 0 },
-        { side: 'bottom', space: bottomSpace > 0 ? bottomSpace : 0 },
-        { side: 'left', space: leftSpace > 0 ? leftSpace : 0 },
-        { side: 'right', space: rightSpace > 0 ? rightSpace : 0 }
-      ].filter(side => side.space > 0);
-
-      if (availableSides.length === 0) break;
-
-      availableSides.sort((a, b) => b.space - a.space);
-      distribution[availableSides[0].side as keyof typeof distribution]++;
-      totalChairs--;
-    }
-
-    return distribution[position];
-  };
-
-  const renderChairs = (position: 'top' | 'right' | 'bottom' | 'left') => {
-    const chairCount = getChairsForSide(position);
-    if (chairCount === 0) return null;
-
-    const chairs = [];
-    const GAP = 10;
-    const isSide = position === 'left' || position === 'right';
-    
-    const baseContainerStyle: ViewStyle = {
-      position: 'absolute',
-      width: '100%',
-      height: 28,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: -1,
-    };
-
-    const positionStyle: ViewStyle = position === 'top' ? {
-      top: 0
-    } : position === 'bottom' ? {
-      bottom: 0
-    } : position === 'left' ? {
-      left: 0,
-      width: 28,
-      height: '100%'
-    } : {
-      right: 0,
-      width: 28,
-      height: '100%'
-    };
-
-    const containerStyle = {
-      ...baseContainerStyle,
-      ...positionStyle,
-      flexDirection: isSide ? 'column' : 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-    };
-
-    for (let i = 0; i < chairCount; i++) {
-      chairs.push(
-        <View
-          key={i}
-          style={{
-            width: isSide ? 20 : 30,
-            height: isSide ? 30 : 20,
-            backgroundColor: '#D9D9D9',
-            borderRadius: 50,
-            marginLeft: !isSide && i > 0 ? GAP : 0,
-            marginTop: isSide && i > 0 ? GAP : 0,
-          }}
-        />
-      );
-    }
-
-    return (
-      <View style={containerStyle}>
-        <View style={{
-          flexDirection: isSide ? 'column' : 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
-          {chairs}
-        </View>
-      </View>
-    );
-  };
-
   return (
     <Pressable
       onPress={() => onPress(table)}
       onLongPress={() => onLongPress(table)}
       delayLongPress={500}
-      style={{ zIndex: isEditing ? 1000 : 1 }}
+      style={{ zIndex: 1000 }}
     >
       <Animated.View
         style={[
@@ -294,8 +187,8 @@ export const RoomTable: React.FC<TableViewProps> = ({
           },
         ]}
       >
-        {renderChairs('top')}
-        {renderChairs('left')}
+        <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
+        <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
         
         <View style={styles.innerContainer}>
           <Animated.View
@@ -313,8 +206,8 @@ export const RoomTable: React.FC<TableViewProps> = ({
           </Animated.View>
         </View>
 
-        {renderChairs('right')}
-        {renderChairs('bottom')}
+        <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
+        <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
 
         {isEditing && editionMode && (
           <>

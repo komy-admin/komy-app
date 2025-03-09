@@ -40,6 +40,7 @@ const Room: React.FC<RoomProps> = ({
   } | null>(null);
   const [isGridReady, setIsGridReady] = useState(false);
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
+  const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
 
   function isTableWithinRoom(table: Table): boolean {
     return (
@@ -94,10 +95,12 @@ const Room: React.FC<RoomProps> = ({
     let optimalZoom = Math.min(horizontalZoom, verticalZoom);
     
     if (roomWidth > 1 || roomHeight > 1) {
-      optimalZoom *= 0.9;
+      optimalZoom *= 0.7;
     }
     
-    return Math.min(Math.max(optimalZoom, 0.2), 1.5);
+    const zoom = Math.min(Math.max(optimalZoom, 0.2), 1.5);
+    setCurrentZoom(zoom);
+    return zoom;
   }
 
   const [zoomKey, setZoomKey] = useState(0);
@@ -156,32 +159,35 @@ const Room: React.FC<RoomProps> = ({
         bindToBorders={true}
         contentWidth={dimensions.gridWidth}
         contentHeight={dimensions.gridHeight}
+        onSingleTap={handleBackgroundPress}
+        onZoomEnd={(_, __, { zoomLevel }) => {
+          setCurrentZoom(zoomLevel);
+        }}
       >
-        <Pressable onPress={handleBackgroundPress}>
-          <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
-            <RoomGrid 
-              width={dimensions.gridWidth} 
-              height={dimensions.gridHeight} 
-              GRID_COLS={width} 
-              GRID_ROWS={height} 
+        <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
+          <RoomGrid 
+            width={dimensions.gridWidth} 
+            height={dimensions.gridHeight} 
+            GRID_COLS={width} 
+            GRID_ROWS={height} 
+            CELL_SIZE={CELL_SIZE}
+          />
+          {visibleTables.map(table => (
+            <RoomTable
+              key={`${table.id}_${currentZoom}`}
+              table={table}
+              status={orders?.find(order => order.tableId === table.id)?.status}
+              isEditing={editingTableId === table.id}
+              editionMode={editionMode}
+              positionValid={isPositionValid(table)}
               CELL_SIZE={CELL_SIZE}
+              currentZoom={currentZoom}
+              onPress={onTablePress}
+              onLongPress={onTableLongPress}
+              onUpdate={onTableUpdate}
             />
-            {visibleTables.map(table => (
-              <RoomTable
-                key={table.id}
-                table={table}
-                status={orders?.find(order => order.tableId === table.id)?.status}
-                isEditing={editingTableId === table.id}
-                editionMode={editionMode}
-                positionValid={isPositionValid(table)}
-                CELL_SIZE={CELL_SIZE}
-                onPress={onTablePress}
-                onLongPress={onTableLongPress}
-                onUpdate={onTableUpdate}
-              />
-            ))}
-          </View>
-        </Pressable>
+          ))}
+        </View>
       </ReactNativeZoomableView>
     </View>
   );
