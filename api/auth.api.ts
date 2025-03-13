@@ -1,5 +1,6 @@
 import { BaseApiService } from './base.api';
 import type { LoginCredentials, RegisterCredentials, AuthResponse } from '~/types/auth.types';
+import { User, UserProfile } from '~/types/user.types';
 
 export class AuthApiService extends BaseApiService<AuthResponse> {
   protected endpoint = '/auth';
@@ -13,12 +14,34 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     await this.storage.setItem('token', token);
   }
 
+  private async setUserProfile(userProfile: UserProfile): Promise<void> {
+    await this.storage.setItem('userProfile', userProfile);
+  }
+
   private async removeToken(): Promise<void> {
     await this.storage.removeItem('token');
   }
 
+  private async removeUserProfile(): Promise<void> {
+    await this.storage.removeItem('userProfile');
+  }
+
+  public async getUserProfile(): Promise<UserProfile | null> {
+    return this.storage.getItem('userProfile') as Promise<UserProfile | null>;
+  }
+
   public async getToken(): Promise<string | null> {
     return this.storage.getItem('token');
+  }
+
+  public async getUserWithToken(): Promise<User> {
+    try {
+      const { data } = await this.axiosInstance.get<User>(`${this.endpoint}/me`);
+      return data;
+    } catch (err) {
+      console.error('Error in getUserWithToken:', err);
+      throw err;
+    }
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -28,6 +51,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         credentials
       );
       await this.setToken(data.token.token);
+      await this.setUserProfile(data.profil);
       return data;
     } catch (err) {
       console.error('Error in login:', err);
@@ -42,6 +66,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         credentials
       );
       await this.setToken(data.token.token);
+      await this.setUserProfile(data.profil);
       return data;
     } catch (err) {
       console.error('Error in register:', err);
@@ -55,6 +80,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         `${this.endpoint}/refresh`
       );
       await this.setToken(data.token.token);
+      await this.setUserProfile(data.profil);
       return data;
     } catch (err) {
       console.error('Error in refreshToken:', err);
@@ -64,6 +90,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
 
   logout(): void {
     this.removeToken();
+    this.removeUserProfile()
   }
 
   private setupAuthInterceptor(): void {

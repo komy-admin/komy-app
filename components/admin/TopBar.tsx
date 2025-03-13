@@ -2,8 +2,11 @@ import React, { useEffect, useState }  from 'react'
 import { View, Image, Text, Pressable} from 'react-native'
 import { FileText, Calendar } from 'lucide-react-native'
 import { Href, Link, router } from 'expo-router'
+import { useSelector } from 'react-redux';
+import { RootState } from '~/store';
 
 export function AdminTopbar() {
+  const { currentUser } = useSelector((state: RootState) => state.auth);
   const [currentDate, setCurrentDate] = useState('')
 
   // Fonction pour formater la date
@@ -86,12 +89,10 @@ export function AdminTopbar() {
                     fontWeight: '300'
                   }}
                 >
-                  Tonton Ugz
-                  {/* {`${(user.firstName ?? '').charAt(0).toUpperCase() + (user.firstName ?? '').slice(1)} ${(user.lastName ?? '').charAt(0).toUpperCase() + (user.lastName ?? '').slice(1)}`} */}
+                  {`${(currentUser?.firstName ?? '').charAt(0).toUpperCase() + (currentUser?.firstName ?? '').slice(1)} ${(currentUser?.lastName ?? '').charAt(0).toUpperCase() + (currentUser?.lastName ?? '').slice(1)}`}
                 </Text>
                 <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                  El SuperAdmin
-                  {/* {(user.profil ?? '').charAt(0).toUpperCase() + (user.profil ?? '').slice(1)} */}
+                  {(currentUser?.profil ?? '').charAt(0).toUpperCase() + (currentUser?.profil ?? '').slice(1)}
                 </Text>
               </View>
             </View>

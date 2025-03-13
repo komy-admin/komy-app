@@ -1,7 +1,7 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, ConfirmDialog, ForkModal, Input, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
+import { Badge, Button, ConfirmDialog, ForkModal, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text, TextInput } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState } from "react";
 import { Room } from "~/types/room.types";
@@ -23,9 +23,8 @@ import { orderItemApiService } from "~/api/order-item.api";
 import OrderDetailView from "~/components/Service/OrderDetailView";
 import { OrderItem } from '~/types/order-item.types';
 import { getMostImportantStatus } from '~/lib/utils';
-import { useSocket } from '~/hooks/useSocket/useSocket';
+import { useSocket } from '~/hooks/useSocket';
 import { EventType } from '~/hooks/useSocket/types';
-import { get } from 'lodash';
 
 export default function ServicePage () {
   const [currentRoom, setCurrentRoom] = useState<Room | null>();
@@ -89,53 +88,39 @@ export default function ServicePage () {
     onDataChange: (response) => setItems(response.data)
   });
 
-  const { on } = useSocket();
-  
+
+  const { socket, isConnected } = useSocket();
+
+   
   useEffect(() => {
-    on(EventType.ORDER_ITEMS_INPROGRESS, ({ orderItemIds }) => {
+    if (!isConnected || !socket) return;
+    const handleUpdateOrdersStatus = (orderItemIds: string[], status: Status) => {
       setOrders(prevOrders => {
         const newOrders = prevOrders.map(order => {
           const updatedOrderItems = order.orderItems.map(orderItem => {
             if (orderItemIds.includes(orderItem.id)) {
-              return { ...orderItem, status: Status.INPROGRESS };
+              return { ...orderItem, status: status };
             }
             return orderItem;
           });
           return { ...order, orderItems: updatedOrderItems, status: getMostImportantStatus(updatedOrderItems.map(orderItem => orderItem.status)) };
         });
-
-        console.log('newOrders', newOrders);
-        
+  
         setTables(prevTables => prevTables.map(table => {
           const order = newOrders.find(order => order.tableId === table.id);
           return order ? { ...table, orders: [order] } : table;
         }));
-        
+  
         return newOrders;
       });
-    });
-
-    on(EventType.ORDER_ITEMS_READY, ({ orderItemIds }) => {
-      setOrders(prevOrders => {
-        const newOrders = prevOrders.map(order => {
-          const updatedOrderItems = order.orderItems.map(orderItem => {
-            if (orderItemIds.includes(orderItem.id)) {
-              return { ...orderItem, status: Status.READY };
-            }
-            return orderItem;
-          });
-          return { ...order, orderItems: updatedOrderItems, status: getMostImportantStatus(updatedOrderItems.map(orderItem => orderItem.status)) };
-        });
-        
-        setTables(prevTables => prevTables.map(table => {
-          const order = newOrders.find(order => order.tableId === table.id);
-          return order ? { ...table, orders: [order] } : table;
-        }));
-        
-        return newOrders;
-      });
-    });
-  }, [orders]);
+    }
+    socket.on(EventType.ORDER_ITEMS_INPROGRESS, ({ orderItemIds }) => handleUpdateOrdersStatus(orderItemIds, Status.INPROGRESS));
+    socket.on(EventType.ORDER_ITEMS_READY, ({ orderItemIds }) => handleUpdateOrdersStatus(orderItemIds, Status.READY));
+    return () => {
+      socket.off(EventType.ORDER_ITEMS_INPROGRESS);
+      socket.off(EventType.ORDER_ITEMS_READY);
+  };
+  }, [isConnected, socket]);
 
   const initData = async () => {
     try {
@@ -383,7 +368,7 @@ export default function ServicePage () {
                 <Button className="rounded-full p-2" variant='outline'>
                   <Grid3X3Icon color='black' />
                 </Button>
-                <Input className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
+                <TextInput className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
                 <Button className="rounded-full p-2" variant='outline'>
                   <ListFilter color='black' />
                 </Button>

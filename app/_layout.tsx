@@ -1,41 +1,98 @@
 import '~/global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Stack } from 'expo-router';
-import { SplashScreen, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { SplashScreen } from 'expo-router';
 import * as React from 'react';
-import { Provider, useSelector } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import { PortalHost } from '@rn-primitives/portal';
-import { store } from '~/store';
-import { RootState } from '~/store';
+import { store, RootState } from '~/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
+import { storageService } from '~/lib/storageService';
+import { setCredentials, setCurrentUser, setLoading } from '~/store/auth.slice';
+import { UserProfile } from '~/types/user.types';
+import { authApiService } from '~/api/auth.api';
 
 export { ErrorBoundary } from 'expo-router';
 
-// Composant pour gérer l'authentification
+// Types pour les routes protégées
+type ProtectedRoutes = {
+  server: string[];
+  admin: string[];
+  superadmin: string[];
+  chef: string[];
+};
+
+const PROTECTED_ROUTES: ProtectedRoutes = {
+  server: ['(server)'],
+  admin: ['(admin)'],
+  superadmin: ['(admin)'],
+  chef: ['(cook)'],
+};
+
+const PUBLIC_ROUTES = ['(auth)'];
+
 function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
-  const { token, accountType, isLoading } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch();
+  const { token, userProfile, isLoading, currentUser } = useSelector((state: RootState) => state.auth);
 
   React.useEffect(() => {
-    const inAuthGroup = segments[0] === '(auth)';
-    
-    if (isLoading) return;
-
-    if (!token && !inAuthGroup) {
-      router.replace('/login');
-    } else if (token && accountType) {
-      if (inAuthGroup) {
-        router.replace(`/(${accountType})/`);
-      } else {
-        const currentSection = segments[0];
-        if (currentSection && !currentSection.includes(accountType)) {
-          router.replace(`/(${accountType})/`);
+    const initializeAuth = async () => {
+      try {
+        const storedToken = await storageService.getItem('token');
+        const storedUserProfile = await storageService.getItem('userProfile');
+        
+        if (storedToken && storedUserProfile) {
+          dispatch(setCredentials({
+            token: storedToken,
+            userProfile: storedUserProfile as UserProfile
+          }));
+          if (!currentUser) {
+            const user = await authApiService.getUserWithToken();
+            dispatch(setCurrentUser(user));
+          }
+        } else {
+          dispatch(setLoading(false));
         }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        dispatch(setLoading(false));
       }
+    };
+  
+    initializeAuth();
+  }, [dispatch]);
+  
+  const checkAccess = React.useCallback(() => {
+    const currentSegment = segments[0];
+
+    if (isLoading) return;
+  
+    if (!token) {
+      if (!PUBLIC_ROUTES.includes(currentSegment)) {
+        router.replace('/login');
+      }
+      return;
     }
-  }, [token, accountType, segments, isLoading]);
+    if (!userProfile) {
+      router.replace('/login');
+      return;
+    }
+    const authorizedRoutes = PROTECTED_ROUTES[userProfile as keyof ProtectedRoutes];
+    
+    if (PUBLIC_ROUTES.includes(currentSegment)) {
+      router.replace(`/${PROTECTED_ROUTES[userProfile]}/`);
+    } else if (currentSegment && !authorizedRoutes.includes(currentSegment)) {
+      router.replace(`/${PROTECTED_ROUTES[userProfile]}/`);
+    }
+  }, [token, userProfile, segments, isLoading, router]);
+
+  React.useEffect(() => {
+    checkAccess();
+  }, [checkAccess]);
 
   return null;
 }
@@ -58,31 +115,11 @@ function RootLayoutNav() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <AuthenticationGate />
-      <Stack>
-        <Stack.Screen
-          name="(auth)/login"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="(server)"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="(admin)"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="(cook)"
-          options={{
-            headerShown: false,
-          }}
-        />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)/login" />
+        <Stack.Screen name="(server)" />
+        <Stack.Screen name="(admin)" />
+        <Stack.Screen name="(cook)" />
       </Stack>
       <PortalHost />
     </SafeAreaView>
@@ -93,7 +130,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
-        <RootLayoutNav />
+        <SocketProvider>
+          <RootLayoutNav />
+        </SocketProvider>
       </Provider>
     </GestureHandlerRootView>
   );

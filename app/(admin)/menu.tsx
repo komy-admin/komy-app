@@ -1,17 +1,14 @@
-import { Alert, DimensionValue, ScrollView, useWindowDimensions, View } from "react-native";
-import { Input, Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, NumberInput } from "~/components/ui";
+import { Alert, useWindowDimensions, View } from "react-native";
+import { Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, NumberInput, TextInput } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Item } from "~/types/item.types";
-import { ItemTypes } from "~/types/item-type.enum";
-import { itemApiService, ItemApiService } from "~/api/item.api";
+import { itemApiService } from "~/api/item.api";
 import { itemTypeApiService } from "~/api/item-type.api";
-import { cn, getItemTypeText } from "~/lib/utils";
 import { FilterBar } from '~/components/filters/Filter';
 import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/hooks/useFilter/types';
-import { ForkSelect } from '~/components/ui/select';
-import { TextInput } from 'react-native';
+import { Select } from '~/components/ui/select';
 import { useFilter } from "~/hooks/useFilter";
 
 export default function MenuPage() {
@@ -232,7 +229,7 @@ export default function MenuPage() {
                 placeholder="Nom de l'article"
                 style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
               />
-              <ForkSelect
+              <Select
                 style={{ marginVertical: 8 }}
                 choices={itemTypes.map(type => ({ label: type.name, value: type.name, id: type.id }))}
                 selectedValue={selectedOption}
@@ -261,7 +258,7 @@ export default function MenuPage() {
                 min={0}
                 max={1000}
                 currency="€"
-                placeholder="0.00"
+                placeholder="Prix"
               />
             </View>
             <View>
