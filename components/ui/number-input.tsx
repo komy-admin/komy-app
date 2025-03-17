@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     borderColor: '#D7D7D7',
     borderRadius: 5,
     backgroundColor: '#FFFFFF',
-    fontWeight: '300',
+    fontWeight: '400',
     color: '#2A2E33',
   }
 });

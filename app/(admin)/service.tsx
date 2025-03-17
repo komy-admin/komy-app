@@ -27,7 +27,7 @@ import { useSocket } from '~/hooks/useSocket';
 import { EventType } from '~/hooks/useSocket/types';
 
 export default function ServicePage () {
-  const [currentRoom, setCurrentRoom] = useState<Room | null>();
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
@@ -432,9 +432,11 @@ export default function ServicePage () {
         <RoomComponent
           tables={tables}
           orders={orders}
-          zoom={0.9}
           editingTableId={selectedTable?.id}
           editionMode={false}
+          isLoading={loading}
+          width={currentRoom?.width}
+          height={currentRoom?.height}
           onTablePress={handleTablePress}
           onTableLongPress={handleTablePress}
           onTableUpdate={() => {}}
@@ -467,8 +469,10 @@ export default function ServicePage () {
         >
           <RoomComponent
             tables={tables.filter(table => !orders.find(order => order.tableId === table.id))}
-            zoom={0.9}
+            width={currentRoom?.width}
+            height={currentRoom?.height}
             editionMode={false}
+            isLoading={loading}
             onTablePress={handleTablePress}
             onTableLongPress={handleTablePress}
             onTableUpdate={() => {}}

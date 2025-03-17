@@ -13,10 +13,18 @@ import { storageService } from '~/lib/storageService';
 import { setCredentials, setCurrentUser, setLoading } from '~/store/auth.slice';
 import { UserProfile } from '~/types/user.types';
 import { authApiService } from '~/api/auth.api';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 
 export { ErrorBoundary } from 'expo-router';
 
-// Types pour les routes protégées
 type ProtectedRoutes = {
   server: string[];
   admin: string[];
@@ -31,14 +39,21 @@ const PROTECTED_ROUTES: ProtectedRoutes = {
   chef: ['(cook)'],
 };
 
-const PUBLIC_ROUTES = ['(auth)'];
+const LOGIN_ROUTE = '/login';
+const HOME_ROUTES = {
+  server: '/(server)',
+  admin: '/(admin)',
+  superadmin: '/(admin)',
+  chef: '/(cook)',
+};
 
 function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
   const dispatch = useDispatch();
-  const { token, userProfile, isLoading, currentUser } = useSelector((state: RootState) => state.auth);
-
+  const { token, userProfile, isLoading } = useSelector((state: RootState) => state.auth);
+  const [isInitialized, setIsInitialized] = React.useState(false);
+  
   React.useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -50,49 +65,64 @@ function AuthenticationGate() {
             token: storedToken,
             userProfile: storedUserProfile as UserProfile
           }));
-          if (!currentUser) {
+          
+          try {
             const user = await authApiService.getUserWithToken();
             dispatch(setCurrentUser(user));
+          } catch (error) {
+            await storageService.removeItem('token');
+            await storageService.removeItem('userProfile');
+            dispatch(setCredentials({ token: null, userProfile: null }));
           }
-        } else {
-          dispatch(setLoading(false));
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
+      } finally {
         dispatch(setLoading(false));
+        setIsInitialized(true);
       }
     };
   
     initializeAuth();
   }, [dispatch]);
   
-  const checkAccess = React.useCallback(() => {
-    const currentSegment = segments[0];
-
-    if (isLoading) return;
-  
-    if (!token) {
-      if (!PUBLIC_ROUTES.includes(currentSegment)) {
-        router.replace('/login');
-      }
-      return;
-    }
-    if (!userProfile) {
-      router.replace('/login');
-      return;
-    }
-    const authorizedRoutes = PROTECTED_ROUTES[userProfile as keyof ProtectedRoutes];
-    
-    if (PUBLIC_ROUTES.includes(currentSegment)) {
-      router.replace(`/${PROTECTED_ROUTES[userProfile]}/`);
-    } else if (currentSegment && !authorizedRoutes.includes(currentSegment)) {
-      router.replace(`/${PROTECTED_ROUTES[userProfile]}/`);
-    }
-  }, [token, userProfile, segments, isLoading, router]);
-
   React.useEffect(() => {
-    checkAccess();
-  }, [checkAccess]);
+    if (!isInitialized || isLoading) {
+      return;
+    }
+    
+    const fullPath = segments.length ? `/${segments.join('/')}` : '/';
+    
+    if (!token) {
+      if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
+        return;
+      }
+      
+      router.replace(LOGIN_ROUTE);
+      return;
+    }
+    
+    if (token && userProfile) {
+      if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
+        const role = userProfile as keyof typeof HOME_ROUTES;
+        if (!role || !HOME_ROUTES[role]) {
+          dispatch(setCredentials({ token: null, userProfile: null }));
+          router.replace(LOGIN_ROUTE);
+          return;
+        }
+        
+        router.replace(HOME_ROUTES[role] as any);
+        return;
+      }
+      
+      const firstSegment = segments[0];
+      if (firstSegment && !PROTECTED_ROUTES[userProfile as keyof ProtectedRoutes]?.includes(firstSegment)) {
+        const role = userProfile as keyof typeof HOME_ROUTES;
+        router.replace(HOME_ROUTES[role] as any);
+        return;
+      }
+    }
+  }, [isInitialized, isLoading, token, userProfile, segments, router, dispatch]);
 
   return null;
 }
