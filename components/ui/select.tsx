@@ -1,260 +1,21 @@
-// import * as SelectPrimitive from '@rn-primitives/select';
-// import * as React from 'react';
-// import { Platform, StyleSheet, View } from 'react-native';
-// import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-// import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { Check } from '~/lib/icons/Check';
-// import { ChevronDown } from '~/lib/icons/ChevronDown';
-// import { ChevronUp } from '~/lib/icons/ChevronUp';
-// import { cn } from '~/lib/utils';
-
-// type Option = SelectPrimitive.Option;
-
-// const Select = SelectPrimitive.Root;
-
-// const SelectGroup = SelectPrimitive.Group;
-
-// const SelectValue = SelectPrimitive.Value;
-
-// const SelectTrigger = React.forwardRef<SelectPrimitive.TriggerRef, SelectPrimitive.TriggerProps>(
-//   ({ className, children, ...props }, ref) => (
-//     <SelectPrimitive.Trigger
-//       ref={ref}
-//       className={cn(
-//         'flex flex-row h-10 native:h-12 items-center text-sm justify-between rounded-md border border-input bg-background px-3 py-2 web:ring-offset-background text-muted-foreground web:focus:outline-none web:focus:ring-2 web:focus:ring-ring web:focus:ring-offset-2 [&>span]:line-clamp-1',
-//         props.disabled && 'web:cursor-not-allowed opacity-50',
-//         className
-//       )}
-//       {...props}
-//     >
-//       <>{children}</>
-//       <ChevronDown size={16} aria-hidden={true} className='text-foreground opacity-50' />
-//     </SelectPrimitive.Trigger>
-//   )
-// );
-// SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
-
-// /**
-//  * Platform: WEB ONLY
-//  */
-// const SelectScrollUpButton = ({ className, ...props }: SelectPrimitive.ScrollUpButtonProps) => {
-//   if (Platform.OS !== 'web') {
-//     return null;
-//   }
-//   return (
-//     <SelectPrimitive.ScrollUpButton
-//       className={cn('flex web:cursor-default items-center justify-center py-1', className)}
-//       {...props}
-//     >
-//       <ChevronUp size={14} className='text-foreground' />
-//     </SelectPrimitive.ScrollUpButton>
-//   );
-// };
-
-// /**
-//  * Platform: WEB ONLY
-//  */
-// const SelectScrollDownButton = ({ className, ...props }: SelectPrimitive.ScrollDownButtonProps) => {
-//   if (Platform.OS !== 'web') {
-//     return null;
-//   }
-//   return (
-//     <SelectPrimitive.ScrollDownButton
-//       className={cn('flex web:cursor-default items-center justify-center py-1', className)}
-//       {...props}
-//     >
-//       <ChevronDown size={14} className='text-foreground' />
-//     </SelectPrimitive.ScrollDownButton>
-//   );
-// };
-
-// const SelectContent = React.forwardRef<
-//   SelectPrimitive.ContentRef,
-//   SelectPrimitive.ContentProps & { portalHost?: string }
-// >(({ className, children, position = 'popper', portalHost, ...props }, ref) => {
-//   const { open } = SelectPrimitive.useRootContext();
-
-//   return (
-//     <SelectPrimitive.Portal hostName={portalHost}>
-//       <SelectPrimitive.Overlay style={Platform.OS !== 'web' ? StyleSheet.absoluteFill : undefined}>
-//         <Animated.View entering={FadeIn} exiting={FadeOut}>
-//           <SelectPrimitive.Content
-//             ref={ref}
-//             className={cn(
-//               'relative z-50 max-h-96 min-w-[8rem] rounded-md border border-border bg-popover shadow-md shadow-foreground/10 py-2 px-1 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-//               position === 'popper' &&
-//                 'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-//               open
-//                 ? 'web:zoom-in-95 web:animate-in web:fade-in-0'
-//                 : 'web:zoom-out-95 web:animate-out web:fade-out-0',
-//               className
-//             )}
-//             position={position}
-//             {...props}
-//           >
-//             <SelectScrollUpButton />
-//             <SelectPrimitive.Viewport
-//               className={cn(
-//                 'p-1',
-//                 position === 'popper' &&
-//                   'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
-//               )}
-//             >
-//               {children}
-//             </SelectPrimitive.Viewport>
-//             <SelectScrollDownButton />
-//           </SelectPrimitive.Content>
-//         </Animated.View>
-//       </SelectPrimitive.Overlay>
-//     </SelectPrimitive.Portal>
-//   );
-// });
-// SelectContent.displayName = SelectPrimitive.Content.displayName;
-
-// const SelectLabel = React.forwardRef<SelectPrimitive.LabelRef, SelectPrimitive.LabelProps>(
-//   ({ className, ...props }, ref) => (
-//     <SelectPrimitive.Label
-//       ref={ref}
-//       className={cn(
-//         'py-1.5 native:pb-2 pl-8 native:pl-10 pr-2 text-popover-foreground text-sm native:text-base font-semibold',
-//         className
-//       )}
-//       {...props}
-//     />
-//   )
-// );
-// SelectLabel.displayName = SelectPrimitive.Label.displayName;
-
-// const SelectItem = React.forwardRef<SelectPrimitive.ItemRef, SelectPrimitive.ItemProps>(
-//   ({ className, children, ...props }, ref) => (
-//     <SelectPrimitive.Item
-//       ref={ref}
-//       className={cn(
-//         'relative web:group flex flex-row w-full web:cursor-default web:select-none items-center rounded-sm py-1.5 native:py-2 pl-8 native:pl-10 pr-2 web:hover:bg-accent/50 active:bg-accent web:outline-none web:focus:bg-accent',
-//         props.disabled && 'web:pointer-events-none opacity-50',
-//         className
-//       )}
-//       {...props}
-//     >
-//       <View className='absolute left-2 native:left-3.5 flex h-3.5 native:pt-px w-3.5 items-center justify-center'>
-//         <SelectPrimitive.ItemIndicator>
-//           <Check size={16} strokeWidth={3} className='text-popover-foreground' />
-//         </SelectPrimitive.ItemIndicator>
-//       </View>
-//       <SelectPrimitive.ItemText className='text-sm native:text-lg text-popover-foreground native:text-base web:group-focus:text-accent-foreground' />
-//     </SelectPrimitive.Item>
-//   )
-// );
-// SelectItem.displayName = SelectPrimitive.Item.displayName;
-
-// const SelectSeparator = React.forwardRef<
-//   SelectPrimitive.SeparatorRef,
-//   SelectPrimitive.SeparatorProps
-// >(({ className, ...props }, ref) => (
-//   <SelectPrimitive.Separator
-//     ref={ref}
-//     className={cn('-mx-1 my-1 h-px bg-muted', className)}
-//     {...props}
-//   />
-// ));
-// SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
-
-// interface SelectValue {
-//   value: string;
-//   label: string;
-// }
-// interface SelectProps {
-//   defaultValue: SelectValue;
-//   choices: SelectValue[];
-//   selectLabel?: string
-// }
-// const Select = ({defaultValue, choices, selectLabel }: SelectProps) => {
-//   const insets = useSafeAreaInsets();
-//   const contentInsets = {
-//     top: insets.top,
-//     bottom: insets.bottom,
-//   };
-
-//   return (
-//     <Select defaultValue={defaultValue}>
-//       <SelectTrigger className='w-[250px]'>
-//         <SelectValue
-//           className='text-foreground text-sm native:text-lg'
-//           placeholder='Select a fruit'
-//         />
-//       </SelectTrigger>
-//       <SelectContent insets={contentInsets} className='w-[250px]'>
-//         <SelectGroup>
-//           {selectLabel && (
-//             <SelectLabel>{ selectLabel }</SelectLabel>
-//           )}
-//           {choices.map((choice, index) => (
-//             <SelectItem
-//               key={`select-${choice.value}-${index}`}
-//               label={choice.label}
-//               value={choice.value}
-//             >
-//               { choice.label }
-//             </SelectItem>
-//            ))}
-//         </SelectGroup>
-//       </SelectContent>
-//     </Select>
-//   );
-// }
-
-// export {
-//   Select,
-//   SelectContent,
-//   SelectGroup,
-//   SelectItem,
-//   SelectLabel,
-//   SelectScrollDownButton,
-//   SelectScrollUpButton,
-//   SelectSeparator,
-//   SelectTrigger,
-//   SelectValue,
-//   Select,
-//   type Option,
-// };
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
+  ScrollView,
   StyleSheet,
+  Platform,
+  Dimensions,
   Animated,
   Pressable,
 } from 'react-native';
+import { ChevronDown } from 'lucide-react-native';
 
-const Chevron = ({ isOpen }: { isOpen: boolean }) => {
-  const rotateAnimation = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(rotateAnimation, {
-      toValue: isOpen ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  }, [isOpen]);
-
-  const rotate = rotateAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
-
-  return (
-    <Animated.View style={[styles.chevron, { transform: [{ rotate }] }]}>
-      <View style={styles.chevronLine1} />
-      <View style={styles.chevronLine2} />
-    </Animated.View>
-  );
-};
 interface Choice {
   label: string;
   value: string;
+  id?: string;
 }
 
 interface SelectProps {
@@ -264,10 +25,13 @@ interface SelectProps {
   placeholder?: string;
   onValueChange: (choice: Choice) => void;
   maxHeight?: number;
-  style?: object
+  style?: object;
+  error?: string;
+  disabled?: boolean;
+  label?: string;
 }
 
-const Select: React.FC<SelectProps> = ({
+export function Select({
   choices,
   selectedValue,
   defaultValue,
@@ -275,12 +39,15 @@ const Select: React.FC<SelectProps> = ({
   onValueChange,
   maxHeight = 200,
   style,
-}) => {
+  error,
+  disabled = false,
+  label,
+}: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentValue, setCurrentValue] = useState(selectedValue || defaultValue);
-  const dropdownAnimation = useRef(new Animated.Value(0)).current;
-  const selectRef = useRef<View>(null);
-
+  const animation = useRef(new Animated.Value(0)).current;
+  const dropdownRef = useRef<View>(null);
+  const [dropdownLayout, setDropdownLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   useEffect(() => {
     if (selectedValue) {
@@ -291,178 +58,249 @@ const Select: React.FC<SelectProps> = ({
   }, [selectedValue, defaultValue]);
 
   useEffect(() => {
-    Animated.timing(dropdownAnimation, {
+    Animated.timing(animation, {
       toValue: isOpen ? 1 : 0,
       duration: 200,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   }, [isOpen]);
 
+  const rotateAnimation = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const scaleAnimation = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.95, 1],
+  });
+
   const handlePress = () => {
+    if (disabled) return;
+    
+    if (dropdownRef.current) {
+      dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setDropdownLayout({ x: pageX, y: pageY, width, height });
+      });
+    }
     setIsOpen(!isOpen);
   };
 
   const handleSelect = (choice: Choice) => {
     onValueChange(choice);
+    setCurrentValue(choice);
     setIsOpen(false);
   };
 
-  const dropdownHeight = dropdownAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, maxHeight],
-  });
+  // Hauteur fixe pour chaque option
+  const optionHeight = 48;
+  
+  // Afficher seulement 3 options par défaut
+  const visibleOptions = 3;
+  
+  // Calculer la hauteur du dropdown
+  const dropdownHeight = Math.min(
+    maxHeight,
+    // Si plus de 3 options, on montre 3 options + un peu de la 4ème pour indiquer qu'il y a plus
+    choices.length > visibleOptions
+      ? optionHeight * visibleOptions + (optionHeight * 0.3)
+      : optionHeight * choices.length
+  );
 
   return (
-    <>
-    {isOpen && (
-      <Pressable onPress={() => setIsOpen(false)}>
-        <View style={StyleSheet.absoluteFill} />
-      </Pressable>
-    )}
-    
-    <View ref={selectRef} style={{...styles.container, ...style}} collapsable={false}>
-      <TouchableOpacity
-        style={[styles.selectButton, isOpen && styles.selectButtonOpen]}
-        onPress={handlePress}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.selectButtonText}>
-          {currentValue ? currentValue.label : placeholder}
+    <View style={[styles.container, style]}>
+      {label && (
+        <Text style={[
+          styles.label,
+          error && styles.labelError,
+          disabled && styles.labelDisabled
+        ]}>
+          {label}
         </Text>
-        <Chevron isOpen={isOpen} />
-      </TouchableOpacity>
-
-      {isOpen && (
-        <Animated.View 
+      )}
+      
+      <View style={styles.selectWrapper}>
+        <TouchableOpacity
+          ref={dropdownRef}
           style={[
-            styles.dropdown,
-            {
-              maxHeight: dropdownHeight,
-              opacity: dropdownAnimation,
-            }
+            styles.selectButton,
+            isOpen && styles.selectButtonOpen,
+            error && styles.selectButtonError,
+            disabled && styles.selectButtonDisabled,
           ]}
+          onPress={handlePress}
+          activeOpacity={0.7}
+          disabled={disabled}
         >
-          <FlatList
-            data={choices}
-            keyExtractor={item => item.value}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.option,
-                  currentValue?.value === item.value && styles.selectedOption,
-                ]}
-                onPress={() => handleSelect(item)}
+          <Text style={[
+            styles.selectedText,
+            !currentValue && styles.placeholderText,
+            disabled && styles.textDisabled
+          ]}>
+            {currentValue ? currentValue.label : placeholder}
+          </Text>
+          <Animated.View style={{ transform: [{ rotate: rotateAnimation }] }}>
+            <ChevronDown size={20} color={disabled ? '#A0A0A0' : '#2A2E33'} />
+          </Animated.View>
+        </TouchableOpacity>
+
+        {isOpen && (
+          <>
+            <Pressable 
+              style={StyleSheet.absoluteFill} 
+              onPress={() => setIsOpen(false)} 
+            />
+            <Animated.View
+              style={[
+                styles.dropdown,
+                {
+                  height: dropdownHeight,
+                  transform: [{ scale: scaleAnimation }],
+                  opacity: animation,
+                  ...(Platform.OS === 'web' && {
+                    position: 'absolute',
+                    top: '100%',
+                    width: '100%',
+                    zIndex: 1000,
+                  }),
+                },
+              ]}
+            >
+              <ScrollView
+                style={styles.scrollView}
+                showsVerticalScrollIndicator={true}
+                bounces={false}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    currentValue?.value === item.value && styles.selectedOptionText,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            )}
-            scrollEnabled={true}
-            bounces={false}
-            style={styles.list}
-            nestedScrollEnabled={true}
-          />
-        </Animated.View>
+                {choices.map((choice, index) => (
+                  <TouchableOpacity
+                    key={choice.id || `${choice.value}-${index}`}
+                    style={[
+                      styles.option,
+                      currentValue?.value === choice.value && styles.selectedOption,
+                    ]}
+                    onPress={() => handleSelect(choice)}
+                  >
+                    <Text style={[
+                      styles.optionText,
+                      currentValue?.value === choice.value && styles.selectedOptionText,
+                    ]}>
+                      {choice.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </Animated.View>
+          </>
+        )}
+      </View>
+
+      {error && (
+        <Text style={styles.errorText}>{error}</Text>
       )}
     </View>
-  </>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    zIndex: 1000,
+    zIndex: 2,
+  },
+  selectWrapper: {
+    position: 'relative',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2A2E33',
+    marginBottom: 6,
+  },
+  labelError: {
+    color: '#DC2626',
+  },
+  labelDisabled: {
+    color: '#A0A0A0',
   },
   selectButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 9,
-    backgroundColor: 'white',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  chevron: {
-    width: 12,
-    height: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chevronLine1: {
-    position: 'absolute',
-    width: 8,
-    height: 2,
-    backgroundColor: '#666',
-    transform: [{ rotate: '45deg' }],
-    left: 0,
-  },
-  chevronLine2: {
-    position: 'absolute',
-    width: 8,
-    height: 2,
-    backgroundColor: '#666',
-    transform: [{ rotate: '-45deg' }],
-    right: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D7D7D7',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   selectButtonOpen: {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    borderBottomColor: 'transparent',
   },
-  selectButtonText: {
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    fontSize: 14,
-    color: '#333',
+  selectButtonError: {
+    borderColor: '#DC2626',
+  },
+  selectButtonDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E5E5E5',
+    ...(Platform.OS === 'web' && {
+      cursor: 'not-allowed',
+    }),
+  },
+  selectedText: {
+    fontSize: 16,
+    color: '#2A2E33',
+  },
+  placeholderText: {
+    color: '#A0A0A0',
+  },
+  textDisabled: {
+    color: '#A0A0A0',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#DC2626',
+    marginTop: 4,
   },
   dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#D7D7D7',
     borderTopWidth: 0,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     overflow: 'hidden',
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
     elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  list: {
-    flexGrow: 0,
+  scrollView: {
+    width: '100%',
   },
   option: {
-    padding: 12,
+    height: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   selectedOption: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F5F5F5',
   },
   optionText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 16,
+    color: '#2A2E33',
   },
   selectedOptionText: {
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });
-
-export { Select };

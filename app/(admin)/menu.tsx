@@ -1,5 +1,5 @@
-import { Alert, useWindowDimensions, View } from "react-native";
-import { Tabs, TabsContent, TabsList, TabsTrigger, Text, Button, ForkTable, NumberInput, TextInput } from "~/components/ui";
+import { Alert, useWindowDimensions, View, ScrollView, Text, StyleSheet } from "react-native";
+import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState } from "react";
 import { Item } from "~/types/item.types";
@@ -8,39 +8,23 @@ import { itemTypeApiService } from "~/api/item-type.api";
 import { FilterBar } from '~/components/filters/Filter';
 import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/hooks/useFilter/types';
-import { Select } from '~/components/ui/select';
 import { useFilter } from "~/hooks/useFilter";
+import { CustomModal } from "~/components/CustomModal";
+import { MenuForm } from "~/components/form/MenuForm";
+import { useToast } from '~/components/ToastProvider';
 
 export default function MenuPage() {
-  // State management
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ALL");
   const [items, setItems] = useState<Item[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [title, setTitle] = useState('Filtrage');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+  const { showToast } = useToast();
   
-  // Form data
-  const [formData, setFormData] = useState({
-    name: '',
-    price: 0,
-    itemTypeId: ''
-  });
-  
-  const defaultOption = {
-    value: '',
-    label: 'Choisissez une catégorie',
-    id: ''
-  };
-  
-  const handleBack = () => {
-    setTitle('Filtrage');
-  };
-
-  const [selectedOption, setSelectedOption] = useState(defaultOption);
-
   const filterItem: FilterConfig<Item>[] = [
     { 
       field: 'name', 
@@ -64,15 +48,6 @@ export default function MenuPage() {
       show: false
     },
   ];
-  // const {
-  //   data,
-  //   loading,
-  //   error,
-  //   updateFilter,
-  //   clearFilters,
-  //   changePage,
-  //   queryParams
-  // } = useFilter({ config: filterItem, service: itemApiService as ItemApiService });
 
   const { updateFilter, loading, clearFilters, queryParams } = useFilter<Item>({
     config: filterItem,
@@ -80,7 +55,6 @@ export default function MenuPage() {
     onDataChange: (response) => setItems(response.data)
   });
 
-  // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -98,101 +72,112 @@ export default function MenuPage() {
     loadInitialData();
   }, []);
 
-  // Update items when filter data changes
-  // useEffect(() => {
-  //   if (data) {
-  //     setItems(data.data);
-  //   }
-  // }, [data]);
-
-  // Handlers
   const handleCreateItem = () => {
-    if (isPanelCollapsed) {
-      setIsPanelCollapsed(false);
-    }
-    setTitle('Création d\'un article');
-    setIsEditing(false);
     setCurrentItem(null);
-    setSelectedOption(defaultOption);
-    setFormData({
-      name: '',
-      price: 0,
-      itemTypeId: ''
-    });
+    setIsModalVisible(true);
   };
 
   const handleEditItem = (id: string) => {
-    if (isPanelCollapsed) {
-      setIsPanelCollapsed(false);
-    }
-    setTitle('Modification d\'un article');
-    const item = items.find(item => item.id === id)
-    if (!item) return
-    setIsEditing(true);
+    const item = items.find(item => item.id === id);
+    if (!item) return;
     setCurrentItem(item);
-    setSelectedOption({
-      value: item.itemType?.name || '',
-      label: item.itemType?.name || '',
-      id: item.itemType?.id || ''
-    });
-    setFormData({
-      name: item.name,
-      price: item.price,
-      itemTypeId: item.itemType?.id || ''
-    });
+    setIsModalVisible(true);
   };
 
-  const handleCancelEditorCreate = () => {
-    setTitle('Filtrage');
-    setIsEditing(false);
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
     setCurrentItem(null);
-    setSelectedOption(defaultOption);
-    setFormData({
-      name: '',
-      price: 0,
-      itemTypeId: ''
-    });
   };
 
-  const submitItemAction = async () => {
-    if (!currentItem) return;
-    const item: Item = {
-      id: currentItem.id,
-      ...formData,
-      itemType: {
-        id: selectedOption.id,
-        name: selectedOption.value
-      }
-    };
-
+  const handleSaveItem = async (item: Item) => {
     try {
-      if (isEditing && item.id) {
-        await itemApiService.update(item.id, item);
-        setItems(items.map(i => i.id === item.id ? item : i));
+      const itemType = itemTypes.find(type => type.id === item.itemType?.id);
+      if (!itemType) {
+        throw new Error("Type not found");
+      }
+
+      const itemWithType = {
+        ...item,
+        itemType: itemType
+      };
+
+      if (item.id) {
+        await itemApiService.update(item.id, itemWithType);
+        if (activeTab !== "ALL" && itemWithType.itemType.id !== activeTab) {
+          setItems(prevItems => prevItems.filter(i => i.id !== item.id));
+        } else {
+          setItems(prevItems => prevItems.map(i => i.id === item.id ? itemWithType : i));
+        }
+        showToast('Article modifié avec succès', 'success');
       } else {
-        const newItem = await itemApiService.create(item);
-        setItems([...items, newItem]);
+        const newItem = await itemApiService.create(itemWithType);
+        if (activeTab === "ALL" || activeTab === itemWithType.itemType.id) {
+          setItems(prevItems => [...prevItems, { ...newItem, itemType }]);
+        }
+        showToast('Article créé avec succès', 'success');
       }
-      handleCancelEditorCreate();
+      handleCloseModal();
     } catch (err) {
-      console.error('Error in submitItemAction:', err);
-      Alert.alert('Error', 'Failed to save item');
+      console.error('Error saving item:', err);
+      showToast('Erreur lors de la sauvegarde de l\'article', 'error');
     }
   };
 
-  const submitItemDelete = async (id: string) => {
+  const handleDeleteItem = async (id: string) => {
+    const item = items.find(item => item.id === id);
+    if (!item) return;
+    setItemToDelete(item);
+    setIsDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
     try {
-      await itemApiService.delete(id);
-      setItems(items.filter(item => item.id !== id));
+      await itemApiService.delete(itemToDelete.id);
+      setItems(items.filter(item => item.id !== itemToDelete.id));
+      showToast('Article supprimé avec succès', 'success');
     } catch (err) {
-      console.error('Error in deleteItem:', err);
-      Alert.alert('Error', 'Failed to delete item');
+      console.error('Error deleting item:', err);
+      showToast('Erreur lors de la suppression de l\'article', 'error');
+    } finally {
+      setIsDeleteModalVisible(false);
+      setItemToDelete(null);
     }
   };
 
-  const renderSidePanelContent = () => {
-    if (title === 'Filtrage') {
-      return (
+  const { width, height } = useWindowDimensions();
+  
+  const itemTableColumns = [
+    {
+      label: 'Nom',
+      key: 'name',
+      width: '50%',
+    },
+    {
+      label: 'Prix',
+      key: 'price',
+      width: '20%',
+    },
+    {
+      label: 'Statut',
+      key: 'statut',
+      width: '20%',
+    },
+    {
+      key: 'actions',
+      width: '10%',
+    }
+  ];
+
+  return (
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      <SidePanel 
+        title="Filtrage" 
+        width={width / 4} 
+        isCollapsed={isPanelCollapsed} 
+        onCollapsedChange={setIsPanelCollapsed}
+      >
         <View style={{ padding: 15 }}>
           <FilterBar
             config={filterItem}
@@ -204,120 +189,8 @@ export default function MenuPage() {
             activeFilters={queryParams.filters || []}
           />
         </View>
-      );
-    }
-
-    if (title.includes('article')) {
-      return (
-        <>
-          <Text style={{
-            textTransform: 'uppercase',
-            fontWeight: '700',
-            fontSize: 14,
-            color: '#2A2E33',
-            backgroundColor: '#F1F1F1',
-            padding: 5,
-            paddingLeft: 16,
-          }}>
-            Informations
-          </Text>
-          <View style={{ flex: 1, padding: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <View>
-              <TextInput
-                value={formData.name}
-                onChangeText={(text: string) => setFormData(prev => ({ ...prev, name: text }))}
-                placeholder="Nom de l'article"
-                style={{ borderWidth: 1, borderColor: '#D7D7D7', borderRadius: 5, backgroundColor: '#FFFFFF', color: '#2A2E33', marginVertical: 8, padding: 10 }}
-              />
-              <Select
-                style={{ marginVertical: 8 }}
-                choices={itemTypes.map(type => ({ label: type.name, value: type.name, id: type.id }))}
-                selectedValue={selectedOption}
-                onValueChange={(value) => {
-                  if (value) {
-                    const itemType = itemTypes.find(type => type.name === value.value);
-                    if (itemType) {
-                      setSelectedOption({
-                        value: itemType.name,
-                        label: itemType.name,
-                        id: itemType.id!
-                      });
-                      setFormData(prev => ({ ...prev, itemTypeId: itemType.id! }));
-                    }
-                  }
-                }}
-              />
-              <NumberInput
-                style={{ marginVertical: 8 }}
-                value={formData.price}
-                onChangeText={(value) => setFormData(prev => ({
-                  ...prev, 
-                  price: value === null ? 0 : value
-                }))}
-                decimalPlaces={2}
-                min={0}
-                max={1000}
-                currency="€"
-                placeholder="Prix"
-              />
-            </View>
-            <View>
-              <Button
-                onPress={submitItemAction}
-                style={{ backgroundColor: '#2A2E33', borderRadius: 10, height: 45 }}
-              >
-                <Text style={{ color: '#FBFBFB', fontWeight: '400', fontSize: 16}}>
-                  {isEditing ? 'Enregistrer les modifications' : 'Confirmer la création'}
-                </Text>
-              </Button>
-              <Button 
-                onPress={handleCancelEditorCreate} 
-                style={{ backgroundColor: '#FBFBFB', borderRadius: 0, marginTop: 5 }}
-              >
-                <Text style={{ color: '#2A2E33', fontWeight: '300', fontSize: 16, textDecorationLine: 'underline'}}>
-                  Annuler
-                </Text>
-              </Button>
-            </View>
-          </View>
-        </>
-      );
-    }
-
-    return null;
-  };
-
-  const { width } = useWindowDimensions()
-  
-  const itemTableColumns = [
-    {
-      label: 'Nom',
-      key: 'name',
-      width: '60%',
-    },
-    {
-      label: 'Prix',
-      key: 'price',
-      width: '20%',
-    },
-    {
-      label: 'Statut',
-      key: 'statut',
-      width: '15%',
-    },
-    {
-      label: '',
-      key: 'delete',
-      width: '5%',
-    },
-
-  ];
-
-  return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel title={title} width={width / 4} onBack={title !== 'Filtrage' ? handleBack : undefined} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
-        {renderSidePanelContent()}
       </SidePanel>
+      
       <View style={{ flex: 1 }}>
         <Tabs
           style={{ flex: 1, backgroundColor: '#FFFFFF' }}
@@ -330,57 +203,218 @@ export default function MenuPage() {
             }
             setActiveTab(newValue);
           }}
-          className="w-full mx-auto flex-col gap-1.5"
+          className="w-full mx-auto flex-col"
         >
-          <View className="flex flex-row justify-between w-full" style={{ backgroundColor: '#FBFBFB', height: 50 }}>
-            <TabsList className="flex-row w-[500px] h-full">
-              <TabsTrigger value="ALL" className="flex-1 flex-row h-full">
-                <Text
-                  className="pr-2"
-                  style={{ color: activeTab === 'ALL' ? '#2A2E33' : '#A0A0A0' }}
-                >
-                  Tous
-                </Text>
-              </TabsTrigger>
-              {itemTypes.map((type) => (
-                <TabsTrigger key={type.id} value={type.id!} className="flex-1 flex-row h-full">
-                  <Text
-                    className="pr-2"
-                    style={{ color: activeTab === type.id ? '#2A2E33' : '#A0A0A0' }}
-                  >
-                    {type.name}
-                  </Text>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <Button
-              onPress={handleCreateItem}
-              className="w-[200px] h-[50px] flex items-center justify-center"
-              style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
+          <View 
+            style={{ 
+              backgroundColor: '#FBFBFB', 
+              height: 50, 
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              position: 'relative',
+            }}
+          >
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={{ 
+                flex: 1, 
+                maxWidth: '80%' 
+              }}
+              contentContainerStyle={{
+                alignItems: 'center'
+              }}
             >
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: '#FBFBFB',
-                  fontWeight: '500',
-                  textAlign: 'center',
-                  textTransform: 'uppercase',
+              <TabsList 
+                className="flex-row justify-start h-full" 
+                style={{ 
+                  paddingTop: 4,
+                  height: 50,
                 }}
               >
-                Créer un article
-              </Text>
-            </Button>
+                <TabsTrigger value="ALL" className="flex-row h-full" style={{ width: 100, minWidth: 100 }}>
+                  <Text
+                    style={{ color: activeTab === 'ALL' ? '#2A2E33' : '#A0A0A0' }}
+                  >
+                    Tous
+                  </Text>
+                </TabsTrigger>
+                {itemTypes.map((type) => (
+                  <TabsTrigger 
+                    key={type.id} 
+                    value={type.id!} 
+                    className="flex-row h-full" 
+                    style={{ width: 100, minWidth: 100 }}
+                  >
+                    <Text
+                      style={{ color: activeTab === type.id ? '#2A2E33' : '#A0A0A0' }}
+                    >
+                      {type.name}
+                    </Text>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </ScrollView>
+            
+            <View 
+              style={{ 
+                width: 200, 
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                backgroundColor: '#FBFBFB',
+                zIndex: 10,
+                shadowColor: '#000',
+                shadowOffset: { width: -4, height: 0 },
+                shadowOpacity: 0.05,
+                shadowRadius: 2,
+              }}
+            >
+              <Button
+                onPress={handleCreateItem}
+                className="w-[200px] h-[50px] flex items-center justify-center"
+                style={{ 
+                  backgroundColor: '#2A2E33', 
+                  borderRadius: 0, 
+                  height: 50,
+                  width: 200,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#FBFBFB',
+                    fontWeight: '500',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Créer un article
+                </Text>
+              </Button>
+            </View>
           </View>
+          
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             <ForkTable 
               data={items}
               columns={itemTableColumns}
               onRowPress={handleEditItem}
-              onRowDelete={submitItemDelete}
+              onRowDelete={handleDeleteItem}
             />
           </TabsContent>
         </Tabs>
       </View>
+
+      <CustomModal
+        isVisible={isModalVisible}
+        onClose={handleCloseModal}
+        width={width * 0.5}
+        height= {height * 0.54}
+        title={currentItem ? "Modifier l'article" : "Créer un article"}
+      >
+        <MenuForm
+          item={currentItem}
+          itemTypes={itemTypes}
+          onSave={handleSaveItem}
+          onCancel={handleCloseModal}
+          activeTab={activeTab}
+        />
+      </CustomModal>
+
+      <CustomModal
+        isVisible={isDeleteModalVisible}
+        onClose={() => {
+          setIsDeleteModalVisible(false);
+          setItemToDelete(null);
+        }}
+        width={600}
+        height={300}
+        title="Confirmation de suppression"
+      >
+        <View style={styles.deleteModalContent}>
+          <View style={{ paddingTop: 20 }}>
+            <Text style={styles.deleteMessage}>
+              Êtes-vous sûr de vouloir supprimer l'article {itemToDelete?.name} ?
+            </Text>
+            <Text style={styles.deleteWarning}>
+              {'(Cette action est irréversible.)'}
+            </Text>
+          </View>
+          <View style={styles.deleteButtonContainer}>
+            <Button
+                onPress={confirmDelete}
+                style={styles.deleteButton}
+                variant="destructive"
+              >
+                <Text style={styles.deleteButtonText}>Supprimer</Text>
+            </Button>
+            <Button
+              onPress={() => {
+                setIsDeleteModalVisible(false);
+                setItemToDelete(null);
+              }}
+              variant="ghost"
+              style={styles.cancelButton}
+            >
+              <Text style={styles.cancelButtonText}>Annuler</Text>
+            </Button>
+          </View>
+        </View>
+      </CustomModal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  deleteModalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  deleteMessage: {
+    fontSize: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+    color: '#2A2E33',
+  },
+  deleteWarning: {
+    fontSize: 14,
+    color: '#FF4444',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  deleteButtonContainer: {
+    width: '100%',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  cancelButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    width: '100%',
+    marginBottom: 7,
+  },
+  cancelButtonText: {
+    color: '#2A2E33',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  deleteButton: {
+    backgroundColor: '#FF4444',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    width: '100%',
+    borderRadius: 6,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});

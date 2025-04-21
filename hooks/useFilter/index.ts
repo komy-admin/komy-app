@@ -6,7 +6,7 @@ import { debounce } from 'lodash';
 export function useFilter<T>({
   service,
   config,
-  defaultParams = { page: 1, perPage: 10 },
+  defaultParams = { page: 1, perPage: 100 },
   onDataChange,
   loadOnMount = true
 }: UseFilterProps<T>) {
