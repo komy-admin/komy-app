@@ -27,7 +27,7 @@ import { useSocket } from '~/hooks/useSocket';
 import { EventType } from '~/hooks/useSocket/types';
 
 export default function ServicePage () {
-  const [currentRoom, setCurrentRoom] = useState<Room | null>();
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
@@ -149,6 +149,13 @@ export default function ServicePage () {
   }
 
   const handleTablePress = (table: Table | null) => {
+    if (selectedTable && currentOrder && currentOrder.orderItems.length === 0) {
+      try {
+        deleteOrder(currentOrder)
+      } catch (error) {
+          console.error('Failed to delete empty order:', error);
+      }
+    }
     setSelectedTable(table)
     setCurrentOrder(orders.find(order => order.tableId === table?.id) || null)
   }
@@ -156,6 +163,11 @@ export default function ServicePage () {
   const createOrder = async () => {
     try {
       if (!selectedTable) return;
+      const existingOrder = orders.find(order => order.tableId === selectedTable.id);
+      if (existingOrder) {
+        throw new Error('An order already exists for this table.');
+      }
+
       const order = await orderApiService.create({ tableId: selectedTable.id, table: selectedTable, orderItems: [], status: Status.DRAFT });
       setCurrentOrder(order)
       setShowMenu(true)
@@ -225,6 +237,9 @@ export default function ServicePage () {
         {...(currentOrder && { onBack: () => {
           if (showMenu) setShowMenu(false)
           else {
+            if (currentOrder && (!currentOrder.orderItems || !currentOrder.orderItems.length)) {
+              deleteOrder(currentOrder)
+            }
             setCurrentOrder(null)
             setSelectedTable(null)
           }
@@ -432,9 +447,11 @@ export default function ServicePage () {
         <RoomComponent
           tables={tables}
           orders={orders}
-          zoom={0.9}
           editingTableId={selectedTable?.id}
           editionMode={false}
+          isLoading={loading}
+          width={currentRoom?.width}
+          height={currentRoom?.height}
           onTablePress={handleTablePress}
           onTableLongPress={handleTablePress}
           onTableUpdate={() => {}}
@@ -467,10 +484,34 @@ export default function ServicePage () {
         >
           <RoomComponent
             tables={tables.filter(table => !orders.find(order => order.tableId === table.id))}
-            zoom={0.9}
+            width={currentRoom?.width}
+            height={currentRoom?.height}
             editionMode={false}
-            onTablePress={handleTablePress}
-            onTableLongPress={handleTablePress}
+            isLoading={loading}
+            onTablePress={async (pressedTable: Table | null) => {
+              if (pressedTable) {
+                let newCurrentOrder = orders.find(order => order.tableId === pressedTable.id)
+                if (!newCurrentOrder && currentOrder) {
+                  newCurrentOrder = await orderApiService.update(currentOrder.id, { tableId: pressedTable.id, status: currentOrder.status })
+                  setCurrentOrder(newCurrentOrder)
+                  setOrders(orders.map(order => order.id === currentOrder.id ? newCurrentOrder! : order))
+                  setSelectedTable(pressedTable)
+                }
+                setShowReassignModal(false)
+              }
+            }}
+            onTableLongPress={async (pressedTable: Table | null) => {
+              if (pressedTable) {
+                let newCurrentOrder = orders.find(order => order.tableId === pressedTable.id)
+                if (!newCurrentOrder && currentOrder) {
+                  newCurrentOrder = await orderApiService.update(currentOrder.id, { tableId: pressedTable.id, status: currentOrder.status })
+                  setCurrentOrder(newCurrentOrder)
+                  setOrders(orders.map(order => order.id === currentOrder.id ? newCurrentOrder! : order))
+                  setSelectedTable(pressedTable)
+                }
+                setShowReassignModal(false)
+              }
+            }}
             onTableUpdate={() => {}}
           />
         </ForkModal>

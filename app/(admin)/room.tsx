@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Plus, Trash } from 'lucide-react-native';
-import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { roomApiService } from '~/api/room.api';
 import { tableApiService } from '~/api/table.api';
@@ -12,36 +11,36 @@ import { Room } from '~/types/room.types';
 import { Status } from '~/types/status.enum';
 import { Table } from "~/types/table.types";
 import { RoomCard } from '~/components/Room/RoomCard';
-import { current } from '@reduxjs/toolkit';
 
 export default function RoomPage() {
-  const [newRoomName, setNewRoomName] = useState("")
-  const [currentRoom, setCurrentRoom] = useState<Room | null>();
+  const [newRoomName, setNewRoomName] = useState("");
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null)
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newRoomWidth, setNewRoomWidth] = useState(10)
-  const [newRoomHeight, setNewRoomHeight] = useState(10)
+  const [newRoomWidth, setNewRoomWidth] = useState(15);
+  const [newRoomHeight, setNewRoomHeight] = useState(15);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [title, setTitle] = useState('Création de salle');
+  const [tempWidth, setTempWidth] = useState(10);
+  const [tempHeight, setTempHeight] = useState(10);
 
   const [initialRoom, setInitialRoom] = useState<Room | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [tempTableName, setTempTableName] = useState<string>("");
   const [tempSeats, setTempSeats] = useState<number>(0);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isCreatingTable, setIsCreatingTable] = useState(false);
+  const [tempBadge, setTempBadge] = useState<{ name: string } | null>(null);
 
   useEffect(() => {
-    if (currentRoom && initialRoom) {
-      const hasNameChange = currentRoom.name !== initialRoom.name;
-      const hasWidthChange = currentRoom.width !== initialRoom.width;
-      const hasHeightChange = currentRoom.height !== initialRoom.height;
-      
-      setHasChanges(hasNameChange || hasWidthChange || hasHeightChange);
+    if (currentRoom) {
+      setTempWidth(currentRoom.width);
+      setTempHeight(currentRoom.height);
     }
-  }, [currentRoom, initialRoom]);
+  }, [currentRoom]);
 
   useEffect(() => {
     if (selectedTable) {
@@ -56,6 +55,16 @@ export default function RoomPage() {
   }, [selectedTable, currentRoom]);
 
   useEffect(() => {
+    if (currentRoom && initialRoom) {
+      const hasNameChange = currentRoom.name !== initialRoom.name;
+      const hasWidthChange = tempWidth !== initialRoom.width;
+      const hasHeightChange = tempHeight !== initialRoom.height;
+      
+      setHasChanges(hasNameChange || hasWidthChange || hasHeightChange);
+    }
+  }, [currentRoom, initialRoom, tempWidth, tempHeight]);
+
+  useEffect(() => {
     initData();
   }, []);
 
@@ -63,9 +72,9 @@ export default function RoomPage() {
     try {
       setIsLoading(true);
       const { data } = await roomApiService.getAll();
-      if (!data.length) return
-      setRooms(data)
-      initRoomEdition(data[0])
+      if (!data.length) return;
+      setRooms(data);
+      initRoomEdition(data[0]);
       setError(null);
     } catch (err) {
       setError('Erreur lors du chargement des tables');
@@ -82,6 +91,9 @@ export default function RoomPage() {
     } else if (currentRoom) {
       setCurrentRoom(null);
       setTitle('Création de salle');
+      requestAnimationFrame(() => {
+        setTables([]);
+      });
     }
   };
 
@@ -89,24 +101,37 @@ export default function RoomPage() {
     if (!currentRoom) return;
     
     try {
+      // Sauvegarde de la salle avec ses dimensions actuelles
       const updatedRoom = await roomApiService.update(currentRoom.id, {
         name: currentRoom.name,
-        width: currentRoom.width,
-        height: currentRoom.height
+        width: tempWidth,
+        height: tempHeight
       });
       
-      setCurrentRoom(updatedRoom);
-      setInitialRoom(updatedRoom);
-      setHasChanges(false);
+      // Récupération des données à jour de la salle, incluant les tables
+      const refreshedRoom = await roomApiService.get(currentRoom.id);
       
-      setRooms(prevRooms => 
-        prevRooms.map(room => 
-          room.id === updatedRoom.id ? updatedRoom : room
-        )
-      );
+      if (refreshedRoom) {
+        setCurrentRoom(refreshedRoom);
+        setInitialRoom(refreshedRoom);
+        setTables(refreshedRoom.tables || []);
+        setHasChanges(false);
+        
+        // Mise à jour de la liste des salles
+        setRooms(prevRooms => 
+          prevRooms.map(room => 
+            room.id === refreshedRoom.id ? refreshedRoom : room
+          )
+        );
+      }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de la salle:', error);
-      setCurrentRoom(initialRoom);
+      if (initialRoom) {
+        setCurrentRoom(initialRoom);
+        setTempWidth(initialRoom.width);
+        setTempHeight(initialRoom.height);
+        setTables(initialRoom.tables || []);
+      }
     }
   };
 
@@ -146,79 +171,226 @@ export default function RoomPage() {
     if (table) {
       setTitle('Modification table');
     }
-  }
+  };
 
   const handleAddTable = async () => {
+    if (!currentRoom) return;
+
+    if (isCreatingTable) return;
+    setIsCreatingTable(true);
+    setError(null);
+
     function generateName() {
       const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
       const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
       return `${letter}${number}`;
     }
+
+    const DEFAULT_TABLE_SIZE = 2;
+    const SPACING = 0;
+    
+    const isPositionValid = (x: number, y: number): boolean => {
+      if (x < 0 || y < 0 || x >= currentRoom.width || y >= currentRoom.height) {
+        return false;
+      }
+
+      if (x + DEFAULT_TABLE_SIZE > currentRoom.width || 
+          y + DEFAULT_TABLE_SIZE > currentRoom.height) {
+        return false;
+      }
+
+      return !tables.some(table => {
+        const hasCollision = (x < table.xStart + table.width + SPACING &&
+                            x + DEFAULT_TABLE_SIZE + SPACING > table.xStart &&
+                            y < table.yStart + table.height + SPACING &&
+                            y + DEFAULT_TABLE_SIZE + SPACING > table.yStart);
+        return hasCollision;
+      });
+    };
+
+    let validPosition = null;
+    
+    const maxX = currentRoom.width - DEFAULT_TABLE_SIZE;
+    const maxY = currentRoom.height - DEFAULT_TABLE_SIZE;
+
+    for (let y = 0; y <= maxY && !validPosition; y++) {
+      for (let x = 0; x <= maxX && !validPosition; x++) {
+        if (isPositionValid(x, y)) {
+          validPosition = { x, y };
+          break;
+        }
+      }
+    }
+
+    if (!validPosition) {
+      const errorMessage = "Pas d'espace disponible pour une nouvelle table";
+      console.error(errorMessage);
+      setError(errorMessage);
+      setIsCreatingTable(false);
+      return;
+    }
+
     const tableToCreate = {
       name: generateName(),
-      xStart: 5,
-      yStart: 5,
-      width: 2,
-      height: 2,
-      roomId: currentRoom!.id,
+      xStart: validPosition.x,
+      yStart: validPosition.y,
+      width: DEFAULT_TABLE_SIZE,
+      height: DEFAULT_TABLE_SIZE,
+      roomId: currentRoom.id,
       seats: 2
+    };
+
+    try {
+      const newTable = await tableApiService.create(tableToCreate);
+      setTables(prevTables => [...prevTables, newTable]);
+      setSelectedTable(newTable);
+      await AsyncStorage.setItem('tables', JSON.stringify([...tables, newTable]));
+    } catch (error) {
+      console.error("Erreur lors de la création de la table:", error);
+      setError("Erreur lors de la création de la table");
+    } finally {
+      setIsCreatingTable(false);
     }
-    const newTable = await tableApiService.create(tableToCreate)
-    setTables([...tables, newTable])
-    setSelectedTable(newTable)
-    await AsyncStorage.setItem('tables', JSON.stringify(tables))
-  }
+  };
 
   const deleteTable = async () => {
     if (selectedTable) {
-      await tableApiService.delete(selectedTable.id)
-      setTables(tables.filter(table => table.id !== selectedTable.id))
-      setSelectedTable(null)
+      await tableApiService.delete(selectedTable.id);
+      setTables(tables.filter(table => table.id !== selectedTable.id));
+      setSelectedTable(null);
       setTitle('Modification salle');
       await AsyncStorage.setItem('tables', JSON.stringify(tables))
     }
-  }
+  };
 
-  const handleChangeRoom = (room: Room): void => {
+  const handleChangeRoom = async (room: Room) => {
     setIsPanelCollapsed(false);
     if (room.id !== currentRoom?.id) {
-      initRoomEdition(room);
-      setTitle('Modification salle');
+      try {
+        // Si des modifications sont en attente, les sauvegarder
+        if (currentRoom && hasChanges) {
+          await handleSaveRoom();
+        }
+        
+        // Récupérer les données à jour de la nouvelle salle
+        const freshRoom = await roomApiService.get(room.id);
+        if (freshRoom) {
+          initRoomEdition(freshRoom);
+          setTitle('Modification salle');
+        }
+      } catch (error) {
+        console.error('Erreur lors du changement de salle:', error);
+      }
     }
-  }
+  };
 
   const deleteRoom = async () => {
-    if (currentRoom) {
-      await roomApiService.delete(currentRoom.id)
-      setTitle('Création de salle');
+    if (!currentRoom) return;
+    
+    try {
+      await roomApiService.delete(currentRoom.id);
+      
+      // Mettre à jour la liste des salles
+      const updatedRooms = rooms.filter(room => room.id !== currentRoom.id);
+      setRooms(updatedRooms);
+      
+      // Réinitialiser les états liés à la salle courante
+      setSelectedTable(null);
+      setTables([]);
+      setHasChanges(false);
+      
+      // Si d'autres salles existent, sélectionner la première
+      if (updatedRooms.length > 0) {
+        const nextRoom = await roomApiService.get(updatedRooms[0].id);
+        if (nextRoom) {
+          initRoomEdition(nextRoom);
+          setTitle('Modification salle');
+        }
+      } else {
+        // Si plus aucune salle n'existe, revenir à l'état initial
+        setCurrentRoom(null);
+        setInitialRoom(null);
+        setTitle('Création de salle');
+        setTempWidth(15);
+        setTempHeight(15);
+        setNewRoomWidth(15);
+        setNewRoomHeight(15);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la salle:', error);
+      setError('Erreur lors de la suppression de la salle');
     }
-  }
+  };
 
   const initRoomEdition = (room: Room) => {
     setCurrentRoom(room);
     setInitialRoom({ ...room });
-    setTables(room.tables);
+    setTables(room.tables || []);
     setSelectedTable(null);
     setHasChanges(false);
+    setTempWidth(room.width);
+    setTempHeight(room.height);
   };
+  
+  useEffect(() => {
+    if (!currentRoom) {
+      setTempBadge(newRoomName ? { name: newRoomName } : { name: 'Nouvelle salle' });
+    } else {
+      setTempBadge(null);
+    }
+  }, [currentRoom, newRoomName]);
 
   const setCreateRoomPanel = () => {
+    // Réinitialiser complètement l'état
     setIsPanelCollapsed(false);
-    setSelectedTable(null)
-    setCurrentRoom(null)
+    setSelectedTable(null);
+    setCurrentRoom(null);
+    setTables([]);
     setTitle('Création de salle');
-  }
+    setTempWidth(15);
+    setTempHeight(15);
+    setNewRoomWidth(15);
+    setNewRoomHeight(15);
+    setInitialRoom(null); // Important: réinitialiser l'état initial
+    setHasChanges(false);
+    // Forcer une réinitialisation du composant RoomComponent
+    requestAnimationFrame(() => {
+      setTables([]); // Double réinitialisation pour forcer le re-render
+    });
+  };
+
 
   const createRoom = async () => {
-    const newRoom = await roomApiService.create({ name: newRoomName, tables: [], width: newRoomWidth, height: newRoomHeight })
-    setRooms([...rooms, newRoom])
-    setCurrentRoom(newRoom)
-    setTables([])
-    setNewRoomName("")
-    setNewRoomWidth(10)
-    setNewRoomHeight(10)
-    setTitle('Modification salle');
-  }
+    try {
+      // Réinitialiser les tables avant la création
+      setTables([]);
+      
+      const newRoom = await roomApiService.create({ 
+        name: newRoomName, 
+        tables: [], // S'assurer qu'aucune table n'est créée initialement
+        width: newRoomWidth, 
+        height: newRoomHeight 
+      });
+      
+      // Mettre à jour l'état avec la nouvelle salle
+      setRooms([...rooms, newRoom]);
+      setCurrentRoom(newRoom);
+      setInitialRoom(newRoom);
+      setTables([]); // S'assurer que les tables sont vides
+      setNewRoomName("");
+      setNewRoomWidth(15);
+      setNewRoomHeight(15);
+      setTitle('Modification salle');
+      
+      // Forcer une réinitialisation du composant RoomComponent
+      requestAnimationFrame(() => {
+        setTables([]); // Double réinitialisation pour forcer le re-render
+      });
+    } catch (error) {
+      console.error("Erreur lors de la création de la salle:", error);
+      setError("Erreur lors de la création de la salle");
+    }
+  };
 
   const renderSidePanelContent = () => {
     return (
@@ -235,7 +407,7 @@ export default function RoomPage() {
           Informations
         </Text>
         <View style={{ padding: 16, flex: 1 }}>
-          { selectedTable ? (
+          {selectedTable ? (
             <View style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1}}>
               <View>
                 <Text style={{fontSize: 14.5}}>Nom de la table</Text>
@@ -326,10 +498,10 @@ export default function RoomPage() {
                 />
                 <Text style={{fontSize: 14.5}}>Largeur</Text>
                 <NumberInput
-                  value={newRoomWidth}
+                  value={tempWidth}
                   decimalPlaces={0}
                   onChangeText={(value) => {
-                    setNewRoomWidth(value!);
+                    setTempWidth(value || 10);
                     setHasChanges(true);
                   }}
                   placeholder='Largeur'
@@ -337,10 +509,10 @@ export default function RoomPage() {
                 />
                 <Text style={{fontSize: 14.5}}>Hauteur</Text>
                 <NumberInput
-                  value={newRoomHeight}
+                  value={tempHeight}
                   decimalPlaces={0}
                   onChangeText={(value) => {
-                    setNewRoomHeight(value!);
+                    setTempHeight(value || 10);
                     setHasChanges(true);
                   }}
                   placeholder='Hauteur'
@@ -395,17 +567,17 @@ export default function RoomPage() {
                 />
                 <Text style={{fontSize: 14.5}}>Largeur</Text>
                 <NumberInput
-                  value={10}
+                  value={newRoomWidth}
                   decimalPlaces={0}
-                  onChangeText={() => {}}
+                  onChangeText={(value) => setNewRoomWidth(value || 10)}
                   style={{ marginVertical: 8 }}
                   placeholder='Largeur'
                 />
                 <Text style={{fontSize: 14.5}}>Hauteur</Text>
                 <NumberInput
-                  value={10}
+                  value={newRoomHeight}
                   decimalPlaces={0}
-                  onChangeText={() => {}}
+                  onChangeText={(value) => setNewRoomHeight(value || 10)}
                   style={{ marginVertical: 8 }}
                   placeholder='Hauteur'
                 />
@@ -466,6 +638,16 @@ export default function RoomPage() {
                 </Badge>
               </Pressable>
             ))}
+            {!currentRoom && tempBadge && !isLoading && (
+              <Badge
+                variant="outline"
+                className='mx-1'
+                active={true}
+                size='lg'
+              >
+                <Text>{tempBadge.name}</Text>
+              </Badge>
+            )}
           </ScrollView>
           <Button
             onPress={setCreateRoomPanel}
@@ -486,24 +668,26 @@ export default function RoomPage() {
           </Button>
         </View>
         <RoomComponent
+          key={currentRoom?.id || 'new-room'}
           tables={tables}
-          zoom={0.9}
           editingTableId={selectedTable?.id}
           editionMode={true}
+          width={currentRoom?.width}
+          height={currentRoom?.height}
+          isLoading={isLoading}
           onTablePress={handleTablePress}
           onTableLongPress={handleTablePress}
           onTableUpdate={handleTableUpdate}
         />
         <View 
-          style={{ position: 'absolute', bottom: 20, right: 10, left: 10 }}
-          className="flex items-center justify-center">
+          style={{ position: 'absolute', bottom: 5, right: 10, left: 10 }}
+          className="flex items-center justify-center"
+          pointerEvents="box-none">
           {currentRoom && (
             <RoomCard
               roomName={`${currentRoom.name}`}
-              capacity={{ current: currentRoom.tables ? currentRoom.tables.length : 0 }}
-              EditMode={() => {
-                handleAddTable()
-              }}
+              capacity={{ current: tables.length }}
+              EditMode={handleAddTable}
             />
           )}
         </View>

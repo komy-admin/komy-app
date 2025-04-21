@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
+import { router } from 'expo-router';
 
 export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
@@ -15,6 +16,7 @@ export default function LoginScreen() {
       const { token, ...user } = await authApiService.login({ loginId, password });
       dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
       dispatch(setCurrentUser(user));
+      router.replace(`/${user.profil}/`);
     } catch (error) {
       console.error(error);
     }
@@ -27,6 +29,7 @@ export default function LoginScreen() {
       </Text>
       
       <TextInput
+        id="LoginId"
         value={loginId}
         onChangeText={setLoginId}
         placeholder="Identifiant"
@@ -34,6 +37,7 @@ export default function LoginScreen() {
       />
       
       <TextInput
+        id="LoginPassword"
         value={password}
         onChangeText={setPassword}
         placeholder="Mot de passe"

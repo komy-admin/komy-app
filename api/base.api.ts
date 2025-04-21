@@ -22,7 +22,6 @@ export abstract class BaseApiService<T> {
 
     this.storage = storageService
 
-    // Ajout de l'intercepteur directement dans le constructeur de base
     this.axiosInstance.interceptors.request.use(
       async (config) => {
         const token = await this.storage.getItem('token');
@@ -37,7 +36,6 @@ export abstract class BaseApiService<T> {
     );
   }
 
-  // Obtenir tous les éléments avec pagination et filtres optionnels
   async getAll(params?: string): Promise<{ data: T[], meta: any }> {
     try {
       // const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
@@ -50,7 +48,6 @@ export abstract class BaseApiService<T> {
     }
   }
 
-  // Obtenir un élément par ID
   async get(id: string): Promise<T> {
     try {
       const response = await this.axiosInstance.get<T>(`${this.endpoint}/${id}`);
@@ -61,7 +58,6 @@ export abstract class BaseApiService<T> {
     }
   }
 
-  // Créer un nouvel élément
   async create(data: Partial<T>): Promise<T> {
     try {
       const response = await this.axiosInstance.post<T>(this.endpoint, data);
@@ -72,7 +68,6 @@ export abstract class BaseApiService<T> {
     }
   }
 
-  // Mettre à jour un élément
   async update(id: string, data: Partial<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>): Promise<T> {
     try {
       const response = await this.axiosInstance.put<T>(`${this.endpoint}/${id}`, data);
@@ -83,7 +78,6 @@ export abstract class BaseApiService<T> {
     }
   }
 
-  // Supprimer un élément
   async delete(id: string): Promise<void> {
     try {
       await this.axiosInstance.delete(`${this.endpoint}/${id}`);
