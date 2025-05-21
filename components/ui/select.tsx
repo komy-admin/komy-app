@@ -9,6 +9,7 @@ import {
   Dimensions,
   Animated,
   Pressable,
+  Modal,
 } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
 
@@ -47,7 +48,12 @@ export function Select({
   const [currentValue, setCurrentValue] = useState(selectedValue || defaultValue);
   const animation = useRef(new Animated.Value(0)).current;
   const dropdownRef = useRef<View>(null);
-  const [dropdownLayout, setDropdownLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [dropdownLayout, setDropdownLayout] = useState({
+    pageX: 0,
+    pageY: 0,
+    width: 0,
+    height: 0,
+  });
 
   useEffect(() => {
     if (selectedValue) {
@@ -77,10 +83,10 @@ export function Select({
 
   const handlePress = () => {
     if (disabled) return;
-    
+
     if (dropdownRef.current) {
       dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
-        setDropdownLayout({ x: pageX, y: pageY, width, height });
+        setDropdownLayout({ pageX, pageY, width, height });
       });
     }
     setIsOpen(!isOpen);
@@ -92,33 +98,82 @@ export function Select({
     setIsOpen(false);
   };
 
-  // Hauteur fixe pour chaque option
   const optionHeight = 48;
-  
-  // Afficher seulement 3 options par défaut
   const visibleOptions = 3;
-  
-  // Calculer la hauteur du dropdown
   const dropdownHeight = Math.min(
     maxHeight,
-    // Si plus de 3 options, on montre 3 options + un peu de la 4ème pour indiquer qu'il y a plus
     choices.length > visibleOptions
-      ? optionHeight * visibleOptions + (optionHeight * 0.3)
+      ? optionHeight * visibleOptions + optionHeight * 0.3
       : optionHeight * choices.length
+  );
+
+  const renderDropdownContent = () => (
+    <Animated.View
+      style={[
+        styles.dropdown,
+        {
+          height: dropdownHeight,
+          transform: [{ scale: scaleAnimation }],
+          opacity: animation,
+          ...(Platform.OS === 'web'
+            ? {
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                zIndex: 1000,
+              }
+            : {
+                position: 'absolute',
+                top: dropdownLayout.pageY + dropdownLayout.height,
+                left: dropdownLayout.pageX,
+                width: dropdownLayout.width,
+              }),
+        },
+      ]}
+    >
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={true}
+        bounces={false}
+      >
+        {choices.map((choice, index) => (
+          <TouchableOpacity
+            key={choice.id || `${choice.value}-${index}`}
+            style={[
+              styles.option,
+              currentValue?.value === choice.value && styles.selectedOption,
+            ]}
+            onPress={() => handleSelect(choice)}
+          >
+            <Text
+              style={[
+                styles.optionText,
+                currentValue?.value === choice.value && styles.selectedOptionText,
+              ]}
+            >
+              {choice.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </Animated.View>
   );
 
   return (
     <View style={[styles.container, style]}>
       {label && (
-        <Text style={[
-          styles.label,
-          error && styles.labelError,
-          disabled && styles.labelDisabled
-        ]}>
+        <Text
+          style={[
+            styles.label,
+            error && styles.labelError,
+            disabled && styles.labelDisabled,
+          ]}
+        >
           {label}
         </Text>
       )}
-      
+
       <View style={styles.selectWrapper}>
         <TouchableOpacity
           ref={dropdownRef}
@@ -132,11 +187,13 @@ export function Select({
           activeOpacity={0.7}
           disabled={disabled}
         >
-          <Text style={[
-            styles.selectedText,
-            !currentValue && styles.placeholderText,
-            disabled && styles.textDisabled
-          ]}>
+          <Text
+            style={[
+              styles.selectedText,
+              !currentValue && styles.placeholderText,
+              disabled && styles.textDisabled,
+            ]}
+          >
             {currentValue ? currentValue.label : placeholder}
           </Text>
           <Animated.View style={{ transform: [{ rotate: rotateAnimation }] }}>
@@ -144,59 +201,21 @@ export function Select({
           </Animated.View>
         </TouchableOpacity>
 
-        {isOpen && (
-          <>
-            <Pressable 
-              style={StyleSheet.absoluteFill} 
-              onPress={() => setIsOpen(false)} 
-            />
-            <Animated.View
-              style={[
-                styles.dropdown,
-                {
-                  height: dropdownHeight,
-                  transform: [{ scale: scaleAnimation }],
-                  opacity: animation,
-                  ...(Platform.OS === 'web' && {
-                    position: 'absolute',
-                    top: '100%',
-                    width: '100%',
-                    zIndex: 1000,
-                  }),
-                },
-              ]}
+        {Platform.OS === 'web' ? (
+          isOpen && renderDropdownContent()
+        ) : (
+          <Modal visible={isOpen} transparent animationType="none">
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setIsOpen(false)}
             >
-              <ScrollView
-                style={styles.scrollView}
-                showsVerticalScrollIndicator={true}
-                bounces={false}
-              >
-                {choices.map((choice, index) => (
-                  <TouchableOpacity
-                    key={choice.id || `${choice.value}-${index}`}
-                    style={[
-                      styles.option,
-                      currentValue?.value === choice.value && styles.selectedOption,
-                    ]}
-                    onPress={() => handleSelect(choice)}
-                  >
-                    <Text style={[
-                      styles.optionText,
-                      currentValue?.value === choice.value && styles.selectedOptionText,
-                    ]}>
-                      {choice.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </Animated.View>
-          </>
+              {renderDropdownContent()}
+            </Pressable>
+          </Modal>
         )}
       </View>
 
-      {error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 }
@@ -236,8 +255,7 @@ const styles = StyleSheet.create({
     }),
   },
   selectButtonOpen: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    borderColor: '#2563EB',
   },
   selectButtonError: {
     borderColor: '#DC2626',
@@ -268,9 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D7D7D7',
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
+    borderRadius: 8,
     overflow: 'hidden',
     elevation: 5,
     shadowColor: '#000',
