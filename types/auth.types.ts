@@ -10,6 +10,15 @@ export interface RegisterCredentials extends LoginCredentials {
   lastName?: string;
 }
 
+export interface ForgotCredentials {
+  email: string;
+}
+
+export interface ResetCredentials {
+  token: string;
+  password: string;
+}
+
 export type AuthResponse = User & { token: { token: string } };
 
 export interface currentUser {

@@ -1,5 +1,5 @@
 import { BaseApiService } from './base.api';
-import type { LoginCredentials, RegisterCredentials, AuthResponse } from '~/types/auth.types';
+import type { LoginCredentials, RegisterCredentials, ForgotCredentials, ResetCredentials, AuthResponse } from '~/types/auth.types';
 import { User, UserProfile } from '~/types/user.types';
 
 export class AuthApiService extends BaseApiService<AuthResponse> {
@@ -84,6 +84,32 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       return data;
     } catch (err) {
       console.error('Error in refreshToken:', err);
+      throw err;
+    }
+  }
+
+  async forgotPassword(credentials: ForgotCredentials): Promise<AuthResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/forgot-password`,
+        credentials
+      );
+      return data;
+    } catch (err) {
+      console.error('Error in login:', err);
+      throw err;
+    }
+  }
+
+  async resetPassword(credentials: ResetCredentials): Promise<AuthResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/reset-password`,
+        credentials
+      );
+      return data;
+    } catch (err) {
+      console.error('Error in login:', err);
       throw err;
     }
   }

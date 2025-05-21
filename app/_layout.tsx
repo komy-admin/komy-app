@@ -92,7 +92,8 @@ function AuthenticationGate() {
     }
     
     const fullPath = segments.length ? `/${segments.join('/')}` : '/';
-    
+    if (fullPath === '/(auth)/forgot-password') return
+    if (fullPath === '/(auth)/reset-password') return
     if (!token) {
       if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
         return;

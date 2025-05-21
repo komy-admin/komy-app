@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
 import { User, Lock, Bell, LogOut, PenTool, Database } from 'lucide-react-native';
+import { logout } from '~/store/auth.slice';
+import { useAppDispatch } from '~/store/hooks';
 
 type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications';
 
@@ -17,6 +19,10 @@ type ConfigSidebarProps = {
 };
 
 export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebarProps) {
+  const dispatch = useAppDispatch();
+  const handleLogout = () => {
+    dispatch(logout());
+  };
   return (
     <View style={{ 
       width: '25%', 
@@ -114,7 +120,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
           borderRadius: 8,
           backgroundColor: pressed ? '#FEF2F2' : 'transparent',
         })}
-        onPress={() => console.log('Déconnexion')}
+        onPress={handleLogout}
       >
         <LogOut size={18} color="#DC2626" style={{ marginRight: 12 }} />
         <Text style={{ 
