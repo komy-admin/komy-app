@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Table } from '~/types/table.types';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
 import { Order } from '~/types/order.types';
+import TableActionPanel from './TableActionPanel';
 
 const CELL_SIZE = 50;
+const PANEL_POSITION_KEY = 'actionPanelPosition';
 
 interface RoomProps {
   tables: Table[]; 
@@ -19,6 +22,8 @@ interface RoomProps {
   onTableUpdate: (id: string, updates: Partial<Table>) => void;
   onTableLongPress: (table: Table | null) => void;
   onTablePress: (table: Table | null) => void;
+  onEditTable?: () => void;
+  onDeleteTable?: () => void;
 }
 
 const Room: React.FC<RoomProps> = ({ 
@@ -31,7 +36,9 @@ const Room: React.FC<RoomProps> = ({
   isLoading = false,
   onTableUpdate, 
   onTableLongPress, 
-  onTablePress 
+  onTablePress,
+  onEditTable,
+  onDeleteTable
 }) => {
   const [dimensions, setDimensions] = useState<{
     gridWidth: number;
@@ -41,6 +48,54 @@ const Room: React.FC<RoomProps> = ({
   const [isGridReady, setIsGridReady] = useState(false);
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
   const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  
+  const getInitialPanelPosition = () => {
+    const screenWidth = Dimensions.get('window').width;
+    const screenHeight = Dimensions.get('window').height;
+    const gridWidth = width * CELL_SIZE;
+    
+    return {
+      x: Platform.OS === 'web' ? 
+        gridWidth + ((screenWidth - gridWidth) / 2) - 75 : 
+        screenWidth / 2 - 75,
+      y: screenHeight / 3
+    };
+  };
+  
+  const [panelPosition, setPanelPosition] = useState(getInitialPanelPosition());
+
+  useEffect(() => {
+    const loadPanelPosition = async () => {
+      try {
+        const savedPosition = await AsyncStorage.getItem(PANEL_POSITION_KEY);
+        if (savedPosition) {
+          setPanelPosition(JSON.parse(savedPosition));
+        }
+      } catch (error) {
+        console.error('Error loading panel position:', error);
+      }
+    };
+    
+    loadPanelPosition();
+  }, []);
+
+  // Synchroniser selectedTable avec editingTableId
+  useEffect(() => {
+    if (editingTableId) {
+      const table = tables.find(t => t.id === editingTableId);
+      if (table) {
+        setSelectedTable(table);
+      }
+    }
+  }, [editingTableId, tables]);
+
+  // Effet pour vérifier si la table sélectionnée existe toujours dans la liste des tables
+  useEffect(() => {
+    if (selectedTable && !tables.find(table => table.id === selectedTable.id)) {
+      setSelectedTable(null);
+    }
+  }, [tables, selectedTable]);
 
   function isTableWithinRoom(table: Table): boolean {
     return (
@@ -72,12 +127,10 @@ const Room: React.FC<RoomProps> = ({
   function isPositionValid(table: Table): boolean {
     if (table.id !== editingTableId) return true;
 
-    // Vérification des limites de la salle
     if (!isTableWithinRoom(table)) {
       return false;
     }
 
-    // Vérification des collisions avec d'autres tables
     if (hasTableCollision(table, tables)) {
       return false;
     }
@@ -138,6 +191,34 @@ const Room: React.FC<RoomProps> = ({
 
   const handleBackgroundPress = () => {
     onTablePress(null);
+    setSelectedTable(null);
+  };
+
+  const handleTableSelect = (table: Table) => {
+    if (selectedTable?.id === table.id) return;
+    setSelectedTable(table);
+    onTablePress(table);
+  };
+
+  const handlePanelMove = async (newPosition: { x: number; y: number }) => {
+    setPanelPosition(newPosition);
+    try {
+      await AsyncStorage.setItem(PANEL_POSITION_KEY, JSON.stringify(newPosition));
+    } catch (error) {
+      console.error('Error saving panel position:', error);
+    }
+  };
+
+  const handleEditClick = () => {
+    if (onEditTable) {
+      onEditTable();
+    }
+  };
+
+  const handleDeleteClick = () => {
+    if (onDeleteTable) {
+      onDeleteTable();
+    }
   };
 
   if (isLoading || !dimensions) {
@@ -182,13 +263,21 @@ const Room: React.FC<RoomProps> = ({
               positionValid={isPositionValid(table)}
               CELL_SIZE={CELL_SIZE}
               currentZoom={currentZoom}
-              onPress={onTablePress}
+              onPress={() => handleTableSelect(table)}
               onLongPress={onTableLongPress}
               onUpdate={onTableUpdate}
             />
           ))}
         </View>
       </ReactNativeZoomableView>
+      {selectedTable && tables.find(table => table.id === selectedTable.id) && (
+        <TableActionPanel
+          position={panelPosition}
+          onPositionChange={handlePanelMove}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
+        />
+      )}
     </View>
   );
 };

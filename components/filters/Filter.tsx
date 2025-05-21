@@ -72,7 +72,7 @@ export function FilterBar<T>({
                   decimalPlaces={2}
                   min={0}
                   max={2000}
-                  currency="€"
+                  currency={filter.currency || undefined}
                   placeholder={`${filter.label} min`}
                   style={styles.numberInput}
                 />
@@ -84,7 +84,7 @@ export function FilterBar<T>({
                   decimalPlaces={2}
                   min={0}
                   max={2000}
-                  currency="€"
+                  currency={filter.currency || undefined}
                   placeholder={`${filter.label} max`}
                   style={styles.numberInput}
                 />

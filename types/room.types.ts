@@ -1,7 +1,7 @@
 import { Table } from "./table.types";
 
 export type Room = {
-  id: string;
+  id?: string;
   name: string;
   number?: number;
   width: number;

@@ -303,8 +303,8 @@ export default function TeamPage() {
       <CustomModal
         isVisible={isModalVisible}
         onClose={handleCloseModal}
-        width={width * 0.5}
-        height={ Platform.OS === 'web' ? height * 0.66 : height * 0.62 }
+        width={600}
+        height={660}
         title={currentUser ? "Modifier l'utilisateur" : "Créer un utilisateur"}
       >
         <TeamForm

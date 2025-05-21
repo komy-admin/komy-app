@@ -10,9 +10,11 @@ import {
   FlatList,
   LayoutAnimation,
   Platform,
-  UIManager
+  UIManager,
+  TouchableWithoutFeedback
 } from 'react-native';
-import { Trash2 } from 'lucide-react-native';
+import { Trash2, Edit2 } from 'lucide-react-native';
+import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -24,6 +26,7 @@ interface ColumnData {
   label?: string;
   key: string;
   width: string;
+  render?: (item: any) => React.ReactNode;
 }
 
 interface ForkTableProps {
@@ -31,6 +34,8 @@ interface ForkTableProps {
   columns: ColumnData[];
   onRowPress?: (id: string) => void;
   onRowDelete?: (id: string) => void;
+  useActionMenu?: boolean;
+  getActions?: (item: any) => ActionItem[];
 }
 
 const Table = React.forwardRef<
@@ -99,7 +104,14 @@ const TableCell = React.forwardRef<
 ));
 TableCell.displayName = 'TableCell';
 
-const ForkTable = ({ data, columns, onRowPress, onRowDelete }: ForkTableProps) => {
+const ForkTable = ({ 
+  data, 
+  columns, 
+  onRowPress, 
+  onRowDelete,
+  useActionMenu = false,
+  getActions
+}: ForkTableProps) => {
   const renderItem = React.useCallback(({ item, index }: { item: any; index: number }) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     return (
@@ -109,46 +121,53 @@ const ForkTable = ({ data, columns, onRowPress, onRowDelete }: ForkTableProps) =
           index % 2 === 0 ? styles.evenRow : styles.oddRow
         ]}
       >
-        <Pressable 
-          onPress={() => onRowPress?.(item.id)}
-          style={styles.rowContent}
-        >
-          {columns.map((column, colIndex) => (
-            <View
-              key={`${item.id}-${column.key}`}
-              style={[
-                styles.cell,
-                { width: column.width as DimensionValue }
-              ]}
-            >
-              <View style={styles.cellInner}>
-                <View style={styles.textContainer}>
-                  <Text 
-                    style={styles.cellText}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {item[column.key]}
-                  </Text>
+        <TouchableWithoutFeedback onPress={() => onRowPress?.(item.id)}>
+          <View style={styles.rowContent}>
+            {columns.map((column, columnIndex) => (
+              <View
+                key={`${item.id}-${column.key}`}
+                style={[
+                  styles.cell,
+                  { width: column.width as DimensionValue }
+                ]}
+              >
+                <View style={styles.cellInner}>
+                  {column.render ? (
+                    column.render(item)
+                  ) : (
+                    <View style={styles.textContainer}>
+                      <Text 
+                        style={styles.cellText}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {item[column.key]}
+                      </Text>
+                    </View>
+                  )}
+                  {columnIndex === columns.length - 1 && (
+                    useActionMenu && getActions ? (
+                      <ActionMenu actions={getActions(item)} />
+                    ) : onRowDelete && (
+                      <Pressable
+                        onPress={() => {
+                          LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                          onRowDelete(item.id);
+                        }}
+                        style={styles.deleteButton}
+                      >
+                        <Trash2 size={20} color="#ef4444" />
+                      </Pressable>
+                    )
+                  )}
                 </View>
-                {colIndex === columns.length - 1 && onRowDelete && (
-                  <Pressable
-                    onPress={() => {
-                      LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-                      onRowDelete(item.id);
-                    }}
-                    style={styles.deleteButton}
-                  >
-                    <Trash2 size={20} color="red" />
-                  </Pressable>
-                )}
               </View>
-            </View>
-          ))}
-        </Pressable>
+            ))}
+          </View>
+        </TouchableWithoutFeedback>
       </TableRow>
     );
-  }, [columns, onRowPress, onRowDelete]);
+  }, [columns, onRowPress, onRowDelete, useActionMenu, getActions]);
 
   return (
     <View style={styles.container}>
@@ -232,16 +251,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 16,
-    color: Platform.select({
-      ios: '#2A2E33',
-      android: '#2A2E33',
-      default: '#2A2E33'
-    }),
-    fontWeight: Platform.select({
-      ios: '300',
-      android: '300',
-      default: '200'
-    }),
+    color: '#2A2E33',
+    fontWeight: '300',
     textDecorationLine: 'underline',
   },
   list: {
@@ -286,21 +297,12 @@ const styles = StyleSheet.create({
   },
   cellText: {
     fontSize: 15,
-    color: Platform.select({
-      ios: '#2A2E33',
-      android: '#2A2E33',
-      default: '#2A2E33'
-    }),
-    fontWeight: Platform.select({
-      ios: '400',
-      android: '400',
-      default: '100'
-    }),
+    color: '#2A2E33',
+    fontWeight: '400',
   },
   deleteButton: {
     padding: 8,
-    marginLeft: 8,
-  },
+  }
 });
 
 export { 

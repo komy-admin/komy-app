@@ -2,15 +2,15 @@
 import { Href, Link } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { View, Pressable } from 'react-native';
-import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText,} from 'lucide-react-native';
+import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText, List} from 'lucide-react-native';
 import { Text } from '../ui';
 
 const NAV_ITEMS = [
   { href: '/service', icon: Grid3X3Icon, label: 'Service' },
-  { href: '/room', icon: LayoutDashboard, label: 'Salles' },
+  { href: '/room_list', icon: LayoutDashboard, label: 'Salles' },
   { href: '/menu', icon: NotebookText, label: 'Menu' },
   { href: '/team', icon: Users, label: 'Équipe' },
-  { href: '/kitchen', icon: ChefHat, label: 'Cuisine' },
+  { href: '/kitchen', icon: ChefHat, label: 'Cuisine' }
 ];
 
 export function AdminSidebar() {

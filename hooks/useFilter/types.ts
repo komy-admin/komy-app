@@ -38,6 +38,7 @@ type NestedPaths<T> = T extends object ? {
 }[keyof T] : never;
 
 export type FilterConfig<T> = {
+  currency?: string;
   field: NestedPaths<T>;
   type: FilterType;
   label: string;

@@ -34,6 +34,7 @@ export default function MenuPage() {
       show: true
     },
     { 
+      currency: '€',
       field: 'price', 
       type: 'number',
       label: 'Prix',
@@ -310,8 +311,8 @@ export default function MenuPage() {
       <CustomModal
         isVisible={isModalVisible}
         onClose={handleCloseModal}
-        width={width * 0.5}
-        height= {height * 0.54}
+        width={600}
+        height={560}
         title={currentItem ? "Modifier l'article" : "Créer un article"}
       >
         <MenuForm
