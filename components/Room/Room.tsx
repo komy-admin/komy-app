@@ -270,7 +270,7 @@ const Room: React.FC<RoomProps> = ({
           ))}
         </View>
       </ReactNativeZoomableView>
-      {selectedTable && tables.find(table => table.id === selectedTable.id) && (
+      {editionMode && selectedTable && tables.find(table => table.id === selectedTable.id) && (
         <TableActionPanel
           position={panelPosition}
           onPositionChange={handlePanelMove}

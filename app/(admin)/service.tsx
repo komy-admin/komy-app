@@ -25,6 +25,8 @@ import { OrderItem } from '~/types/order-item.types';
 import { getMostImportantStatus } from '~/lib/utils';
 import { useSocket } from '~/hooks/useSocket';
 import { EventType } from '~/hooks/useSocket/types';
+import { router } from 'expo-router';
+import { useToast } from '~/components/ToastProvider';
 
 export default function ServicePage () {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
@@ -40,6 +42,8 @@ export default function ServicePage () {
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+
+  const { showToast } = useToast();
 
   useEffect(() => {
     initData();
@@ -136,6 +140,7 @@ export default function ServicePage () {
       setTables(rooms[0]?.tables || [])
     } catch (err) {;
       console.error(err);
+      showToast('Erreur lors du chargement des données. Veuillez réessayer plus tard.', 'error');
     } finally {
       setLoading(false);
     }
@@ -162,9 +167,13 @@ export default function ServicePage () {
 
   const createOrder = async () => {
     try {
-      if (!selectedTable) return;
+      if (!selectedTable) {
+        showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
+        return;
+      };
       const existingOrder = orders.find(order => order.tableId === selectedTable.id);
       if (existingOrder) {
+        showToast('Une commande existe déjà pour cette table.', 'warning');
         throw new Error('An order already exists for this table.');
       }
 
@@ -172,7 +181,9 @@ export default function ServicePage () {
       setCurrentOrder(order)
       setShowMenu(true)
       setOrders([...orders, order])
+      showToast('Commande créée avec succès.', 'success');
     } catch (error) {
+      showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
       console.error(error);
     }
   }
@@ -183,9 +194,15 @@ export default function ServicePage () {
   };
 
   const onUpdateQuantity = async (itemId: string, action: 'remove' | 'add') => {
-    if (!currentOrder) return;
+    if (!currentOrder) {
+      showToast('Veuillez d\'abord créer une commande.', 'warning');
+      return;
+    };
     const item = items.find(item => item.id === itemId);
-    if (!item) return;
+    if (!item) {
+      showToast('L\'article sélectionné n\'existe pas.', 'error');
+      return;
+    };
     if (action === 'add') {
       const orderItem = await orderItemApiService.create({ orderId: currentOrder.id, itemId: item.id, status: Status.DRAFT });
       updateOrder({ ...currentOrder, orderItems: [...currentOrder.orderItems, orderItem] });
@@ -195,6 +212,7 @@ export default function ServicePage () {
       orderItemApiService.delete(orderItem.id);
       updateOrder({ ...currentOrder, orderItems: currentOrder.orderItems.filter(orderItem => orderItem.item.id !== itemId) });
     }
+    showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
   }
 
   const updateOrder = (order: Order) => {
@@ -207,13 +225,17 @@ export default function ServicePage () {
     try {
       await orderApiService.delete(order.id);
       updateOrderFilter('table.roomId', currentRoom?.id, '=')
+      showToast('Commande supprimée avec succès.', 'success');
     } catch (error) {
       console.error(error);
     }
   }
 
   const handleStatusUpdate = async (orderItems: OrderItem[], status: Status) => {
-    if (!currentOrder) return;
+    if (!currentOrder) {
+      showToast('Aucune commande sélectionner.', 'warning');
+      return;
+    };
     const orderItemsIds = orderItems.map(orderItem => orderItem.id);
     await orderItemApiService.updateManyStatus(orderItemsIds, status);
     const updatedItems = currentOrder?.orderItems.map(orderItem => {
@@ -228,6 +250,14 @@ export default function ServicePage () {
     });
     updateOrder(updatedOrder);
   }
+
+  const navigateToRoomEdit = () => {
+    if (!currentRoom) return;
+    router.push({
+      pathname: "/(admin)/room_edition",
+      params: { roomId: currentRoom.id }
+    });
+  };
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -421,7 +451,7 @@ export default function ServicePage () {
             ))}
           </ScrollView>
           <Button
-            onPress={() => {}}
+            onPress={() =>  navigateToRoomEdit()}
             className="w-[200px] h-[50px] flex items-center justify-center"
             style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
           >
