@@ -14,6 +14,7 @@ export type User = {
   email: string;
   phone: string;
   profil: UserProfile;
+  profileImage?: string | null;
   password: string;
   loginId: string;
 };

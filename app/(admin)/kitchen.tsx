@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { orderApiService } from "~/api/order.api";
 import { getMostImportantStatus } from '~/lib/utils';
@@ -41,7 +41,6 @@ function useOrderGrouping(fetchedOrders: Order[], fetchedOrderItems: OrderItem[]
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-
   const [isLoading, setIsLoading] = useState(true);
 
   const groupedOrders = useOrderGrouping(orders, orderItems);
@@ -117,23 +116,77 @@ export default function KitchenPage() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <Text>Chargement...</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Chargement...</Text>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 flex-row gap-7 p-7 h-full">
-      {AVAILABLE_STATUSES.map((status, index) => (
-        <OrderColumn
-          key={status}
-          orders={Array.from(groupedOrders.values())
-            .filter(order => order.status === status)} 
-          status={status}
-          onStatusChange={handleStatusChange}
-        />
-      ))}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Cuisine</Text>
+        <Text style={styles.headerSubtitle}>Gestion des commandes en temps réel</Text>
+      </View>
+      
+      <View style={styles.columnsContainer}>
+        {AVAILABLE_STATUSES.map((status, index) => (
+          <OrderColumn
+            key={status}
+            orders={Array.from(groupedOrders.values())
+              .filter(order => order.status === status)} 
+            status={status}
+            onStatusChange={handleStatusChange}
+          />
+        ))}
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FBFBFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FBFBFB',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#2A2E33',
+    fontWeight: '500',
+  },
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2A2E33',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '400',
+  },
+  columnsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 16,
+    gap: 16,
+  },
+});

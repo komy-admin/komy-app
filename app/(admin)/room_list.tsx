@@ -266,7 +266,7 @@ export default function RoomListPage() {
         isVisible={isModalVisible}
         onClose={handleCloseModal}
         width={600}
-        height={520}
+        height={550}
         title={currentRoom ? "Modifier la salle" : "Créer une salle"}
       >
         <RoomForm
@@ -283,8 +283,9 @@ export default function RoomListPage() {
           setRoomToDelete(null);
         }}
         width={600}
-        height={300}
+        height={320}
         title="Confirmation de suppression"
+        titleColor="#FF4444"
       >
         <View style={styles.deleteModalContent}>
           <View style={{ paddingTop: 20 }}>
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
   deleteWarning: {
     fontSize: 14,
     color: '#FF4444',
-    marginBottom: 20,
+    marginBottom: 40,
     textAlign: 'center',
   },
   deleteButtonContainer: {

@@ -80,7 +80,7 @@ const TableForm: React.FC<TableFormProps> = ({
             placeholder="Nombre de couverts"
             decimalPlaces={0}
             min={1}
-            style={[styles.input, { height: 48 }]}
+            style={[styles.input, { height: 48, width: '100%' }]}
           />
         </View>
       </View>

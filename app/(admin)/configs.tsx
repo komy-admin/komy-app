@@ -5,8 +5,9 @@ import PersonalInfoPage from '~/components/config/personal';
 import PasswordPage from '~/components/config/password';
 import NotificationsPage from '~/components/config/notifications';
 import DashboardPage from '~/components/config/dashboard';
+import ConfigurationRestoPage from '@/components/config/configuration';
 
-type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications';
+type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications' | 'configuration';
 
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
@@ -21,6 +22,8 @@ export default function ConfigPage() {
         return <NotificationsPage/>;
       case 'dashboard':
         return <DashboardPage/>;
+      case 'configuration':
+        return <ConfigurationRestoPage/>;
       default:
         return <DashboardPage/>;
     }
@@ -32,8 +35,8 @@ export default function ConfigPage() {
         currentSection={currentSection} 
         onSectionChange={setCurrentSection}
       />
-      <ScrollView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        <View style={{ padding: 32 }}>
+      <ScrollView style={{ flex: 1 , height: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={{ flex: 1, minHeight: '100%'}}>
           {renderSection()}
         </View>
       </ScrollView>

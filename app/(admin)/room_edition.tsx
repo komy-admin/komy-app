@@ -288,7 +288,7 @@ export default function RoomPage() {
         isVisible={isEditModalVisible}
         onClose={() => setIsEditModalVisible(false)}
         width={600}
-        height={430}
+        height={450}
         title="Modifier la table"
       >
         <TableForm
@@ -302,8 +302,9 @@ export default function RoomPage() {
         isVisible={isDeleteModalVisible}
         onClose={() => setIsDeleteModalVisible(false)}
         width={600}
-        height={300}
+        height={320}
         title="Confirmation de suppression"
+        titleColor="#FF4444"
       >
         <View style={styles.deleteModalContent}>
           <View style={{ paddingTop: 20 }}>
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
   deleteWarning: {
     fontSize: 14,
     color: '#FF4444',
-    marginBottom: 20,
+    marginBottom: 40,
     textAlign: 'center',
   },
   deleteButtonContainer: {

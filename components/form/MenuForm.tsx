@@ -162,7 +162,7 @@ export function MenuForm({ item, itemTypes, onSave, onCancel, activeTab }: MenuF
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Prix *</Text>
           <NumberInput
-            style={[styles.input, { height: 48 }]}
+            style={[styles.input, { height: 48, width: '100%' }]}
             value={formData.price?? 0}
             onChangeText={(value) => setFormData(prev => ({
               ...prev, 

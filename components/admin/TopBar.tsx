@@ -17,7 +17,7 @@ export function AdminTopbar() {
     const year = today.getFullYear()
     setCurrentDate(`${day}/${month}/${year}`)
   }
-
+  
   useEffect(() => {
     updateDate()
     const now = new Date()
@@ -31,6 +31,13 @@ export function AdminTopbar() {
 
     return () => clearTimeout(timeout)
   }, [])
+
+  const getImageSource = () => {
+    if (currentUser?.profileImage) {
+      return { uri: currentUser.profileImage };
+    }
+    return require('~/assets/images/user-profile-default-2.png');
+  };
 
   const configUser = '/configs'
   return (
@@ -73,13 +80,14 @@ export function AdminTopbar() {
               }}
             >
               <Image
-                source={require('~/assets/images/icone_user_test.webp')}
+                source={getImageSource()}
                 style={{
                   width: 45,
                   height: 45,
                   borderRadius: 30,
                   borderColor: '#54575B',
                 }}
+                resizeMode="cover"
               />
               <View>
                 <Text 

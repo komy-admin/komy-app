@@ -102,7 +102,7 @@ export const RoomForm: React.FC<RoomFormProps> = ({
             decimalPlaces={0}
             min={5}
             max={50}
-            style={[styles.input, { height: 48 }]}
+            style={[styles.input, { height: 48, width: '100%' }]}
           />
         </View>
 
@@ -115,7 +115,7 @@ export const RoomForm: React.FC<RoomFormProps> = ({
             decimalPlaces={0}
             min={5}
             max={50}
-            style={[styles.input, { height: 48 }]}
+            style={[styles.input, { height: 48, width: '100%' }]}
           />
         </View>
       </View>

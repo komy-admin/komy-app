@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TextInput, Platform, StyleSheet, View, Text } from 'react-native';
+import { cn } from '~/lib/utils';
 
 interface NumberInputProps {
   value: number | null;
@@ -8,8 +9,10 @@ interface NumberInputProps {
   min?: number;
   max?: number;
   placeholder: string;
+  placeholderTextColor?: string;
   currency?: string;
   style?: object;
+  className?: string;
 }
 
 export function NumberInput({
@@ -19,8 +22,10 @@ export function NumberInput({
   min = 0,
   max = Number.MAX_SAFE_INTEGER,
   placeholder,
+  placeholderTextColor = "#D7D7D7",
   currency,
   style,
+  className,
   ...props
 }: NumberInputProps) {
   const [localValue, setLocalValue] = useState('');
@@ -100,11 +105,14 @@ export function NumberInput({
         onFocus={handleFocus}
         onBlur={handleBlur}
         placeholder={placeholder}
-        placeholderTextColor="#A0A0A0"
+        placeholderTextColor={placeholderTextColor}
+        className={cn(
+          'web:flex h-10 native:h-12 web:w-full rounded-md border border-input bg-background px-3 web:py-2 text-base lg:text-sm native:text-lg native:leading-[1.25] text-foreground placeholder:text-muted-foreground web:ring-offset-background file:border-0 file:bg-transparent file:font-medium web:focus-visible:outline-none web:focus-visible:ring-2 web:focus-visible:ring-ring web:focus-visible:ring-offset-2',
+          isFocused && 'web:ring-2 web:ring-ring web:ring-offset-2',
+          className
+        )}
         style={[
-          styles.input,
           Platform.OS !== 'web' && styles.mobileInput,
-          isFocused && styles.inputFocused,
           style
         ]}
         {...props}
@@ -121,27 +129,11 @@ const styles = StyleSheet.create({
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: Platform.OS === 'web' ? 38 : 46,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#D7D7D7',
-    borderRadius: 5,
-    backgroundColor: '#FFFFFF',
-    color: '#2A2E33',
-    fontSize: Platform.OS !== 'web' ? 16 : 14,
+    minHeight: Platform.OS === 'web' ? 40 : 48,
   },
   mobileInput: {
-    fontSize: 16,
     paddingRight: 32,
-  },
-  inputFocused: {
-    borderColor: '#2A2E33',
-    borderWidth: 1.5,
+    width: '100%'
   },
   currencyText: {
     position: 'absolute',

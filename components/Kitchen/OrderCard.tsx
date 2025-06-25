@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View, StyleSheet } from "react-native";
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import { Button, Text } from "../ui";
 import { DateFormat, formatDate, getStatusColor, getStatusText } from "~/lib/utils";
-import { ChevronDown, ChevronUp, MoveLeft, MoveRight } from "lucide-react-native";
+import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight } from "lucide-react-native";
 import React from "react";
 import { OrderItem } from "~/types/order-item.types";
 
@@ -46,104 +46,267 @@ export default function OrderCard({ order, status, onStatusChange }: {
       onStatusChange(filteredOrder, newStatus);
     };
 
+    const toggleExpanded = () => {
+      setIsExpanded(!isExpanded);
+    };
+
     const renderStatusButtons = (itemType: string, groupStatus: Status) => (
-      <View
-        className="flex flex-row justify-between gap-3"
-        style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center'}}
-      >
+      <View style={styles.buttonContainer}>
         {(groupStatus === Status.INPROGRESS || groupStatus === Status.READY) && (
-          <View className="w-1/3">
-            <Button
-              onPress={() =>
-                groupStatus === Status.INPROGRESS
-                  ? handleStatusChange(itemType, Status.PENDING)
-                  : handleStatusChange(itemType, Status.INPROGRESS)
-              }
-              className="mt-2 flex items-center justify-center"
-              style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}
-            >
-              <MoveLeft size={24} color="black" />
-            </Button>
-          </View>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              groupStatus === Status.INPROGRESS
+                ? handleStatusChange(itemType, Status.PENDING)
+                : handleStatusChange(itemType, Status.INPROGRESS);
+            }}
+            style={[styles.actionButton, styles.previousButton]}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft size={18} color="#6B7280" />
+          </TouchableOpacity>
         )}
         {(groupStatus === Status.PENDING || groupStatus === Status.INPROGRESS) && (
-          <View className="w-1/3">
-            <Button
-              onPress={() => 
-                groupStatus === Status.PENDING 
-                  ? handleStatusChange(itemType, Status.INPROGRESS)
-                  : handleStatusChange(itemType, Status.READY)
-              }
-              className="mt-2 flex items-center justify-center"
-              style={{ borderWidth: 1, borderColor: '#D7D7D7', backgroundColor: 'white' }}
-            >
-              <MoveRight size={24} color="black" />
-            </Button>
-          </View>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              groupStatus === Status.PENDING 
+                ? handleStatusChange(itemType, Status.INPROGRESS)
+                : handleStatusChange(itemType, Status.READY);
+            }}
+            style={[styles.actionButton, styles.nextButton]}
+            activeOpacity={0.7}
+          >
+            <ArrowRight size={18} color="#FFFFFF" />
+          </TouchableOpacity>
         )}
       </View>
     );
   
     return (
-      <View className="bg-white shadow mb-3">
-        <View className="p-3">
-          <View className="flex-row justify-between items-start mb-2.5 pb-2.5 border-b border-gray-100">
-            <Text className="text-gray-900 text-sm font-medium">{order.id}</Text>
-            <Text className="text-gray-600 text-sm">
+      <TouchableOpacity 
+        style={styles.card}
+        onPress={toggleExpanded}
+        activeOpacity={0.95}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderId}>#{order.id}</Text>
+            <Text style={styles.itemCount}>
               {order?.orderItems?.length || 0} ARTICLE{order?.orderItems?.length > 1 ? 'S' : ''}
             </Text>
           </View>
-          
-          <View className="w-full flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className="text-gray-900 font-bold mb-1">
-                Table {order?.table?.name}
-              </Text>
-              <Text className="text-gray-500 text-xs flex-wrap">
-                Commande lancée à {formatDate(order.createdAt, DateFormat.TIME)}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              onPress={() => setIsExpanded(!isExpanded)}
-              className="ml-2"
-            >
-              <View>
-                {isExpanded ? (
-                  <ChevronUp size={24} color="#2A2E33" />
-                ) : (
-                  <ChevronDown size={24} color="#2A2E33" />
-                )}
-              </View>
-            </TouchableOpacity>
+          <View style={styles.expandButton}>
+            {isExpanded ? (
+              <ChevronUp size={20} color="#6B7280" />
+            ) : (
+              <ChevronDown size={20} color="#6B7280" />
+            )}
           </View>
-  
-          {isExpanded && (
-            <View className="mt-4">
-              {Object.entries(groupedItems).map(([type, group]) => (
-                <View key={type} className="mb-4">
-                  <View className="flex-row items-center justify-between mb-2">
-                    <Text className="text-gray-900 font-medium capitalize">{group.name}</Text>
-                    <View className={`shadow px-2 py-1`} style={{ backgroundColor: getStatusColor(group.status) }}>
-                      <Text className="text-xs font-medium">{getStatusText(group.status)}</Text>
-                    </View>
+        </View>
+        
+        <View style={styles.cardBody}>
+          <View style={styles.tableInfo}>
+            <Text style={styles.tableName}>
+              Table {order?.table?.name}
+            </Text>
+            <Text style={styles.orderTime}>
+              Commande lancée à {formatDate(order.createdAt, DateFormat.TIME)}
+            </Text>
+          </View>
+        </View>
+
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            <View style={styles.divider} />
+            {Object.entries(groupedItems).map(([type, group]) => (
+              <View key={type} style={styles.itemGroup}>
+                <View style={styles.groupHeader}>
+                  <Text style={styles.groupName}>{group.name}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(group.status) }]}>
+                    <Text style={styles.statusText}>{getStatusText(group.status)}</Text>
                   </View>
-                  
+                </View>
+                
+                <View style={styles.itemsList}>
                   {group.items.map((orderItem, index) => (
-                    <View key={index} className="flex-row items-center mb-2 pl-4">
-                      <Text className="text-sm mr-3">-</Text>
-                      <View>
-                        <Text className="text-gray-800 text-sm">{orderItem.item.name}</Text>
-                        <Text className="text-gray-500 text-xs">{orderItem.note}</Text>
+                    <View key={index} style={styles.orderItem}>
+                      <View style={styles.itemBullet} />
+                      <View style={styles.itemDetails}>
+                        <Text style={styles.itemName}>{orderItem.item.name}</Text>
+                        {orderItem.note && (
+                          <Text style={styles.itemNote}>{orderItem.note}</Text>
+                        )}
                       </View>
                     </View>
                   ))}
-                  
-                  {renderStatusButtons(type, group.status)}
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </View>
+                
+                {renderStatusButtons(type, group.status)}
+              </View>
+            ))}
+          </View>
+        )}
+      </TouchableOpacity>
     );
-};
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  orderInfo: {
+    flex: 1,
+  },
+  orderId: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2A2E33',
+    marginBottom: 2,
+  },
+  itemCount: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  expandButton: {
+    padding: 4,
+  },
+  cardBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  tableInfo: {
+    gap: 4,
+  },
+  tableName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2A2E33',
+  },
+  orderTime: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '400',
+  },
+  expandedContent: {
+    paddingBottom: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 16,
+  },
+  itemGroup: {
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  groupName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2A2E33',
+    textTransform: 'capitalize',
+    flex: 1,
+    minWidth: 100,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+    flexShrink: 0,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2A2E33',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemsList: {
+    marginBottom: 16,
+    paddingLeft: 8,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  itemBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#D1D5DB',
+    marginTop: 6,
+    marginRight: 12,
+  },
+  itemDetails: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  itemNote: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  previousButton: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  nextButton: {
+    backgroundColor: '#2A2E33',
+  },
+});

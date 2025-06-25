@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { User, Mail, Phone, MapPin } from 'lucide-react-native';
+import { Settings, ChefHat, Utensils, LayoutGrid as Layout } from 'lucide-react-native';
 
-export default function PersonalPage() {
+export default function ConfigurationRestoPage() {
   return (
     <View style={styles.container}>
       {/* Effet de flou en arrière-plan */}
@@ -11,40 +11,40 @@ export default function PersonalPage() {
         <View style={styles.comingSoonCard}>
           {/* Icône avec animation */}
           <View style={styles.iconContainer}>
-            <User size={48} color="#8B5CF6" strokeWidth={1.5} />
+            <Settings size={48} color="#6366F1" strokeWidth={1.5} />
           </View>
-          
+
           <View style={{ alignItems: 'center' }}>
             {/* Titre principal */}
-            <Text style={styles.title}>Profil en développement</Text>
-            
+            <Text style={styles.title}>Configuration Restaurant</Text>
             {/* Sous-titre */}
             <Text style={styles.subtitle}>
-              Formulaire de modification en cours de création
+              Personnalisation et paramètres arrivent bientôt
             </Text>
           </View>
+          
           
           {/* Barre de progression */}
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '60%' }]} />
+              <View style={[styles.progressFill, { width: '45%' }]} />
             </View>
-            <Text style={styles.progressText}>60% terminé</Text>
+            <Text style={styles.progressText}>45% terminé</Text>
           </View>
           
           {/* Fonctionnalités à venir */}
           <View style={styles.featuresContainer}>
             <View style={styles.featureItem}>
-              <Mail size={16} color="#10B981" />
-              <Text style={styles.featureText}>Modification email</Text>
+              <Utensils size={16} color="#10B981" />
+              <Text style={styles.featureText}>Gestion des types de menu</Text>
             </View>
             <View style={styles.featureItem}>
-              <Phone size={16} color="#10B981" />
-              <Text style={styles.featureText}>Gestion téléphone</Text>
+              <Layout size={16} color="#10B981" />
+              <Text style={styles.featureText}>Personnalisation de la cuisine</Text>
             </View>
             <View style={styles.featureItem}>
-              <MapPin size={16} color="#10B981" />
-              <Text style={styles.featureText}>Adresse personnelle</Text>
+              <Settings size={16} color="#10B981" />
+              <Text style={styles.featureText}>Configuration des colonnes</Text>
             </View>
           </View>
         </View>
@@ -78,14 +78,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     maxWidth: 400,
-    height: 500,
-    width: '60%',
     marginHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 10,
     },
+    height: 500,
+    width: '60%',
     shadowOpacity: 0.1,
     shadowRadius: 25,
     elevation: 10,
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#6366F1',
     borderRadius: 3,
   },
   progressText: {
