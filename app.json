@@ -3,7 +3,7 @@
     "name": "Fork-it-app",
     "slug": "Fork-it-app",
     "version": "1.0.0",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -33,7 +33,13 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -5,6 +5,10 @@ import { AdminTopbar } from '~/components/admin/TopBar';
 import { ToastProvider } from '~/components/ToastProvider';
 import { Monitor, Smartphone } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui';
+import { router } from 'expo-router';
+import { authApiService } from '@/api/auth.api';
+
 
 // Composant pour la vérification de l'écran admin
 function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
@@ -49,27 +53,27 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
           <View style={styles.blockedIconContainer}>
             <Monitor size={64} color="#6366F1" strokeWidth={1.5} />
           </View>
-          
+
           {/* Titre */}
           <Text style={styles.blockedTitle}>
             Interface d'administration
           </Text>
-          
+
           {/* Message */}
           <Text style={styles.blockedMessage}>
             L'interface d'administration nécessite un écran d'au moins 850px de largeur pour fonctionner correctement.
           </Text>
-          
+
           {/* Informations techniques */}
           <View style={styles.dimensionsInfo}>
             <Text style={styles.dimensionsText}>
-              Largeur actuelle : {dimensions.width}px
+              Largeur actuelle : {Math.round(dimensions.width)}px
             </Text>
             <Text style={styles.dimensionsText}>
               Largeur minimale : 850px
             </Text>
           </View>
-          
+
           {/* Suggestions */}
           <View style={styles.suggestionsContainer}>
             <View style={styles.suggestionItem}>
@@ -85,6 +89,17 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
               </Text>
             </View>
           </View>
+
+          {/* Bouton de déconnexion */}
+          <Button
+            variant="secondary"
+            onPress={() => {
+              authApiService.logout();
+              router.replace('/login');
+            }}
+          >
+            <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+          </Button>
         </View>
       </View>
     );
@@ -100,7 +115,7 @@ export default function AdminLayout() {
       <AdminScreenSizeGate>
         <View style={{ flex: 1, flexDirection: 'column' }}>
           <AdminTopbar />
-          <View style={{ flex: 1, flexDirection: 'row'}}>
+          <View style={{ flex: 1, flexDirection: 'row' }}>
             <AdminSidebar />
             <View style={{ flex: 1 }}>
               <Slot />
@@ -198,5 +213,35 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontWeight: '500',
     flex: 1,
+  },
+  logoutButton: {
+    width: '100%',
+    height: 56,
+    backgroundColor: '#000000',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 25,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+      },
+    }),
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });

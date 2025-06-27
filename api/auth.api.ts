@@ -1,3 +1,4 @@
+import { QRLoginResponse } from '@/types/user.qr.types';
 import { BaseApiService } from './base.api';
 import type { LoginCredentials, RegisterCredentials, ForgotCredentials, ResetCredentials, AuthResponse } from '~/types/auth.types';
 import { User, UserProfile } from '~/types/user.types';
@@ -40,6 +41,21 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       return data;
     } catch (err) {
       console.error('Error in getUserWithToken:', err);
+      throw err;
+    }
+  }
+
+  async qrLogin(token: string): Promise<QRLoginResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<QRLoginResponse>(
+        `${this.endpoint}/qr-login`,
+        { token }
+      );
+      await this.setToken(data.token.token);
+      await this.setUserProfile(data.user.profil);
+      return data;
+    } catch (err) {
+      console.error('Error in qrLogin:', err);
       throw err;
     }
   }
