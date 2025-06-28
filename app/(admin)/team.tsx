@@ -12,6 +12,8 @@ import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
 import { useToast } from '~/components/ToastProvider';
 import { QRCode } from "~/components/ui/QRCode";
+import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
+import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 
 export default function TeamPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -162,6 +164,27 @@ export default function TeamPage() {
     if (!selectedUserForQr) return;
     await userApiService.revokeQrToken(selectedUserForQr.id);
     showToast('QR code révoqué avec succès', 'success');
+  };
+
+  const getUserActions = (user: User): ActionItem[] => {
+    return [
+      {
+        label: 'Modifier',
+        icon: <Edit2 size={16} color="#4F46E5" />,
+        onPress: () => handleEditUser(user.id ? user.id : '')
+      },
+      {
+        label: 'QR Code',
+        icon: <QrCode size={16} color="#4F46E5" />,
+        onPress: () => handleShowQrCode(user)
+      },
+      {
+        label: 'Supprimer',
+        icon: <Trash size={16} color="#ef4444" />,
+        type: 'destructive',
+        onPress: () => handleDeleteUser(user.id ? user.id : '')
+      }
+    ];
   };
 
   const { width } = useWindowDimensions();
@@ -322,8 +345,8 @@ export default function TeamPage() {
             <ForkTable
               data={users}
               columns={teamTableColumns}
-              onRowPress={handleEditUser}
-              onRowDelete={handleDeleteUser}
+              useActionMenu={true}
+              getActions={getUserActions}
             />
           </TabsContent>
         </Tabs>
@@ -341,7 +364,6 @@ export default function TeamPage() {
           onSave={handleSaveUser}
           onCancel={handleCloseModal}
           activeTab={activeTab}
-          onShowQrCode={currentUser ? () => handleShowQrCode(currentUser) : undefined}
         />
       </CustomModal>
 
