@@ -5,6 +5,7 @@ import { useAppDispatch } from '~/store/hooks';
 import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
 import { router, Link } from 'expo-router';
+import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner'; // chemin relatif à ajuster si besoin
 
 export default function LoginScreen() {
@@ -57,18 +58,29 @@ export default function LoginScreen() {
               Fork'it
             </RNText>
 
-            <Button
-              variant="secondary"
-              style={{ marginBottom: 16 }}
-              onPress={() => setShowQrScanner(true)}
-            >
-              <Text>Connexion via QR code</Text>
-            </Button>
+            <View style={styles.qrButtonContainer}>
+              <Button
+                variant="outline"
+                style={styles.qrButton}
+                onPress={() => setShowQrScanner(true)}
+              >
+                <View style={styles.qrButtonContent}>
+                  <QrCode size={20} color="#1F2937" strokeWidth={2} />
+                  <Text style={styles.qrButtonText}>Connexion via QR code</Text>
+                </View>
+              </Button>
+            </View>
+
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
             {qrResult && (
-              <View style={{ marginBottom: 16 }}>
-                <Text style={{ color: '#6366F1', fontWeight: 'bold' }}>QR scanné :</Text>
-                <Text selectable>{qrResult}</Text>
+              <View style={styles.qrResultContainer}>
+                <Text style={styles.qrResultLabel}>QR scanné :</Text>
+                <Text style={styles.qrResultText} selectable>{qrResult}</Text>
               </View>
             )}
 
@@ -151,6 +163,80 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.5,
     lineHeight: 40,
+  },
+  qrButtonContainer: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  qrButton: {
+    width: '100%',
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  qrButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  qrButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  dividerContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginHorizontal: 16,
+    fontWeight: '500',
+  },
+  qrResultContainer: {
+    width: '100%',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#6366F1',
+  },
+  qrResultLabel: {
+    fontSize: 14,
+    color: '#6366F1',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  qrResultText: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
   },
   input: {
     width: '100%',
