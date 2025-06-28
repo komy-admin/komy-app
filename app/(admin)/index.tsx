@@ -5,7 +5,7 @@ export default function AdminIndex() {
   const pathname = usePathname();
   console.log('index admin =>', pathname);
   if (pathname === '/(admin)' || pathname === '/') {
-    return <Redirect href="/menu" />;
+    return <Redirect href="/service" />;
   }
   return null;
 }

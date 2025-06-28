@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Pressable, Animated, StyleSheet } from 'react-native';
-import { ChevronLeft, ChevronRight, X, ArrowLeft } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Pressable, Animated, StyleSheet, Platform } from 'react-native';
+import { X, SlidersHorizontal} from 'lucide-react-native';
 import { Text } from './ui';
 
 interface SidePanelProps {
@@ -12,6 +12,7 @@ interface SidePanelProps {
   onBack?: () => void;
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  hideCloseButton?: boolean;
 }
 
 export function SidePanel({
@@ -19,32 +20,62 @@ export function SidePanel({
   children,
   title,
   width = 350,
-  collapsedWidth = 0,
+  collapsedWidth = 50,
   onBack,
   isCollapsed: controlledIsCollapsed,
   onCollapsedChange,
+  hideCloseButton = false,
 }: SidePanelProps) {
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
-  const animatedWidth = React.useRef(new Animated.Value(width)).current;
+  
+  // Animations refs
+  const animatedWidth = useRef(new Animated.Value(isCollapsed ? collapsedWidth : width)).current;
+  const collapsedOpacity = useRef(new Animated.Value(isCollapsed ? 1 : 0)).current;
+  const contentOpacity = useRef(new Animated.Value(isCollapsed ? 0 : 1)).current;
+  // Nouvelle approche pour la rotation - utilisation d'une valeur interpolée
+  const rotationValue = useRef(new Animated.Value(0)).current;
+  
+  // Initialisation pour corriger le bug de rotation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+      // PAS d'animation - juste définir la valeur finale directement
+      rotationValue.setValue(1);
+    }, 10);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
+    // Animation de la largeur avec easing plus fluide
     Animated.timing(animatedWidth, {
       toValue: isCollapsed ? collapsedWidth : width,
-      duration: 300,
+      duration: isCollapsed ? 150 : 300,
       useNativeDriver: false,
     }).start();
-  }, [isCollapsed, collapsedWidth, width]);
 
-  // Hide content when collapsed
-  const contentStyle = {
-    opacity: animatedWidth.interpolate({
-      inputRange: [0, 50, width],
-      outputRange: [0, 0, 1],
-    }),
-  };
+    // Animation de l'opacité du contenu collapsed
+    Animated.timing(collapsedOpacity, {
+      toValue: isCollapsed ? 1 : 0,
+      duration: isCollapsed ? 300 : 600,
+      useNativeDriver: true,
+    }).start();
+
+    // Animation de l'opacité du contenu principal
+    Animated.timing(contentOpacity, {
+      toValue: isCollapsed ? 0 : 1,
+      duration: isCollapsed ? 400 : 700,
+      useNativeDriver: true,
+    }).start();
+  }, [isCollapsed, collapsedWidth, width, isInitialized]);
 
   const toggleCollapse = () => {
+    if (hideCloseButton) return;
+    
     const newCollapsedState = !isCollapsed;
     if (onCollapsedChange) {
       onCollapsedChange(newCollapsedState);
@@ -59,6 +90,12 @@ export function SidePanel({
     };
   };
 
+  // Interpolation pour la rotation - plus robuste sur mobile
+  const rotationInterpolate = rotationValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '270deg'],
+  });
+
   return (
     <Animated.View
       style={[
@@ -67,53 +104,79 @@ export function SidePanel({
         { width: animatedWidth, maxWidth: animatedWidth },
       ]}
     >
+      {/* Barre latérale collapsed */}
+      {isCollapsed && (
+        <Animated.View 
+          style={[
+            styles.collapsedBarContainer,
+            { opacity: collapsedOpacity }
+          ]}
+        >
+          <Pressable onPress={toggleCollapse} style={styles.collapsedBar}>
+            <View style={styles.collapsedBarContent}>
+              {/* Section icône */}
+              <Animated.View 
+                style={[
+                  styles.fullWidthIconSection,
+                  { opacity: collapsedOpacity }
+                ]}
+              >
+                <SlidersHorizontal size={20} color="#FFFFFF" strokeWidth={2} />
+              </Animated.View>
+              
+              {/* Texte vertical */}
+              <Animated.View 
+                style={[
+                  styles.textSection,
+                  { opacity: collapsedOpacity }
+                ]}
+              >
+                <View style={styles.textContainer}>
+                  <Animated.Text 
+                    style={[
+                      styles.verticalText,
+                      { 
+                        transform: [{ rotate: rotationInterpolate }],
+                        opacity: isInitialized ? 1 : 0,
+                      }
+                    ]}
+                  >
+                    AFFICHER LES FILTRES
+                  </Animated.Text>
+                </View>
+              </Animated.View>
+            </View>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* Contenu principal */}
       {!isCollapsed && (
-        <Animated.View style={[styles.content, contentStyle]}>
+        <Animated.View style={[styles.content, { opacity: contentOpacity }]}>
           <View
-            className="flex flex-row justify-between"
-            style={{
-              width: '100%',
-              height: 50,
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingLeft: 15,
-              paddingRight: 15,
-              ...getHeaderStyle()
-            }}
+            style={[
+              styles.header,
+              getHeaderStyle()
+            ]}
           >
-            <View style={onBack ? styles.headerCenter : styles.headerLeft}>
-              {onBack ? (
-                <>
-                  <Pressable onPress={onBack} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#2A2E33" />
-                  </Pressable>
-                  <Text className="font-bold text-lg" style={styles.centeredTitle}>{title}</Text>
-                  <Pressable onPress={toggleCollapse}>
-                    <X size={24} color="#2A2E33" />
-                  </Pressable>
-                </>
-              ) : (
-                <>
-                  <Text className="font-bold text-lg">{title}</Text>
-                  <Pressable onPress={toggleCollapse}>
-                    <X size={24} color="#2A2E33" />
-                  </Pressable>
-                </>
+            <View style={styles.headerLeft}>
+              <Text 
+                style={styles.title}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {title}
+              </Text>
+              {!hideCloseButton && (
+                <Pressable onPress={toggleCollapse} style={styles.backButton}>
+                  <X size={24} color="#2A2E33" />
+                </Pressable>
               )}
             </View>
           </View>
           {children}
         </Animated.View>
       )}
-      <Pressable onPress={toggleCollapse} style={styles.togglePressable}>
-        <View style={styles.toggleButton}>
-          {isCollapsed ? (
-            <ChevronRight size={24} color="#2A2E33" />
-          ) : (
-            <ChevronLeft size={24} color="#2A2E33" />
-          )}
-        </View>
-      </Pressable>
     </Animated.View>
   );
 }
@@ -122,50 +185,90 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
-    zIndex: 1000
+    zIndex: 1000,
   },
   content: {
     flex: 1,
+  },
+  header: {
+    width: '100%',
+    height: 50,
+    justifyContent: 'center',
+    paddingHorizontal: 15,
   },
   headerLeft: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
   },
-  headerCenter: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  centeredTitle: {
-    flex: 1,
-    textAlign: 'center',
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2A2E33',
+    maxWidth: 280,
+    textAlign: 'left',
   },
   backButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 6,
+    marginLeft: 12, // Espacement fixe
   },
-  togglePressable: {
-    position: 'absolute',
-    right: -54,
-    top: '50%',
-    transform: [{ translateY: -42 }],
-    padding: 30,
+  collapsedBarContainer: {
+    flex: 1,
+    width: '100%',
   },
-  toggleButton: {
+  collapsedBar: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 2, height: 0 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+      },
+    }),
+  },
+  collapsedBarContent: {
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-end',
+  },
+  fullWidthIconSection: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#718096',
     justifyContent: 'center',
     alignItems: 'center',
-    width: 24,
-    height: 24,
-    backgroundColor: '#FBFBFB',
-    borderRadius: 0,
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e0e0e0',
-    zIndex: 1000
+  },
+  textSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  textContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 200,
+    width: 50,
+  },
+  verticalText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#718096',
+    letterSpacing: 1.2,
+    textAlign: 'center',
+    width: 200,
   },
 });

@@ -263,6 +263,7 @@ export default function ServicePage () {
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <SidePanel
         style={{ flex: 1}}
+        hideCloseButton={true}
         title={currentOrder ? `Commande ${currentOrder.table.name}` : 'Service'}
         {...(currentOrder && { onBack: () => {
           if (showMenu) setShowMenu(false)

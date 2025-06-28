@@ -14,7 +14,7 @@ import { MenuForm } from "~/components/form/MenuForm";
 import { useToast } from '~/components/ToastProvider';
 
 export default function MenuPage() {
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("ALL");
   const [items, setItems] = useState<Item[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);

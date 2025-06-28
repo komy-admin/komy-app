@@ -15,7 +15,7 @@ import { useFilter } from '~/hooks/useFilter';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 
 export default function RoomListPage() {
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);

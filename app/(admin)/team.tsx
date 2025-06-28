@@ -13,7 +13,7 @@ import { TeamForm } from "~/components/form/TeamForm";
 import { useToast } from '~/components/ToastProvider';
 
 export default function TeamPage() {
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<UserProfile | 'all'>('all');
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
