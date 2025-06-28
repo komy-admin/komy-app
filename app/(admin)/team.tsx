@@ -14,6 +14,8 @@ import { useToast } from '~/components/ToastProvider';
 import { QRCode } from "~/components/ui/QRCode";
 import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
+import { useSelector } from 'react-redux';
+import { RootState } from '~/store';
 
 export default function TeamPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -27,7 +29,8 @@ export default function TeamPage() {
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrSuccess, setQrSuccess] = useState<string | null>(null);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { currentUser } = useSelector((state: RootState) => state.auth);
+  const [User, setUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { showToast } = useToast();
 
@@ -76,20 +79,20 @@ export default function TeamPage() {
   });
 
   const handleCreateUser = () => {
-    setCurrentUser(null);
+    setUser(null);
     setIsModalVisible(true);
   };
 
   const handleEditUser = (id: string) => {
     const user = users.find(user => user.id === id);
     if (!user) return;
-    setCurrentUser(user);
+    setUser(user);
     setIsModalVisible(true);
   };
 
   const handleCloseModal = () => {
     setIsModalVisible(false);
-    setCurrentUser(null);
+    setUser(null);
   };
 
   const handleSaveUser = async (user: User) => {
@@ -173,11 +176,11 @@ export default function TeamPage() {
         icon: <Edit2 size={16} color="#4F46E5" />,
         onPress: () => handleEditUser(user.id ? user.id : '')
       },
-      {
+      ...(currentUser?.profil === 'admin' || 'superadmin' ? [{
         label: 'QR Code',
         icon: <QrCode size={16} color="#4F46E5" />,
         onPress: () => handleShowQrCode(user)
-      },
+      }] : []),
       {
         label: 'Supprimer',
         icon: <Trash size={16} color="#ef4444" />,
@@ -357,10 +360,10 @@ export default function TeamPage() {
         onClose={handleCloseModal}
         width={600}
         height={675}
-        title={currentUser ? "Modifier l'utilisateur" : "Créer un utilisateur"}
+        title={User ? "Modifier l'utilisateur" : "Créer un utilisateur"}
       >
         <TeamForm
-          user={currentUser}
+          user={User}
           onSave={handleSaveUser}
           onCancel={handleCloseModal}
           activeTab={activeTab}
