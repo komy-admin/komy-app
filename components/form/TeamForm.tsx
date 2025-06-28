@@ -6,12 +6,14 @@ import { User, UserProfile } from '~/types/user.types';
 import { getEnumValue } from '~/lib/utils';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
+import { QrCode } from 'lucide-react-native';
 
 interface TeamFormProps {
   user: User | null;
   onSave: (user: User) => void;
   onCancel: () => void;
   activeTab: UserProfile | 'all';
+  onShowQrCode?: () => void;
 }
 
 const initialFormData = {
@@ -28,7 +30,7 @@ const defaultOption = {
   label: 'Choisissez un rôle',
 };
 
-export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
+export function TeamForm({ user, onSave, onCancel, activeTab, onShowQrCode }: TeamFormProps) {
   const [formData, setFormData] = useState(initialFormData);
   const [selectedOption, setSelectedOption] = useState(defaultOption);
   const [isPasswordModified, setIsPasswordModified] = useState(false);
@@ -83,7 +85,7 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
       const userTypeKey = Object.keys(UserProfile).find(
         key => UserProfile[key as keyof typeof UserProfile] === user.profil
       );
-      
+
       if (userTypeKey) {
         setSelectedOption({
           value: userTypeKey,
@@ -93,7 +95,7 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
     } else {
       setFormData(initialFormData);
       setIsPasswordModified(false);
-      
+
       if (activeTab !== 'all') {
         const profileKey = Object.keys(UserProfile).find(
           key => UserProfile[key as keyof typeof UserProfile] === activeTab
@@ -119,7 +121,7 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
     };
 
     const errors = validateForm(dataToValidate, validationRules);
-    
+
     if (errors.length > 0) {
       showToast(errors[0].message, 'error');
       return;
@@ -255,6 +257,22 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
       </View>
 
       <View style={styles.buttonSection}>
+        {user && onShowQrCode && (
+          <Button
+            onPress={onShowQrCode}
+            variant="outline"
+            size={null}
+            style={styles.qrButton}
+          >
+            <View style={styles.qrButtonContent}>
+              <QrCode size={20} color="#2A2E33" />
+              <Text style={styles.qrButtonText}>
+                QR Code
+              </Text>
+            </View>
+          </Button>
+        )}
+
         <Button
           onPress={handleSubmit}
           variant="default"
@@ -265,8 +283,8 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
             {user ? 'Enregistrer les modifications' : 'Confirmer la création'}
           </Text>
         </Button>
-        
-        <Button 
+
+        <Button
           onPress={onCancel}
           variant="ghost"
           size={null}
@@ -334,6 +352,29 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     paddingTop: 24,
     gap: 12,
+  },
+  qrButton: {
+    backgroundColor: 'transparent',
+    borderColor: '#2A2E33',
+    borderWidth: 1,
+    borderRadius: 8,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer'
+    })
+  },
+  qrButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  qrButtonText: {
+    color: '#2A2E33',
+    fontWeight: '500',
+    fontSize: 16,
   },
   submitButton: {
     backgroundColor: '#2A2E33',

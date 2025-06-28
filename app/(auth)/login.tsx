@@ -1,14 +1,17 @@
-import { View, StyleSheet, Platform, Text as RNText, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, Text as RNText, KeyboardAvoidingView, ScrollView, Modal } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
 import { router, Link } from 'expo-router';
+import QrCodeScanner from '../../components/auth/QrCodeScanner'; // chemin relatif à ajuster si besoin
 
 export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [qrResult, setQrResult] = useState<string | null>(null);
   const dispatch = useAppDispatch();
 
   const handleLogin = async () => {
@@ -22,59 +25,102 @@ export default function LoginScreen() {
     }
   };
 
+  const handleQrScan = async (data: string) => {
+    setQrResult(data);
+    setShowQrScanner(false);
+    const qrLogin = await authApiService.qrLogin(data);
+    if (!qrLogin.token.token) {
+      console.error('Token non trouvé');
+      return;
+    }
+    const currentUser = await authApiService.getUserWithToken();
+    console.log('QR login response:', qrLogin);
+    dispatch(setCredentials({ token: qrLogin.token.token, userProfile: currentUser.profil }));
+    dispatch(setCurrentUser(currentUser));
+    router.replace(`/${currentUser.profil}/` as any);
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={styles.contentContainer}>
-          <RNText style={styles.title}>
-            Fork'it
-          </RNText>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentContainer}>
+            <RNText style={styles.title}>
+              Fork'it
+            </RNText>
 
-          <TextInput
-            id="LoginId"
-            value={loginId}
-            onChangeText={setLoginId}
-            placeholder="Identifiant"
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          
-          <TextInput
-            id="LoginPassword" 
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Mot de passe"
-            secureTextEntry
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+            <Button
+              variant="secondary"
+              style={{ marginBottom: 16 }}
+              onPress={() => setShowQrScanner(true)}
+            >
+              <Text>Connexion via QR code</Text>
+            </Button>
 
-          <View style={styles.forgotPasswordContainer}>
-            <Link href="/forgot-password" asChild>
-              <Text style={styles.forgotPasswordText}>
-                Mot de passe oublié ?
-              </Text>
-            </Link>
+            {qrResult && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ color: '#6366F1', fontWeight: 'bold' }}>QR scanné :</Text>
+                <Text selectable>{qrResult}</Text>
+              </View>
+            )}
+
+            <TextInput
+              id="LoginId"
+              value={loginId}
+              onChangeText={setLoginId}
+              placeholder="Identifiant"
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <TextInput
+              id="LoginPassword"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Mot de passe"
+              secureTextEntry
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={styles.forgotPasswordContainer}>
+              <Link href="/forgot-password" asChild>
+                <Text style={styles.forgotPasswordText}>
+                  Mot de passe oublié ?
+                </Text>
+              </Link>
+            </View>
+
+            <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
+              <Text style={styles.loginButtonText}>Se connecter</Text>
+            </Button>
           </View>
-          
-          <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Se connecter</Text>
-          </Button>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <Modal
+        visible={showQrScanner}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowQrScanner(false)}
+      >
+        <QrCodeScanner
+          onScan={handleQrScan}
+          onCancel={() => setShowQrScanner(false)}
+        />
+      </Modal>
+    </>
   );
 }
 
