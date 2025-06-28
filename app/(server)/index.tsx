@@ -217,7 +217,6 @@ export default function ServerHome() {
         pathname: '/(server)/order/menu',
         params: { orderId: order.id }
       });
-      showToast('Commande créée avec succès.', 'success');
     } catch (error) {
       showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
       console.error(error);
@@ -598,13 +597,13 @@ export default function ServerHome() {
           height: 4,
         }}
         handleStyle={{
-          backgroundColor: '#ffffff',
+          backgroundColor: '#f8f9fa',
           borderTopLeftRadius: 15,
           borderTopRightRadius: 15,
           paddingVertical: 12,
         }}
         backgroundStyle={{
-          backgroundColor: '#ffffff',
+          backgroundColor: '#f8f9fa',
         }}
         style={{
           shadowColor: "#000",

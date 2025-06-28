@@ -144,6 +144,13 @@ export default function OrderDetailPage() {
     });
   };
 
+  const handleBackPress = () => {
+    if (order?.orderItems.length === 0) {
+      deleteOrder();
+    }
+    router.back();
+  };
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
@@ -168,7 +175,7 @@ export default function OrderDetailPage() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-background border-b border-border">
         <Pressable
-          onPress={() => router.back()}
+          onPress={handleBackPress}
           className="flex-row items-center"
         >
           <ArrowLeft size={24} color="#374151" />
