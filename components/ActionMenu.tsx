@@ -21,13 +21,14 @@ export type ActionItem = {
 
 type ActionMenuProps = {
   actions: ActionItem[];
+  width?: number;
 };
 
-export function ActionMenu({ actions }: ActionMenuProps) {
+export function ActionMenu({ actions, width = 180 }: ActionMenuProps) {
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, right: 0 });
   const buttonRef = useRef<View>(null);
-  
+
   // Animation values
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
@@ -35,31 +36,31 @@ export function ActionMenu({ actions }: ActionMenuProps) {
 
   const handlePress = () => {
     if (buttonRef.current) {
-      buttonRef.current.measure((x, y, width, height, pageX, pageY) => {
+      buttonRef.current.measure((x, y, buttonWidth, height, pageX, pageY) => {
         // Calcul intelligent de la position pour éviter les débordements
-        const menuWidth = 180;
+        const menuWidth = width;
         const menuHeight = actions.length * 48 + 16; // Hauteur estimée du menu
-        
+
         let finalTop = pageY + height + 8;
-        let finalRight = SCREEN_WIDTH - pageX - width;
-        
+        let finalRight = SCREEN_WIDTH - pageX - buttonWidth;
+
         // Ajustement si le menu dépasse en bas
         if (finalTop + menuHeight > SCREEN_HEIGHT - 50) {
           finalTop = pageY - menuHeight - 8;
         }
-        
+
         // Ajustement si le menu dépasse à droite
         if (finalRight + menuWidth > SCREEN_WIDTH - 20) {
           finalRight = 20;
         }
-        
+
         setPosition({
           top: finalTop,
           right: Math.max(finalRight, 20)
         });
-        
+
         setVisible(true);
-        
+
         // Démarrer les animations
         opacity.value = withTiming(1, { duration: 200 });
         scale.value = withSpring(1, {
@@ -110,8 +111,8 @@ export function ActionMenu({ actions }: ActionMenuProps) {
 
   return (
     <View style={styles.menuButtonContainer}>
-      <Pressable 
-        ref={buttonRef} 
+      <Pressable
+        ref={buttonRef}
         onPress={handlePress}
         style={({ pressed }) => [
           styles.menuButton,
@@ -126,7 +127,7 @@ export function ActionMenu({ actions }: ActionMenuProps) {
       >
         <View style={[
           styles.menuButtonInner,
-          Platform.OS !== 'web' && { 
+          Platform.OS !== 'web' && {
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.1,
@@ -146,17 +147,18 @@ export function ActionMenu({ actions }: ActionMenuProps) {
         statusBarTranslucent={true}
       >
         <Animated.View style={[styles.backdrop, backdropAnimatedStyle]}>
-          <Pressable 
+          <Pressable
             style={StyleSheet.absoluteFill}
             onPress={hideMenu}
           >
-            <Animated.View 
+            <Animated.View
               style={[
-                styles.menuContainer, 
+                styles.menuContainer,
                 menuAnimatedStyle,
-                { 
-                  top: position.top, 
+                {
+                  top: position.top,
                   right: position.right,
+                  width: width,
                   maxHeight: SCREEN_HEIGHT * 0.6, // Limite la hauteur du menu
                 }
               ]}
@@ -175,8 +177,8 @@ export function ActionMenu({ actions }: ActionMenuProps) {
                     setTimeout(() => action.onPress(), 100);
                   }}
                   android_ripple={{
-                    color: action.type === 'destructive' 
-                      ? 'rgba(239, 68, 68, 0.1)' 
+                    color: action.type === 'destructive'
+                      ? 'rgba(239, 68, 68, 0.1)'
                       : 'rgba(42, 46, 51, 0.05)',
                   }}
                 >
@@ -186,7 +188,7 @@ export function ActionMenu({ actions }: ActionMenuProps) {
                         {action.icon}
                       </View>
                     )}
-                    <Text 
+                    <Text
                       style={[
                         styles.menuItemText,
                         action.type === 'destructive' && styles.destructiveText
@@ -255,7 +257,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 12,
-    width: 180,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.6)',
     overflow: 'hidden',

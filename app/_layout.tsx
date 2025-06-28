@@ -17,6 +17,7 @@ import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from 'react-native-reanimated';
+import { ToastProvider } from '@/components/ToastProvider';
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -53,19 +54,19 @@ function AuthenticationGate() {
   const dispatch = useDispatch();
   const { token, userProfile, isLoading } = useSelector((state: RootState) => state.auth);
   const [isInitialized, setIsInitialized] = React.useState(false);
-  
+
   React.useEffect(() => {
     const initializeAuth = async () => {
       try {
         const storedToken = await storageService.getItem('token');
         const storedUserProfile = await storageService.getItem('userProfile');
-        
+
         if (storedToken && storedUserProfile) {
           dispatch(setCredentials({
             token: storedToken,
             userProfile: storedUserProfile as UserProfile
           }));
-          
+
           try {
             const user = await authApiService.getUserWithToken();
             dispatch(setCurrentUser(user));
@@ -82,15 +83,15 @@ function AuthenticationGate() {
         setIsInitialized(true);
       }
     };
-  
+
     initializeAuth();
   }, [dispatch]);
-  
+
   React.useEffect(() => {
     if (!isInitialized || isLoading) {
       return;
     }
-    
+
     const fullPath = segments.length ? `/${segments.join('/')}` : '/';
     if (fullPath === '/(auth)/forgot-password') return
     if (fullPath === '/(auth)/reset-password') return
@@ -98,11 +99,11 @@ function AuthenticationGate() {
       if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
         return;
       }
-      
+
       router.replace(LOGIN_ROUTE);
       return;
     }
-    
+
     if (token && userProfile) {
       if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
         const role = userProfile as keyof typeof HOME_ROUTES;
@@ -111,11 +112,11 @@ function AuthenticationGate() {
           router.replace(LOGIN_ROUTE);
           return;
         }
-        
+
         router.replace(HOME_ROUTES[role] as any);
         return;
       }
-      
+
       const firstSegment = segments[0];
       if (firstSegment && !PROTECTED_ROUTES[userProfile as keyof ProtectedRoutes]?.includes(firstSegment)) {
         const role = userProfile as keyof typeof HOME_ROUTES;
@@ -159,12 +160,14 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <SocketProvider>
-          <RootLayoutNav />
-        </SocketProvider>
-      </Provider>
-    </GestureHandlerRootView>
+    <ToastProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Provider store={store}>
+          <SocketProvider>
+            <RootLayoutNav />
+          </SocketProvider>
+        </Provider>
+      </GestureHandlerRootView>
+    </ToastProvider>
   );
 }
