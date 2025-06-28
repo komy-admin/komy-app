@@ -11,42 +11,48 @@ import { FilterConfig } from "~/hooks/useFilter/types";
 import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
 import { useToast } from '~/components/ToastProvider';
+import { QRCode } from "~/components/ui/QRCode";
 
 export default function TeamPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<UserProfile | 'all'>('all');
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [selectedUserForQr, setSelectedUserForQr] = useState<User | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrSuccess, setQrSuccess] = useState<string | null>(null);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { showToast } = useToast();
-  
+
   const filterUser: FilterConfig<User>[] = [
-    { 
-      field: 'firstName', 
+    {
+      field: 'firstName',
       type: 'text',
       label: 'Prénom',
       operator: 'like',
       show: true
     },
-    { 
-      field: 'lastName', 
+    {
+      field: 'lastName',
       type: 'text',
       label: 'Nom',
       operator: 'like',
       show: true
     },
-    { 
-      field: 'email', 
+    {
+      field: 'email',
       type: 'text',
       label: 'Email',
       operator: 'like',
       show: true
     },
-    { 
-      field: 'phone', 
+    {
+      field: 'phone',
       type: 'number',
       label: 'Numéro de téléphone',
       operator: 'like',
@@ -66,12 +72,6 @@ export default function TeamPage() {
     service: userApiService,
     onDataChange: (response) => setUsers(response.data)
   });
-
-  useEffect(() => {
-    if (users) {
-      setIsLoading(false);
-    }
-  }, [users]);
 
   const handleCreateUser = () => {
     setCurrentUser(null);
@@ -94,7 +94,7 @@ export default function TeamPage() {
     try {
       if (user.id) {
         await userApiService.update(user.id, user);
-        setUsers(prevUsers => 
+        setUsers(prevUsers =>
           prevUsers.map(u => u.id === user.id ? user : u)
         );
         showToast('Utilisateur modifié avec succès', 'success');
@@ -121,7 +121,7 @@ export default function TeamPage() {
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
-    
+
     try {
       await userApiService.delete(userToDelete.id);
       setUsers(users.filter(user => user.id !== userToDelete.id));
@@ -135,7 +135,36 @@ export default function TeamPage() {
     }
   };
 
-  const { width, height } = useWindowDimensions();
+  const handleShowQrCode = async (user: User) => {
+    setSelectedUserForQr(user);
+    setQrModalVisible(true);
+    setQrCodeToken(null);
+    setQrError(null);
+    setQrSuccess(null);
+    setQrLoading(true);
+
+    try {
+      const res = await userApiService.generateQrToken(user.id);
+      console.log('QR API response:', res);
+      setQrCodeToken(res.qrData.token);
+    } catch (e: any) {
+      setQrError("Erreur lors de la génération du QR code");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleShareQr = () => {
+    console.log('Partager QR Code pour:', selectedUserForQr?.firstName, selectedUserForQr?.lastName);
+  };
+
+  const handleRevokeQr = async () => {
+    if (!selectedUserForQr) return;
+    await userApiService.revokeQrToken(selectedUserForQr.id);
+    showToast('QR code révoqué avec succès', 'success');
+  };
+
+  const { width } = useWindowDimensions();
 
   const teamTableColumns = [
     {
@@ -167,10 +196,10 @@ export default function TeamPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel 
-        title="Filtrage" 
-        width={width / 4} 
-        isCollapsed={isPanelCollapsed} 
+      <SidePanel
+        title="Filtrage"
+        width={width / 4}
+        isCollapsed={isPanelCollapsed}
         onCollapsedChange={setIsPanelCollapsed}
       >
         <View style={{ padding: 15 }}>
@@ -185,7 +214,7 @@ export default function TeamPage() {
           />
         </View>
       </SidePanel>
-      
+
       <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Tabs
           style={{ flex: 1, backgroundColor: '#FFFFFF' }}
@@ -200,17 +229,17 @@ export default function TeamPage() {
             setActiveTab(newTab);
           }}
         >
-          <View 
-            style={{ 
+          <View
+            style={{
               backgroundColor: '#FBFBFB',
               height: 50,
               position: 'relative'
             }}
           >
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
-              style={{ 
+              style={{
                 maxWidth: '80%'
               }}
               contentContainerStyle={{
@@ -218,16 +247,16 @@ export default function TeamPage() {
                 height: 50
               }}
             >
-              <TabsList 
-                className="flex-row justify-start h-full" 
-                style={{ 
+              <TabsList
+                className="flex-row justify-start h-full"
+                style={{
                   paddingTop: 4,
                   height: 50
                 }}
               >
-                <TabsTrigger 
-                  value="all" 
-                  className="flex-row h-full" 
+                <TabsTrigger
+                  value="all"
+                  className="flex-row h-full"
                   style={{ width: 100, minWidth: 100 }}
                 >
                   <Text style={{ color: activeTab === 'all' ? '#2A2E33' : '#A0A0A0' }}>
@@ -237,10 +266,10 @@ export default function TeamPage() {
                 {Object.values(UserProfile)
                   .filter(type => !['superadmin', 'admin'].includes(type))
                   .map((type) => (
-                    <TabsTrigger 
-                      key={type} 
-                      value={type} 
-                      className="flex-row h-full" 
+                    <TabsTrigger
+                      key={type}
+                      value={type}
+                      className="flex-row h-full"
                       style={{ width: 100, minWidth: 100 }}
                     >
                       <Text style={{ color: activeTab === type ? '#2A2E33' : '#A0A0A0' }}>
@@ -250,10 +279,10 @@ export default function TeamPage() {
                   ))}
               </TabsList>
             </ScrollView>
-            
-            <View 
-              style={{ 
-                width: 200, 
+
+            <View
+              style={{
+                width: 200,
                 position: 'absolute',
                 right: 0,
                 top: 0,
@@ -269,11 +298,11 @@ export default function TeamPage() {
               <Button
                 onPress={handleCreateUser}
                 className="w-[200px] h-[50px] flex items-center justify-center"
-                style={{ 
-                  backgroundColor: '#2A2E33', 
-                  borderRadius: 0, 
+                style={{
+                  backgroundColor: '#2A2E33',
+                  borderRadius: 0,
                   height: 50,
-                  width: 200 
+                  width: 200
                 }}
               >
                 <Text style={{
@@ -290,7 +319,7 @@ export default function TeamPage() {
           </View>
 
           <TabsContent style={{ flex: 1 }} value={activeTab}>
-            <ForkTable 
+            <ForkTable
               data={users}
               columns={teamTableColumns}
               onRowPress={handleEditUser}
@@ -312,6 +341,7 @@ export default function TeamPage() {
           onSave={handleSaveUser}
           onCancel={handleCloseModal}
           activeTab={activeTab}
+          onShowQrCode={currentUser ? () => handleShowQrCode(currentUser) : undefined}
         />
       </CustomModal>
 
@@ -332,16 +362,16 @@ export default function TeamPage() {
               Êtes-vous sûr de vouloir supprimer le profil {userToDelete?.firstName} {userToDelete?.lastName} ?
             </Text>
             <Text style={styles.deleteWarning}>
-            {'(Cette action est irréversible.)'}
+              {'(Cette action est irréversible.)'}
             </Text>
           </View>
           <View style={styles.deleteButtonContainer}>
             <Button
-                onPress={confirmDelete}
-                style={styles.deleteButton}
-                variant="destructive"
-              >
-                <Text style={styles.deleteButtonText}>Supprimer</Text>
+              onPress={confirmDelete}
+              style={styles.deleteButton}
+              variant="destructive"
+            >
+              <Text style={styles.deleteButtonText}>Supprimer</Text>
             </Button>
             <Button
               onPress={() => {
@@ -355,6 +385,63 @@ export default function TeamPage() {
             </Button>
           </View>
         </View>
+      </CustomModal>
+
+      <CustomModal
+        isVisible={qrModalVisible}
+        onClose={() => {
+          setQrModalVisible(false);
+          setSelectedUserForQr(null);
+          setQrCodeToken(null);
+          setQrError(null);
+          setQrSuccess(null);
+        }}
+        width={450}
+        height={500}
+        title="QR Code Utilisateur"
+      >
+        {selectedUserForQr && (
+          <View style={styles.qrModalContent}>
+            <View style={styles.qrCodeContainer}>
+              {qrLoading && (
+                <Text style={styles.loadingText}>Chargement du QR code...</Text>
+              )}
+              {qrError && (
+                <Text style={styles.errorText}>{qrError}</Text>
+              )}
+              {qrSuccess && (
+                <Text style={styles.successText}>{qrSuccess}</Text>
+              )}
+              {!qrLoading && !qrError && qrCodeToken && (
+                <QRCode value={qrCodeToken} size={220} />
+              )}
+            </View>
+
+            <Text style={styles.userNameText}>
+              {selectedUserForQr.firstName} {selectedUserForQr.lastName}
+            </Text>
+
+            <View style={styles.qrButtonContainer}>
+              <Button
+                onPress={handleShareQr}
+                style={styles.shareButton}
+                variant="outline"
+                disabled={!qrCodeToken || qrLoading}
+              >
+                <Text style={styles.shareButtonText}>Partager</Text>
+              </Button>
+
+              <Button
+                onPress={handleRevokeQr}
+                style={styles.revokeButton}
+                variant="destructive"
+                disabled={!qrCodeToken || qrLoading}
+              >
+                <Text style={styles.revokeButtonText}>Révoquer</Text>
+              </Button>
+            </View>
+          </View>
+        )}
       </CustomModal>
     </View>
   );
@@ -406,6 +493,72 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   deleteButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  qrModalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  qrCodeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginVertical: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF4444',
+    marginVertical: 40,
+    textAlign: 'center',
+  },
+  successText: {
+    fontSize: 16,
+    color: '#00AA00',
+    marginVertical: 40,
+    textAlign: 'center',
+  },
+  userNameText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2A2E33',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  qrButtonContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+  },
+  shareButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderColor: '#2A2E33',
+    borderWidth: 1,
+    borderRadius: 6,
+  },
+  shareButtonText: {
+    color: '#2A2E33',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  revokeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#FF4444',
+    borderRadius: 6,
+  },
+  revokeButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
