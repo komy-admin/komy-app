@@ -8,6 +8,7 @@ export function useFilter<T>({
   config,
   defaultParams = { page: 1, perPage: 100 },
   onDataChange,
+  onError,
   loadOnMount = true
 }: UseFilterProps<T>) {
   const [queryParams, setQueryParams] = useState<QueryParams>({
@@ -32,12 +33,18 @@ export function useFilter<T>({
       const queryString = FilterQueryBuilder.build(params);
       const response = await service.getAll(queryString);
       onDataChange(response);
-      setLoading(false);
+      setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Une erreur est survenue'));
+      const error = err instanceof Error ? err : new Error('Une erreur est survenue');
+      setError(error);
+      
+      if (onError) {
+        onError(error);
+      }
+      
       setLoading(false);
     }
-  }, [service, onDataChange]);
+  }, [service, onDataChange, onError]);
 
   const debouncedLoadData = useCallback(
     debounce((params: QueryParams) => loadData(params), 300),
@@ -106,5 +113,4 @@ export function useFilter<T>({
     clearFilters,
     changePage
   };
- 
 }

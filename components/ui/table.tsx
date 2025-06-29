@@ -13,8 +13,9 @@ import {
   UIManager,
   TouchableWithoutFeedback
 } from 'react-native';
-import { Trash2, Edit2 } from 'lucide-react-native';
+import { Trash2, CreditCard as Edit2 } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
+import { TableLoader } from '~/components/TableLoader';
 
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -36,6 +37,9 @@ interface ForkTableProps {
   onRowDelete?: (id: string) => void;
   useActionMenu?: boolean;
   getActions?: (item: any) => ActionItem[];
+  isLoading?: boolean;
+  loadingMessage?: string;
+  emptyMessage?: string;
 }
 
 const Table = React.forwardRef<
@@ -104,13 +108,22 @@ const TableCell = React.forwardRef<
 ));
 TableCell.displayName = 'TableCell';
 
+const EmptyState: React.FC<{ message: string }> = ({ message }) => (
+  <View style={styles.emptyState}>
+    <Text style={styles.emptyMessage}>{message}</Text>
+  </View>
+);
+
 const ForkTable = ({ 
   data, 
   columns, 
   onRowPress, 
   onRowDelete,
   useActionMenu = false,
-  getActions
+  getActions,
+  isLoading = false,
+  loadingMessage = "Chargement des données...",
+  emptyMessage = "Aucune donnée disponible"
 }: ForkTableProps) => {
   const renderItem = React.useCallback(({ item, index }: { item: any; index: number }) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -168,6 +181,78 @@ const ForkTable = ({
       </TableRow>
     );
   }, [columns, onRowPress, onRowDelete, useActionMenu, getActions]);
+
+  // Affichage du loader pendant le chargement
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Table style={styles.table}>
+          <TableHeader style={styles.header}>
+            <TableRow style={styles.headerRow}>
+              {columns.map((column) => (
+                <TableHead 
+                  key={column.key}
+                  style={[
+                    styles.headerCell,
+                    { width: column.width as DimensionValue }
+                  ]}
+                >
+                  {column.label && (
+                    <View style={styles.headerTextContainer}>
+                      <Text 
+                        style={styles.headerText}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {column.label}
+                      </Text>
+                    </View>
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableLoader message={loadingMessage} />
+        </Table>
+      </View>
+    );
+  }
+
+  // Affichage de l'état vide si pas de données
+  if (!data || data.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Table style={styles.table}>
+          <TableHeader style={styles.header}>
+            <TableRow style={styles.headerRow}>
+              {columns.map((column) => (
+                <TableHead 
+                  key={column.key}
+                  style={[
+                    styles.headerCell,
+                    { width: column.width as DimensionValue }
+                  ]}
+                >
+                  {column.label && (
+                    <View style={styles.headerTextContainer}>
+                      <Text 
+                        style={styles.headerText}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {column.label}
+                      </Text>
+                    </View>
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <EmptyState message={emptyMessage} />
+        </Table>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -302,7 +387,20 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
-  }
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#FAFAFA',
+  },
+  emptyMessage: {
+    fontSize: 16,
+    color: '#999999',
+    fontWeight: '400',
+    textAlign: 'center',
+  },
 });
 
 export { 

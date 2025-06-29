@@ -51,26 +51,34 @@ export default function MenuPage() {
   ];
 
   const { updateFilter, loading, clearFilters, queryParams } = useFilter<Item>({
-    config: filterItem,
     service: itemApiService,
-    onDataChange: (response) => setItems(response.data)
+    config: filterItem,
+    onDataChange: (response) => {
+      setItems(response.data);
+      setIsLoading(false);
+    },
+    onError: (error) => {
+      console.error('Error loading items:', error);
+      showToast('Erreur lors du chargement des articles', 'error');
+      setIsLoading(false);
+    }
   });
 
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadItemTypes = async () => {
       try {
         setIsLoading(true);
-        const { data } = await itemTypeApiService.getAll()
+        const { data } = await itemTypeApiService.getAll();
         setItemTypes(data);
       } catch (err) {
-        console.error('Error loading initial data:', err);
-        Alert.alert('Error', 'Failed to load data');
+        console.error('Error loading item types:', err);
+        showToast('Erreur lors du chargement des types d\'articles', 'error');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadInitialData();
+    loadItemTypes();
   }, []);
 
   const handleCreateItem = () => {
@@ -302,6 +310,9 @@ export default function MenuPage() {
               columns={itemTableColumns}
               onRowPress={handleEditItem}
               onRowDelete={handleDeleteItem}
+              isLoading={isLoading || loading}
+              loadingMessage="Chargement des articles..."
+              emptyMessage="Aucun article trouvé"
             />
           </TabsContent>
         </Tabs>

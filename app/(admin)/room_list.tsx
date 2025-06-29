@@ -1,5 +1,5 @@
 import { View, StyleSheet, Text, ScrollView, useWindowDimensions } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { SidePanel } from '~/components/SidePanel';
 import { Button, ForkTable } from '~/components/ui';
@@ -17,7 +17,6 @@ import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 export default function RoomListPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
@@ -50,27 +49,16 @@ export default function RoomListPage() {
   ];
 
   const { updateFilter, loading, clearFilters, queryParams } = useFilter<Room>({
-    config: filterRoom,
     service: roomApiService,
-    onDataChange: (response) => setRooms(response.data)
-  });
-
-  useEffect(() => {
-    fetchRooms();
-  }, []);
-
-  const fetchRooms = async () => {
-    try {
-      setIsLoading(true);
-      const { data } = await roomApiService.getAll();
-      setRooms(data);
-    } catch (err) {
-      console.error('Error loading rooms:', err);
+    config: filterRoom,
+    onDataChange: (response) => {
+      setRooms(response.data);
+    },
+    onError: (error) => {
+      console.error('Error loading rooms:', error);
       showToast('Erreur lors du chargement des salles', 'error');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
   const handleCreateRoom = () => {
     setCurrentRoom(null);
@@ -259,6 +247,9 @@ export default function RoomListPage() {
           onRowPress={handleEditRoom}
           useActionMenu={true}
           getActions={getRoomActions}
+          isLoading={loading}
+          loadingMessage="Chargement des salles..."
+          emptyMessage="Aucune salle trouvée"
         />
       </View>
 

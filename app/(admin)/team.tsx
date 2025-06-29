@@ -1,7 +1,7 @@
 import { View, ScrollView, useWindowDimensions, Text, StyleSheet, Platform } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { userApiService } from "~/api/user.api";
 import { getUserProfileText } from "~/lib/utils";
@@ -73,9 +73,15 @@ export default function TeamPage() {
   ];
 
   const { updateFilter, loading, clearFilters, queryParams } = useFilter<User>({
-    config: filterUser,
     service: userApiService,
-    onDataChange: (response) => setUsers(response.data)
+    config: filterUser,
+    onDataChange: (response) => {
+      setUsers(response.data);
+    },
+    onError: (error) => {
+      console.error('Error loading users:', error);
+      showToast('Erreur lors du chargement des utilisateurs', 'error');
+    }
   });
 
   const handleCreateUser = () => {
@@ -350,6 +356,9 @@ export default function TeamPage() {
               columns={teamTableColumns}
               useActionMenu={true}
               getActions={getUserActions}
+              isLoading={loading}
+              loadingMessage="Chargement des utilisateurs..."
+              emptyMessage="Aucun utilisateur trouvé"
             />
           </TabsContent>
         </Tabs>

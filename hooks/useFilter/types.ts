@@ -22,6 +22,7 @@ export interface UseFilterProps<T> {
   config: FilterConfig<T>[];
   defaultParams?: Partial<QueryParams>;
   onDataChange: (data: PaginatedResponse<T>) => void;
+  onError?: (error: Error) => void;
   loadOnMount?: boolean;
 }
 
