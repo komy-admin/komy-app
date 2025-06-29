@@ -132,7 +132,7 @@ export function FilterBar<T>({
                 <NumberInput
                   value={min}
                   onChangeText={(newMin) => handlePriceRangeUpdate(String(filter.field), 'min', newMin)}
-                  decimalPlaces={2}
+                  decimalPlaces={0}
                   min={0}
                   max={2000}
                   currency={filter.currency || undefined}
@@ -145,7 +145,7 @@ export function FilterBar<T>({
                 <NumberInput
                   value={max}
                   onChangeText={(newMax) => handlePriceRangeUpdate(String(filter.field), 'max', newMax)}
-                  decimalPlaces={2}
+                  decimalPlaces={0}
                   min={0}
                   max={2000}
                   currency={filter.currency || undefined}

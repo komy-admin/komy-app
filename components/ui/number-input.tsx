@@ -42,7 +42,7 @@ export function NumberInput({
   }, [value, isFocused]);
 
   const formatValue = (num: number): string => {
-    return `${num.toFixed(decimalPlaces)}${currency ? ` ${currency}` : ''}`;
+    return `${num.toFixed(decimalPlaces)}`;
   };
 
   const handleChangeText = (text: string) => {
