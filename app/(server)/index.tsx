@@ -8,13 +8,14 @@ import { Order } from '~/types/order.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { Card, CardContent, CardHeader, CardTitle, Text, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
+import { StatusPill } from '~/components/ui/StatusPill';
 import { tableApiService } from '~/api/table.api';
 import { roomApiService } from '~/api/room.api';
 import { orderApiService } from '~/api/order.api';
 import { itemApiService } from '~/api/item.api';
 import { itemTypeApiService } from '~/api/item-type.api';
 import { orderItemApiService } from '~/api/order-item.api';
-import { getStatusColor, getStatusText, getMostImportantStatus } from '~/lib/utils';
+import { getStatusColor, getStatusText, getMostImportantStatus, getNextStatus } from '~/lib/utils';
 import { router } from 'expo-router';
 import RoomComponent from '~/components/Room/Room';
 import { Status } from '~/types/status.enum';
@@ -23,9 +24,10 @@ import { FilterConfig } from '~/hooks/useFilter/types';
 import { useSocket } from '~/hooks/useSocket';
 import { EventType } from '~/hooks/useSocket/types';
 import { useToast } from '~/components/ToastProvider';
-import { Plus, Minus, CheckCircle, Clock, AlertCircle, Truck } from 'lucide-react-native';
+import { Plus, Minus, CheckCircle, Clock, AlertCircle, Truck, SquareArrowRight } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { OrderItem } from '@/types/order-item.types';
+import * as Haptics from 'expo-haptics';
 
 type BottomSheetMode = 'tables' | 'orders' | 'menu';
 
@@ -164,10 +166,10 @@ export default function ServerHome() {
   };
 
   const handleTablePress = (table: Table | null) => {
-    console.log('Table pressed in ServerHome', table?.name);
     if (!table) return;
 
-    // Nettoyer la commande vide précédente si elle existe
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (selectedTable && currentOrder && currentOrder.orderItems.length === 0) {
       try {
         deleteOrder(currentOrder);
@@ -204,6 +206,8 @@ export default function ServerHome() {
         return;
       }
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       const order = await orderApiService.create({
         tableId: selectedTable.id,
         table: selectedTable,
@@ -212,12 +216,12 @@ export default function ServerHome() {
       });
       setCurrentOrder(order);
       setOrders([...orders, order]);
-      // Naviguer vers la page menu
       router.push({
         pathname: '/(server)/order/menu',
         params: { orderId: order.id }
       });
     } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
       console.error(error);
     }
@@ -225,6 +229,8 @@ export default function ServerHome() {
 
   const deleteOrder = async (order: Order) => {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
       await orderApiService.delete(order.id);
       setOrders(orders.filter(o => o.id !== order.id));
       if (currentOrder?.id === order.id) {
@@ -235,6 +241,8 @@ export default function ServerHome() {
       }
       showToast('Commande supprimée avec succès.', 'success');
     } catch (error) {
+      // Retour haptique d'erreur
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       console.error(error);
       showToast('Erreur lors de la suppression.', 'error');
     }
@@ -277,22 +285,28 @@ export default function ServerHome() {
 
   const handleQuickStatusUpdate = async (order: Order, newStatus: Status, itemTypeId?: string) => {
     try {
+      if (newStatus === Status.READY) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (newStatus === Status.SERVED) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+
       let orderItemsToUpdate;
 
       if (itemTypeId) {
-        // Mettre à jour seulement les orderItems du type spécifié
         orderItemsToUpdate = order.orderItems.filter(orderItem =>
           orderItem.item.itemType.id === itemTypeId
         );
       } else {
-        // Mettre à jour tous les orderItems de la commande
+        orderItemsToUpdate = order.orderItems;
         orderItemsToUpdate = order.orderItems;
       }
 
       const orderItemsIds = orderItemsToUpdate.map(orderItem => orderItem.id);
       await orderItemApiService.updateManyStatus(orderItemsIds, newStatus);
 
-      // Mettre à jour le statut de la commande selon le statut le plus important
       const updatedOrderItems = order.orderItems.map(orderItem => {
         if (orderItemsIds.includes(orderItem.id)) {
           return { ...orderItem, status: newStatus };
@@ -305,7 +319,6 @@ export default function ServerHome() {
         status: mostImportantStatus
       });
 
-      // Mettre à jour l'état local avec les nouveaux orderItems
       const finalOrder = { ...updatedOrder, orderItems: updatedOrderItems };
       setOrders(orders.map(o => o.id === order.id ? finalOrder : o));
 
@@ -330,15 +343,6 @@ export default function ServerHome() {
     }
   };
 
-  const getNextStatus = (currentStatus: Status): Status | null => {
-    const statusProgression: Partial<Record<Status, Status>> = {
-      [Status.DRAFT]: Status.PENDING,
-      [Status.PENDING]: Status.INPROGRESS,
-      [Status.INPROGRESS]: Status.READY,
-      [Status.READY]: Status.SERVED,
-    };
-    return statusProgression[currentStatus] || null;
-  };
 
   const getNextStatusLabel = (currentStatus: Status): string => {
     const labels: Partial<Record<Status, string>> = {
@@ -352,12 +356,12 @@ export default function ServerHome() {
 
   const getStatusIcon = (status: Status) => {
     const icons: Record<Status, JSX.Element> = {
-      [Status.DRAFT]: <Clock size={14} color="#9CA3AF" />,
-      [Status.PENDING]: <Clock size={14} color="#F59E0B" />,
-      [Status.INPROGRESS]: <Clock size={14} color="#EF4444" />,
-      [Status.READY]: <Truck size={14} color="#10B981" />,
-      [Status.SERVED]: <CheckCircle size={14} color="#6B7280" />,
-      [Status.TERMINATED]: <CheckCircle size={14} color="#6B7280" />,
+      [Status.DRAFT]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.PENDING]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.INPROGRESS]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.READY]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.SERVED]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.TERMINATED]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
       [Status.ERROR]: <AlertCircle size={14} color="#EF4444" />,
     };
     return icons[status] || icons[Status.DRAFT];
@@ -439,25 +443,34 @@ export default function ServerHome() {
                     const nextStatus = getNextStatus(dominantStatus);
 
                     if (nextStatus && dominantStatus !== Status.SERVED) {
-                      const nextLabel = getNextStatusLabel(dominantStatus);
                       const count = items.length;
 
                       actions.push({
-                        label: `${typeName} (${count}) ${getStatusText(dominantStatus)} → ${nextLabel}`,
+                        content: (
+                          <View className="flex-1">
+                            <View className="flex-row items-center justify-between">
+                              <View className="flex-row items-center">
+                                <Text className="font-semibold text-gray-900 text-base mr-3">
+                                  {typeName}
+                                </Text>
+                                <View className="bg-gray-100 px-2 py-1 rounded-full">
+                                  <Text className="text-xs font-medium text-gray-700">
+                                    {count}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                            <View className="flex-row items-center mt-2">
+                              <StatusPill status={dominantStatus} size="md" />
+                              <View className="mx-3 h-px bg-gray-300 flex-1" />
+                              <StatusPill status={nextStatus} size="md" />
+                            </View>
+                          </View>
+                        ),
                         icon: getStatusIcon(nextStatus),
                         onPress: () => handleQuickStatusUpdate(order, nextStatus, typeId)
                       });
                     }
-                  });
-
-                  // Action pour voir les détails complets
-                  actions.push({
-                    label: 'Voir détails complets',
-                    icon: <Clock size={16} color="#6B7280" />,
-                    onPress: () => router.push({
-                      pathname: '/(server)/order/[id]',
-                      params: { id: order.id }
-                    })
                   });
 
                   return actions;
@@ -493,7 +506,7 @@ export default function ServerHome() {
                         </View>
                       </Pressable>
                       {tableOrder && (
-                        <ActionMenu actions={getStatusActions(tableOrder)} width={350} />
+                        <ActionMenu actions={getStatusActions(tableOrder)} width={350} withSeparator fullWidth />
                       )}
                     </CardContent>
                   </Card>

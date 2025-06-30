@@ -51,6 +51,26 @@ export const getStatusText = (status: Status) => {
   return texts[status];
 }
 
+export const getNextStatus = (currentStatus: Status): Status | null => {
+  const statusProgression: Partial<Record<Status, Status>> = {
+    [Status.DRAFT]: Status.PENDING,
+    [Status.PENDING]: Status.INPROGRESS,
+    [Status.INPROGRESS]: Status.READY,
+    [Status.READY]: Status.SERVED,
+  };
+  return statusProgression[currentStatus] || null;
+};
+
+export const getPreviousStatus = (currentStatus: Status): Status | null => {
+  const statusRegression: Partial<Record<Status, Status>> = {
+    [Status.PENDING]: Status.DRAFT,
+    [Status.INPROGRESS]: Status.PENDING,
+    [Status.READY]: Status.INPROGRESS,
+    [Status.SERVED]: Status.READY,
+  };
+  return statusRegression[currentStatus] || null;
+};
+
 export const getItemTypeText = (itemType: ItemTypes) => {
   const texts = {
     [ItemTypes.DRINK]: 'Boissons',
