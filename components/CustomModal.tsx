@@ -6,7 +6,6 @@ import Animated, {
   useSharedValue,
   withTiming,
   interpolate,
-  Extrapolate,
 } from 'react-native-reanimated';
 import { X } from 'lucide-react-native';
 
@@ -85,63 +84,51 @@ export function CustomModal({
   if (!isVisible) return null;
 
   return (
-    <TouchableWithoutFeedback onPress={onClose}>
-      <Animated.View style={[styles.overlay, overlayStyle]}>
-        <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-          <Animated.View
-            style={[
-              styles.modalContainer,
-              modalStyle,
-              style,
-              {
-                width,
-                ...(height && { height }),
-                maxHeight: WINDOW_HEIGHT * 0.85, // Réduit de 0.9 à 0.85 pour plus d'espace
-                minWidth: Math.min(320, width),
-              },
-            ]}
-          >
-            <View style={styles.header}>
-              <View style={styles.headerContent}>
-                <View style={styles.titleSection}>
-                  <View style={[styles.titleIndicator, { backgroundColor: titleColor || '#6366F1' }]} />
-                  <Text style={styles.title}>{title}</Text>
-                </View>
-                
-                <TouchableWithoutFeedback onPress={onClose}>
-                  <View style={{ paddingHorizontal: 20, paddingVertical: 15 }}>
-                    <View style={[
-                      styles.closeButton,
-                      Platform.OS === 'web' && { cursor: 'pointer' }
-                    ]}>
-                      <X size={18} color="#64748B" strokeWidth={2.5} />
-                    </View>
-                  </View>
-                </TouchableWithoutFeedback>
-              </View>
+    // Overlay simple sans Animated.View pour éviter les conflits
+    <View style={[styles.overlay, { opacity: isVisible ? 1 : 0 }]}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.overlayTouchable} />
+      </TouchableWithoutFeedback>
+      
+      {/* Modal avec animation mais sans interférence tactile */}
+      <Animated.View
+        style={[
+          styles.modalContainer,
+          modalStyle,
+          style,
+          {
+            width,
+            ...(height && { height }),
+            maxHeight: WINDOW_HEIGHT * 0.85,
+            minWidth: Math.min(320, width),
+          },
+        ]}
+      >
+        {/* Header fixe */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.titleSection}>
+              <View style={[styles.titleIndicator, { backgroundColor: titleColor || '#6366F1' }]} />
+              <Text style={styles.title}>{title}</Text>
             </View>
             
-            <View style={styles.contentWrapper}>
-              <Animated.ScrollView 
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                scrollEventThrottle={16}
-                overScrollMode="never"
-                bounces={Platform.OS !== 'web'}
-                {...(Platform.OS === 'web' && {
-                  className: 'custom-scrollbar'
-                })}
-              >
-                <View style={styles.contentContainer}>
-                  {children}
+            <TouchableWithoutFeedback onPress={onClose}>
+              <View style={{ paddingHorizontal: 20, paddingVertical: 15 }}>
+                <View style={[
+                  styles.closeButton,
+                  Platform.OS === 'web' && { cursor: 'pointer' }
+                ]}>
+                  <X size={18} color="#64748B" strokeWidth={2.5} />
                 </View>
-              </Animated.ScrollView>
-            </View>
-          </Animated.View>
-        </TouchableWithoutFeedback>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </View>
+        
+        {/* Contenu sans View wrapper supplémentaire */}
+        {children}
       </Animated.View>
-    </TouchableWithoutFeedback>
+    </View>
   );
 }
 
@@ -155,6 +142,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+  },
+  overlayTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   modalContainer: {
     backgroundColor: '#FFFFFF',
@@ -230,19 +225,5 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s ease',
       },
     }),
-  },
-  contentWrapper: {
-    flex: 1,
-    position: 'relative',
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  contentContainer: {
-    flex: 1,
   },
 });

@@ -13,6 +13,7 @@ interface SidePanelProps {
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   hideCloseButton?: boolean;
+  showCloseButtonWhenTableSelected?: boolean;
 }
 
 export function SidePanel({
@@ -25,6 +26,7 @@ export function SidePanel({
   isCollapsed: controlledIsCollapsed,
   onCollapsedChange,
   hideCloseButton = false,
+  showCloseButtonWhenTableSelected = false,
 }: SidePanelProps) {
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -34,14 +36,12 @@ export function SidePanel({
   const animatedWidth = useRef(new Animated.Value(isCollapsed ? collapsedWidth : width)).current;
   const collapsedOpacity = useRef(new Animated.Value(isCollapsed ? 1 : 0)).current;
   const contentOpacity = useRef(new Animated.Value(isCollapsed ? 0 : 1)).current;
-  // Nouvelle approche pour la rotation - utilisation d'une valeur interpolée
   const rotationValue = useRef(new Animated.Value(0)).current;
   
   // Initialisation pour corriger le bug de rotation
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialized(true);
-      // PAS d'animation - juste définir la valeur finale directement
       rotationValue.setValue(1);
     }, 10);
 
@@ -74,7 +74,7 @@ export function SidePanel({
   }, [isCollapsed, collapsedWidth, width, isInitialized]);
 
   const toggleCollapse = () => {
-    if (hideCloseButton) return;
+    if (hideCloseButton && !showCloseButtonWhenTableSelected) return;
     
     const newCollapsedState = !isCollapsed;
     if (onCollapsedChange) {
@@ -84,10 +84,29 @@ export function SidePanel({
     }
   };
 
+  const handleCloseAction = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      toggleCollapse();
+    }
+  };
+
   const getHeaderStyle = () => {
     return {
       backgroundColor: onBack ? '#FFFFFF' : '#F1F1F1',
     };
+  };
+
+  // Détermine si le bouton de fermeture doit être affiché
+  const shouldShowCloseButton = () => {
+    if (hideCloseButton && !showCloseButtonWhenTableSelected) {
+      return false;
+    }
+    if (showCloseButtonWhenTableSelected) {
+      return true;
+    }
+    return !hideCloseButton;
   };
 
   // Interpolation pour la rotation - plus robuste sur mobile
@@ -103,6 +122,7 @@ export function SidePanel({
         styles.container,
         { width: animatedWidth, maxWidth: animatedWidth },
       ]}
+      pointerEvents={isCollapsed ? 'auto' : 'box-none'}
     >
       {/* Barre latérale collapsed */}
       {isCollapsed && (
@@ -111,6 +131,7 @@ export function SidePanel({
             styles.collapsedBarContainer,
             { opacity: collapsedOpacity }
           ]}
+          pointerEvents="auto"
         >
           <Pressable onPress={toggleCollapse} style={styles.collapsedBar}>
             <View style={styles.collapsedBarContent}>
@@ -152,7 +173,10 @@ export function SidePanel({
 
       {/* Contenu principal */}
       {!isCollapsed && (
-        <Animated.View style={[styles.content, { opacity: contentOpacity }]}>
+        <Animated.View 
+          style={[styles.content, { opacity: contentOpacity }]}
+          pointerEvents="auto"
+        >
           <View
             style={[
               styles.header,
@@ -167,14 +191,17 @@ export function SidePanel({
               >
                 {title}
               </Text>
-              {!hideCloseButton && (
-                <Pressable onPress={toggleCollapse} style={styles.backButton}>
+              {shouldShowCloseButton() && (
+                <Pressable onPress={handleCloseAction} style={styles.backButton}>
                   <X size={24} color="#2A2E33" />
                 </Pressable>
               )}
             </View>
           </View>
-          {children}
+          {/* CRITIQUE: Wrapper pour isoler le contenu scrollable */}
+          <View style={styles.childrenContainer}>
+            {children}
+          </View>
         </Animated.View>
       )}
     </Animated.View>
@@ -190,11 +217,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  childrenContainer: {
+    flex: 1,
+    overflow: 'hidden',
+  },
   header: {
     width: '100%',
     height: 50,
     justifyContent: 'center',
     paddingHorizontal: 15,
+    zIndex: 1,
   },
   headerLeft: {
     flex: 1,
@@ -212,7 +244,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     borderRadius: 6,
-    marginLeft: 12, // Espacement fixe
+    marginLeft: 12,
   },
   collapsedBarContainer: {
     flex: 1,

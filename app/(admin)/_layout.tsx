@@ -1,5 +1,5 @@
 import { Slot } from 'expo-router';
-import { View, Text, Dimensions, StyleSheet, Platform } from 'react-native';
+import { View, Text, Dimensions, StyleSheet, Platform, Pressable } from 'react-native';
 import { AdminSidebar } from '~/components/admin/Sidebar';
 import { AdminTopbar } from '~/components/admin/TopBar';
 import { ToastProvider } from '~/components/ToastProvider';
@@ -8,12 +8,19 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui';
 import { router } from 'expo-router';
 import { authApiService } from '@/api/auth.api';
+import { logout } from '@/store/auth.slice';
+import { useAppDispatch } from '@/store/hooks';
 
 
 // Composant pour la vérification de l'écran admin
 function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
+  const dispatch = useAppDispatch();
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
   const [isInitialized, setIsInitialized] = useState(false);
+
+  const handleLogout = () => {
+      dispatch(logout());
+  };
 
   useEffect(() => {
     // Délai pour éviter les faux positifs lors du rafraîchissement
@@ -91,15 +98,12 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
           </View>
 
           {/* Bouton de déconnexion */}
-          <Button
-            variant="secondary"
-            onPress={() => {
-              authApiService.logout();
-              router.replace('/login');
-            }}
+          <Pressable
+            style={styles.logoutButton}
+            onPress={handleLogout}
           >
             <Text style={styles.logoutButtonText}>Se déconnecter</Text>
-          </Button>
+          </Pressable>
         </View>
       </View>
     );
@@ -215,6 +219,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoutButton: {
+    marginTop: 24,
     width: '100%',
     height: 56,
     backgroundColor: '#000000',
@@ -224,11 +229,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 25,
-    elevation: 10,
+    shadowRadius: 3,
+    elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.8)',
     ...Platform.select({

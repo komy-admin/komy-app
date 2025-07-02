@@ -8,15 +8,26 @@ interface StartOrderCardProps {
   table: Table;
   order?: Order;
   onStartPress: () => void;
+  onContinuePress?: (order: Order) => void;
   isLocked?: boolean;
 }
 
 export default function StartOrderCard({ 
   table, 
   order, 
-  onStartPress, 
+  onStartPress,
+  onContinuePress,
   isLocked = false 
 }: StartOrderCardProps) {
+  
+  const handleButtonPress = () => {
+    if (order && onContinuePress) {
+      onContinuePress(order);
+    } else {
+      onStartPress();
+    }
+  };
+
   return (
     <View style={styles.outerContainer}>
       <View style={styles.container}>
@@ -39,7 +50,7 @@ export default function StartOrderCard({
           )}
           <Pressable 
             style={styles.startButton}
-            onPress={onStartPress}
+            onPress={handleButtonPress}
           >
             <Text style={styles.startButtonText}>
               {order ? 'Continue' : 'Start'}

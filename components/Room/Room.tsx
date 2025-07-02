@@ -6,7 +6,7 @@ import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-vi
 import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
 import { Order } from '~/types/order.types';
-import TableActionPanel from './TableActionPanel';
+import TableActionPanel from '~/components/Room/TableActionPanel';
 
 const CELL_SIZE = 50;
 const PANEL_POSITION_KEY = 'actionPanelPosition';
@@ -48,7 +48,6 @@ const Room: React.FC<RoomProps> = ({
   const [isGridReady, setIsGridReady] = useState(false);
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
   const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   
   const getInitialPanelPosition = () => {
     const screenWidth = Dimensions.get('window').width;
@@ -79,23 +78,6 @@ const Room: React.FC<RoomProps> = ({
     
     loadPanelPosition();
   }, []);
-
-  // Synchroniser selectedTable avec editingTableId
-  useEffect(() => {
-    if (editingTableId) {
-      const table = tables.find(t => t.id === editingTableId);
-      if (table) {
-        setSelectedTable(table);
-      }
-    }
-  }, [editingTableId, tables]);
-
-  // Effet pour vérifier si la table sélectionnée existe toujours dans la liste des tables
-  useEffect(() => {
-    if (selectedTable && !tables.find(table => table.id === selectedTable.id)) {
-      setSelectedTable(null);
-    }
-  }, [tables, selectedTable]);
 
   function isTableWithinRoom(table: Table): boolean {
     return (
@@ -191,12 +173,9 @@ const Room: React.FC<RoomProps> = ({
 
   const handleBackgroundPress = () => {
     onTablePress(null);
-    setSelectedTable(null);
   };
 
   const handleTableSelect = (table: Table) => {
-    if (selectedTable?.id === table.id) return;
-    setSelectedTable(table);
     onTablePress(table);
   };
 
@@ -228,6 +207,8 @@ const Room: React.FC<RoomProps> = ({
       </View>
     );
   }
+
+  const selectedTable = editingTableId ? tables.find(t => t.id === editingTableId) : null;
 
   return (
     <View style={styles.container}>

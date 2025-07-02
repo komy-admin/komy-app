@@ -1,10 +1,10 @@
 import { Animated, Platform, StyleSheet, Text, View, Pressable } from 'react-native';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
-import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import React, { useCallback, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react-native';
-import { ConfirmDialog } from '../ui';
+import { ConfirmDialog } from '~/components/ui';
 
 interface OrderCardProps {
   order: Order;
@@ -12,6 +12,7 @@ interface OrderCardProps {
 }
 
 const SWIPE_THRESHOLD = -80;
+const ACTIVATION_DISTANCE = 15;
 
 const getOrderType = (order: Order): string => {
   const statuses = order.orderItems.map(item => item.status);
@@ -25,14 +26,12 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
   const orderType = getOrderType(order);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const showDeleteConfirmation = useCallback(() => {
-    setShowDeleteDialog(true);
-  }, []);
-
   const translateX = useRef(new Animated.Value(0)).current;
   const swipeRef = useRef(0);
+  const isSwipeActive = useRef(false);
 
   const resetPosition = useCallback(() => {
+    isSwipeActive.current = false;
     Animated.spring(translateX, {
       toValue: 0,
       useNativeDriver: true,
@@ -41,20 +40,31 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
 
   const onGestureEvent = useCallback(
     (event: PanGestureHandlerGestureEvent) => {
-      const { translationX } = event.nativeEvent;
+      const { translationX, velocityX } = event.nativeEvent;
       swipeRef.current = translationX;
       
-      if (translationX <= 0 && translationX >= (SWIPE_THRESHOLD - 10)) {
+      // Activer le swipe seulement si le mouvement est principalement horizontal
+      // et dépasse la distance d'activation
+      if (Math.abs(translationX) > ACTIVATION_DISTANCE && Math.abs(velocityX) > Math.abs(event.nativeEvent.velocityY)) {
+        isSwipeActive.current = true;
+      }
+      
+      // Appliquer la transformation seulement si le swipe est actif
+      if (isSwipeActive.current && translationX <= 0 && translationX >= (SWIPE_THRESHOLD - 10)) {
         translateX.setValue(translationX);
       }
     },
     [translateX]
   );
 
-  const onGestureEnd = useCallback(() => {
-    if (swipeRef.current <= SWIPE_THRESHOLD) {
-      setShowDeleteDialog(true);
-    } else {
+  const onHandlerStateChange = useCallback((event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      if (isSwipeActive.current && swipeRef.current <= SWIPE_THRESHOLD) {
+        setShowDeleteDialog(true);
+      } else {
+        resetPosition();
+      }
+    } else if (event.nativeEvent.state === State.FAILED || event.nativeEvent.state === State.CANCELLED) {
       resetPosition();
     }
   }, [resetPosition]);
@@ -118,10 +128,20 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
       >
         <Trash2 color="white" size={24} />
       </Animated.View>
-
+      {/* Les conditions sont importante => scroll vertical sur le parent */}
       <PanGestureHandler
         onGestureEvent={onGestureEvent}
-        onEnded={onGestureEnd}
+        onHandlerStateChange={onHandlerStateChange}
+        // CRITIQUE: Configurations pour réduire la priorité du PanGestureHandler
+        activeOffsetX={[-ACTIVATION_DISTANCE, ACTIVATION_DISTANCE]} // Seuil d'activation horizontal
+        failOffsetY={[-20, 20]} // Échouer si mouvement vertical trop important
+        shouldCancelWhenOutside={true} // Annuler si on sort de la zone
+        // Réduire la priorité par rapport au scroll parent
+        simultaneousHandlers={undefined}
+        waitFor={undefined}
+        // Améliorer la détection des gestes intentionnels
+        minPointers={1}
+        maxPointers={1}
       >
         <Animated.View
           style={[
@@ -154,7 +174,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
         open={showDeleteDialog}
         onOpenChange={(value) => {
           setShowDeleteDialog(value);
-          resetPosition();
+          if (!value) resetPosition();
         }}
         title="Supprimer la commande"
         content="Êtes-vous sûr de vouloir supprimer cette commande ?"
@@ -233,8 +253,4 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#666666',
   },
-  webDeleteButton: {
-    padding: 8,
-    marginRight: 8,
-  }
 });

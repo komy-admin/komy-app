@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Button, ConfirmDialog, ForkModal, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text, TextInput } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
@@ -13,7 +13,7 @@ import { Order } from "~/types/order.types";
 import { FilterConfig } from "~/hooks/useFilter/types";
 import { itemApiService } from "~/api/item.api";
 import { Item } from "~/types/item.types";
-import { Grid3X3Icon, ListFilter, Minus, Plus } from "lucide-react-native";
+import { Grid3x3 as Grid3X3Icon, ListFilter } from "lucide-react-native";
 import OrderList from "~/components/Service/OrderList";
 import StartOrderCard from "~/components/Service/StartOrderCard";
 import { Status } from "~/types/status.enum";
@@ -27,6 +27,8 @@ import { useSocket } from '~/hooks/useSocket';
 import { EventType } from '~/hooks/useSocket/types';
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
+import { CustomModal } from "~/components/CustomModal";
+import OrderItemsForm from "~/components/form/OrderItemsForm";
 
 export default function ServicePage () {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
@@ -35,20 +37,19 @@ export default function ServicePage () {
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null)
-  const [menuTabsValue, setMenuTabsValue] = useState<string>('');
-  const [showMenu, setShowMenu] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
+  const [isOrderModalVisible, setIsOrderModalVisible] = useState<boolean>(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [orderCreatedFromStart, setOrderCreatedFromStart] = useState<boolean>(false);
 
   const { showToast } = useToast();
 
   useEffect(() => {
     initData();
   }, []);
-
 
   const filterOrderConfig: FilterConfig<Order>[] = [
     { 
@@ -92,10 +93,8 @@ export default function ServicePage () {
     onDataChange: (response) => setItems(response.data)
   });
 
-
   const { socket, isConnected } = useSocket();
 
-   
   useEffect(() => {
     if (!isConnected || !socket) return;
     const handleUpdateOrdersStatus = (orderItemIds: string[], status: Status) => {
@@ -133,7 +132,6 @@ export default function ServicePage () {
       const { data: itemTypes } = await itemTypeApiService.getAll();
       setRooms(rooms)
       setItemTypes(itemTypes)
-      setMenuTabsValue(itemTypes[0]?.id)
       if (!rooms.length) return
       setCurrentRoom(rooms[0])
       updateOrderFilter('table.roomId', rooms[0].id, '=')
@@ -179,7 +177,8 @@ export default function ServicePage () {
 
       const order = await orderApiService.create({ tableId: selectedTable.id, table: selectedTable, orderItems: [], status: Status.DRAFT });
       setCurrentOrder(order)
-      setShowMenu(true)
+      setIsOrderModalVisible(true)
+      setOrderCreatedFromStart(true) // Marquer que cette commande vient d'être créée
       setOrders([...orders, order])
       showToast('Commande créée avec succès.', 'success');
     } catch (error) {
@@ -188,32 +187,51 @@ export default function ServicePage () {
     }
   }
 
-  const getItemQuantity = (itemId: string) => {
-    if (!currentOrder) return 0;
-    return currentOrder.orderItems.filter(orderItem => orderItem.item.id === itemId).length;
+  const handleContinueOrder = (order: Order) => {
+    setCurrentOrder(order);
+    setSelectedTable(order.table);
+    setOrderCreatedFromStart(false); // Cette commande existait déjà
+    setIsOrderModalVisible(true);
   };
 
-  const onUpdateQuantity = async (itemId: string, action: 'remove' | 'add') => {
-    if (!currentOrder) {
-      showToast('Veuillez d\'abord créer une commande.', 'warning');
-      return;
-    };
-    const item = items.find(item => item.id === itemId);
-    if (!item) {
-      showToast('L\'article sélectionné n\'existe pas.', 'error');
-      return;
-    };
-    if (action === 'add') {
-      const orderItem = await orderItemApiService.create({ orderId: currentOrder.id, itemId: item.id, status: Status.DRAFT });
-      updateOrder({ ...currentOrder, orderItems: [...currentOrder.orderItems, orderItem] });
-    } else if (action === 'remove') {
-      const orderItem = currentOrder.orderItems.find(orderItem => orderItem.item.id === itemId);
-      if (!orderItem) return;
-      orderItemApiService.delete(orderItem.id);
-      updateOrder({ ...currentOrder, orderItems: currentOrder.orderItems.filter(orderItem => orderItem.item.id !== itemId) });
+  const handleOpenOrderModal = () => {
+    setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
+    setIsOrderModalVisible(true);
+  };
+
+  const handleCloseOrderModal = async () => {
+    // Cette fonction est appelée SEULEMENT quand l'utilisateur ferme manuellement la modal
+    // ou appuie sur "Annuler"
+    if (currentOrder && orderCreatedFromStart && currentOrder.orderItems.length === 0) {
+      try {
+        await deleteOrder(currentOrder);
+        setCurrentOrder(null);
+        showToast('Commande annulée car aucun article n\'a été ajouté.', 'info');
+      } catch (error) {
+        console.error('Erreur lors de la suppression de la commande vide:', error);
+      }
     }
-    showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
-  }
+    
+    setIsOrderModalVisible(false);
+    setOrderCreatedFromStart(false);
+  };
+
+  const handleSaveOrder = async (updatedOrder: Order) => {
+    try {
+      setCurrentOrder(updatedOrder);
+      setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+      
+      // Fermer la modal directement sans passer par handleCloseOrderModal
+      // pour éviter la logique de suppression
+      setIsOrderModalVisible(false);
+      setOrderCreatedFromStart(false);
+      
+      showToast('Commande mise à jour avec succès.', 'success');
+    } catch (error) {
+      showToast('Erreur lors de la mise à jour de la commande.', 'error');
+      console.error(error);
+    }
+  };
 
   const updateOrder = (order: Order) => {
     setSelectedTable(order.table)
@@ -224,6 +242,8 @@ export default function ServicePage () {
   const deleteOrder = async (order: Order) => {
     try {
       await orderApiService.delete(order.id);
+      // Mettre à jour la liste des commandes en supprimant celle qui vient d'être supprimée
+      setOrders(prevOrders => prevOrders.filter(o => o.id !== order.id));
       updateOrderFilter('table.roomId', currentRoom?.id, '=')
       showToast('Commande supprimée avec succès.', 'success');
     } catch (error) {
@@ -259,150 +279,73 @@ export default function ServicePage () {
     });
   };
 
+  // Fonction pour déterminer si une table avec commande est sélectionnée
+  const isTableWithOrderSelected = () => {
+    return selectedTable && currentOrder && currentOrder.orderItems && currentOrder.orderItems.length > 0;
+  };
+
+  // Fonction pour gérer la déselection de table
+  const handleDeselectTable = () => {
+    setSelectedTable(null);
+    setCurrentOrder(null);
+  };
+
+  const { width, height } = useWindowDimensions();
+
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <SidePanel
         style={{ flex: 1}}
         hideCloseButton={true}
+        width={width / 4}
+        showCloseButtonWhenTableSelected={!!isTableWithOrderSelected()}
         title={currentOrder ? `Commande ${currentOrder.table.name}` : 'Service'}
-        {...(currentOrder && { onBack: () => {
-          if (showMenu) setShowMenu(false)
-          else {
-            if (currentOrder && (!currentOrder.orderItems || !currentOrder.orderItems.length)) {
-              deleteOrder(currentOrder)
-            }
-            setCurrentOrder(null)
-            setSelectedTable(null)
-          }
-        }})}
+        onBack={handleDeselectTable}
       >
       {currentOrder ? (
         <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between'}}>
-          {showMenu ? (
-            <>
-              <Tabs
-                value={menuTabsValue}
-                onValueChange={(newValue: string) => setMenuTabsValue(newValue)}
-                className='flex-1 w-full max-w-[400px] mx-auto flex-col gap-1.5'
-              >
-                <TabsList className='flex-row w-full'>
-                  {itemTypes.map((itemType) => (
-                    <TabsTrigger key={itemType.id} value={itemType.id} className='flex-1 py-3'>
-                      <Text>{itemType.name}</Text>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                <View style={{ flex: 1, paddingHorizontal: 16, marginTop: 8 }}>
-                  {items
-                    .filter(item => item.itemType.id === menuTabsValue)
-                    .map((item) => {
-                      const quantity = getItemQuantity(item.id);
-                      
-                      return (
-                        <TabsContent value={item.itemType.id} key={item.id}>
-                          <View className='flex-row items-center justify-between py-2'>
-                            <View className='flex-1'>
-                              <Text numberOfLines={1} className='font-medium' ellipsizeMode="tail">
-                                {item.name}
-                              </Text>
-                            </View>
-                            <View className='flex-row items-center gap-4'>
-                              <View className='flex-row items-center bg-gray-100 rounded-full px-1'>
-                                {quantity > 0 ? (
-                                  <>
-                                    <Pressable
-                                      onPress={() => onUpdateQuantity(item.id, 'remove')}
-                                      className='p-2'
-                                    >
-                                      <Minus size={20} color="#666666" />
-                                    </Pressable>
-                                    <Text className='text-base min-w-[24px] text-center'>
-                                      {quantity}
-                                    </Text>
-                                  </>
-                                ) : (
-                                  <Text className='text-base min-w-[24px] text-center px-2'>0</Text>
-                                )}
-                                <Pressable
-                                  onPress={() => onUpdateQuantity(item.id, 'add')}
-                                  className='p-2'
-                                >
-                                  <Plus size={20} color="#666666" />
-                                </Pressable>
-                              </View>
-                            </View>
-                          </View>
-                        </TabsContent>
-                      );
-                  })}
+          <OrderDetailView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={handleStatusUpdate} />
+          <View style={{ padding: 16 }}>
+            <PopoverButton
+              style={{ backgroundColor: '#2A2E33' }}
+              className='w-full h-[50px]'
+              variant="default"
+              side="top"
+              triggerContent={<Text>PLUS D'ACTION</Text>}
+              popoverContent={
+                <View className="gap-4">
+                  <View className="gap-2">
+                    <Button variant="outline" onPress={() => setShowReassignModal(true)}>
+                      <Text>Assigner une autre table</Text>
+                    </Button>
+                    <Button variant="outline" onPress={() => console.log('Régler la note')}>
+                      <Text>Régler la note</Text>
+                    </Button>
+                    <Button variant="destructive" onPress={() => setShowDeleteOrderDialog(true)}>
+                      <Text>Supprimer la commande</Text>
+                    </Button>
+                  </View>
                 </View>
-              </Tabs>
-              <View style={{ padding: 16 }}>
-                <Button
-                  onPress={() => setShowMenu(false)}
-                  className="w-full h-[50px] flex items-center justify-center"
-                  style={{ backgroundColor: '#2A2E33' }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: '#FBFBFB',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Valider la commande
-                  </Text>
-                </Button>
-              </View>
-            </>
-          ) : (
-            <>
-              <OrderDetailView order={currentOrder} itemTypes={itemTypes} onStatusUpdate={handleStatusUpdate} />
-              <View style={{ padding: 16 }}>
-                <PopoverButton
-                  style={{ backgroundColor: '#2A2E33' }}
-                  className='w-full h-[50px]'
-                  variant="default"
-                  side="top"
-                  triggerContent={<Text>PLUS D'ACTION</Text>}
-                  popoverContent={
-                    <View className="gap-4">
-                      <View className="gap-2">
-                        <Button variant="outline" onPress={() => setShowReassignModal(true)}>
-                          <Text>Assigner une autre table</Text>
-                        </Button>
-                        <Button variant="outline" onPress={() => console.log('Régler la note')}>
-                          <Text>Régler la note</Text>
-                        </Button>
-                        <Button variant="destructive" onPress={() => setShowDeleteOrderDialog(true)}>
-                          <Text>Supprimer la commande</Text>
-                        </Button>
-                      </View>
-                    </View>
-                  }
-                />
-                <Button
-                  onPress={() => setShowMenu(true)}
-                  className="w-full h-[50px] flex items-center justify-center mt-2"
-                  style={{ backgroundColor: '#2A2E33' }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: '#FBFBFB',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Modifier la commande
-                  </Text>
-                </Button>
-              </View>
-            </>
-          )}
+              }
+            />
+            <Button
+              onPress={handleOpenOrderModal}
+              className="w-full h-[50px] flex items-center justify-center mt-2"
+              style={{ backgroundColor: '#2A2E33' }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: '#FBFBFB',
+                  fontWeight: '500',
+                  textAlign: 'center',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Modifier la commande
+              </Text>
+            </Button>
+          </View>
         </View>
       ) : (
         <View style={{ padding: 16, flex: 1 }}>
@@ -473,7 +416,9 @@ export default function ServicePage () {
           <StartOrderCard
             table={selectedTable}
             order={orders.find(order => order.tableId === selectedTable.id)}
-            onStartPress={createOrder} />
+            onStartPress={createOrder}
+            onContinuePress={handleContinueOrder}
+          />
         )}
         <RoomComponent
           tables={tables}
@@ -488,65 +433,84 @@ export default function ServicePage () {
           onTableUpdate={() => {}}
         />
       </View>
-        {currentOrder && showDeleteOrderDialog && (
-          <ConfirmDialog
-            open={showDeleteOrderDialog}
-            onOpenChange={(value) => {
-              setShowDeleteOrderDialog(value)
-            }}
-            title="Supprimer la commande"
-            content="Êtes-vous sûr de vouloir supprimer cette commande ?"
-            onCancel={() => setShowDeleteOrderDialog(false)}
-            onConfirm={() => {
-              setShowDeleteOrderDialog(false)
-              deleteOrder(currentOrder)
-              setCurrentOrder(null)
-              setSelectedTable(null)
-            }}
-            confirmText="Supprimer"
-            variant="destructive"
+
+      {/* Modal pour l'ajout/modification de commande */}
+      <CustomModal
+        isVisible={isOrderModalVisible}
+        onClose={handleCloseOrderModal}
+        width={700}
+        height={650}
+        title={currentOrder ? `Modifier la commande - ${currentOrder.table.name}` : "Créer une commande"}
+      >
+        {currentOrder && (
+          <OrderItemsForm
+            order={currentOrder}
+            items={items}
+            itemTypes={itemTypes}
+            onSave={handleSaveOrder}
+            onCancel={handleCloseOrderModal}
           />
         )}
-        <ForkModal
-          visible={showReassignModal}
-          onClose={() => setShowReassignModal(false)}
-          maxWidth={800}
-          title="Sélectionner une table"
-        >
-          <RoomComponent
-            tables={tables.filter(table => !orders.find(order => order.tableId === table.id))}
-            width={currentRoom?.width}
-            height={currentRoom?.height}
-            editionMode={false}
-            isLoading={loading}
-            onTablePress={async (pressedTable: Table | null) => {
-              if (pressedTable) {
-                let newCurrentOrder = orders.find(order => order.tableId === pressedTable.id)
-                if (!newCurrentOrder && currentOrder) {
-                  newCurrentOrder = await orderApiService.update(currentOrder.id, { tableId: pressedTable.id, status: currentOrder.status })
-                  setCurrentOrder(newCurrentOrder)
-                  setOrders(orders.map(order => order.id === currentOrder.id ? newCurrentOrder! : order))
-                  setSelectedTable(pressedTable)
-                }
-                setShowReassignModal(false)
+      </CustomModal>
+
+      {currentOrder && showDeleteOrderDialog && (
+        <ConfirmDialog
+          open={showDeleteOrderDialog}
+          onOpenChange={(value) => {
+            setShowDeleteOrderDialog(value)
+          }}
+          title="Supprimer la commande"
+          content="Êtes-vous sûr de vouloir supprimer cette commande ?"
+          onCancel={() => setShowDeleteOrderDialog(false)}
+          onConfirm={() => {
+            setShowDeleteOrderDialog(false)
+            deleteOrder(currentOrder)
+            setCurrentOrder(null)
+            setSelectedTable(null)
+          }}
+          confirmText="Supprimer"
+          variant="destructive"
+        />
+      )}
+      <ForkModal
+        visible={showReassignModal}
+        onClose={() => setShowReassignModal(false)}
+        maxWidth={800}
+        title="Sélectionner une table"
+      >
+        <RoomComponent
+          tables={tables.filter(table => !orders.find(order => order.tableId === table.id))}
+          width={currentRoom?.width}
+          height={currentRoom?.height}
+          editionMode={false}
+          isLoading={loading}
+          onTablePress={async (pressedTable: Table | null) => {
+            if (pressedTable) {
+              let newCurrentOrder = orders.find(order => order.tableId === pressedTable.id)
+              if (!newCurrentOrder && currentOrder) {
+                newCurrentOrder = await orderApiService.update(currentOrder.id, { tableId: pressedTable.id, status: currentOrder.status })
+                setCurrentOrder(newCurrentOrder)
+                setOrders(orders.map(order => order.id === currentOrder.id ? newCurrentOrder! : order))
+                setSelectedTable(pressedTable)
               }
-            }}
-            onTableLongPress={async (pressedTable: Table | null) => {
-              if (pressedTable) {
-                let newCurrentOrder = orders.find(order => order.tableId === pressedTable.id)
-                if (!newCurrentOrder && currentOrder) {
-                  newCurrentOrder = await orderApiService.update(currentOrder.id, { tableId: pressedTable.id, status: currentOrder.status })
-                  setCurrentOrder(newCurrentOrder)
-                  setOrders(orders.map(order => order.id === currentOrder.id ? newCurrentOrder! : order))
-                  setSelectedTable(pressedTable)
-                }
-                setShowReassignModal(false)
+              setShowReassignModal(false)
+            }
+          }}
+          onTableLongPress={async (pressedTable: Table | null) => {
+            if (pressedTable) {
+              let newCurrentOrder = orders.find(order => order.tableId === pressedTable.id)
+              if (!newCurrentOrder && currentOrder) {
+                newCurrentOrder = await orderApiService.update(currentOrder.id, { tableId: pressedTable.id, status: currentOrder.status })
+                setCurrentOrder(newCurrentOrder)
+                setOrders(orders.map(order => order.id === currentOrder.id ? newCurrentOrder! : order))
+                setSelectedTable(pressedTable)
               }
-            }}
-            onTableUpdate={() => {}}
-          />
-        </ForkModal>
+              setShowReassignModal(false)
+            }
+          }}
+          onTableUpdate={() => {}}
+        />
+      </ForkModal>
     </View>
   );
-
 }
