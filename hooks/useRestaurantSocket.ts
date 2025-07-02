@@ -1,0 +1,205 @@
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { useSocket } from './useSocket';
+import { restaurantActions } from '~/store/restaurant';
+
+// Types pour les événements WebSocket génériques
+interface WebSocketEvent {
+  model: string;
+  action: 'created' | 'updated' | 'deleted';
+  data: any;
+  accountId: string;
+  timestamp: string;
+}
+
+/**
+ * Hook pour synchroniser les événements WebSocket avec le store restaurant
+ * Utilise les nouveaux événements génériques (model_action pattern)
+ */
+export const useRestaurantSocket = () => {
+  const dispatch = useDispatch();
+  const { socket, isConnected } = useSocket();
+
+  useEffect(() => {
+    // Mettre à jour l'état de connexion dans le store
+    dispatch(restaurantActions.setConnected(isConnected));
+  }, [isConnected, dispatch]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) {
+      return;
+    }
+
+    // Configuration des gestionnaires d'événements
+    const eventHandlers = {
+      // Événements Orders
+      order_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvelle commande reçue:', event.data.id);
+        dispatch(restaurantActions.createOrder({ order: event.data }));
+      },
+      
+      order_updated: (event: WebSocketEvent) => {
+        console.log('📝 Commande mise à jour:', event.data.id);
+        dispatch(restaurantActions.updateOrder({ order: event.data }));
+      },
+      
+      order_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Commande supprimée:', event.data.id);
+        dispatch(restaurantActions.deleteOrder({ orderId: event.data.id }));
+      },
+
+      // Événements OrderItems
+      orderitem_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvel article de commande:', event.data.id);
+        // Ajouter le nouvel item
+        dispatch(restaurantActions.updateOrderItem({ orderItem: event.data }));
+      },
+      
+      orderitem_updated: (event: WebSocketEvent) => {
+        console.log('📝 Article de commande mis à jour:', event.data.id);
+        // Mettre à jour le statut de l'item spécifique
+        dispatch(restaurantActions.updateOrderItem({ orderItem: event.data }));
+      },
+      
+      orderitem_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Article de commande supprimé:', event.data.id);
+        dispatch(restaurantActions.deleteOrderItem({ orderItemId: event.data.id }));
+      },
+
+      // Événements Tables
+      table_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvelle table créée:', event.data.id);
+        dispatch(restaurantActions.createTable({ table: event.data }));
+      },
+      
+      table_updated: (event: WebSocketEvent) => {
+        console.log('📝 Table mise à jour:', event.data.id);
+        dispatch(restaurantActions.updateTable({ table: event.data }));
+      },
+      
+      table_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Table supprimée:', event.data.id);
+        dispatch(restaurantActions.deleteTable({ tableId: event.data.id }));
+      },
+
+      // Événements Rooms
+      room_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvelle salle créée:', event.data.id);
+        dispatch(restaurantActions.createRoom({ room: event.data }));
+      },
+      
+      room_updated: (event: WebSocketEvent) => {
+        console.log('📝 Salle mise à jour:', event.data.id);
+        dispatch(restaurantActions.updateRoom({ room: event.data }));
+      },
+      
+      room_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Salle supprimée:', event.data.id);
+        dispatch(restaurantActions.deleteRoom({ roomId: event.data.id }));
+      },
+
+      // Événements Items (Menu)
+      item_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvel article de menu:', event.data.id);
+        dispatch(restaurantActions.createMenuItem({ item: event.data }));
+      },
+      
+      item_updated: (event: WebSocketEvent) => {
+        console.log('📝 Article de menu mis à jour:', event.data.id);
+        dispatch(restaurantActions.updateMenuItem({ item: event.data }));
+      },
+      
+      item_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Article de menu supprimé:', event.data.id);
+        dispatch(restaurantActions.deleteMenuItem({ itemId: event.data.id }));
+      },
+
+      // Événements Users
+      user_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvel utilisateur créé:', event.data.id);
+        dispatch(restaurantActions.createUser({ user: event.data }));
+      },
+      
+      user_updated: (event: WebSocketEvent) => {
+        console.log('📝 Utilisateur mis à jour:', event.data.id);
+        dispatch(restaurantActions.updateUser({ user: event.data }));
+      },
+      
+      user_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Utilisateur supprimé:', event.data.id);
+        dispatch(restaurantActions.deleteUser({ userId: event.data.id }));
+      },
+    };
+
+    // Enregistrer tous les listeners avec type générique
+    Object.entries(eventHandlers).forEach(([eventName, handler]) => {
+      (socket as any).on(eventName, (event: WebSocketEvent) => {
+        try {
+          console.log(`📡 Événement WebSocket reçu: ${eventName}`, {
+            model: event.model,
+            action: event.action,
+            dataId: event.data?.id,
+            timestamp: event.timestamp
+          });
+          
+          handler(event);
+        } catch (error) {
+          console.error(`❌ Erreur lors du traitement de ${eventName}:`, error);
+        }
+      });
+    });
+
+    console.log('🔌 Nouveaux listeners WebSocket enregistrés pour le restaurant');
+
+    // Nettoyage des listeners
+    return () => {
+      Object.keys(eventHandlers).forEach(eventName => {
+        (socket as any).off(eventName);
+      });
+      
+      console.log('🔌 Listeners WebSocket supprimés pour le restaurant');
+    };
+  }, [socket, isConnected, dispatch]);
+
+  return {
+    isConnected,
+    socket,
+  };
+};
+
+/**
+ * Hook optionnel pour la réconciliation des données après reconnexion
+ * Peut être utilisé pour re-synchroniser les données avec le serveur
+ */
+export const useRestaurantDataReconciliation = () => {
+  const { isConnected } = useSocket();
+
+  const reconcileData = async (roomId: string) => {
+    try {
+      console.log('🔄 Réconciliation des données pour la room:', roomId);
+      
+      // Ici vous pourriez re-fetch les données depuis l'API
+      // pour vous assurer qu'elles sont à jour après une reconnexion
+      
+      // Exemple :
+      // const { data: orders } = await orderApiService.getAll({ roomId });
+      // dispatch(restaurantActions.setOrders({ orders, roomId }));
+      
+      console.log('✅ Réconciliation terminée');
+    } catch (error) {
+      console.error('❌ Erreur lors de la réconciliation:', error);
+    }
+  };
+
+  // Déclencher la réconciliation automatiquement après reconnexion
+  useEffect(() => {
+    if (isConnected) {
+      // Optionnel: déclencher la réconciliation après reconnexion
+      // reconcileData(currentRoomId);
+    }
+  }, [isConnected]);
+
+  return {
+    reconcileData,
+  };
+};

@@ -5,29 +5,18 @@ import { useMemo, useRef, useCallback, useState, useEffect, JSX } from 'react';
 import { Table } from '~/types/table.types';
 import { Room } from '~/types/room.types';
 import { Order } from '~/types/order.types';
-import { Item } from '~/types/item.types';
-import { ItemType } from '~/types/item-type.types';
-import { Card, CardContent, CardHeader, CardTitle, Text, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
+import { Card, CardContent, Text, Badge, Button } from '~/components/ui';
 import { StatusPill } from '~/components/ui/StatusPill';
-import { tableApiService } from '~/api/table.api';
-import { roomApiService } from '~/api/room.api';
-import { orderApiService } from '~/api/order.api';
-import { itemApiService } from '~/api/item.api';
-import { itemTypeApiService } from '~/api/item-type.api';
-import { orderItemApiService } from '~/api/order-item.api';
 import { getStatusColor, getStatusText, getMostImportantStatus, getNextStatus } from '~/lib/utils';
 import { router } from 'expo-router';
 import RoomComponent from '~/components/Room/Room';
 import { Status } from '~/types/status.enum';
-import { useFilter } from '~/hooks/useFilter';
-import { FilterConfig } from '~/hooks/useFilter/types';
-import { useSocket } from '~/hooks/useSocket';
-import { EventType } from '~/hooks/useSocket/types';
 import { useToast } from '~/components/ToastProvider';
-import { Plus, Minus, CheckCircle, Clock, AlertCircle, Truck, SquareArrowRight } from 'lucide-react-native';
+import { AlertCircle, SquareArrowRight } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { OrderItem } from '@/types/order-item.types';
 import * as Haptics from 'expo-haptics';
+import { useMenu, useOrders, useRestaurant, useRooms, useTables } from '~/hooks/useRestaurant';
 
 type BottomSheetMode = 'tables' | 'orders' | 'menu';
 
@@ -36,132 +25,21 @@ export default function ServerHome() {
   const snapPoints = useMemo(() => ['15%', '50%', '90%'], []);
   const screenHeight = Dimensions.get('window').height;
 
-  // État principal
-  const [tables, setTables] = useState<Table[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+  
+  const { rooms, currentRoom, error: roomsError, setCurrentRoom } = useRooms();
+  const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
+  const { currentRoomOrders, selectedTableOrder, createOrder, deleteOrder, updateOrderStatus, error: ordersError } = useOrders();
+  const { items, itemTypes } = useMenu();
 
-  // État de l'interface
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [bottomSheetMode, setBottomSheetMode] = useState<BottomSheetMode>('tables');
-  const [menuTabsValue, setMenuTabsValue] = useState<string>('');
 
   const { showToast } = useToast();
 
-  useEffect(() => {
-    initData();
-  }, []);
-
-  // Configuration des filtres
-  const filterOrderConfig: FilterConfig<Order>[] = [
-    {
-      field: 'status',
-      type: 'text',
-      label: 'Statut',
-      operator: 'not in',
-      show: false
-    },
-    {
-      field: 'table.roomId',
-      type: 'text',
-      label: 'Table',
-      operator: '=',
-      show: false
-    },
-  ];
-
-  const { updateFilter: updateOrderFilter } = useFilter<Order>({
-    config: filterOrderConfig,
-    service: orderApiService,
-    defaultParams: { sort: { field: 'updatedAt', direction: 'asc' }, perPage: 100 },
-    onDataChange: (response) => setOrders(response.data),
-    loadOnMount: false
-  });
-
-  const filterItemConfig: FilterConfig<Item>[] = [
-    {
-      field: 'itemTypeId',
-      type: 'text',
-      label: 'ItemType',
-      operator: '=',
-      show: false
-    },
-  ];
-
-  const { updateFilter: updateItemFilter } = useFilter<Item>({
-    config: filterItemConfig,
-    service: itemApiService,
-    defaultParams: { page: 1, perPage: 100 },
-    onDataChange: (response) => setItems(response.data)
-  });
-
-  // Socket pour temps réel
-  const { socket, isConnected } = useSocket();
-
-  useEffect(() => {
-    if (!isConnected || !socket) return;
-    const handleUpdateOrdersStatus = (orderItemIds: string[], status: Status) => {
-      setOrders(prevOrders => {
-        const newOrders = prevOrders.map(order => {
-          const updatedOrderItems = order.orderItems.map(orderItem => {
-            if (orderItemIds.includes(orderItem.id)) {
-              return { ...orderItem, status: status };
-            }
-            return orderItem;
-          });
-          return { ...order, orderItems: updatedOrderItems, status: getMostImportantStatus(updatedOrderItems.map(orderItem => orderItem.status)) };
-        });
-
-        setTables(prevTables => prevTables.map(table => {
-          const order = newOrders.find(order => order.tableId === table.id);
-          return order ? { ...table, orders: [order] } : table;
-        }));
-
-        return newOrders;
-      });
-    }
-    socket.on(EventType.ORDER_ITEMS_INPROGRESS, ({ orderItemIds }) => handleUpdateOrdersStatus(orderItemIds, Status.INPROGRESS));
-    socket.on(EventType.ORDER_ITEMS_READY, ({ orderItemIds }) => handleUpdateOrdersStatus(orderItemIds, Status.READY));
-    return () => {
-      socket.off(EventType.ORDER_ITEMS_INPROGRESS);
-      socket.off(EventType.ORDER_ITEMS_READY);
-    };
-  }, [isConnected, socket]);
-
-  const initData = async () => {
-    try {
-      setIsLoading(true);
-      const { data: rooms } = await roomApiService.getAll();
-      const { data: itemTypes } = await itemTypeApiService.getAll();
-      setRooms(rooms);
-      setItemTypes(itemTypes);
-      setMenuTabsValue(itemTypes[0]?.id);
-      if (!rooms.length) return;
-      setCurrentRoom(rooms[0]);
-      updateOrderFilter('table.roomId', rooms[0].id, '=');
-      setTables(rooms[0]?.tables || []);
-      setError(null);
-    } catch (err) {
-      setError('Erreur lors du chargement des données');
-      console.error(err);
-      showToast('Erreur lors du chargement des données. Veuillez réessayer plus tard.', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleChangeRoom = (room: Room) => {
-    setCurrentOrder(null);
     setSelectedTable(null);
-    setCurrentRoom(room);
-    setTables(room.tables);
-    updateOrderFilter('table.roomId', room.id, '=');
+    setCurrentRoom(room.id);
     setBottomSheetMode('tables');
   };
 
@@ -170,17 +48,17 @@ export default function ServerHome() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (selectedTable && currentOrder && currentOrder.orderItems.length === 0) {
+    // Supprimer les commandes vides si on change de table
+    if (selectedTable && selectedTableOrder && selectedTableOrder.orderItems.length === 0) {
       try {
-        deleteOrder(currentOrder);
+        deleteOrder(selectedTableOrder.id);
       } catch (error) {
         console.error('Failed to delete empty order:', error);
       }
     }
 
-    setSelectedTable(table);
-    const existingOrder = orders.find(order => order.tableId === table.id);
-    setCurrentOrder(existingOrder || null);
+    setSelectedTable(table.id);
+    const existingOrder = currentRoomOrders.find(order => order.tableId === table.id);
 
     if (existingOrder) {
       // Naviguer vers la page de détail
@@ -194,13 +72,13 @@ export default function ServerHome() {
     }
   };
 
-  const createOrder = async () => {
+  const handleCreateOrder = async () => {
     try {
       if (!selectedTable) {
         showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
         return;
       }
-      const existingOrder = orders.find(order => order.tableId === selectedTable.id);
+      const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTable.id);
       if (existingOrder) {
         showToast('Une commande existe déjà pour cette table.', 'warning');
         return;
@@ -208,14 +86,7 @@ export default function ServerHome() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      const order = await orderApiService.create({
-        tableId: selectedTable.id,
-        table: selectedTable,
-        orderItems: [],
-        status: Status.DRAFT
-      });
-      setCurrentOrder(order);
-      setOrders([...orders, order]);
+      const order = await createOrder(selectedTable.id);
       router.push({
         pathname: '/(server)/order/menu',
         params: { orderId: order.id }
@@ -227,14 +98,12 @@ export default function ServerHome() {
     }
   };
 
-  const deleteOrder = async (order: Order) => {
+  const handleDeleteOrder = async (orderId: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-      await orderApiService.delete(order.id);
-      setOrders(orders.filter(o => o.id !== order.id));
-      if (currentOrder?.id === order.id) {
-        setCurrentOrder(null);
+      await deleteOrder(orderId);
+      if (selectedTableOrder?.id === orderId) {
         setSelectedTable(null);
         setBottomSheetMode('tables');
         bottomSheetRef.current?.snapToIndex(0);
@@ -248,40 +117,6 @@ export default function ServerHome() {
     }
   };
 
-  const getItemQuantity = (itemId: string) => {
-    if (!currentOrder) return 0;
-    return currentOrder.orderItems.filter(orderItem => orderItem.item.id === itemId).length;
-  };
-
-  const onUpdateQuantity = async (itemId: string, action: 'remove' | 'add') => {
-    if (!currentOrder) {
-      showToast('Veuillez d\'abord créer une commande.', 'warning');
-      return;
-    }
-    const item = items.find(item => item.id === itemId);
-    if (!item) {
-      showToast('L\'article sélectionné n\'existe pas.', 'error');
-      return;
-    }
-    if (action === 'add') {
-      const orderItem = await orderItemApiService.create({
-        orderId: currentOrder.id,
-        itemId: item.id,
-        status: Status.DRAFT
-      });
-      const updatedOrder = { ...currentOrder, orderItems: [...currentOrder.orderItems, orderItem] };
-      setCurrentOrder(updatedOrder);
-      setOrders(orders.map(o => o.id === currentOrder.id ? updatedOrder : o));
-    } else if (action === 'remove') {
-      const orderItem = currentOrder.orderItems.find(orderItem => orderItem.item.id === itemId);
-      if (!orderItem) return;
-      await orderItemApiService.delete(orderItem.id);
-      const updatedOrder = { ...currentOrder, orderItems: currentOrder.orderItems.filter(oi => oi.id !== orderItem.id) };
-      setCurrentOrder(updatedOrder);
-      setOrders(orders.map(o => o.id === currentOrder.id ? updatedOrder : o));
-    }
-    showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
-  };
 
   const handleQuickStatusUpdate = async (order: Order, newStatus: Status, itemTypeId?: string) => {
     try {
@@ -293,37 +128,11 @@ export default function ServerHome() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
 
-      let orderItemsToUpdate;
-
-      if (itemTypeId) {
-        orderItemsToUpdate = order.orderItems.filter(orderItem =>
-          orderItem.item.itemType.id === itemTypeId
-        );
-      } else {
-        orderItemsToUpdate = order.orderItems;
-        orderItemsToUpdate = order.orderItems;
-      }
-
-      const orderItemsIds = orderItemsToUpdate.map(orderItem => orderItem.id);
-      await orderItemApiService.updateManyStatus(orderItemsIds, newStatus);
-
-      const updatedOrderItems = order.orderItems.map(orderItem => {
-        if (orderItemsIds.includes(orderItem.id)) {
-          return { ...orderItem, status: newStatus };
-        }
-        return orderItem;
-      });
-
-      const mostImportantStatus = getMostImportantStatus(updatedOrderItems.map(oi => oi.status));
-      const updatedOrder = await orderApiService.update(order.id, {
-        status: mostImportantStatus
-      });
-
-      const finalOrder = { ...updatedOrder, orderItems: updatedOrderItems };
-      setOrders(orders.map(o => o.id === order.id ? finalOrder : o));
+      // Utiliser la fonction centralisée updateOrderStatus
+      await updateOrderStatus(order.id, newStatus, itemTypeId);
 
       const itemTypeName = itemTypeId ?
-        orderItemsToUpdate[0]?.item.itemType.name || 'articles' :
+        order.orderItems.find(oi => oi.item.itemType.id === itemTypeId)?.item.itemType.name || 'articles' :
         'commande';
 
       const statusMessages: Record<Status, string> = {
@@ -343,17 +152,6 @@ export default function ServerHome() {
     }
   };
 
-
-  const getNextStatusLabel = (currentStatus: Status): string => {
-    const labels: Partial<Record<Status, string>> = {
-      [Status.DRAFT]: 'En attente',
-      [Status.PENDING]: 'En cours',
-      [Status.INPROGRESS]: 'Prêt',
-      [Status.READY]: 'Servi',
-    };
-    return labels[currentStatus] || '';
-  };
-
   const getStatusIcon = (status: Status) => {
     const icons: Record<Status, JSX.Element> = {
       [Status.DRAFT]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
@@ -367,26 +165,6 @@ export default function ServerHome() {
     return icons[status] || icons[Status.DRAFT];
   };
 
-  const handleStatusUpdate = async (orderItems: OrderItem[], status: Status) => {
-    if (!currentOrder) {
-      showToast('Aucune commande sélectionnée.', 'warning');
-      return;
-    }
-    const orderItemsIds = orderItems.map(orderItem => orderItem.id);
-    await orderItemApiService.updateManyStatus(orderItemsIds, status);
-    const updatedItems = currentOrder?.orderItems.map(orderItem => {
-      if (orderItems.includes(orderItem)) {
-        return { ...orderItem, status };
-      }
-      return orderItem;
-    });
-    const mostImportantStatus = getMostImportantStatus(updatedItems.map(orderItem => orderItem.status));
-    const updatedOrder = await orderApiService.update(currentOrder.id, {
-      status: mostImportantStatus
-    });
-    setCurrentOrder(updatedOrder);
-    setOrders(orders.map(o => o.id === currentOrder.id ? updatedOrder : o));
-  };
 
   const renderBottomSheetContent = useCallback(() => {
     switch (bottomSheetMode) {
@@ -410,9 +188,10 @@ export default function ServerHome() {
                   ))}
                 </View>
               </View>
-              {tables.map((table) => {
-                const tableOrder = orders.find(order => order.tableId === table.id);
-                const status = tableOrder?.status || Status.DRAFT;
+              {currentRoomTables.map((table) => {
+                if (!table.currentOrder) return null;
+                const tableOrder = table.currentOrder;
+                const status = tableOrder.status;
 
                 const getStatusActions = (order: Order | undefined): ActionItem[] => {
                   if (!order) return [];
@@ -533,7 +312,7 @@ export default function ServerHome() {
                 <Text className="text-muted-foreground mb-2 text-center">Table {selectedTable?.name}</Text>
                 <Text className="text-muted-foreground mb-6 text-center">{selectedTable?.seats} places disponibles</Text>
                 <Button
-                  onPress={createOrder}
+                  onPress={handleCreateOrder}
                   className="w-full bg-primary"
                 >
                   <Text className="text-primary-foreground font-medium">Créer une commande</Text>
@@ -558,21 +337,16 @@ export default function ServerHome() {
       default:
         return null;
     }
-  }, [bottomSheetMode, tables, currentRoom, rooms, selectedTable, orders, router]);
+  }, [bottomSheetMode, currentRoomTables, currentRoom, rooms, selectedTable, currentRoomOrders, router]);
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <Text className="text-gray-900">Chargement...</Text>
-      </View>
-    );
-  }
 
-  if (error) {
+  if (roomsError || ordersError) {
     return (
       <View className="flex-1 bg-background items-center justify-center p-4">
-        <Text className="text-destructive text-center mb-4">{error}</Text>
-        <Button onPress={initData}>
+        <Text className="text-destructive text-center mb-4">
+          {roomsError || ordersError || 'Erreur lors du chargement'}
+        </Text>
+        <Button onPress={() => { }}>
           <Text className="text-primary-foreground">Réessayer</Text>
         </Button>
       </View>
@@ -585,8 +359,8 @@ export default function ServerHome() {
         height: screenHeight * 0.85 - 88,
       }}>
         <RoomComponent
-          tables={tables}
-          orders={orders}
+          tables={currentRoomTables.map(t => ({ ...t, orders: t.currentOrder ? [t.currentOrder] : [] }))}
+          orders={currentRoomOrders}
           editingTableId={selectedTable?.id}
           editionMode={false}
           isLoading={false}

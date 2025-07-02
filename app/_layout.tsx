@@ -18,6 +18,7 @@ import {
   ReanimatedLogLevel,
 } from 'react-native-reanimated';
 import { ToastProvider } from '@/components/ToastProvider';
+import { AppInitializer } from '~/components/AppInitializer';
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -147,12 +148,14 @@ function RootLayoutNav() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <AuthenticationGate />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)/login" />
-        <Stack.Screen name="(server)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="(cook)" />
-      </Stack>
+      <AppInitializer>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)/login" />
+          <Stack.Screen name="(server)" />
+          <Stack.Screen name="(admin)" />
+          <Stack.Screen name="(cook)" />
+        </Stack>
+      </AppInitializer>
       <PortalHost />
     </SafeAreaView>
   );

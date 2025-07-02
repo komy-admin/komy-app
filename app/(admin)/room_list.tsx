@@ -1,64 +1,31 @@
-import { View, StyleSheet, Text, ScrollView, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { SidePanel } from '~/components/SidePanel';
 import { Button, ForkTable } from '~/components/ui';
-import { CreditCard as Edit2, UtensilsCrossed, Square, Trash } from 'lucide-react-native';
-import { roomApiService } from '~/api/room.api';
+import { CreditCard as Edit2, UtensilsCrossed, Trash } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { CustomModal } from '~/components/CustomModal';
 import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
-import { FilterBar } from '~/components/filters/Filter';
-import { FilterConfig } from '~/hooks/useFilter/types';
-import { useFilter } from '~/hooks/useFilter';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
+import { useRooms, useRestaurant } from '~/hooks/useRestaurant';
 
 export default function RoomListPage() {
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
-  const [rooms, setRooms] = useState<Room[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
   const { showToast } = useToast();
   const router = useRouter();
-  
-  const filterRoom: FilterConfig<Room>[] = [
-    { 
-      field: 'name', 
-      type: 'text',
-      label: 'Nom',
-      operator: 'like',
-      show: true
-    },
-    { 
-      field: 'width', 
-      type: 'number',
-      label: 'Largeur',
-      operator: 'between',
-      show: true
-    },
-    { 
-      field: 'height', 
-      type: 'number',
-      label: 'Hauteur',
-      operator: 'between',
-      show: true
-    }
-  ];
 
-  const { updateFilter, loading, clearFilters, queryParams } = useFilter<Room>({
-    service: roomApiService,
-    config: filterRoom,
-    onDataChange: (response) => {
-      setRooms(response.data);
-    },
-    onError: (error) => {
-      console.error('Error loading rooms:', error);
-      showToast('Erreur lors du chargement des salles', 'error');
-    }
-  });
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+
+  // Utilisation des hooks Redux
+  const { rooms, loading, error, createRoom, updateRoom, deleteRoom, getRoomById } = useRooms();
+
+  // Plus besoin de useFilter, useEffect ou fetchRooms - tout est géré par Redux
+  // TODO: Implémenter le filtrage via Redux si nécessaire plus tard
 
   const handleCreateRoom = () => {
     setCurrentRoom(null);
@@ -80,12 +47,10 @@ export default function RoomListPage() {
   const handleSaveRoom = async (room: Room) => {
     try {
       if (room.id) {
-        await roomApiService.update(room.id, room);
-        setRooms(prevRooms => prevRooms.map(r => r.id === room.id ? room : r));
+        await updateRoom(room.id, room);
         showToast('Salle modifiée avec succès', 'success');
       } else {
-        const newRoom = await roomApiService.create(room);
-        setRooms(prevRooms => [...prevRooms, newRoom]);
+        await createRoom(room);
         showToast('Salle créée avec succès', 'success');
       }
       handleCloseModal();
@@ -103,15 +68,10 @@ export default function RoomListPage() {
   };
 
   const confirmDelete = async () => {
-    if (!roomToDelete) return;
-    
+    if (!roomToDelete?.id) return;
+
     try {
-      if (roomToDelete?.id) {
-        await roomApiService.delete(roomToDelete.id);
-      } else {
-        throw new Error("Room ID is undefined");
-      }
-      setRooms(rooms.filter(room => room.id !== roomToDelete.id));
+      await deleteRoom(roomToDelete.id);
       showToast('Salle supprimée avec succès', 'success');
     } catch (err) {
       console.error('Error deleting room:', err);
@@ -128,7 +88,7 @@ export default function RoomListPage() {
       params: { roomId }
     });
   };
-  
+
   const getRoomActions = (room: Room): ActionItem[] => {
     return [
       {
@@ -149,7 +109,7 @@ export default function RoomListPage() {
       }
     ];
   };
-  
+
   const roomTableColumns = [
     {
       label: 'Nom',
@@ -179,32 +139,20 @@ export default function RoomListPage() {
     }
   ];
 
-  const { width } = useWindowDimensions();
 
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
-      <SidePanel 
-        title="Filtrage" 
-        width={width / 4} 
-        isCollapsed={isPanelCollapsed} 
-        onCollapsedChange={setIsPanelCollapsed}
-      >
-        <View style={{ padding: 15 }}>
-          <FilterBar
-            config={filterRoom}
-            onUpdateFilter={updateFilter}
-            onClearFilters={clearFilters}
-            activeFilters={queryParams.filters || []}
-          />
-        </View>
-      </SidePanel>
-      
+      {/* TODO: Réimplémenter le filtrage avec Redux si nécessaire */}
+      {/* <SidePanel title="Filtrage" width={width / 4} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
+        Filtres temporairement désactivés pendant la migration
+      </SidePanel> */}
+
       <View style={{ flex: 1 }}>
         <View style={styles.headerContainer}>
           <Text style={styles.headerTitle}>Liste des salles</Text>
-           <View 
-            style={{ 
-              width: 200, 
+          <View
+            style={{
+              width: 200,
               position: 'absolute',
               right: 0,
               top: 0,
@@ -220,9 +168,9 @@ export default function RoomListPage() {
             <Button
               onPress={handleCreateRoom}
               className="w-[200px] h-[50px] flex items-center justify-center"
-              style={{ 
-                backgroundColor: '#2A2E33', 
-                borderRadius: 0, 
+              style={{
+                backgroundColor: '#2A2E33',
+                borderRadius: 0,
                 height: 50,
                 width: 200,
               }}
@@ -241,16 +189,23 @@ export default function RoomListPage() {
             </Button>
           </View>
         </View>
-        <ForkTable
-          data={rooms}
-          columns={roomTableColumns}
-          onRowPress={handleEditRoom}
-          useActionMenu={true}
-          getActions={getRoomActions}
-          isLoading={loading}
-          loadingMessage="Chargement des salles..."
-          emptyMessage="Aucune salle trouvée"
-        />
+        {loading || error ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
+              {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+            </Text>
+          </View>
+        ) : (
+          <ForkTable
+            data={rooms}
+            columns={roomTableColumns}
+            onRowPress={handleEditRoom}
+            useActionMenu={true}
+            getActions={getRoomActions}
+            loadingMessage="Chargement des salles..."
+            emptyMessage="Aucune salle trouvée"
+          />
+        )}
       </View>
 
       <CustomModal

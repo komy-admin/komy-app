@@ -2,75 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
-import { Order } from '~/types/order.types';
-import { Item } from '~/types/item.types';
-import { ItemType } from '~/types/item-type.types';
 import { Status } from '~/types/status.enum';
-import { orderApiService } from '~/api/order.api';
-import { itemApiService } from '~/api/item.api';
-import { itemTypeApiService } from '~/api/item-type.api';
 import { orderItemApiService } from '~/api/order-item.api';
-import { useFilter } from '~/hooks/useFilter';
-import { FilterConfig } from '~/hooks/useFilter/types';
 import { useToast } from '~/components/ToastProvider';
 import { ArrowLeft, Plus, Minus } from 'lucide-react-native';
+import { useOrders, useMenu, useRestaurant } from '~/hooks/useRestaurant';
 
 export default function OrderMenuPage() {
   const { orderId } = useLocalSearchParams();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [items, setItems] = useState<Item[]>([]);
-  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const { showToast } = useToast();
+  
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+  
+  // Utilisation des hooks Redux
+  const { getOrderById, loading, error } = useOrders();
+  const { items, itemTypes } = useMenu();
+  
+  // Récupération de la commande depuis le store
+  const order = getOrderById(orderId as string);
 
+  // Initialiser l'onglet par défaut quand les itemTypes sont chargés
   useEffect(() => {
-    loadData();
-  }, [orderId]);
-
-  const filterItemConfig: FilterConfig<Item>[] = [
-    {
-      field: 'itemTypeId',
-      type: 'text',
-      label: 'ItemType',
-      operator: '=',
-      show: false
-    },
-  ];
-
-  const { updateFilter: updateItemFilter } = useFilter<Item>({
-    config: filterItemConfig,
-    service: itemApiService,
-    defaultParams: { page: 1, perPage: 100 },
-    onDataChange: (response) => setItems(response.data)
-  });
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      if (!orderId || typeof orderId !== 'string') {
-        throw new Error('ID de commande invalide');
-      }
-
-      const [orderResponse, itemTypesResponse] = await Promise.all([
-        orderApiService.get(orderId),
-        itemTypeApiService.getAll()
-      ]);
-
-      setOrder(orderResponse);
-      setItemTypes(itemTypesResponse.data);
-      setMenuTabsValue(itemTypesResponse.data[0]?.id);
-      setError(null);
-    } catch (err) {
-      setError('Erreur lors du chargement des données');
-      console.error(err);
-      showToast('Erreur lors du chargement des données.', 'error');
-    } finally {
-      setIsLoading(false);
+    if (itemTypes.length > 0 && !menuTabsValue) {
+      setMenuTabsValue(itemTypes[0].id);
     }
-  };
+  }, [itemTypes, menuTabsValue]);
+  
+  // Plus besoin de loadData, useFilter ou d'appels API - tout est géré par Redux
 
   const getItemQuantity = (itemId: string) => {
     if (!order) return 0;
@@ -91,29 +51,24 @@ export default function OrderMenuPage() {
 
     try {
       if (action === 'add') {
-        const orderItem = await orderItemApiService.create({
+        await orderItemApiService.create({
           orderId: order.id,
           itemId: item.id,
           status: Status.DRAFT
         });
-        const updatedOrder = { ...order, orderItems: [...order.orderItems, orderItem] };
-        setOrder(updatedOrder);
       } else if (action === 'remove') {
         const orderItem = order.orderItems.find(orderItem => orderItem.item.id === itemId);
         if (!orderItem) return;
-
         await orderItemApiService.delete(orderItem.id);
-        const updatedOrder = {
-          ...order,
-          orderItems: order.orderItems.filter(oi => oi.id !== orderItem.id)
-        };
-        setOrder(updatedOrder);
       }
-
+      
+      // Le store Redux se met à jour automatiquement via WebSockets
+      // Plus besoin de setOrder manuel
+      
       showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
     } catch (error) {
-      console.error(error);
-      showToast('Erreur lors de la mise à jour.', 'error');
+      console.error('Erreur lors de la mise à jour de la quantité:', error);
+      showToast('Erreur lors de la mise à jour de la quantité.', 'error');
     }
   };
 
@@ -125,7 +80,7 @@ export default function OrderMenuPage() {
     });
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
         <Text className="text-gray-900">Chargement...</Text>
@@ -155,9 +110,9 @@ export default function OrderMenuPage() {
           <ArrowLeft size={24} color="#374151" />
           <Text className="ml-2 text-lg font-medium text-gray-900">Retour</Text>
         </Pressable>
-        <Text className="text-lg font-bold text-gray-900">Menu - Table {order.table.name}</Text>
+        <Text className="text-lg font-bold text-gray-900">Menu - Table {order?.table.name}</Text>
         <Text className="text-sm text-muted-foreground">
-          {order.orderItems.length} article{order.orderItems.length > 1 ? 's' : ''}
+          {order?.orderItems.length || 0} article{(order?.orderItems.length || 0) > 1 ? 's' : ''}
         </Text>
       </View>
 
@@ -226,11 +181,10 @@ export default function OrderMenuPage() {
       <View className="px-4 py-3 bg-background border-t border-border">
         <Button
           onPress={navigateToOrderDetail}
-          className="w-full"
-          className="bg-primary"
+          className="w-full bg-primary"
         >
           <Text className="text-primary-foreground font-medium">
-            Valider la commande ({order.orderItems.length} article{order.orderItems.length > 1 ? 's' : ''})
+            Valider la commande ({order?.orderItems.length || 0} article{(order?.orderItems.length || 0) > 1 ? 's' : ''})
           </Text>
         </Button>
       </View>

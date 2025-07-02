@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
-import { orderApiService } from "~/api/order.api";
 import { getMostImportantStatus } from '~/lib/utils';
 import { useSocket } from '~/hooks/useSocket';
 import { Status } from "~/types/status.enum";
@@ -9,6 +8,9 @@ import { EventType } from '~/hooks/useSocket/types';
 import { orderItemApiService } from '~/api/order-item.api';
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { OrderItem } from '~/types/order-item.types';
+import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
+import { useSelector } from 'react-redux';
+import { selectAllOrderItems } from '~/store/restaurant';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -16,12 +18,12 @@ const AVAILABLE_STATUSES = [
   Status.READY,
 ];
 
-function useOrderGrouping(fetchedOrders: Order[], fetchedOrderItems: OrderItem[]) {
+function useOrderGrouping(orders: Order[], orderItems: OrderItem[]) {
   const groupedOrders = useMemo(() => {
     const orderMap = new Map();
     
-    fetchedOrderItems.forEach(item => {
-      const order = fetchedOrders.find(o => o.id === item.orderId);
+    orderItems.forEach(item => {
+      const order = orders.find(o => o.id === item.orderId);
       if (!order) return;
       
       const key = `${order.id}-${item.status}`;
@@ -33,42 +35,40 @@ function useOrderGrouping(fetchedOrders: Order[], fetchedOrderItems: OrderItem[]
     });
 
     return orderMap;
-  }, [fetchedOrders, fetchedOrderItems]);
+  }, [orders, orderItems]);
 
   return groupedOrders;
 }
 
 export default function KitchenPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const groupedOrders = useOrderGrouping(orders, orderItems);
-
-  const loadAllData = useCallback(async () => {
-    const [ordersData, orderItemsData] = await Promise.all([
-      orderApiService.getAll(`status[operator]=in&${AVAILABLE_STATUSES.map((s) => `status[values]=${s}`).join('&')}&perPage=100`),
-      orderItemApiService.getAll(`status[operator]=in&${AVAILABLE_STATUSES.map((s) => `status[values]=${s}`).join('&')}&perPage=100`)
-    ]);
-    
-    setOrders(ordersData.data);
-    setOrderItems(orderItemsData.data);
-  }, []);
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+  
+  // Utilisation des hooks Redux
+  const { orders, loading, error } = useOrders();
+  const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
+  
+  // Filtrer les commandes et items selon les statuts disponibles en cuisine
+  const kitchenOrders = useMemo(() => {
+    return orders.filter(order => 
+      order.orderItems.some(item => AVAILABLE_STATUSES.includes(item.status))
+    );
+  }, [orders]);
+  
+  const kitchenOrderItems = useMemo(() => {
+    return orderItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
+  }, [orderItems]);
+  
+  const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems);
 
   const { socket, isConnected } = useSocket();
 
   useEffect(() => {
     if (!isConnected || !socket) return;
-    socket.on(EventType.ORDER_ITEMS_PENDING, async ({ orderItems }: { orderItems: OrderItem[] }) => {
+    socket.on(EventType.ORDER_ITEMS_PENDING, ({ orderItems }: { orderItems: OrderItem[] }) => {
       console.log('Received ORDER_ITEMS_PENDING event:', orderItems);
-      setOrderItems(prevItems => [...prevItems.filter(i => !orderItems.map(x => x.id).includes(i.id)), ...orderItems]);
-      for (const orderItem of orderItems) {
-        const order = orders.find(o => o.id === orderItem.orderId);
-        if (!order) {
-          const newOrder = await orderApiService.get(orderItem.orderId);
-          setOrders(prevOrders => [...prevOrders, newOrder]);
-        }
-      }
+      // Les données sont automatiquement synchronisées via useRestaurantSocket
+      // Pas besoin de mise à jour manuelle du state local
     });
 
     return () => {
@@ -76,35 +76,17 @@ export default function KitchenPage() {
     }
    }, [isConnected, socket]);
 
-  useEffect(() => {
-    loadAllData().then(() => setIsLoading(false));
-  }, []);
+  // Plus besoin de charger manuellement - useAppInit gère l'initialisation automatique
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
-      await orderItemApiService.updateManyStatus(order.orderItems.map(oi => oi.id), newStatus)
-   
-      const updatedItems = orderItems.map(item => 
-        order.orderItems.some(orderItem => orderItem.id === item.id)
-          ? { ...item, status: newStatus }
-          : item
-      );
+      await orderItemApiService.updateManyStatus(order.orderItems.map(oi => oi.id), newStatus);
       
-      const allOrderItems = updatedItems.filter(item => item.orderId === order.id);
-      const calculatedNewOrderStatus = getMostImportantStatus(allOrderItems.map(item => item.status));
+      // Le calcul du nouveau statut de commande est fait automatiquement par le store
+      // lors de la synchronisation WebSocket, pas besoin de le faire manuellement ici
       
-      setOrderItems(updatedItems);
-      
-      if (order.status !== calculatedNewOrderStatus) {
-        await orderApiService.update(order.id, { status: calculatedNewOrderStatus });
-        setOrders(prevOrders => prevOrders.map(o => 
-          o.id === order.id ? { ...o, status: calculatedNewOrderStatus } : o
-        ));
-      }
-   
       // await emit(EventType.UPDATE_ORDER_STATUS, {
       //   orderId: order.id,
-      //   orderStatus: calculatedNewOrderStatus,
       //   orderItemIds: order.orderItems.map(item => item.id),
       //   orderItemStatus: newStatus,
       // });
@@ -114,10 +96,12 @@ export default function KitchenPage() {
     }
   };
 
-  if (isLoading) {
+  if (loading || globalLoading || error) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={styles.loadingText}>
+          {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+        </Text>
       </View>
     );
   }

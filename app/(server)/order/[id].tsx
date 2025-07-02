@@ -1,98 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button } from '~/components/ui';
-import { Order } from '~/types/order.types';
-import { Item } from '~/types/item.types';
-import { ItemType } from '~/types/item-type.types';
 import { OrderItem } from '~/types/order-item.types';
 import { Status } from '~/types/status.enum';
-import { orderApiService } from '~/api/order.api';
-import { itemApiService } from '~/api/item.api';
-import { itemTypeApiService } from '~/api/item-type.api';
-import { orderItemApiService } from '~/api/order-item.api';
-import { useFilter } from '~/hooks/useFilter';
-import { FilterConfig } from '~/hooks/useFilter/types';
-import { useSocket } from '~/hooks/useSocket';
-import { EventType } from '~/hooks/useSocket/types';
 import { useToast } from '~/components/ToastProvider';
-import { getMostImportantStatus } from '~/lib/utils';
 import OrderDetailView from '~/components/Service/OrderDetailView';
 import { ArrowLeft, Plus } from 'lucide-react-native';
+import { useOrders, useMenu, useRestaurant } from '~/hooks/useRestaurant';
+import { orderItemApiService } from '~/api/order-item.api';
 
 export default function OrderDetailPage() {
   const { id } = useLocalSearchParams();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const { showToast } = useToast();
-  const { socket, isConnected } = useSocket();
+  
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+  
+  // Utilisation des hooks Redux
+  const { getOrderById, deleteOrder, updateOrderStatus, loading, error } = useOrders();
+  const { itemTypes } = useMenu();
+  
+  // Récupération de la commande depuis le store
+  const order = getOrderById(id as string);
 
-  useEffect(() => {
-    loadOrderData();
-  }, [id]);
-
-  // Socket pour temps réel
-  useEffect(() => {
-    if (!isConnected || !socket || !order) return;
-
-    const handleUpdateOrdersStatus = (orderItemIds: string[], status: Status) => {
-      setOrder(prevOrder => {
-        if (!prevOrder) return null;
-
-        const updatedOrderItems = prevOrder.orderItems.map(orderItem => {
-          if (orderItemIds.includes(orderItem.id)) {
-            return { ...orderItem, status: status };
-          }
-          return orderItem;
-        });
-
-        return {
-          ...prevOrder,
-          orderItems: updatedOrderItems,
-          status: getMostImportantStatus(updatedOrderItems.map(orderItem => orderItem.status))
-        };
-      });
-    };
-
-    socket.on(EventType.ORDER_ITEMS_INPROGRESS, ({ orderItemIds }) =>
-      handleUpdateOrdersStatus(orderItemIds, Status.INPROGRESS)
-    );
-    socket.on(EventType.ORDER_ITEMS_READY, ({ orderItemIds }) =>
-      handleUpdateOrdersStatus(orderItemIds, Status.READY)
-    );
-
-    return () => {
-      socket.off(EventType.ORDER_ITEMS_INPROGRESS);
-      socket.off(EventType.ORDER_ITEMS_READY);
-    };
-  }, [isConnected, socket, order]);
-
-  const loadOrderData = async () => {
-    try {
-      setIsLoading(true);
-      if (!id || typeof id !== 'string') {
-        throw new Error('ID de commande invalide');
-      }
-
-      const [orderResponse, itemTypesResponse] = await Promise.all([
-        orderApiService.get(id),
-        itemTypeApiService.getAll()
-      ]);
-
-      setOrder(orderResponse);
-      setItemTypes(itemTypesResponse.data);
-      setError(null);
-    } catch (err) {
-      setError('Erreur lors du chargement de la commande');
-      console.error(err);
-      showToast('Erreur lors du chargement de la commande.', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Les données sont maintenant gérées par Redux via les hooks
+  // La synchronisation temps réel est gérée par useRestaurantSocket automatiquement
 
   const handleStatusUpdate = async (orderItems: OrderItem[], status: Status) => {
     if (!order) {
@@ -103,20 +36,10 @@ export default function OrderDetailPage() {
     try {
       const orderItemsIds = orderItems.map(orderItem => orderItem.id);
       await orderItemApiService.updateManyStatus(orderItemsIds, status);
-
-      const updatedItems = order.orderItems.map(orderItem => {
-        if (orderItems.includes(orderItem)) {
-          return { ...orderItem, status };
-        }
-        return orderItem;
-      });
-
-      const mostImportantStatus = getMostImportantStatus(updatedItems.map(orderItem => orderItem.status));
-      const updatedOrder = await orderApiService.update(order.id, {
-        status: mostImportantStatus
-      });
-
-      setOrder(updatedOrder);
+      
+      // Le store Redux se met à jour automatiquement via WebSockets
+      // Pas besoin d'appeler updateOrderStatus qui met à jour TOUTE la commande
+      
       showToast('Statut mis à jour avec succès.', 'success');
     } catch (error) {
       console.error(error);
@@ -124,11 +47,11 @@ export default function OrderDetailPage() {
     }
   };
 
-  const deleteOrder = async () => {
+  const handleDeleteOrder = async () => {
     if (!order) return;
 
     try {
-      await orderApiService.delete(order.id);
+      await deleteOrder(order.id);
       showToast('Commande supprimée avec succès.', 'success');
       router.back();
     } catch (error) {
@@ -146,12 +69,12 @@ export default function OrderDetailPage() {
 
   const handleBackPress = () => {
     if (order?.orderItems.length === 0) {
-      deleteOrder();
+      handleDeleteOrder();
     }
     router.back();
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
         <Text className="text-gray-900">Chargement...</Text>
@@ -211,7 +134,7 @@ export default function OrderDetailPage() {
             <Text className="text-white font-medium">Modifier la commande</Text>
           </Button>
           <Button
-            onPress={deleteOrder}
+            onPress={handleDeleteOrder}
             className="flex-1"
             variant="destructive"
           >
