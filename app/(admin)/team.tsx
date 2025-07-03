@@ -1,13 +1,9 @@
-import { View, ScrollView, useWindowDimensions, Text, StyleSheet, Platform } from "react-native";
+import { View, ScrollView, useWindowDimensions, Text, StyleSheet } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { User, UserProfile } from "~/types/user.types";
-import { userApiService } from "~/api/user.api";
 import { getUserProfileText } from "~/lib/utils";
-import { FilterBar } from '~/components/filters/Filter';
-import { useFilter } from "~/hooks/useFilter";
-import { FilterConfig } from "~/hooks/useFilter/types";
 import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
 import { useToast } from '~/components/ToastProvider';
@@ -16,11 +12,14 @@ import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
+import { useUsers, useRestaurant } from '~/hooks/useRestaurant';
+import { FilterBar } from '~/components/filters/Filter';
+import { FilterConfig } from "~/hooks/useFilter/types";
 
 export default function TeamPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<UserProfile | 'all'>('all');
-  const [users, setUsers] = useState<User[]>([]);
+  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [selectedUserForQr, setSelectedUserForQr] = useState<User | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -34,7 +33,18 @@ export default function TeamPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { showToast } = useToast();
 
-  const filterUser: FilterConfig<User>[] = [
+  // Vérifier les droits d'accès aux utilisateurs
+  const { userProfile } = useSelector((state: RootState) => state.auth);
+  const canManageUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile);
+
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+
+  // Utilisation des hooks Redux (seulement si autorisé)
+  const { users, loading, error, createUser, updateUser, deleteUser, generateQrToken, revokeQrToken, loadUsers, getUsersByProfile } = useUsers();
+
+  // Configuration des filtres
+  const filterConfig: FilterConfig<User>[] = [
     {
       field: 'firstName',
       type: 'text',
@@ -63,26 +73,50 @@ export default function TeamPage() {
       operator: 'like',
       show: true
     },
-    {
-      field: 'profil',
-      type: 'select',
-      label: 'Profile',
-      operator: '=',
-      show: false
-    }
   ];
 
-  const { updateFilter, loading, clearFilters, queryParams } = useFilter<User>({
-    service: userApiService,
-    config: filterUser,
-    onDataChange: (response) => {
-      setUsers(response.data);
-    },
-    onError: (error) => {
-      console.error('Error loading users:', error);
-      showToast('Erreur lors du chargement des utilisateurs', 'error');
-    }
-  });
+  // Filtrer les utilisateurs avec les filtres appliqués
+  const filteredUsers = useMemo(() => {
+    let result = activeTab === 'all' ? users : getUsersByProfile(activeTab);
+
+    // Appliquer les filtres
+    Object.entries(filterValues).forEach(([field, value]) => {
+      if (value && value !== '') {
+        result = result.filter(user => {
+          switch (field) {
+            case 'firstName':
+              return user.firstName?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
+            case 'lastName':
+              return user.lastName?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
+            case 'email':
+              return user.email?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
+            case 'phone':
+              return user.phone?.toString().includes(value.toString()) ?? false;
+            default:
+              return false;
+          }
+        });
+      }
+    });
+
+    return result.map(user => ({
+      ...user,
+      profil: getUserProfileText(user.profil)
+    }));
+  }, [users, activeTab, filterValues, getUsersByProfile]);
+
+  // Gestion des filtres
+  const handleUpdateFilter = (field: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setFilterValues({});
+    setActiveTab('all');
+  };
 
   const handleCreateUser = () => {
     setUser(null);
@@ -104,16 +138,10 @@ export default function TeamPage() {
   const handleSaveUser = async (user: User) => {
     try {
       if (user.id) {
-        await userApiService.update(user.id, user);
-        setUsers(prevUsers =>
-          prevUsers.map(u => u.id === user.id ? user : u)
-        );
+        await updateUser(user.id, user);
         showToast('Utilisateur modifié avec succès', 'success');
       } else {
-        const newUser = await userApiService.create(user);
-        if (activeTab === 'all' || activeTab === user.profil) {
-          setUsers(prevUsers => [...prevUsers, newUser]);
-        }
+        await createUser(user);
         showToast('Utilisateur créé avec succès', 'success');
       }
       handleCloseModal();
@@ -134,8 +162,7 @@ export default function TeamPage() {
     if (!userToDelete) return;
 
     try {
-      await userApiService.delete(userToDelete.id);
-      setUsers(users.filter(user => user.id !== userToDelete.id));
+      await deleteUser(userToDelete.id);
       showToast('Utilisateur supprimé avec succès', 'success');
     } catch (err) {
       console.error('Error deleting user:', err);
@@ -155,7 +182,7 @@ export default function TeamPage() {
     setQrLoading(true);
 
     try {
-      const res = await userApiService.generateQrToken(user.id);
+      const res = await generateQrToken(user.id);
       console.log('QR API response:', res);
       setQrCodeToken(res.qrData.token);
     } catch (e: any) {
@@ -171,7 +198,7 @@ export default function TeamPage() {
 
   const handleRevokeQr = async () => {
     if (!selectedUserForQr) return;
-    await userApiService.revokeQrToken(selectedUserForQr.id);
+    await revokeQrToken(selectedUserForQr.id);
     showToast('QR code révoqué avec succès', 'success');
   };
 
@@ -236,13 +263,10 @@ export default function TeamPage() {
       >
         <View style={{ padding: 15 }}>
           <FilterBar
-            config={filterUser}
-            onUpdateFilter={updateFilter}
-            onClearFilters={() => {
-              setActiveTab('all');
-              clearFilters();
-            }}
-            activeFilters={queryParams.filters || []}
+            config={filterConfig}
+            onUpdateFilter={handleUpdateFilter}
+            onClearFilters={handleClearFilters}
+            activeFilters={Object.entries(filterValues).map(([field, value]) => ({ field, value, operator: 'like' }))}
           />
         </View>
       </SidePanel>
@@ -253,11 +277,6 @@ export default function TeamPage() {
           value={activeTab}
           onValueChange={(newValue: string) => {
             const newTab = newValue as UserProfile | 'all';
-            if (newTab !== 'all') {
-              updateFilter('profil', newTab, '=');
-            } else {
-              updateFilter('profil', '', '=');
-            }
             setActiveTab(newTab);
           }}
         >
@@ -331,15 +350,16 @@ export default function TeamPage() {
                 onPress={handleCreateUser}
                 className="w-[200px] h-[50px] flex items-center justify-center"
                 style={{
-                  backgroundColor: '#2A2E33',
+                  backgroundColor: canManageUsers ? '#2A2E33' : '#CCCCCC',
                   borderRadius: 0,
                   height: 50,
                   width: 200
                 }}
+                disabled={!canManageUsers}
               >
                 <Text style={{
                   fontSize: 14,
-                  color: '#FBFBFB',
+                  color: canManageUsers ? '#FBFBFB' : '#888888',
                   fontWeight: '500',
                   textAlign: 'center',
                   textTransform: 'uppercase',
@@ -351,15 +371,32 @@ export default function TeamPage() {
           </View>
 
           <TabsContent style={{ flex: 1 }} value={activeTab}>
-            <ForkTable
-              data={users}
-              columns={teamTableColumns}
-              useActionMenu={true}
-              getActions={getUserActions}
-              isLoading={loading}
-              loadingMessage="Chargement des utilisateurs..."
-              emptyMessage="Aucun utilisateur trouvé"
-            />
+            {!canManageUsers ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                <Text style={{ color: '#ef4444', fontSize: 16, textAlign: 'center' }}>
+                  Accès non autorisé{'\n'}
+                  Vous n'avez pas les droits nécessaires pour gérer les utilisateurs.
+                </Text>
+              </View>
+            ) : loading || error ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
+                  {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+                </Text>
+              </View>
+            ) : (
+              <ForkTable
+                data={filteredUsers}
+                columns={teamTableColumns}
+                onRowPress={handleEditUser}
+                onRowDelete={handleDeleteUser}
+                useActionMenu={true}
+                getActions={getUserActions}
+                isLoading={loading}
+                loadingMessage="Chargement des utilisateurs..."
+                emptyMessage="Aucun utilisateur trouvé"
+              />
+            )}
           </TabsContent>
         </Tabs>
       </View>

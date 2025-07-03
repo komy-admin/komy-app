@@ -1,3 +1,4 @@
+import { Table } from '@/types/table.types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ItemTypes } from '~/types/item-type.enum';
@@ -6,6 +7,11 @@ import { UserProfile } from '~/types/user.types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export const getTableStatus = (table: Table) => {
+  const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
+  return getMostImportantStatus(statuses);
 }
 
 export const getMostImportantStatus = (statuses: Status[]) => {
@@ -51,6 +57,26 @@ export const getStatusText = (status: Status) => {
   return texts[status];
 }
 
+export const getNextStatus = (currentStatus: Status): Status | null => {
+  const statusProgression: Partial<Record<Status, Status>> = {
+    [Status.DRAFT]: Status.PENDING,
+    [Status.PENDING]: Status.INPROGRESS,
+    [Status.INPROGRESS]: Status.READY,
+    [Status.READY]: Status.SERVED,
+  };
+  return statusProgression[currentStatus] || null;
+};
+
+export const getPreviousStatus = (currentStatus: Status): Status | null => {
+  const statusRegression: Partial<Record<Status, Status>> = {
+    [Status.PENDING]: Status.DRAFT,
+    [Status.INPROGRESS]: Status.PENDING,
+    [Status.READY]: Status.INPROGRESS,
+    [Status.SERVED]: Status.READY,
+  };
+  return statusRegression[currentStatus] || null;
+};
+
 export const getItemTypeText = (itemType: ItemTypes) => {
   const texts = {
     [ItemTypes.DRINK]: 'Boissons',
@@ -66,8 +92,8 @@ export const getUserProfileText = (teamType: UserProfile) => {
     [UserProfile.ADMIN]: 'Admin',
     [UserProfile.SUPERADMIN]: 'Super admin',
     [UserProfile.MANAGER]: 'Manager',
-    [UserProfile.SERVER]: 'Serveur',
-    [UserProfile.CHEF]: 'Chef',
+    [UserProfile.SERVER]: 'Service',
+    [UserProfile.CHEF]: 'Cuisine',
   };
   return texts[teamType] || 'Type inconnu';
 };

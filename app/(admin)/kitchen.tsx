@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
-import { orderApiService } from "~/api/order.api";
 import { getMostImportantStatus } from '~/lib/utils';
 import { useSocket } from '~/hooks/useSocket';
 import { Status } from "~/types/status.enum";
@@ -9,6 +8,9 @@ import { EventType } from '~/hooks/useSocket/types';
 import { orderItemApiService } from '~/api/order-item.api';
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { OrderItem } from '~/types/order-item.types';
+import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
+import { useSelector } from 'react-redux';
+import { selectAllOrderItems } from '~/store/restaurant';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -16,14 +18,14 @@ const AVAILABLE_STATUSES = [
   Status.READY,
 ];
 
-function useOrderGrouping(fetchedOrders: Order[], fetchedOrderItems: OrderItem[]) {
+function useOrderGrouping(orders: Order[], orderItems: OrderItem[]) {
   const groupedOrders = useMemo(() => {
     const orderMap = new Map();
-    
-    fetchedOrderItems.forEach(item => {
-      const order = fetchedOrders.find(o => o.id === item.orderId);
+
+    orderItems.forEach(item => {
+      const order = orders.find(o => o.id === item.orderId);
       if (!order) return;
-      
+
       const key = `${order.id}-${item.status}`;
       if (!orderMap.has(key)) {
         orderMap.set(key, { ...order, status: item.status, orderItems: [item] });
@@ -33,91 +35,47 @@ function useOrderGrouping(fetchedOrders: Order[], fetchedOrderItems: OrderItem[]
     });
 
     return orderMap;
-  }, [fetchedOrders, fetchedOrderItems]);
+  }, [orders, orderItems]);
 
   return groupedOrders;
 }
 
 export default function KitchenPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
 
-  const groupedOrders = useOrderGrouping(orders, orderItems);
+  // Utilisation des hooks Redux
+  const { orders, loading, error, updateOrderItemStatus } = useOrders();
+  const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
 
-  const loadAllData = useCallback(async () => {
-    const [ordersData, orderItemsData] = await Promise.all([
-      orderApiService.getAll(`status[operator]=in&${AVAILABLE_STATUSES.map((s) => `status[values]=${s}`).join('&')}&perPage=100`),
-      orderItemApiService.getAll(`status[operator]=in&${AVAILABLE_STATUSES.map((s) => `status[values]=${s}`).join('&')}&perPage=100`)
-    ]);
-    
-    setOrders(ordersData.data);
-    setOrderItems(orderItemsData.data);
-  }, []);
+  // Filtrer les commandes et items selon les statuts disponibles en cuisine
+  const kitchenOrders = useMemo(() => {
+    return orders.filter(order =>
+      order.orderItems.some(item => AVAILABLE_STATUSES.includes(item.status))
+    );
+  }, [orders]);
 
-  const { socket, isConnected } = useSocket();
+  const kitchenOrderItems = useMemo(() => {
+    return orderItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
+  }, [orderItems]);
 
-  useEffect(() => {
-    if (!isConnected || !socket) return;
-    socket.on(EventType.ORDER_ITEMS_PENDING, async ({ orderItems }: { orderItems: OrderItem[] }) => {
-      console.log('Received ORDER_ITEMS_PENDING event:', orderItems);
-      setOrderItems(prevItems => [...prevItems.filter(i => !orderItems.map(x => x.id).includes(i.id)), ...orderItems]);
-      for (const orderItem of orderItems) {
-        const order = orders.find(o => o.id === orderItem.orderId);
-        if (!order) {
-          const newOrder = await orderApiService.get(orderItem.orderId);
-          setOrders(prevOrders => [...prevOrders, newOrder]);
-        }
-      }
-    });
-
-    return () => {
-      socket.off(EventType.ORDER_ITEMS_PENDING);
-    }
-   }, [isConnected, socket]);
-
-  useEffect(() => {
-    loadAllData().then(() => setIsLoading(false));
-  }, []);
+  const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems);
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
-      await orderItemApiService.updateManyStatus(order.orderItems.map(oi => oi.id), newStatus)
-   
-      const updatedItems = orderItems.map(item => 
-        order.orderItems.some(orderItem => orderItem.id === item.id)
-          ? { ...item, status: newStatus }
-          : item
-      );
-      
-      const allOrderItems = updatedItems.filter(item => item.orderId === order.id);
-      const calculatedNewOrderStatus = getMostImportantStatus(allOrderItems.map(item => item.status));
-      
-      setOrderItems(updatedItems);
-      
-      if (order.status !== calculatedNewOrderStatus) {
-        await orderApiService.update(order.id, { status: calculatedNewOrderStatus });
-        setOrders(prevOrders => prevOrders.map(o => 
-          o.id === order.id ? { ...o, status: calculatedNewOrderStatus } : o
-        ));
-      }
-   
-      // await emit(EventType.UPDATE_ORDER_STATUS, {
-      //   orderId: order.id,
-      //   orderStatus: calculatedNewOrderStatus,
-      //   orderItemIds: order.orderItems.map(item => item.id),
-      //   orderItemStatus: newStatus,
-      // });
+      await updateOrderItemStatus(order.orderItems.map(oi => oi.id), newStatus);
     } catch (error) {
       console.error('Error updating status:', error);
       throw error;
     }
   };
 
-  if (isLoading) {
+  if (loading || globalLoading || error) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={styles.loadingText}>
+          {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+        </Text>
       </View>
     );
   }
@@ -128,13 +86,13 @@ export default function KitchenPage() {
         <Text style={styles.headerTitle}>Cuisine</Text>
         <Text style={styles.headerSubtitle}>Gestion des commandes en temps réel</Text>
       </View>
-      
+
       <View style={styles.columnsContainer}>
         {AVAILABLE_STATUSES.map((status, index) => (
           <OrderColumn
             key={status}
             orders={Array.from(groupedOrders.values())
-              .filter(order => order.status === status)} 
+              .filter(order => order.status === status)}
             status={status}
             onStatusChange={handleStatusChange}
           />

@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { Order } from "~/types/order.types";
 import OrderCard from "~/components/Service/OrderCard";
 
@@ -8,7 +8,7 @@ interface OrderListProps {
   onOrderDelete?: (order: Order) => void;
 }
 
-export default function OrderList({orders, onOrderPress, onOrderDelete}: OrderListProps) {
+export default function OrderList({ orders, onOrderPress, onOrderDelete }: OrderListProps) {
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -30,8 +30,8 @@ export default function OrderList({orders, onOrderPress, onOrderDelete}: OrderLi
       alwaysBounceVertical={true}
     >
       {orders.map(order => (
-        <Pressable 
-          key={order.id} 
+        <Pressable
+          key={order.id}
           onPress={() => onOrderPress(order)}
         >
           <OrderCard order={order} onDelete={onOrderDelete} />

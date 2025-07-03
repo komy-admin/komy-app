@@ -21,8 +21,9 @@ const getOrderType = (order: Order): string => {
 };
 
 export default function OrderCard({ order, onDelete }: OrderCardProps) {
-  const statusColor = getStatusColor(order.status);
-  const statusText = getStatusText(order.status);
+  const mostImportantStatus = getMostImportantStatus(order.orderItems.map(item => item.status));
+  const statusColor = getStatusColor(mostImportantStatus);
+  const statusText = getStatusText(mostImportantStatus);
   const orderType = getOrderType(order);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -42,13 +43,13 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
     (event: PanGestureHandlerGestureEvent) => {
       const { translationX, velocityX } = event.nativeEvent;
       swipeRef.current = translationX;
-      
+
       // Activer le swipe seulement si le mouvement est principalement horizontal
       // et dépasse la distance d'activation
       if (Math.abs(translationX) > ACTIVATION_DISTANCE && Math.abs(velocityX) > Math.abs(event.nativeEvent.velocityY)) {
         isSwipeActive.current = true;
       }
-      
+
       // Appliquer la transformation seulement si le swipe est actif
       if (isSwipeActive.current && translationX <= 0 && translationX >= (SWIPE_THRESHOLD - 10)) {
         translateX.setValue(translationX);
@@ -88,7 +89,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
               {order.table.name}
             </Text>
           </View>
-          
+
           <View style={styles.content}>
             <Text style={styles.title}>{orderType}</Text>
             <Text style={styles.status}>
@@ -155,7 +156,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
               {order.table.name}
             </Text>
           </View>
-          
+
           <View style={styles.content}>
             <Text style={styles.title}>{orderType}</Text>
             <Text style={styles.status}>
@@ -193,7 +194,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'relative',
-    marginVertical: 8,
+    marginVertical: 8
   },
   deleteBackground: {
     position: 'absolute',
@@ -205,6 +206,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 2, height: 0 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+      },
+    }),
   },
   container: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Pressable, Animated, StyleSheet, Platform } from 'react-native';
-import { X, SlidersHorizontal} from 'lucide-react-native';
+import { X, SlidersHorizontal } from 'lucide-react-native';
 import { Text } from './ui';
 
 interface SidePanelProps {
@@ -31,13 +31,13 @@ export function SidePanel({
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
-  
+
   // Animations refs
   const animatedWidth = useRef(new Animated.Value(isCollapsed ? collapsedWidth : width)).current;
   const collapsedOpacity = useRef(new Animated.Value(isCollapsed ? 1 : 0)).current;
   const contentOpacity = useRef(new Animated.Value(isCollapsed ? 0 : 1)).current;
   const rotationValue = useRef(new Animated.Value(0)).current;
-  
+
   // Initialisation pour corriger le bug de rotation
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -75,7 +75,7 @@ export function SidePanel({
 
   const toggleCollapse = () => {
     if (hideCloseButton && !showCloseButtonWhenTableSelected) return;
-    
+
     const newCollapsedState = !isCollapsed;
     if (onCollapsedChange) {
       onCollapsedChange(newCollapsedState);
@@ -126,7 +126,7 @@ export function SidePanel({
     >
       {/* Barre latérale collapsed */}
       {isCollapsed && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.collapsedBarContainer,
             { opacity: collapsedOpacity }
@@ -136,7 +136,7 @@ export function SidePanel({
           <Pressable onPress={toggleCollapse} style={styles.collapsedBar}>
             <View style={styles.collapsedBarContent}>
               {/* Section icône */}
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.fullWidthIconSection,
                   { opacity: collapsedOpacity }
@@ -144,19 +144,19 @@ export function SidePanel({
               >
                 <SlidersHorizontal size={20} color="#FFFFFF" strokeWidth={2} />
               </Animated.View>
-              
+
               {/* Texte vertical */}
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.textSection,
                   { opacity: collapsedOpacity }
                 ]}
               >
                 <View style={styles.textContainer}>
-                  <Animated.Text 
+                  <Animated.Text
                     style={[
                       styles.verticalText,
-                      { 
+                      {
                         transform: [{ rotate: rotationInterpolate }],
                         opacity: isInitialized ? 1 : 0,
                       }
@@ -173,7 +173,7 @@ export function SidePanel({
 
       {/* Contenu principal */}
       {!isCollapsed && (
-        <Animated.View 
+        <Animated.View
           style={[styles.content, { opacity: contentOpacity }]}
           pointerEvents="auto"
         >
@@ -184,7 +184,7 @@ export function SidePanel({
             ]}
           >
             <View style={styles.headerLeft}>
-              <Text 
+              <Text
                 style={styles.title}
                 numberOfLines={1}
                 ellipsizeMode="tail"
@@ -213,6 +213,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
     zIndex: 1000,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 2, height: 0 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+      },
+    }),
   },
   content: {
     flex: 1,

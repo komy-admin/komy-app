@@ -1,11 +1,11 @@
 import { useColorScheme as useNativewindColorScheme } from 'nativewind';
 
 export function useColorScheme() {
-  const { colorScheme, setColorScheme, toggleColorScheme } = useNativewindColorScheme();
+  // Force light theme only - no dark mode support
   return {
-    colorScheme: colorScheme ?? 'dark',
-    isDarkColorScheme: colorScheme === 'dark',
-    setColorScheme,
-    toggleColorScheme,
+    colorScheme: 'light' as const,
+    isDarkColorScheme: false,
+    setColorScheme: () => {}, // Disable theme switching
+    toggleColorScheme: () => {}, // Disable theme toggling
   };
 }

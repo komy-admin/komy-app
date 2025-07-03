@@ -1,93 +1,378 @@
 // app/(server)/index.tsx
 import { View, ScrollView, Pressable, Dimensions } from 'react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
+import { useMemo, useRef, useCallback, useState, useEffect, JSX } from 'react';
 import { Table } from '~/types/table.types';
-import { Card, CardContent, CardHeader, CardTitle, Text } from '~/components/ui';
-import { tableApiService } from '~/api/table.api';
-import { getStatusColor, getStatusText } from '~/lib/utils';
+import { Room } from '~/types/room.types';
+import { Order } from '~/types/order.types';
+import { Card, CardContent, Text, Badge, Button } from '~/components/ui';
+import { StatusPill } from '~/components/ui/StatusPill';
+import { getStatusColor, getStatusText, getMostImportantStatus, getNextStatus } from '~/lib/utils';
 import { router } from 'expo-router';
 import RoomComponent from '~/components/Room/Room';
 import { Status } from '~/types/status.enum';
+import { useToast } from '~/components/ToastProvider';
+import { AlertCircle, SquareArrowRight } from 'lucide-react-native';
+import { ActionMenu, ActionItem } from '~/components/ActionMenu';
+import { OrderItem } from '@/types/order-item.types';
+import * as Haptics from 'expo-haptics';
+import { useMenu, useOrders, useRestaurant, useRooms, useTables } from '~/hooks/useRestaurant';
+
+type BottomSheetMode = 'tables' | 'orders' | 'menu';
 
 export default function ServerHome() {
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => ['25%', '50%', '90%'], []);
+  const snapPoints = useMemo(() => ['15%', '50%', '90%'], []);
   const screenHeight = Dimensions.get('window').height;
 
-  const [tables, setTables] = useState<Table[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+  
+  const { rooms, currentRoom, error: roomsError, setCurrentRoom } = useRooms();
+  const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
+  const { currentRoomOrders, selectedTableOrder, createOrder, deleteOrder, updateOrderStatus, error: ordersError } = useOrders();
+  const { items, itemTypes } = useMenu();
 
-  useEffect(() => {
-    loadTables();
-  }, []);
+  const [bottomSheetMode, setBottomSheetMode] = useState<BottomSheetMode>('tables');
 
-  const loadTables = async () => {
-    try {
-      setIsLoading(true);
-      const { data } = await tableApiService.getAll();
-      setTables(data);
-      setError(null);
-    } catch (err) {
-      setError('Erreur lors du chargement des tables');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+  const { showToast } = useToast();
+
+  const handleChangeRoom = (room: Room) => {
+    setSelectedTable(null);
+    setCurrentRoom(room.id);
+    setBottomSheetMode('tables');
   };
 
   const handleTablePress = (table: Table | null) => {
     if (!table) return;
-    try {
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Supprimer les commandes vides si on change de table
+    if (selectedTable && selectedTableOrder && selectedTableOrder.orderItems.length === 0) {
+      try {
+        deleteOrder(selectedTableOrder.id);
+      } catch (error) {
+        console.error('Failed to delete empty order:', error);
+      }
+    }
+
+    setSelectedTable(table.id);
+    const existingOrder = currentRoomOrders.find(order => order.tableId === table.id);
+
+    if (existingOrder) {
+      // Naviguer vers la page de détail
       router.push({
-        pathname: "/table/[id]",
-        params: { id: table.id }
+        pathname: '/(server)/order/[id]',
+        params: { id: existingOrder.id }
+      });
+    } else {
+      setBottomSheetMode('orders');
+      bottomSheetRef.current?.snapToIndex(1);
+    }
+  };
+
+  const handleCreateOrder = async () => {
+    try {
+      if (!selectedTable) {
+        showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
+        return;
+      }
+      const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTable.id);
+      if (existingOrder) {
+        showToast('Une commande existe déjà pour cette table.', 'warning');
+        return;
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      const order = await createOrder(selectedTable.id);
+      router.push({
+        pathname: '/(server)/order/menu',
+        params: { orderId: order.id }
       });
     } catch (error) {
-      console.error('Navigation error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
+      console.error(error);
     }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+      await deleteOrder(orderId);
+      if (selectedTableOrder?.id === orderId) {
+        setSelectedTable(null);
+        setBottomSheetMode('tables');
+        bottomSheetRef.current?.snapToIndex(0);
+      }
+      showToast('Commande supprimée avec succès.', 'success');
+    } catch (error) {
+      // Retour haptique d'erreur
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.error(error);
+      showToast('Erreur lors de la suppression.', 'error');
+    }
+  };
+
+
+  const handleQuickStatusUpdate = async (order: Order, newStatus: Status, itemTypeId?: string) => {
+    try {
+      if (newStatus === Status.READY) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (newStatus === Status.SERVED) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+
+      // Utiliser la fonction centralisée updateOrderStatus
+      await updateOrderStatus(order.id, newStatus, itemTypeId);
+
+      const itemTypeName = itemTypeId ?
+        order.orderItems.find(oi => oi.item.itemType.id === itemTypeId)?.item.itemType.name || 'articles' :
+        'commande';
+
+      const statusMessages: Record<Status, string> = {
+        [Status.DRAFT]: `${itemTypeName} en brouillon`,
+        [Status.PENDING]: `${itemTypeName} remis en attente`,
+        [Status.INPROGRESS]: `${itemTypeName} en cours de préparation`,
+        [Status.READY]: `${itemTypeName} marqué(s) comme prêt(s)`,
+        [Status.SERVED]: `${itemTypeName} marqué(s) comme servi(s)`,
+        [Status.TERMINATED]: `${itemTypeName} terminé(s)`,
+        [Status.ERROR]: `Problème signalé sur ${itemTypeName}`,
+      };
+
+      showToast(statusMessages[newStatus] || 'Statut mis à jour', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      showToast('Erreur lors de la mise à jour du statut', 'error');
+    }
+  };
+
+  const getStatusIcon = (status: Status) => {
+    const icons: Record<Status, JSX.Element> = {
+      [Status.DRAFT]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.PENDING]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.INPROGRESS]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.READY]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.SERVED]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.TERMINATED]: <SquareArrowRight size={14} color={getStatusColor(status)} />,
+      [Status.ERROR]: <AlertCircle size={14} color="#EF4444" />,
+    };
+    return icons[status] || icons[Status.DRAFT];
+  };
+
+
+  const renderBottomSheetContent = useCallback(() => {
+    switch (bottomSheetMode) {
+      case 'tables':
+        return (
+          <BottomSheetScrollView className="px-4">
+            <View className="py-2">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-gray-900">Tables - {currentRoom?.name}</Text>
+                <View className="flex-row gap-2">
+                  {rooms.map((room, index) => (
+                    <Pressable key={index} onPress={() => handleChangeRoom(room)}>
+                      <Badge
+                        variant="outline"
+                        active={room.id === currentRoom?.id}
+                        size="sm"
+                      >
+                        <Text className="text-xs text-gray-900">{room.name}</Text>
+                      </Badge>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+              {currentRoomTables.map((table) => {
+                if (!table.currentOrder) return null;
+                const tableOrder = table.currentOrder;
+                const status = tableOrder.status;
+
+                const getStatusActions = (order: Order | undefined): ActionItem[] => {
+                  if (!order) return [];
+
+                  const actions: ActionItem[] = [];
+
+                  // Grouper les orderItems par type
+                  const itemsByType = order.orderItems.reduce((acc, orderItem) => {
+                    const typeId = orderItem.item.itemType.id;
+                    const typeName = orderItem.item.itemType.name;
+
+                    if (!acc[typeId]) {
+                      acc[typeId] = {
+                        typeName,
+                        items: [],
+                        typeId
+                      };
+                    }
+                    acc[typeId].items.push(orderItem);
+                    return acc;
+                  }, {} as Record<string, { typeName: string; items: any[]; typeId: string }>);
+
+                  // Créer des actions pour chaque type
+                  Object.values(itemsByType).forEach(({ typeName, items, typeId }) => {
+                    // Calculer le statut dominant du groupe
+                    const statuses = items.map(item => item.status);
+                    const dominantStatus = getMostImportantStatus(statuses);
+                    const nextStatus = getNextStatus(dominantStatus);
+
+                    if (nextStatus && dominantStatus !== Status.SERVED) {
+                      const count = items.length;
+
+                      actions.push({
+                        content: (
+                          <View className="flex-1">
+                            <View className="flex-row items-center justify-between">
+                              <View className="flex-row items-center">
+                                <Text className="font-semibold text-gray-900 text-base mr-3">
+                                  {typeName}
+                                </Text>
+                                <View className="bg-gray-100 px-2 py-1 rounded-full">
+                                  <Text className="text-xs font-medium text-gray-700">
+                                    {count}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                            <View className="flex-row items-center mt-2">
+                              <StatusPill status={dominantStatus} size="md" />
+                              <View className="mx-3 h-px bg-gray-300 flex-1" />
+                              <StatusPill status={nextStatus} size="md" />
+                            </View>
+                          </View>
+                        ),
+                        icon: getStatusIcon(nextStatus),
+                        onPress: () => handleQuickStatusUpdate(order, nextStatus, typeId)
+                      });
+                    }
+                  });
+
+                  return actions;
+                };
+
+                return (
+                  <Card
+                    key={table.id}
+                    className="mb-3 border border-gray-200"
+                    style={{ backgroundColor: getStatusColor(status) }}
+                  >
+                    <CardContent className="flex-row justify-between items-center py-3">
+                      <Pressable
+                        className="flex-1 flex-row items-center"
+                        onPress={() => handleTablePress(table)}
+                      >
+                        <View className="flex-1">
+                          <Text className="font-medium text-gray-900">Table {table.name}</Text>
+                          <Text className="text-sm text-muted-foreground">{table.seats} places</Text>
+                          {tableOrder && (
+                            <Text className="text-xs text-muted-foreground mt-1">
+                              {tableOrder.orderItems.length} article{tableOrder.orderItems.length > 1 ? 's' : ''}
+                            </Text>
+                          )}
+                        </View>
+                        <View
+                          className="px-3 py-1 rounded-full mr-2"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}
+                        >
+                          <Text className="text-sm text-gray-900">
+                            {getStatusText(status)}
+                          </Text>
+                        </View>
+                      </Pressable>
+                      {tableOrder && (
+                        <ActionMenu actions={getStatusActions(tableOrder)} width={350} withSeparator fullWidth />
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </View>
+          </BottomSheetScrollView>
+        );
+
+      case 'orders':
+        return (
+          <BottomSheetScrollView className="px-4">
+            <View className="py-4">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-gray-900">Table {selectedTable?.name}</Text>
+                <Pressable onPress={() => {
+                  setBottomSheetMode('tables');
+                  bottomSheetRef.current?.snapToIndex(0);
+                }}>
+                  <Text className="text-primary">Retour</Text>
+                </Pressable>
+              </View>
+              <View className="items-center py-8">
+                <Text className="text-muted-foreground mb-2 text-center">Table {selectedTable?.name}</Text>
+                <Text className="text-muted-foreground mb-6 text-center">{selectedTable?.seats} places disponibles</Text>
+                <Button
+                  onPress={handleCreateOrder}
+                  className="w-full bg-primary"
+                >
+                  <Text className="text-primary-foreground font-medium">Créer une commande</Text>
+                </Button>
+              </View>
+            </View>
+          </BottomSheetScrollView>
+        );
+
+      case 'menu':
+        // Ce mode n'est plus utilisé car déplacé vers une page dédiée
+        return (
+          <BottomSheetScrollView className="px-4">
+            <View className="py-4 items-center">
+              <Text className="text-muted-foreground">Menu déplacé vers une page dédiée</Text>
+            </View>
+          </BottomSheetScrollView>
+        );
+
+      // Le mode 'detail' a été supprimé car déplacé vers une page dédiée
+
+      default:
+        return null;
+    }
+  }, [bottomSheetMode, currentRoomTables, currentRoom, rooms, selectedTable, currentRoomOrders, router]);
+
+
+  if (roomsError || ordersError) {
+    return (
+      <View className="flex-1 bg-background items-center justify-center p-4">
+        <Text className="text-destructive text-center mb-4">
+          {roomsError || ordersError || 'Erreur lors du chargement'}
+        </Text>
+        <Button onPress={() => { }}>
+          <Text className="text-primary-foreground">Réessayer</Text>
+        </Button>
+      </View>
+    );
   }
 
-  const renderTableList = useCallback(() => (
-    <BottomSheetScrollView className="px-4">
-      <View className="py-2">
-        <Text className="text-lg font-bold mb-4">Liste des Tables</Text>
-        {tables.map((table) => (
-          <Pressable
-            key={table.id}
-            onPress={() => handleTablePress(table)}
-          >
-            <Card
-              className="mb-3 border border-gray-200"
-              style={{backgroundColor: getStatusColor(Status.DRAFT)}}>
-              <CardContent className="flex-row justify-between items-center py-3">
-                <View>
-                  <Text className="font-medium">Table {table.name}</Text>
-                  <Text className="text-sm text-gray-500">{table.seats} places</Text>
-                </View>
-                <View className="px-3 py-1 rounded-full bg-white">
-                  <Text className="text-sm">
-                    {getStatusText(Status.DRAFT)}
-                  </Text>
-                </View>
-              </CardContent>
-            </Card>
-          </Pressable>
-        ))}
-      </View>
-    </BottomSheetScrollView>
-  ), [tables]);
-
   return (
-    <View className="flex-1 bg-background maisoutes">
-      <View className="" style={{
-        height : screenHeight * 0.75 - 88,
+    <View className="flex-1 bg-background">
+      <View style={{
+        height: screenHeight * 0.85 - 88,
       }}>
-        <RoomComponent tables={tables} onTablePress={handleTablePress} onTableLongPress={handleTablePress} onTableUpdate={() => {}} />
+        <RoomComponent
+          tables={currentRoomTables.map(t => ({ ...t, orders: t.currentOrder ? [t.currentOrder] : [] }))}
+          orders={currentRoomOrders}
+          editingTableId={selectedTable?.id}
+          editionMode={false}
+          isLoading={false}
+          width={currentRoom?.width}
+          height={currentRoom?.height}
+          onTablePress={handleTablePress}
+          onTableLongPress={handleTablePress}
+          onTableUpdate={() => { }}
+        />
       </View>
 
-      {/* Bottom Sheet avec style amélioré */}
+      {/* Bottom Sheet avec modes multiples */}
       <BottomSheet
         ref={bottomSheetRef}
         snapPoints={snapPoints}
@@ -99,26 +384,26 @@ export default function ServerHome() {
           height: 4,
         }}
         handleStyle={{
-          backgroundColor: 'white',
+          backgroundColor: '#f8f9fa',
           borderTopLeftRadius: 15,
           borderTopRightRadius: 15,
           paddingVertical: 12,
         }}
         backgroundStyle={{
-          backgroundColor: 'white',
+          backgroundColor: '#f8f9fa',
         }}
         style={{
           shadowColor: "#000",
           shadowOffset: {
             width: 0,
-            height: -4,
+            height: 4,
           },
-          shadowOpacity: 0.15,
-          shadowRadius: 5,
-          elevation: 5,
+          shadowOpacity: 0.30,
+          shadowRadius: 4.65,
+          elevation: 8,
         }}
       >
-        {renderTableList()}
+        {renderBottomSheetContent()}
       </BottomSheet>
     </View>
   );

@@ -35,7 +35,7 @@ export default function OrderItemsForm({
 }: OrderItemsFormProps) {
   const [activeTab, setActiveTab] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { showToast } = useToast();
   // État local pour les modifications (brouillon)
   const [draftItems, setDraftItems] = useState<DraftOrderItem[]>([]);
@@ -49,7 +49,7 @@ export default function OrderItemsForm({
   // Initialiser le brouillon avec les items existants de la commande
   useEffect(() => {
     const initialDraft: DraftOrderItem[] = [];
-    
+
     // Compter les quantités des items existants
     order.orderItems.forEach((orderItem: OrderItem) => {
       const existingDraft = initialDraft.find(draft => draft.itemId === orderItem.item.id);
@@ -62,7 +62,7 @@ export default function OrderItemsForm({
         });
       }
     });
-    
+
     setDraftItems(initialDraft);
   }, [order]);
 
@@ -74,11 +74,11 @@ export default function OrderItemsForm({
   const onUpdateQuantity = (itemId: string, action: 'remove' | 'add') => {
     setDraftItems(prevDraft => {
       const existingDraft = prevDraft.find(draft => draft.itemId === itemId);
-      
+
       if (action === 'add') {
         if (existingDraft) {
-          return prevDraft.map(draft => 
-            draft.itemId === itemId 
+          return prevDraft.map(draft =>
+            draft.itemId === itemId
               ? { ...draft, quantity: draft.quantity + 1 }
               : draft
           );
@@ -90,15 +90,15 @@ export default function OrderItemsForm({
           if (existingDraft.quantity <= 1) {
             return prevDraft.filter(draft => draft.itemId !== itemId);
           } else {
-            return prevDraft.map(draft => 
-              draft.itemId === itemId 
+            return prevDraft.map(draft =>
+              draft.itemId === itemId
                 ? { ...draft, quantity: draft.quantity - 1 }
                 : draft
             );
           }
         }
       }
-      
+
       return prevDraft;
     });
   };
@@ -126,14 +126,14 @@ export default function OrderItemsForm({
       for (const [itemId, currentCount] of currentItemCounts) {
         const newCount = newItemCounts.get(itemId) || 0;
         const difference = newCount - currentCount;
-        
+
         if (difference < 0) {
           // Il faut supprimer des items (on supprime les plus récents)
           const orderItemsToRemove = order.orderItems
             .filter((oi: OrderItem) => oi.item.id === itemId)
             .sort((a: OrderItem, b: OrderItem) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, Math.abs(difference));
-          
+
           itemsToRemove.push(...orderItemsToRemove.map((oi: OrderItem) => oi.id));
         } else if (difference > 0) {
           // Il faut ajouter des items
@@ -150,7 +150,7 @@ export default function OrderItemsForm({
 
       // 3. Supprimer les orderItems en trop
       if (itemsToRemove.length > 0) {
-        const deletePromises = itemsToRemove.map(orderItemId => 
+        const deletePromises = itemsToRemove.map(orderItemId =>
           orderItemApiService.delete(orderItemId)
         );
         await Promise.all(deletePromises);
@@ -176,7 +176,7 @@ export default function OrderItemsForm({
       const updatedOrder = await orderApiService.get(order.id);
 
       // 6. Calculer le nouveau statut global
-      const mostImportantStatus = updatedOrder.orderItems.length > 0 
+      const mostImportantStatus = updatedOrder.orderItems.length > 0
         ? getMostImportantStatus(updatedOrder.orderItems.map((orderItem: OrderItem) => orderItem.status))
         : Status.DRAFT;
 
@@ -241,7 +241,7 @@ export default function OrderItemsForm({
 
       {/* ScrollView principal */}
       <View style={styles.scrollContainer}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
@@ -274,7 +274,7 @@ export default function OrderItemsForm({
             .filter(item => item.itemType.id === activeTab)
             .map((item) => {
               const quantity = getItemQuantity(item.id);
-              
+
               return (
                 <View key={item.id} style={styles.itemRow}>
                   <View style={styles.itemInfo}>
@@ -285,7 +285,7 @@ export default function OrderItemsForm({
                       {item.price}€
                     </Text>
                   </View>
-                  
+
                   <View style={styles.quantityContainer}>
                     <Pressable
                       onPress={() => onUpdateQuantity(item.id, 'remove')}
@@ -296,11 +296,11 @@ export default function OrderItemsForm({
                     >
                       <Minus size={20} color={quantity === 0 ? "#ccc" : "#666"} strokeWidth={2.5} />
                     </Pressable>
-                    
+
                     <Text style={styles.quantityText}>
                       {quantity}
                     </Text>
-                    
+
                     <Pressable
                       onPress={() => onUpdateQuantity(item.id, 'add')}
                       style={[styles.quantityButton, isLoading && styles.disabledButton]}
@@ -327,7 +327,7 @@ export default function OrderItemsForm({
             Total: {getTotalPrice().toFixed(2)}€
           </Text>
         </View>
-        
+
         <View style={styles.buttonContainer}>
           <Button
             onPress={handleCancel}
@@ -337,7 +337,7 @@ export default function OrderItemsForm({
           >
             <Text style={styles.cancelButtonText}>Annuler</Text>
           </Button>
-          
+
           <Button
             onPress={handleSave}
             style={styles.saveButton}

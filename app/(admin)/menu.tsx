@@ -1,85 +1,97 @@
-import { Alert, useWindowDimensions, View, ScrollView, Text, StyleSheet } from "react-native";
+import { useWindowDimensions, View, ScrollView, Text, StyleSheet } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import React, { useEffect, useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Item } from "~/types/item.types";
-import { itemApiService } from "~/api/item.api";
-import { itemTypeApiService } from "~/api/item-type.api";
 import { FilterBar } from '~/components/filters/Filter';
 import { ItemType } from '~/types/item-type.types';
 import { FilterConfig } from '~/hooks/useFilter/types';
-import { useFilter } from "~/hooks/useFilter";
 import { CustomModal } from "~/components/CustomModal";
 import { MenuForm } from "~/components/form/MenuForm";
 import { useToast } from '~/components/ToastProvider';
+import { useMenu, useRestaurant } from '~/hooks/useRestaurant';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("ALL");
-  const [items, setItems] = useState<Item[]>([]);
-  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   const { showToast } = useToast();
-  
+
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+
+  // Utilisation des hooks Redux
+  const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType } = useMenu();
+
   const filterItem: FilterConfig<Item>[] = [
-    { 
-      field: 'name', 
+    {
+      field: 'name',
       type: 'text',
       label: 'Nom',
       operator: 'like',
       show: true
     },
-    { 
+    {
       currency: '€',
-      field: 'price', 
+      field: 'price',
       type: 'number',
       label: 'Prix',
       operator: 'between',
       show: true
     },
-    { 
-      field: 'itemTypeId', 
-      type: 'text',
-      label: 'ItempType',
-      operator: '=',
-      show: false
-    },
   ];
 
-  const { updateFilter, loading, clearFilters, queryParams } = useFilter<Item>({
-    service: itemApiService,
-    config: filterItem,
-    onDataChange: (response) => {
-      setItems(response.data);
-      setIsLoading(false);
-    },
-    onError: (error) => {
-      console.error('Error loading items:', error);
-      showToast('Erreur lors du chargement des articles', 'error');
-      setIsLoading(false);
-    }
-  });
+  // Filtrer les articles avec les filtres appliqués
+  const filteredItems = useMemo(() => {
+    let result = activeTab === 'ALL' ? items : getItemsByType(activeTab);
 
-  useEffect(() => {
-    const loadItemTypes = async () => {
-      try {
-        setIsLoading(true);
-        const { data } = await itemTypeApiService.getAll();
-        setItemTypes(data);
-      } catch (err) {
-        console.error('Error loading item types:', err);
-        showToast('Erreur lors du chargement des types d\'articles', 'error');
-      } finally {
-        setIsLoading(false);
+    // Appliquer les filtres
+    Object.entries(filterValues).forEach(([field, value]) => {
+      if (value && value !== '') {
+        result = result.filter(item => {
+          switch (field) {
+            case 'name':
+              return item.name?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
+            case 'price':
+              if (Array.isArray(value)) {
+                const [min, max] = value;
+                if (min !== null && max !== null) {
+                  return item.price >= min && item.price <= max;
+                } else if (min !== null) {
+                  return item.price >= min;
+                } else if (max !== null) {
+                  return item.price <= max;
+                }
+              }
+              return true;
+            default:
+              return false;
+          }
+        });
       }
-    };
+    });
 
-    loadItemTypes();
-  }, []);
+    return result;
+  }, [items, activeTab, filterValues, getItemsByType]);
+
+  // Gestion des filtres
+  const handleUpdateFilter = (field: string, value: any) => {
+    setFilterValues(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setFilterValues({});
+    setActiveTab('ALL');
+  };
+
+  // Plus besoin de charger manuellement - useAppInit gère l'initialisation automatique
 
   const handleCreateItem = () => {
     setCurrentItem(null);
@@ -111,18 +123,10 @@ export default function MenuPage() {
       };
 
       if (item.id) {
-        await itemApiService.update(item.id, itemWithType);
-        if (activeTab !== "ALL" && itemWithType.itemType.id !== activeTab) {
-          setItems(prevItems => prevItems.filter(i => i.id !== item.id));
-        } else {
-          setItems(prevItems => prevItems.map(i => i.id === item.id ? itemWithType : i));
-        }
+        await updateMenuItem(item.id, itemWithType);
         showToast('Article modifié avec succès', 'success');
       } else {
-        const newItem = await itemApiService.create(itemWithType);
-        if (activeTab === "ALL" || activeTab === itemWithType.itemType.id) {
-          setItems(prevItems => [...prevItems, { ...newItem, itemType }]);
-        }
+        await createMenuItem(itemWithType);
         showToast('Article créé avec succès', 'success');
       }
       handleCloseModal();
@@ -141,10 +145,9 @@ export default function MenuPage() {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    
+
     try {
-      await itemApiService.delete(itemToDelete.id);
-      setItems(items.filter(item => item.id !== itemToDelete.id));
+      await deleteMenuItem(itemToDelete.id);
       showToast('Article supprimé avec succès', 'success');
     } catch (err) {
       console.error('Error deleting item:', err);
@@ -156,7 +159,7 @@ export default function MenuPage() {
   };
 
   const { width, height } = useWindowDimensions();
-  
+
   const itemTableColumns = [
     {
       label: 'Nom',
@@ -181,21 +184,18 @@ export default function MenuPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel 
-        title="Filtrage" 
-        width={width / 4} 
-        isCollapsed={isPanelCollapsed} 
+      <SidePanel
+        title="Filtrage"
+        width={width / 4}
+        isCollapsed={isPanelCollapsed}
         onCollapsedChange={setIsPanelCollapsed}
       >
         <View style={{ padding: 15 }}>
           <FilterBar
             config={filterItem}
-            onUpdateFilter={updateFilter}
-            onClearFilters={() => {
-              setActiveTab('ALL')
-              clearFilters()
-            }}
-            activeFilters={queryParams.filters || []}
+            onUpdateFilter={handleUpdateFilter}
+            onClearFilters={handleClearFilters}
+            activeFilters={Object.entries(filterValues).map(([field, value]) => ({ field, value, operator: 'like' }))}
           />
         </View>
       </SidePanel>
@@ -204,38 +204,33 @@ export default function MenuPage() {
           style={{ flex: 1, backgroundColor: '#FFFFFF' }}
           value={activeTab}
           onValueChange={(newValue: string) => {
-            if (newValue !== 'ALL') {
-              updateFilter('itemTypeId', newValue);
-            } else {
-              updateFilter('itemTypeId', '');
-            }
             setActiveTab(newValue);
           }}
           className="w-full mx-auto flex-col"
         >
-          <View 
-            style={{ 
-              backgroundColor: '#FBFBFB', 
-              height: 50, 
+          <View
+            style={{
+              backgroundColor: '#FBFBFB',
+              height: 50,
               flexDirection: 'row',
               justifyContent: 'space-between',
               position: 'relative',
             }}
           >
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
-              style={{ 
-                flex: 1, 
-                maxWidth: '80%' 
+              style={{
+                flex: 1,
+                maxWidth: '80%'
               }}
               contentContainerStyle={{
                 alignItems: 'center'
               }}
             >
-              <TabsList 
-                className="flex-row justify-start h-full" 
-                style={{ 
+              <TabsList
+                className="flex-row justify-start h-full"
+                style={{
                   paddingTop: 4,
                   height: 50,
                 }}
@@ -248,10 +243,10 @@ export default function MenuPage() {
                   </Text>
                 </TabsTrigger>
                 {itemTypes.map((type) => (
-                  <TabsTrigger 
-                    key={type.id} 
-                    value={type.id!} 
-                    className="flex-row h-full" 
+                  <TabsTrigger
+                    key={type.id}
+                    value={type.id!}
+                    className="flex-row h-full"
                     style={{ width: 100, minWidth: 100 }}
                   >
                     <Text
@@ -263,10 +258,10 @@ export default function MenuPage() {
                 ))}
               </TabsList>
             </ScrollView>
-            
-            <View 
-              style={{ 
-                width: 200, 
+
+            <View
+              style={{
+                width: 200,
                 position: 'absolute',
                 right: 0,
                 top: 0,
@@ -282,9 +277,9 @@ export default function MenuPage() {
               <Button
                 onPress={handleCreateItem}
                 className="w-[200px] h-[50px] flex items-center justify-center"
-                style={{ 
-                  backgroundColor: '#2A2E33', 
-                  borderRadius: 0, 
+                style={{
+                  backgroundColor: '#2A2E33',
+                  borderRadius: 0,
                   height: 50,
                   width: 200,
                 }}
@@ -303,17 +298,22 @@ export default function MenuPage() {
               </Button>
             </View>
           </View>
-          
+
           <TabsContent style={{ flex: 1 }} value={activeTab}>
-            <ForkTable 
-              data={items}
-              columns={itemTableColumns}
-              onRowPress={handleEditItem}
-              onRowDelete={handleDeleteItem}
-              isLoading={isLoading || loading}
-              loadingMessage="Chargement des articles..."
-              emptyMessage="Aucun article trouvé"
-            />
+            {loading || globalLoading || error ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
+                  {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+                </Text>
+              </View>
+            ) : (
+              <ForkTable
+                data={filteredItems}
+                columns={itemTableColumns}
+                onRowPress={handleEditItem}
+                onRowDelete={handleDeleteItem}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </View>
@@ -356,11 +356,11 @@ export default function MenuPage() {
           </View>
           <View style={styles.deleteButtonContainer}>
             <Button
-                onPress={confirmDelete}
-                style={styles.deleteButton}
-                variant="destructive"
-              >
-                <Text style={styles.deleteButtonText}>Supprimer</Text>
+              onPress={confirmDelete}
+              style={styles.deleteButton}
+              variant="destructive"
+            >
+              <Text style={styles.deleteButtonText}>Supprimer</Text>
             </Button>
             <Button
               onPress={() => {

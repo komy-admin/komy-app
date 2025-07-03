@@ -58,7 +58,7 @@ export abstract class BaseApiService<T> {
     }
   }
 
-  async create(data: Partial<T>): Promise<T> {
+  async create(data: Partial<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>): Promise<T> {
     try {
       const response = await this.axiosInstance.post<T>(this.endpoint, data);
       return response.data;

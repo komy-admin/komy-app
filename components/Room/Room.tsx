@@ -7,12 +7,13 @@ import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
 import { Order } from '~/types/order.types';
 import TableActionPanel from '~/components/Room/TableActionPanel';
+import { getMostImportantStatus, getTableStatus } from '@/lib/utils';
 
 const CELL_SIZE = 50;
 const PANEL_POSITION_KEY = 'actionPanelPosition';
 
 interface RoomProps {
-  tables: Table[]; 
+  tables: Table[];
   orders?: Order[];
   editingTableId?: string;
   editionMode?: boolean;
@@ -26,16 +27,16 @@ interface RoomProps {
   onDeleteTable?: () => void;
 }
 
-const Room: React.FC<RoomProps> = ({ 
-  tables, 
-  orders, 
-  editingTableId, 
-  editionMode = false, 
+const Room: React.FC<RoomProps> = ({
+  tables,
+  orders,
+  editingTableId,
+  editionMode = false,
   width = 15,
   height = 15,
   isLoading = false,
-  onTableUpdate, 
-  onTableLongPress, 
+  onTableUpdate,
+  onTableLongPress,
   onTablePress,
   onEditTable,
   onDeleteTable
@@ -48,20 +49,21 @@ const Room: React.FC<RoomProps> = ({
   const [isGridReady, setIsGridReady] = useState(false);
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
   const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
-  
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+
   const getInitialPanelPosition = () => {
     const screenWidth = Dimensions.get('window').width;
     const screenHeight = Dimensions.get('window').height;
     const gridWidth = width * CELL_SIZE;
-    
+
     return {
-      x: Platform.OS === 'web' ? 
-        gridWidth + ((screenWidth - gridWidth) / 2) - 75 : 
+      x: Platform.OS === 'web' ?
+        gridWidth + ((screenWidth - gridWidth) / 2) - 75 :
         screenWidth / 2 - 75,
       y: screenHeight / 3
     };
   };
-  
+
   const [panelPosition, setPanelPosition] = useState(getInitialPanelPosition());
 
   useEffect(() => {
@@ -75,7 +77,7 @@ const Room: React.FC<RoomProps> = ({
         console.error('Error loading panel position:', error);
       }
     };
-    
+
     loadPanelPosition();
   }, []);
 
@@ -123,16 +125,16 @@ const Room: React.FC<RoomProps> = ({
   function calculateOptimalZoom(screenWidth: number, gridWidth: number, gridHeight: number, roomWidth: number, roomHeight: number) {
     const SIDE_PANEL_WIDTH = screenWidth / 4;
     const availableWidth = screenWidth - SIDE_PANEL_WIDTH;
-    
+
     const horizontalZoom = (availableWidth * 0.95) / gridWidth;
     const verticalZoom = (Dimensions.get('window').height * 0.9) / gridHeight;
-    
+
     let optimalZoom = Math.min(horizontalZoom, verticalZoom);
-    
+
     if (roomWidth > 1 || roomHeight > 1) {
       optimalZoom *= 0.7;
     }
-    
+
     const zoom = Math.min(Math.max(optimalZoom, 0.2), 1.5);
     setCurrentZoom(zoom);
     return zoom;
@@ -143,18 +145,18 @@ const Room: React.FC<RoomProps> = ({
   useEffect(() => {
     setIsGridReady(false);
     setVisibleTables([]);
-    
+
     if (!isLoading) {
       const screenWidth = Dimensions.get('window').width;
       const gridWidth = width * CELL_SIZE;
       const gridHeight = height * CELL_SIZE;
-      
+
       setDimensions({
         gridWidth,
         gridHeight,
         initialZoom: calculateOptimalZoom(screenWidth, gridWidth, gridHeight, width, height)
       });
-      
+
       setZoomKey(prev => prev + 1);
 
       const timer = setTimeout(() => {
@@ -176,6 +178,9 @@ const Room: React.FC<RoomProps> = ({
   };
 
   const handleTableSelect = (table: Table) => {
+    console.log('Table selected in Room', table?.name);
+    if (selectedTable?.id === table.id) return;
+    setSelectedTable(table);
     onTablePress(table);
   };
 
@@ -208,8 +213,6 @@ const Room: React.FC<RoomProps> = ({
     );
   }
 
-  const selectedTable = editingTableId ? tables.find(t => t.id === editingTableId) : null;
-
   return (
     <View style={styles.container}>
       <ReactNativeZoomableView
@@ -227,18 +230,18 @@ const Room: React.FC<RoomProps> = ({
         }}
       >
         <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
-          <RoomGrid 
-            width={dimensions.gridWidth} 
-            height={dimensions.gridHeight} 
-            GRID_COLS={width} 
-            GRID_ROWS={height} 
+          <RoomGrid
+            width={dimensions.gridWidth}
+            height={dimensions.gridHeight}
+            GRID_COLS={width}
+            GRID_ROWS={height}
             CELL_SIZE={CELL_SIZE}
           />
           {visibleTables.map(table => (
             <RoomTable
               key={`${table.id}_${currentZoom}`}
               table={table}
-              status={orders?.find(order => order.tableId === table.id)?.status}
+              status={getTableStatus(table)}
               isEditing={editingTableId === table.id}
               editionMode={editionMode}
               positionValid={isPositionValid(table)}

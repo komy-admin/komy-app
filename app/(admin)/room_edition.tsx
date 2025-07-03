@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
-import { roomApiService } from '~/api/room.api';
-import { tableApiService } from '~/api/table.api';
 import RoomComponent from '~/components/Room/Room';
 import { Badge, Button } from "~/components/ui";
 import { Room } from '~/types/room.types';
@@ -11,83 +9,49 @@ import { RoomCard } from '~/components/Room/RoomCard';
 import { CustomModal } from '~/components/CustomModal';
 import TableForm from '~/components/form/TableForm';
 import { useToast } from '~/components/ToastProvider';
+import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
 
 export default function RoomPage() {
   const params = useLocalSearchParams();
   const roomId = params.roomId as string;
   const { showToast } = useToast();
-  
-  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [tables, setTables] = useState<Table[]>([]);
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+
+  // Utilisation des hooks Redux
+  const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading, error: roomsError } = useRooms();
+  const { getTablesByRoom, selectedTable, setSelectedTable, createTable, updateTable, deleteTable } = useTables();
+
+  // Variables d'état local pour l'UI seulement
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isTableUpdated, setIsTableUpdated] = useState(false);
 
-  useEffect(() => {
-    if (roomId) {
-      initData();
-    }
-  }, [roomId]);
+  // Récupérer les tables de la salle actuelle depuis le store
+  const tables = getTablesByRoom(roomId);
 
-  const initData = async () => {
-    try {
-      setIsLoading(true);
-      const { data } = await roomApiService.getAll();
-      setRooms(data);
-      
-      if (roomId) {
-        const room = await roomApiService.get(roomId);
-        if (room) {
-          setCurrentRoom(room);
-          setTables(room.tables || []);
-          setSelectedTable(null);
-        }
+  // Initialiser la salle actuelle quand le roomId change
+  useEffect(() => {
+    if (roomId && rooms.length > 0) {
+      const room = rooms.find(r => r.id === roomId);
+      if (room && room.id !== currentRoom?.id) {
+        setCurrentRoom(room.id);
+        setSelectedTable(null);
       }
-      setError(null);
-    } catch (err) {
-      setError('Erreur lors du chargement des tables');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [roomId, rooms, currentRoom?.id, setCurrentRoom, setSelectedTable]);
 
   const handleTableUpdate = async (id: string, updates: Partial<Table>) => {
     try {
-      setTables(prevTables => 
-        prevTables.map(table => 
-          table.id === id ? { ...table, ...updates } : table
-        )
-      );
-  
-      const updatedTable = await tableApiService.update(id, updates);
-      setTables(prevTables =>
-        prevTables.map(table =>
-          table.id === updatedTable.id ? updatedTable : table
-        )
-      );
-  
-      if (selectedTable?.id === id) {
-        setSelectedTable(updatedTable);
-      }
+      await updateTable(id, updates);
 
       if (isTableUpdated) {
         showToast('Table mise à jour avec succès', 'success');
         setIsTableUpdated(false);
       }
     } catch (error) {
-      setTables(prevTables =>
-        prevTables.map(table =>
-          table.id === id
-            ? tables.find(t => t.id === id) || table
-            : table
-        )
-      );
       console.error('Erreur lors de la mise à jour de la table:', error);
       showToast('Erreur lors de la mise à jour de la table', 'error');
     }
@@ -97,7 +61,7 @@ export default function RoomPage() {
     if (selectedTable?.id === table?.id) {
       return;
     }
-    setSelectedTable(table);
+    setSelectedTable(table?.id || null);
   };
 
   const handleEditTable = () => {
@@ -112,8 +76,7 @@ export default function RoomPage() {
     if (!selectedTable?.id) return;
 
     try {
-      await tableApiService.delete(selectedTable.id);
-      setTables(prevTables => prevTables.filter(table => table.id !== selectedTable.id));
+      await deleteTable(selectedTable.id);
       setSelectedTable(null);
       setIsDeleteModalVisible(false);
       showToast('Table supprimée avec succès', 'success');
@@ -125,7 +88,7 @@ export default function RoomPage() {
 
   const handleSaveTable = async (updates: Partial<Table>) => {
     if (!selectedTable?.id) return;
-    
+
     try {
       setIsTableUpdated(true);
       await handleTableUpdate(selectedTable.id, updates);
@@ -141,7 +104,6 @@ export default function RoomPage() {
 
     if (isCreatingTable) return;
     setIsCreatingTable(true);
-    setError(null);
 
     function generateName() {
       const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
@@ -151,28 +113,28 @@ export default function RoomPage() {
 
     const DEFAULT_TABLE_SIZE = 2;
     const SPACING = 0;
-    
+
     const isPositionValid = (x: number, y: number): boolean => {
       if (x < 0 || y < 0 || x >= (currentRoom?.width || 0) || y >= (currentRoom?.height || 0)) {
         return false;
       }
 
-      if (x + DEFAULT_TABLE_SIZE > (currentRoom?.width || 0) || 
-          y + DEFAULT_TABLE_SIZE > (currentRoom?.height || 0)) {
+      if (x + DEFAULT_TABLE_SIZE > (currentRoom?.width || 0) ||
+        y + DEFAULT_TABLE_SIZE > (currentRoom?.height || 0)) {
         return false;
       }
 
       return !tables.some(table => {
         const hasCollision = (x < table.xStart + table.width + SPACING &&
-                            x + DEFAULT_TABLE_SIZE + SPACING > table.xStart &&
-                            y < table.yStart + table.height + SPACING &&
-                            y + DEFAULT_TABLE_SIZE + SPACING > table.yStart);
+          x + DEFAULT_TABLE_SIZE + SPACING > table.xStart &&
+          y < table.yStart + table.height + SPACING &&
+          y + DEFAULT_TABLE_SIZE + SPACING > table.yStart);
         return hasCollision;
       });
     };
 
     let validPosition = null;
-    
+
     const maxX = (currentRoom?.width || 0) - DEFAULT_TABLE_SIZE;
     const maxY = (currentRoom?.height || 0) - DEFAULT_TABLE_SIZE;
 
@@ -188,7 +150,7 @@ export default function RoomPage() {
     if (!validPosition) {
       const errorMessage = "Pas d'espace disponible pour une nouvelle table";
       console.error(errorMessage);
-      setError(errorMessage);
+      showToast(errorMessage, 'error');
       setIsCreatingTable(false);
       return;
     }
@@ -204,9 +166,8 @@ export default function RoomPage() {
     };
 
     try {
-      const newTable = await tableApiService.create(tableToCreate);
-      setTables(prevTables => [...prevTables, newTable]);
-      handleTablePress(newTable); // Utiliser handleTablePress au lieu de setSelectedTable
+      const newTable = await createTable(tableToCreate);
+      handleTablePress(newTable);
       showToast('Table créée avec succès', 'success');
     } catch (error) {
       console.error("Erreur lors de la création de la table:", error);
@@ -216,21 +177,10 @@ export default function RoomPage() {
     }
   };
 
-  const handleChangeRoom = async (room: Room) => {
-    try {
-      if (!room.id) {
-        throw new Error("Room ID is undefined");
-      }
-      const freshRoom = await roomApiService.get(room.id);
-      if (freshRoom) {
-        setCurrentRoom(freshRoom);
-        setTables(freshRoom.tables || []);
-        setSelectedTable(null);
-      }
-    } catch (error) {
-      console.error('Erreur lors du changement de salle:', error);
-      showToast('Erreur lors du changement de salle', 'error');
-    }
+  const handleChangeRoom = (room: Room) => {
+    if (!room.id) return;
+    setCurrentRoom(room.id);
+    setSelectedTable(null);
   };
 
   return (
@@ -258,7 +208,7 @@ export default function RoomPage() {
           ))}
         </ScrollView>
       </View>
-      
+
       <RoomComponent
         key={currentRoom?.id || 'new-room'}
         tables={tables}
@@ -266,14 +216,14 @@ export default function RoomPage() {
         editionMode={true}
         width={currentRoom?.width || 10}
         height={currentRoom?.height || 10}
-        isLoading={isLoading}
+        isLoading={roomsLoading}
         onTablePress={handleTablePress}
         onTableLongPress={handleTablePress}
         onTableUpdate={handleTableUpdate}
         onEditTable={handleEditTable}
         onDeleteTable={handleDeleteTable}
       />
-      
+
       <View style={styles.cardContainer} pointerEvents="box-none">
         {currentRoom && (
           <RoomCard
