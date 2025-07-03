@@ -75,8 +75,6 @@ export default function TeamPage() {
     },
   ];
 
-  // Plus besoin de charger manuellement - useAppInit gère l'initialisation automatique
-
   // Filtrer les utilisateurs avec les filtres appliqués
   const filteredUsers = useMemo(() => {
     let result = activeTab === 'all' ? users : getUsersByProfile(activeTab);
@@ -85,7 +83,6 @@ export default function TeamPage() {
     Object.entries(filterValues).forEach(([field, value]) => {
       if (value && value !== '') {
         result = result.filter(user => {
-          // Type-safe access aux propriétés User
           switch (field) {
             case 'firstName':
               return user.firstName?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
@@ -102,7 +99,10 @@ export default function TeamPage() {
       }
     });
 
-    return result;
+    return result.map(user => ({
+      ...user,
+      profil: getUserProfileText(user.profil)
+    }));
   }, [users, activeTab, filterValues, getUsersByProfile]);
 
   // Gestion des filtres

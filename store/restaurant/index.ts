@@ -140,6 +140,9 @@ export const restaurantActions = {
   
   setItems: menuActions.setItems,
   setItemTypes: menuActions.setItemTypes,
+  createItemType: menuActions.createItemType,
+  updateItemType: menuActions.updateItemType,
+  deleteItemType: menuActions.deleteItemType,
   createMenuItem: menuActions.createMenuItem,
   updateMenuItem: menuActions.updateMenuItem,
   deleteMenuItem: menuActions.deleteMenuItem,
@@ -199,8 +202,8 @@ export const selectEnrichedTables = createSelector(
 export const selectCurrentRoomTables = createSelector(
   [
     (state: { restaurant: RestaurantState }) => state.restaurant.rooms.currentRoomId,
-    (state: { restaurant: RestaurantState }) => Object.values(state.restaurant.tables.tables),
-    (state: { restaurant: RestaurantState }) => Object.values(state.restaurant.orders.orders),
+    (state: { restaurant: RestaurantState }) => selectAllTables({ tables: state.restaurant.tables }),
+    (state: { restaurant: RestaurantState }) => selectOrders({ orders: state.restaurant.orders }),
   ],
   (currentRoomId, tables, orders) => {
     if (!currentRoomId) return [];
@@ -218,7 +221,7 @@ export const selectCurrentRoomTables = createSelector(
 export const selectCurrentRoomOrders = createSelector(
   [
     (state: { restaurant: RestaurantState }) => state.restaurant.rooms.currentRoomId,
-    (state: { restaurant: RestaurantState }) => Object.values(state.restaurant.orders.orders),
+    (state: { restaurant: RestaurantState }) => selectOrders({ orders: state.restaurant.orders }),
   ],
   (currentRoomId, orders) => {
     if (!currentRoomId) return [];
@@ -238,8 +241,10 @@ export const selectSelectedTableOrder = createSelector(
 );
 
 // Selectors adaptés pour la structure du state restaurant
-export const selectAllRooms = (state: { restaurant: RestaurantState }) => 
-  Object.values(state.restaurant.rooms.rooms);
+export const selectAllRooms = createSelector(
+  [(state: { restaurant: RestaurantState }) => state.restaurant.rooms.rooms],
+  (rooms) => Object.values(rooms)
+);
 
 export const selectCurrentRoom = (state: { restaurant: RestaurantState }) => {
   const { currentRoomId, rooms } = state.restaurant.rooms;

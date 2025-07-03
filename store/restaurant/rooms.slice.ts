@@ -96,7 +96,10 @@ const selectRoomsState = (state: { rooms: RoomsState }) => state.rooms;
 
 export const selectAllRooms = createSelector(
   [selectRoomsState],
-  (roomsState) => roomsState ? Object.values(roomsState.rooms) : []
+  (roomsState) => {
+    if (!roomsState) return [];
+    return Object.values(roomsState.rooms);
+  }
 );
 
 export const selectCurrentRoom = createSelector(

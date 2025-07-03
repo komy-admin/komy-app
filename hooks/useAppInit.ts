@@ -7,6 +7,9 @@ import { useMenu } from './useMenu';
 import { useTables } from './useTables';
 import { useUsers } from './useUsers';
 import { restaurantActions } from '~/store/restaurant';
+import { Room } from '@/types/room.types';
+import { ItemType } from '@/types/item-type.types';
+import { User } from '@/types/user.types';
 
 interface InitializationState {
   isInitialized: boolean;
@@ -86,9 +89,9 @@ export const useAppInit = () => {
       console.log('📦 Chargement des données de base...');
       
       // Vérifier les droits utilisateur pour charger les users
-      const canLoadUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile.profil);
+      const canLoadUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile);
       
-      const promises = [
+      const promises: Promise<any>[] = [
         loadRooms().then(result => {
           updateProgress('rooms', true);
           console.log('✅ Salles chargées:', result.length);
@@ -112,7 +115,7 @@ export const useAppInit = () => {
         );
       } else {
         updateProgress('users', true);
-        console.log('⚠️ Pas de droits pour charger les utilisateurs (profil:', userProfile?.profil, ')');
+        console.log('⚠️ Pas de droits pour charger les utilisateurs (profil:', userProfile, ')');
       }
       
       const results = await Promise.all(promises);

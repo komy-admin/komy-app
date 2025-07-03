@@ -15,20 +15,20 @@ export default function RoomPage() {
   const params = useLocalSearchParams();
   const roomId = params.roomId as string;
   const { showToast } = useToast();
-  
+
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
-  
+
   // Utilisation des hooks Redux
   const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading, error: roomsError } = useRooms();
   const { getTablesByRoom, selectedTable, setSelectedTable, createTable, updateTable, deleteTable } = useTables();
-  
+
   // Variables d'état local pour l'UI seulement
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isTableUpdated, setIsTableUpdated] = useState(false);
-  
+
   // Récupérer les tables de la salle actuelle depuis le store
   const tables = getTablesByRoom(roomId);
 
@@ -46,7 +46,7 @@ export default function RoomPage() {
   const handleTableUpdate = async (id: string, updates: Partial<Table>) => {
     try {
       await updateTable(id, updates);
-      
+
       if (isTableUpdated) {
         showToast('Table mise à jour avec succès', 'success');
         setIsTableUpdated(false);
@@ -61,7 +61,7 @@ export default function RoomPage() {
     if (selectedTable?.id === table?.id) {
       return;
     }
-    setSelectedTable(table);
+    setSelectedTable(table?.id || null);
   };
 
   const handleEditTable = () => {
@@ -88,7 +88,7 @@ export default function RoomPage() {
 
   const handleSaveTable = async (updates: Partial<Table>) => {
     if (!selectedTable?.id) return;
-    
+
     try {
       setIsTableUpdated(true);
       await handleTableUpdate(selectedTable.id, updates);
@@ -113,28 +113,28 @@ export default function RoomPage() {
 
     const DEFAULT_TABLE_SIZE = 2;
     const SPACING = 0;
-    
+
     const isPositionValid = (x: number, y: number): boolean => {
       if (x < 0 || y < 0 || x >= (currentRoom?.width || 0) || y >= (currentRoom?.height || 0)) {
         return false;
       }
 
-      if (x + DEFAULT_TABLE_SIZE > (currentRoom?.width || 0) || 
-          y + DEFAULT_TABLE_SIZE > (currentRoom?.height || 0)) {
+      if (x + DEFAULT_TABLE_SIZE > (currentRoom?.width || 0) ||
+        y + DEFAULT_TABLE_SIZE > (currentRoom?.height || 0)) {
         return false;
       }
 
       return !tables.some(table => {
         const hasCollision = (x < table.xStart + table.width + SPACING &&
-                            x + DEFAULT_TABLE_SIZE + SPACING > table.xStart &&
-                            y < table.yStart + table.height + SPACING &&
-                            y + DEFAULT_TABLE_SIZE + SPACING > table.yStart);
+          x + DEFAULT_TABLE_SIZE + SPACING > table.xStart &&
+          y < table.yStart + table.height + SPACING &&
+          y + DEFAULT_TABLE_SIZE + SPACING > table.yStart);
         return hasCollision;
       });
     };
 
     let validPosition = null;
-    
+
     const maxX = (currentRoom?.width || 0) - DEFAULT_TABLE_SIZE;
     const maxY = (currentRoom?.height || 0) - DEFAULT_TABLE_SIZE;
 
@@ -208,7 +208,7 @@ export default function RoomPage() {
           ))}
         </ScrollView>
       </View>
-      
+
       <RoomComponent
         key={currentRoom?.id || 'new-room'}
         tables={tables}
@@ -223,7 +223,7 @@ export default function RoomPage() {
         onEditTable={handleEditTable}
         onDeleteTable={handleDeleteTable}
       />
-      
+
       <View style={styles.cardContainer} pointerEvents="box-none">
         {currentRoom && (
           <RoomCard

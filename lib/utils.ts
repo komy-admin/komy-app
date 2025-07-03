@@ -86,8 +86,8 @@ export const getUserProfileText = (teamType: UserProfile) => {
     [UserProfile.ADMIN]: 'Admin',
     [UserProfile.SUPERADMIN]: 'Super admin',
     [UserProfile.MANAGER]: 'Manager',
-    [UserProfile.SERVER]: 'Serveur',
-    [UserProfile.CHEF]: 'Chef',
+    [UserProfile.SERVER]: 'Service',
+    [UserProfile.CHEF]: 'Cuisine',
   };
   return texts[teamType] || 'Type inconnu';
 };

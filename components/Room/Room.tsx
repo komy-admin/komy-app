@@ -212,8 +212,6 @@ const Room: React.FC<RoomProps> = ({
     );
   }
 
-  const selectedTable = editingTableId ? tables.find(t => t.id === editingTableId) : null;
-
   return (
     <View style={styles.container}>
       <ReactNativeZoomableView
