@@ -10,6 +10,7 @@ import OrderList from "~/components/Service/OrderList";
 import StartOrderCard from "~/components/Service/StartOrderCard";
 import { Status } from "~/types/status.enum";
 import OrderDetailView from "~/components/Service/OrderDetailView";
+import PaymentView from "~/components/Service/PaymentView";
 import { OrderItem } from '~/types/order-item.types';
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
@@ -54,6 +55,7 @@ export default function ServicePage() {
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
 
   const { showToast } = useToast();
 
@@ -211,6 +213,23 @@ export default function ServicePage() {
     }
   };
 
+  const handlePaymentComplete = async (paymentData: any) => {
+    try {
+      // Ici, vous pouvez ajouter la logique pour traiter le paiement
+      // Par exemple, appeler une API pour enregistrer le paiement
+      console.log('Données de paiement:', paymentData);
+      
+      setShowPaymentModal(false);
+      showToast('Paiement traité avec succès.', 'success');
+      
+      // Optionnel : fermer la commande ou changer son statut
+      // await updateOrder({ ...selectedTableOrder, status: Status.PAID });
+    } catch (error) {
+      console.error('Erreur lors du traitement du paiement:', error);
+      showToast('Erreur lors du traitement du paiement.', 'error');
+    }
+  };
+
   const navigateToRoomEdit = () => {
     if (!currentRoom) return;
     router.push({
@@ -257,7 +276,7 @@ export default function ServicePage() {
                       <Button variant="outline" onPress={() => setShowReassignModal(true)}>
                         <Text>Assigner une autre table</Text>
                       </Button>
-                      <Button variant="outline" onPress={() => console.log('Régler la note')}>
+                      <Button variant="outline" onPress={() => setShowPaymentModal(true)}>
                         <Text>Régler la note</Text>
                       </Button>
                       <Button variant="destructive" onPress={() => setShowDeleteOrderDialog(true)}>
@@ -464,6 +483,22 @@ export default function ServicePage() {
           }}
           onTableUpdate={() => { }}
         />
+      </ForkModal>
+
+      {/* Modal de paiement */}
+      <ForkModal
+        visible={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        maxWidth={1200}
+        title="Régler l'addition"
+      >
+        {selectedTableOrder && (
+          <PaymentView
+            order={selectedTableOrder}
+            onClose={() => setShowPaymentModal(false)}
+            onPaymentComplete={handlePaymentComplete}
+          />
+        )}
       </ForkModal>
     </View>
   );
