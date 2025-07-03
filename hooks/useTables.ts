@@ -33,7 +33,6 @@ export const useTables = () => {
 
   // Actions synchrones
   const setSelectedTable = useCallback((tableId: string | null) => {
-    console.log('Selected table ID:', tableId);
     dispatch(restaurantActions.setSelectedTable(tableId));
   }, [dispatch]);
 

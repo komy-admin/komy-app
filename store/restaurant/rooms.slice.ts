@@ -41,8 +41,6 @@ const roomsSlice = createSlice({
     // Actions pour les données
     setRooms: (state, action: PayloadAction<SetRoomsPayload>) => {
       const { rooms } = action.payload;
-
-      console.log('Rooms received:', rooms);
       
       // Normaliser les rooms
       state.rooms = {};

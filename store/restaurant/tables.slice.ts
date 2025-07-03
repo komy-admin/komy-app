@@ -50,7 +50,6 @@ const tablesSlice = createSlice({
     
     // Actions de navigation
     setSelectedTable: (state, action: PayloadAction<string | null>) => {
-      console.log('Selected table ID:', action.payload);
       state.selectedTableId = action.payload;
     },
     
@@ -104,7 +103,6 @@ export const selectSelectedTableId = createSelector(
 export const selectSelectedTable = createSelector(
   [selectTablesState],
   (tablesState) => {
-    console.log('tablesState:', tablesState);
     if (!tablesState || !tablesState.selectedTableId) return null;
     return tablesState.tables[tablesState.selectedTableId] || null;
   }

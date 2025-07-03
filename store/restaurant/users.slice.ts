@@ -39,8 +39,6 @@ const usersSlice = createSlice({
     // Actions pour les données
     setUsers: (state, action: PayloadAction<SetUsersPayload>) => {
       const { users } = action.payload;
-
-      console.log('Users received:', users);
       
       // Normaliser les users
       state.users = {};
@@ -55,19 +53,16 @@ const usersSlice = createSlice({
     // Actions WebSocket CRUD pour les users
     createUser: (state, action: PayloadAction<{ user: User }>) => {
       const { user } = action.payload;
-      console.log('🆕 Nouvel utilisateur créé:', user.id);
       state.users[user.id] = user;
     },
     
     updateUser: (state, action: PayloadAction<{ user: User }>) => {
       const { user } = action.payload;
-      console.log('📝 Utilisateur mis à jour:', user.id);
       state.users[user.id] = user;
     },
     
     deleteUser: (state, action: PayloadAction<{ userId: string }>) => {
       const { userId } = action.payload;
-      console.log('🗑️ Utilisateur supprimé:', userId);
       delete state.users[userId];
     },
     
