@@ -18,7 +18,7 @@ export default function RoomListPage() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const { showToast } = useToast();
   const router = useRouter();
   const { width } = useWindowDimensions();
