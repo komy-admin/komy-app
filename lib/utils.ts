@@ -1,3 +1,4 @@
+import { Table } from '@/types/table.types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ItemTypes } from '~/types/item-type.enum';
@@ -6,6 +7,11 @@ import { UserProfile } from '~/types/user.types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export const getTableStatus = (table: Table) => {
+  const statuses = table.orders?.map(order => order.orderItems?.map(item => item.status)).flat();
+  return getMostImportantStatus(statuses);
 }
 
 export const getMostImportantStatus = (statuses: Status[]) => {

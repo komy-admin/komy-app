@@ -358,14 +358,9 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
     });
 
     // Trier les groupes : d'abord par type, puis par priorité de statut
-    const statusPriority: Record<Status, number> = {
-      [Status.ERROR]: 1,
-      [Status.DRAFT]: 2,
-      [Status.PENDING]: 3,
-      [Status.INPROGRESS]: 4,
-      [Status.READY]: 5,
-      [Status.SERVED]: 6,
-      [Status.TERMINATED]: 7,
+    const getStatusPriority = (status: Status): number => {
+      const order = [Status.DRAFT, Status.TERMINATED, Status.SERVED, Status.INPROGRESS, Status.PENDING, Status.READY, Status.ERROR];
+      return order.indexOf(status);
     };
 
     return groups.sort((a, b) => {
@@ -374,8 +369,8 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
       if (typeComparison !== 0) return typeComparison;
 
       // Puis par priorité de statut - avec fallback pour les statuts non définis
-      const aPriority = statusPriority[a.status] ?? 999;
-      const bPriority = statusPriority[b.status] ?? 999;
+      const aPriority = getStatusPriority(a.status);
+      const bPriority = getStatusPriority(b.status);
       return aPriority - bPriority;
     });
   };

@@ -7,6 +7,7 @@ import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
 import { Order } from '~/types/order.types';
 import TableActionPanel from '~/components/Room/TableActionPanel';
+import { getMostImportantStatus, getTableStatus } from '@/lib/utils';
 
 const CELL_SIZE = 50;
 const PANEL_POSITION_KEY = 'actionPanelPosition';
@@ -240,7 +241,7 @@ const Room: React.FC<RoomProps> = ({
             <RoomTable
               key={`${table.id}_${currentZoom}`}
               table={table}
-              status={orders?.find(order => order.tableId === table.id)?.status}
+              status={getTableStatus(table)}
               isEditing={editingTableId === table.id}
               editionMode={editionMode}
               positionValid={isPositionValid(table)}

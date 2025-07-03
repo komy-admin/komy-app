@@ -52,13 +52,7 @@ export default function ServerLayout() {
         <Stack.Screen
           name="index"
           options={{
-            title: 'Tables',
-          }}
-        />
-        <Stack.Screen
-          name="table"
-          options={{
-            headerShown: false,
+            title: 'Commandes',
           }}
         />
       </Stack>

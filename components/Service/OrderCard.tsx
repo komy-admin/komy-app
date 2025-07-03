@@ -21,8 +21,9 @@ const getOrderType = (order: Order): string => {
 };
 
 export default function OrderCard({ order, onDelete }: OrderCardProps) {
-  const statusColor = getStatusColor(order.status);
-  const statusText = getStatusText(order.status);
+  const mostImportantStatus = getMostImportantStatus(order.orderItems.map(item => item.status));
+  const statusColor = getStatusColor(mostImportantStatus);
+  const statusText = getStatusText(mostImportantStatus);
   const orderType = getOrderType(order);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 

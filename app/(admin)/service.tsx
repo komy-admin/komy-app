@@ -439,7 +439,7 @@ export default function ServicePage() {
           onTablePress={async (pressedTable: Table | null) => {
             if (pressedTable && selectedTableOrder) {
               try {
-                // TODO: Implémenter la réassignation de table
+                await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                 setSelectedTable(pressedTable.id);
                 setShowReassignModal(false);
                 showToast('Table réassignée avec succès.', 'success');
@@ -452,7 +452,7 @@ export default function ServicePage() {
           onTableLongPress={async (pressedTable: Table | null) => {
             if (pressedTable && selectedTableOrder) {
               try {
-                // TODO: Implémenter la réassignation de table
+                await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                 setSelectedTable(pressedTable.id);
                 setShowReassignModal(false);
                 showToast('Table réassignée avec succès.', 'success');
