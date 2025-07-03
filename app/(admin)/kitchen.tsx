@@ -21,11 +21,11 @@ const AVAILABLE_STATUSES = [
 function useOrderGrouping(orders: Order[], orderItems: OrderItem[]) {
   const groupedOrders = useMemo(() => {
     const orderMap = new Map();
-    
+
     orderItems.forEach(item => {
       const order = orders.find(o => o.id === item.orderId);
       if (!order) return;
-      
+
       const key = `${order.id}-${item.status}`;
       if (!orderMap.has(key)) {
         orderMap.set(key, { ...order, status: item.status, orderItems: [item] });
@@ -43,53 +43,27 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[]) {
 export default function KitchenPage() {
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
-  
+
   // Utilisation des hooks Redux
-  const { orders, loading, error } = useOrders();
+  const { orders, loading, error, updateOrderItemStatus } = useOrders();
   const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
-  
+
   // Filtrer les commandes et items selon les statuts disponibles en cuisine
   const kitchenOrders = useMemo(() => {
-    return orders.filter(order => 
+    return orders.filter(order =>
       order.orderItems.some(item => AVAILABLE_STATUSES.includes(item.status))
     );
   }, [orders]);
-  
+
   const kitchenOrderItems = useMemo(() => {
     return orderItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
   }, [orderItems]);
-  
+
   const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems);
-
-  const { socket, isConnected } = useSocket();
-
-  useEffect(() => {
-    if (!isConnected || !socket) return;
-    socket.on(EventType.ORDER_ITEMS_PENDING, ({ orderItems }: { orderItems: OrderItem[] }) => {
-      console.log('Received ORDER_ITEMS_PENDING event:', orderItems);
-      // Les données sont automatiquement synchronisées via useRestaurantSocket
-      // Pas besoin de mise à jour manuelle du state local
-    });
-
-    return () => {
-      socket.off(EventType.ORDER_ITEMS_PENDING);
-    }
-   }, [isConnected, socket]);
-
-  // Plus besoin de charger manuellement - useAppInit gère l'initialisation automatique
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
-      await orderItemApiService.updateManyStatus(order.orderItems.map(oi => oi.id), newStatus);
-      
-      // Le calcul du nouveau statut de commande est fait automatiquement par le store
-      // lors de la synchronisation WebSocket, pas besoin de le faire manuellement ici
-      
-      // await emit(EventType.UPDATE_ORDER_STATUS, {
-      //   orderId: order.id,
-      //   orderItemIds: order.orderItems.map(item => item.id),
-      //   orderItemStatus: newStatus,
-      // });
+      await updateOrderItemStatus(order.orderItems.map(oi => oi.id), newStatus);
     } catch (error) {
       console.error('Error updating status:', error);
       throw error;
@@ -112,13 +86,13 @@ export default function KitchenPage() {
         <Text style={styles.headerTitle}>Cuisine</Text>
         <Text style={styles.headerSubtitle}>Gestion des commandes en temps réel</Text>
       </View>
-      
+
       <View style={styles.columnsContainer}>
         {AVAILABLE_STATUSES.map((status, index) => (
           <OrderColumn
             key={status}
             orders={Array.from(groupedOrders.values())
-              .filter(order => order.status === status)} 
+              .filter(order => order.status === status)}
             status={status}
             onStatusChange={handleStatusChange}
           />

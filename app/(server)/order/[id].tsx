@@ -13,14 +13,14 @@ import { orderItemApiService } from '~/api/order-item.api';
 export default function OrderDetailPage() {
   const { id } = useLocalSearchParams();
   const { showToast } = useToast();
-  
+
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
-  
+
   // Utilisation des hooks Redux
-  const { getOrderById, deleteOrder, updateOrderStatus, loading, error } = useOrders();
+  const { getOrderById, deleteOrder, updateOrderItemStatus, loading, error } = useOrders();
   const { itemTypes } = useMenu();
-  
+
   // Récupération de la commande depuis le store
   const order = getOrderById(id as string);
 
@@ -35,11 +35,8 @@ export default function OrderDetailPage() {
 
     try {
       const orderItemsIds = orderItems.map(orderItem => orderItem.id);
-      await orderItemApiService.updateManyStatus(orderItemsIds, status);
-      
-      // Le store Redux se met à jour automatiquement via WebSockets
-      // Pas besoin d'appeler updateOrderStatus qui met à jour TOUTE la commande
-      
+      await updateOrderItemStatus(orderItemsIds, status);
+
       showToast('Statut mis à jour avec succès.', 'success');
     } catch (error) {
       console.error(error);
