@@ -1,4 +1,4 @@
-import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Text, useWindowDimensions, TextInput } from 'react-native';
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Button, ForkTable } from '~/components/ui';
@@ -9,14 +9,19 @@ import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { useRooms, useRestaurant } from '~/hooks/useRestaurant';
+import { SidePanel } from '~/components/SidePanel';
+import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
+import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
 
 export default function RoomListPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const { showToast } = useToast();
   const router = useRouter();
+  const { width } = useWindowDimensions();
 
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
@@ -24,8 +29,11 @@ export default function RoomListPage() {
   // Utilisation des hooks Redux
   const { rooms, loading, error, createRoom, updateRoom, deleteRoom, getRoomById } = useRooms();
 
-  // Plus besoin de useFilter, useEffect ou fetchRooms - tout est géré par Redux
-  // TODO: Implémenter le filtrage via Redux si nécessaire plus tard
+  // State pour le filtrage
+  const [filters, setFilters] = useState<RoomFilterState>(createEmptyFilters());
+
+  // Filtrage des salles
+  const filteredRooms = filterRooms(rooms, filters);
 
   const handleCreateRoom = () => {
     setCurrentRoom(null);
@@ -140,12 +148,23 @@ export default function RoomListPage() {
   ];
 
 
+  const handleFiltersChange = (newFilters: RoomFilterState) => {
+    setFilters(newFilters);
+  };
+
+  const handleClearFilters = () => {
+    setFilters(createEmptyFilters());
+  };
+
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
-      {/* TODO: Réimplémenter le filtrage avec Redux si nécessaire */}
-      {/* <SidePanel title="Filtrage" width={width / 4} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
-        Filtres temporairement désactivés pendant la migration
-      </SidePanel> */}
+      <SidePanel title="Filtrage" width={width / 4} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
+        <RoomFilters
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+        />
+      </SidePanel>
 
       <View style={{ flex: 1 }}>
         <View style={styles.headerContainer}>
@@ -197,7 +216,7 @@ export default function RoomListPage() {
           </View>
         ) : (
           <ForkTable
-            data={rooms}
+            data={filteredRooms}
             columns={roomTableColumns}
             onRowPress={handleEditRoom}
             useActionMenu={true}
@@ -349,5 +368,5 @@ const styles = StyleSheet.create({
   },
   tableIcon: {
     marginTop: 2, // Ajustement fin pour l'alignement vertical
-  }
+  },
 });

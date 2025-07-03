@@ -38,12 +38,12 @@ export function SidePanel({
   const contentOpacity = useRef(new Animated.Value(isCollapsed ? 0 : 1)).current;
   const rotationValue = useRef(new Animated.Value(0)).current;
 
-  // Initialisation pour corriger le bug de rotation
+  // Initialisation optimisée pour iOS
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialized(true);
       rotationValue.setValue(1);
-    }, 10);
+    }, Platform.OS === 'ios' ? 0 : 10);
 
     return () => clearTimeout(timer);
   }, []);
@@ -51,26 +51,48 @@ export function SidePanel({
   useEffect(() => {
     if (!isInitialized) return;
 
-    // Animation de la largeur avec easing plus fluide
-    Animated.timing(animatedWidth, {
-      toValue: isCollapsed ? collapsedWidth : width,
-      duration: isCollapsed ? 150 : 300,
-      useNativeDriver: false,
-    }).start();
-
-    // Animation de l'opacité du contenu collapsed
-    Animated.timing(collapsedOpacity, {
-      toValue: isCollapsed ? 1 : 0,
-      duration: isCollapsed ? 300 : 600,
-      useNativeDriver: true,
-    }).start();
-
-    // Animation de l'opacité du contenu principal
-    Animated.timing(contentOpacity, {
-      toValue: isCollapsed ? 0 : 1,
-      duration: isCollapsed ? 400 : 700,
-      useNativeDriver: true,
-    }).start();
+    // Animation séquentielle optimisée pour éviter la latence des inputs
+    if (isCollapsed) {
+      // Fermeture : cacher le contenu puis réduire la largeur
+      Animated.sequence([
+        Animated.timing(contentOpacity, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(animatedWidth, {
+            toValue: collapsedWidth,
+            duration: Platform.OS === 'ios' ? 200 : 250,
+            useNativeDriver: false,
+          }),
+          Animated.timing(collapsedOpacity, {
+            toValue: 1,
+            duration: Platform.OS === 'ios' ? 150 : 200,
+            useNativeDriver: true,
+          })
+        ])
+      ]).start();
+    } else {
+      // Ouverture : élargir d'abord puis afficher le contenu
+      Animated.sequence([
+        Animated.timing(collapsedOpacity, {
+          toValue: 0,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedWidth, {
+          toValue: width,
+          duration: Platform.OS === 'ios' ? 200 : 250,
+          useNativeDriver: false,
+        }),
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        })
+      ]).start();
+    }
   }, [isCollapsed, collapsedWidth, width, isInitialized]);
 
   const toggleCollapse = () => {
@@ -123,6 +145,8 @@ export function SidePanel({
         { width: animatedWidth, maxWidth: animatedWidth },
       ]}
       pointerEvents={isCollapsed ? 'auto' : 'box-none'}
+      shouldRasterizeIOS={Platform.OS === 'ios'}
+      renderToHardwareTextureAndroid={Platform.OS === 'android'}
     >
       {/* Barre latérale collapsed */}
       {isCollapsed && (
@@ -176,6 +200,7 @@ export function SidePanel({
         <Animated.View
           style={[styles.content, { opacity: contentOpacity }]}
           pointerEvents="auto"
+          removeClippedSubviews={Platform.OS !== 'web'}
         >
           <View
             style={[
