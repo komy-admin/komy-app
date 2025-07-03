@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getTableStatus = (table: Table) => {
-  const statuses = table.orders?.map(order => order.orderItems?.map(item => item.status)).flat();
+  const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
   return getMostImportantStatus(statuses);
 }
 
