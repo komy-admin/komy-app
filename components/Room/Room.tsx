@@ -8,6 +8,7 @@ import { RoomTable } from '~/components/Room/RoomTable';
 import { Order } from '~/types/order.types';
 import TableActionPanel from '~/components/Room/TableActionPanel';
 import { getMostImportantStatus, getTableStatus } from '@/lib/utils';
+import { Toast } from '~/components/ui/toast';
 
 const CELL_SIZE = 50;
 const PANEL_POSITION_KEY = 'actionPanelPosition';
@@ -25,6 +26,7 @@ interface RoomProps {
   onTablePress: (table: Table | null) => void;
   onEditTable?: () => void;
   onDeleteTable?: () => void;
+  onCheckAvailableSpace?: (width: number, height: number) => boolean;
 }
 
 const Room: React.FC<RoomProps> = ({
@@ -39,7 +41,8 @@ const Room: React.FC<RoomProps> = ({
   onTableLongPress,
   onTablePress,
   onEditTable,
-  onDeleteTable
+  onDeleteTable,
+  onCheckAvailableSpace
 }) => {
   const [dimensions, setDimensions] = useState<{
     gridWidth: number;
@@ -50,6 +53,8 @@ const Room: React.FC<RoomProps> = ({
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
   const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   const getInitialPanelPosition = () => {
     const screenWidth = Dimensions.get('window').width;
@@ -112,15 +117,65 @@ const Room: React.FC<RoomProps> = ({
     if (table.id !== editingTableId) return true;
 
     if (!isTableWithinRoom(table)) {
+      showToastMessage("Table hors limites - repositionnement automatique");
       return false;
     }
 
     if (hasTableCollision(table, tables)) {
+      showToastMessage("Collision détectée - repositionnement automatique");
       return false;
     }
 
     return true;
   }
+
+  function showToastMessage(message: string) {
+    setToastMessage(message);
+    setShowToast(true);
+  }
+
+  function findAvailableSpaceForNewTable(tableWidth: number = 2, tableHeight: number = 2): { x: number; y: number } | null {
+    // Parcourt la grille pour trouver un espace libre
+    for (let y = 0; y <= height - tableHeight; y++) {
+      for (let x = 0; x <= width - tableWidth; x++) {
+        const testTable: Table = {
+          id: 'temp',
+          name: 'test',
+          xStart: x,
+          yStart: y,
+          width: tableWidth,
+          height: tableHeight,
+          roomId: '',
+          orders: [],
+          seats: 4,
+          account: '',
+          createdAt: '',
+          updatedAt: ''
+        };
+        
+        if (isTableWithinRoom(testTable) && !hasTableCollision(testTable, tables)) {
+          return { x, y };
+        }
+      }
+    }
+    return null;
+  }
+
+  function canAddNewTable(tableWidth: number = 2, tableHeight: number = 2): boolean {
+    const availableSpace = findAvailableSpaceForNewTable(tableWidth, tableHeight);
+    if (!availableSpace) {
+      showToastMessage("Aucun espace disponible pour une nouvelle table");
+      return false;
+    }
+    return true;
+  }
+
+  // Expose la fonction via les props
+  useEffect(() => {
+    if (onCheckAvailableSpace) {
+      onCheckAvailableSpace = canAddNewTable;
+    }
+  }, [onCheckAvailableSpace]);
 
   function calculateOptimalZoom(screenWidth: number, gridWidth: number, gridHeight: number, roomWidth: number, roomHeight: number) {
     const SIDE_PANEL_WIDTH = screenWidth / 4;
@@ -262,6 +317,13 @@ const Room: React.FC<RoomProps> = ({
           onDelete={handleDeleteClick}
         />
       )}
+      <Toast
+        visible={showToast}
+        message={toastMessage}
+        type="warning"
+        duration={2000}
+        onHide={() => setShowToast(false)}
+      />
     </View>
   );
 };

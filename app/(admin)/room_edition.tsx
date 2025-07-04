@@ -21,7 +21,7 @@ export default function RoomPage() {
 
   // Utilisation des hooks Redux
   const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading, error: roomsError } = useRooms();
-  const { getTablesByRoom, selectedTable, setSelectedTable, createTable, updateTable, deleteTable } = useTables();
+  const { currentRoomTables, selectedTable, setSelectedTable, createTable, updateTable, deleteTable } = useTables();
 
   // Variables d'état local pour l'UI seulement
   const [isCreatingTable, setIsCreatingTable] = useState(false);
@@ -29,19 +29,6 @@ export default function RoomPage() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isTableUpdated, setIsTableUpdated] = useState(false);
 
-  // Récupérer les tables de la salle actuelle depuis le store
-  const tables = getTablesByRoom(roomId);
-
-  // Initialiser la salle actuelle quand le roomId change
-  useEffect(() => {
-    if (roomId && rooms.length > 0) {
-      const room = rooms.find(r => r.id === roomId);
-      if (room && room.id !== currentRoom?.id) {
-        setCurrentRoom(room.id);
-        setSelectedTable(null);
-      }
-    }
-  }, [roomId, rooms, currentRoom?.id, setCurrentRoom, setSelectedTable]);
 
   const handleTableUpdate = async (id: string, updates: Partial<Table>) => {
     try {
@@ -124,7 +111,7 @@ export default function RoomPage() {
         return false;
       }
 
-      return !tables.some(table => {
+      return !currentRoomTables.some(table => {
         const hasCollision = (x < table.xStart + table.width + SPACING &&
           x + DEFAULT_TABLE_SIZE + SPACING > table.xStart &&
           y < table.yStart + table.height + SPACING &&
@@ -211,7 +198,7 @@ export default function RoomPage() {
 
       <RoomComponent
         key={currentRoom?.id || 'new-room'}
-        tables={tables}
+        tables={currentRoomTables}
         editingTableId={selectedTable?.id}
         editionMode={true}
         width={currentRoom?.width || 10}
@@ -228,7 +215,7 @@ export default function RoomPage() {
         {currentRoom && (
           <RoomCard
             roomName={currentRoom.name}
-            capacity={{ current: tables.length }}
+            capacity={{ current: currentRoomTables.length }}
             EditMode={handleAddTable}
           />
         )}
