@@ -19,11 +19,11 @@ export const useRooms = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const rooms = useSelector(selectAllRooms);
-  const currentRoom = useSelector(selectCurrentRoom);
-  const currentRoomId = useSelector(selectCurrentRoomId);
-  const loading = useSelector(selectRoomsLoading);
-  const error = useSelector(selectRoomsError);
+  const rooms = useSelector((state: any) => selectAllRooms(state));
+  const currentRoom = useSelector((state: any) => selectCurrentRoom(state));
+  const currentRoomId = useSelector((state: any) => selectCurrentRoomId(state));
+  const loading = useSelector((state: any) => selectRoomsLoading(state));
+  const error = useSelector((state: any) => selectRoomsError(state));
 
   // Actions synchrones
   const setCurrentRoom = useCallback((roomId: string) => {

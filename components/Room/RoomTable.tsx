@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, PanResponder, StyleSheet, View, ViewStyle } from "react-native";
+import { Animated, PanResponder, Platform, Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
@@ -71,7 +71,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
 
   const dragPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => editionMode && isEditing,
+      onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newXStart = Math.round((lastValidXStart.current * CELL_SIZE + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
         const newYStart = Math.round((lastValidYStart.current * CELL_SIZE + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
@@ -93,7 +93,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
 
   const rightPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => editionMode && isEditing,
+      onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
           MIN_CELLS * CELL_SIZE,
@@ -110,7 +110,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
 
   const leftPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => editionMode && isEditing,
+      onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
           MIN_CELLS * CELL_SIZE,
@@ -132,7 +132,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
 
   const bottomPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => editionMode && isEditing,
+      onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
           MIN_CELLS * CELL_SIZE,
@@ -149,7 +149,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
 
   const topPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => editionMode && isEditing,
+      onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
           MIN_CELLS * CELL_SIZE,
@@ -184,75 +184,150 @@ export const RoomTable: React.FC<TableViewProps> = ({
   ).current;
 
   return (
-    <Animated.View
-      {...tablePanResponder.panHandlers}
-      style={[
-        styles.tableContainer,
-        {
-          width,
-          height,
-          left: xStart,
-          top: yStart,
-          zIndex: 10000,
-          elevation: 10000,
-        },
-      ]}
-    >
-      <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
-      <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
-
-      <View style={styles.innerContainer}>
+    Platform.OS === 'web' || Platform.OS === 'ios' ? (
+      <Pressable
+        onPress={() => onPress(table)}
+        onLongPress={() => onLongPress(table)}
+        delayLongPress={500}
+        style={{ zIndex: 1000 }}
+      >
         <Animated.View
           style={[
-            styles.table,
+            styles.tableContainer,
             {
-              backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
-              opacity: 1,
-              borderWidth: isEditing ? 3 : 2,
-              borderColor: isEditing ? '#2A2E33' : '#AAAAAA',
+              width,
+              height,
+              left: xStart,
+              top: yStart,
             },
           ]}
         >
-          <Text style={styles.tableText}>{table.name}</Text>
+          <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
+          <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
+
+          <View style={styles.innerContainer}>
+            <Animated.View
+              style={[
+                styles.table,
+                {
+                  backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
+                  opacity: 1,
+                  borderWidth: isEditing ? 3 : 2,
+                  borderColor: isEditing ? '#2A2E33' : '#AAAAAA',
+                },
+              ]}
+            >
+              <Text style={styles.tableText}>{table.name}</Text>
+            </Animated.View>
+          </View>
+
+          <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
+          <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+
+          {isEditing && editionMode && (
+            <>
+              <Animated.View
+                {...dragPanResponder.panHandlers}
+                style={styles.dragArea}
+              />
+              <Animated.View
+                {...rightPanResponder.panHandlers}
+                style={styles.rightHandle}
+              >
+                <View style={styles.handleDot} />
+              </Animated.View>
+              <Animated.View
+                {...leftPanResponder.panHandlers}
+                style={styles.leftHandle}
+              >
+                <View style={styles.handleDot} />
+              </Animated.View>
+              <Animated.View
+                {...bottomPanResponder.panHandlers}
+                style={styles.bottomHandle}
+              >
+                <View style={styles.handleDot} />
+              </Animated.View>
+              <Animated.View
+                {...topPanResponder.panHandlers}
+                style={styles.topHandle}
+              >
+                <View style={styles.handleDot} />
+              </Animated.View>
+            </>
+          )}
         </Animated.View>
-      </View>
+      </Pressable>) : (
+      <Animated.View
+        {...tablePanResponder.panHandlers}
+        style={[
+          styles.tableContainer,
+          {
+            width,
+            height,
+            left: xStart,
+            top: yStart,
+            zIndex: 10000,
+            elevation: 10000,
+          },
+        ]}
+      >
+        <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
+        <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
 
-      <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
-      <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+        <View style={styles.innerContainer}>
+          <Animated.View
+            style={[
+              styles.table,
+              {
+                backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
+                opacity: 1,
+                borderWidth: isEditing ? 3 : 2,
+                borderColor: isEditing ? '#2A2E33' : '#AAAAAA',
+              },
+            ]}
+          >
+            <Text style={styles.tableText}>{table.name}</Text>
+          </Animated.View>
+        </View>
 
-      {isEditing && editionMode && (
-        <>
-          <Animated.View
-            {...dragPanResponder.panHandlers}
-            style={styles.dragArea}
-          />
-          <Animated.View
-            {...rightPanResponder.panHandlers}
-            style={styles.rightHandle}
-          >
-            <View style={styles.handleDot} />
-          </Animated.View>
-          <Animated.View
-            {...leftPanResponder.panHandlers}
-            style={styles.leftHandle}
-          >
-            <View style={styles.handleDot} />
-          </Animated.View>
-          <Animated.View
-            {...bottomPanResponder.panHandlers}
-            style={styles.bottomHandle}
-          >
-            <View style={styles.handleDot} />
-          </Animated.View>
-          <Animated.View
-            {...topPanResponder.panHandlers}
-            style={styles.topHandle}
-          >
-            <View style={styles.handleDot} />
-          </Animated.View>
-        </>
-      )}
-    </Animated.View>
+        <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
+        <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+
+        {isEditing && editionMode && (
+          <>
+            <Animated.View
+              {...dragPanResponder.panHandlers}
+              style={styles.dragArea}
+            />
+            <Animated.View
+              {...rightPanResponder.panHandlers}
+              style={styles.rightHandle}
+            >
+              <View style={styles.handleDot} />
+            </Animated.View>
+            <Animated.View
+              {...leftPanResponder.panHandlers}
+              style={styles.leftHandle}
+            >
+              <View style={styles.handleDot} />
+            </Animated.View>
+            <Animated.View
+              {...bottomPanResponder.panHandlers}
+              style={styles.bottomHandle}
+            >
+              <View style={styles.handleDot} />
+            </Animated.View>
+            <Animated.View
+              {...topPanResponder.panHandlers}
+              style={styles.topHandle}
+            >
+              <View style={styles.handleDot} />
+            </Animated.View>
+          </>
+        )}
+      </Animated.View>
+    )
   );
 };
 
