@@ -51,7 +51,7 @@ export function MenuForm({ item, itemTypes, onSave, onCancel, activeTab }: MenuF
     if (item) {
       setFormData({
         name: item.name,
-        price: item.price,
+        price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
         itemTypeId: item.itemType?.id || ''
       });
       
@@ -110,14 +110,16 @@ export function MenuForm({ item, itemTypes, onSave, onCancel, activeTab }: MenuF
       return;
     }
 
+    // Arrondir à 2 décimales pour éviter les problèmes de précision flottante
+    const numericPrice = Math.round(formData.price! * 100) / 100;
+
     const submittedItem: Item = {
       id: item?.id || '',
       name: formData.name,
-      price: formData.price!,
+      price: numericPrice,
       itemTypeId: selectedOption.id,
       itemType: selectedItemType
     };
-
     onSave(submittedItem);
   };
 
@@ -163,7 +165,7 @@ export function MenuForm({ item, itemTypes, onSave, onCancel, activeTab }: MenuF
           <Text style={styles.label}>Prix *</Text>
           <NumberInput
             style={[styles.input, { height: 48, width: '100%' }]}
-            value={formData.price?? 0}
+            value={formData.price ?? null}
             onChangeText={(value) => setFormData(prev => ({
               ...prev, 
               price: value

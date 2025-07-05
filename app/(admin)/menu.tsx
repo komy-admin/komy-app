@@ -3,18 +3,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/c
 import { SidePanel } from "~/components/SidePanel";
 import React, { useState, useMemo } from "react";
 import { Item } from "~/types/item.types";
-import { FilterBar } from '~/components/filters/Filter';
 import { ItemType } from '~/types/item-type.types';
-import { FilterConfig } from '~/hooks/useFilter/types';
 import { CustomModal } from "~/components/CustomModal";
 import { MenuForm } from "~/components/form/MenuForm";
 import { useToast } from '~/components/ToastProvider';
 import { useMenu, useRestaurant } from '~/hooks/useRestaurant';
+import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
+import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("ALL");
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+  const [filters, setFilters] = useState<MenuFilterState>(createEmptyMenuFilters());
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
@@ -27,67 +27,19 @@ export default function MenuPage() {
   // Utilisation des hooks Redux
   const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType } = useMenu();
 
-  const filterItem: FilterConfig<Item>[] = [
-    {
-      field: 'name',
-      type: 'text',
-      label: 'Nom',
-      operator: 'like',
-      show: true
-    },
-    {
-      currency: '€',
-      field: 'price',
-      type: 'number',
-      label: 'Prix',
-      operator: 'between',
-      show: true
-    },
-  ];
-
   // Filtrer les articles avec les filtres appliqués
   const filteredItems = useMemo(() => {
     let result = activeTab === 'ALL' ? items : getItemsByType(activeTab);
-
-    // Appliquer les filtres
-    Object.entries(filterValues).forEach(([field, value]) => {
-      if (value && value !== '') {
-        result = result.filter(item => {
-          switch (field) {
-            case 'name':
-              return item.name?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
-            case 'price':
-              if (Array.isArray(value)) {
-                const [min, max] = value;
-                if (min !== null && max !== null) {
-                  return item.price >= min && item.price <= max;
-                } else if (min !== null) {
-                  return item.price >= min;
-                } else if (max !== null) {
-                  return item.price <= max;
-                }
-              }
-              return true;
-            default:
-              return false;
-          }
-        });
-      }
-    });
-
-    return result;
-  }, [items, activeTab, filterValues, getItemsByType]);
+    return filterMenuItems(result, filters);
+  }, [items, activeTab, filters, getItemsByType]);
 
   // Gestion des filtres
-  const handleUpdateFilter = (field: string, value: any) => {
-    setFilterValues(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleFiltersChange = (newFilters: MenuFilterState) => {
+    setFilters(newFilters);
   };
 
   const handleClearFilters = () => {
-    setFilterValues({});
+    setFilters(createEmptyMenuFilters());
     setActiveTab('ALL');
   };
 
@@ -190,14 +142,11 @@ export default function MenuPage() {
         isCollapsed={isPanelCollapsed}
         onCollapsedChange={setIsPanelCollapsed}
       >
-        <View style={{ padding: 15 }}>
-          <FilterBar
-            config={filterItem}
-            onUpdateFilter={handleUpdateFilter}
-            onClearFilters={handleClearFilters}
-            activeFilters={Object.entries(filterValues).map(([field, value]) => ({ field, value, operator: 'like' }))}
-          />
-        </View>
+        <MenuFilters
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+        />
       </SidePanel>
       <View style={{ flex: 1 }}>
         <Tabs

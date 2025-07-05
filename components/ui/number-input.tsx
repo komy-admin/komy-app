@@ -33,15 +33,20 @@ export function NumberInput({
 
   useEffect(() => {
     if (!isFocused) {
-      if (value === null) {
+      if (value === null || value === undefined) {
         setLocalValue('');
-      } else {
+      } else if (typeof value === 'number' && !isNaN(value)) {
         setLocalValue(value === 0 ? '' : formatValue(value));
+      } else {
+        setLocalValue('');
       }
     }
   }, [value, isFocused]);
 
   const formatValue = (num: number): string => {
+    if (typeof num !== 'number' || isNaN(num)) {
+      return '';
+    }
     return `${num.toFixed(decimalPlaces)}`;
   };
 
