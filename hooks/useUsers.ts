@@ -132,21 +132,22 @@ export const useUsers = () => {
   }, [dispatch]);
 
   // Actions QR spécialisées
-  const generateQrToken = useCallback(async (userId: string) => {
+  const getOrGenerateQrToken = useCallback(async (userId: string) => {
     try {
-      const response = await userApiService.generateQrToken(userId);
+      const response = await userApiService.getOrGenerateQrToken(userId);
       return response;
     } catch (error) {
-      console.error('Erreur lors de la génération du QR code:', error);
+      console.error('Erreur lors de la récupération/génération du QR code:', error);
       throw error;
     }
   }, []);
 
-  const revokeQrToken = useCallback(async (userId: string) => {
+  const regenerateQrToken = useCallback(async (userId: string) => {
     try {
-      await userApiService.revokeQrToken(userId);
+      const response = await userApiService.regenerateQrToken(userId);
+      return response;
     } catch (error) {
-      console.error('Erreur lors de la révocation du QR code:', error);
+      console.error('Erreur lors de la régénération du QR code:', error);
       throw error;
     }
   }, []);
@@ -186,8 +187,8 @@ export const useUsers = () => {
     deleteUser,
     
     // Actions QR
-    generateQrToken,
-    revokeQrToken,
+    getOrGenerateQrToken,
+    regenerateQrToken,
     
     // Utilitaires
     getUserById,

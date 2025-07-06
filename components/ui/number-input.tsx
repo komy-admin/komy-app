@@ -137,13 +137,14 @@ const styles = StyleSheet.create({
     minHeight: Platform.OS === 'web' ? 40 : 48,
   },
   mobileInput: {
-    paddingRight: 32,
+    paddingRight: Platform.OS === 'ios' ? 8 : 32,
     width: '100%'
   },
   currencyText: {
-    position: 'absolute',
-    right: 12,
+    position: Platform.OS === 'ios' ? 'relative' : 'absolute',
+    right: Platform.OS === 'ios' ? 0 : 12,
     color: '#2A2E33',
     fontSize: 16,
+    marginLeft: Platform.OS === 'ios' ? 4 : 0,
   }
 });

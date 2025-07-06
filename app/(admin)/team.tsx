@@ -41,7 +41,7 @@ export default function TeamPage() {
   const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux (seulement si autorisé)
-  const { users, loading, error, createUser, updateUser, deleteUser, generateQrToken, revokeQrToken, loadUsers, getUsersByProfile } = useUsers();
+  const { users, loading, error, createUser, updateUser, deleteUser, getOrGenerateQrToken, regenerateQrToken, loadUsers, getUsersByProfile } = useUsers();
 
 
   // Filtrer les utilisateurs avec les filtres appliqués
@@ -134,11 +134,11 @@ export default function TeamPage() {
     setQrLoading(true);
 
     try {
-      const res = await generateQrToken(user.id);
-      console.log('QR API response:', res);
+      // Récupère le QR existant ou en crée un nouveau automatiquement
+      const res = await getOrGenerateQrToken(user.id);
       setQrCodeToken(res.qrData.token);
     } catch (e: any) {
-      setQrError("Erreur lors de la génération du QR code");
+      setQrError("Erreur lors de la récupération du QR code");
     } finally {
       setQrLoading(false);
     }
@@ -148,10 +148,26 @@ export default function TeamPage() {
     console.log('Partager QR Code pour:', selectedUserForQr?.firstName, selectedUserForQr?.lastName);
   };
 
-  const handleRevokeQr = async () => {
+  const handleRegenerateQr = async () => {
     if (!selectedUserForQr) return;
-    await revokeQrToken(selectedUserForQr.id);
-    showToast('QR code révoqué avec succès', 'success');
+    
+    try {
+      setQrLoading(true);
+      setQrError(null);
+      setQrSuccess(null);
+      
+      // Force la génération d'un nouveau QR (révoque l'ancien automatiquement)
+      const res = await regenerateQrToken(selectedUserForQr.id);
+      setQrCodeToken(res.qrData.token);
+      
+      showToast('QR code régénéré avec succès', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la régénération du QR code:', error);
+      setQrError('Erreur lors de la régénération du QR code');
+      showToast('Erreur lors de la régénération du QR code', 'error');
+    } finally {
+      setQrLoading(false);
+    }
   };
 
   const getUserActions = (user: User): ActionItem[] => {
@@ -452,12 +468,12 @@ export default function TeamPage() {
               </Button>
 
               <Button
-                onPress={handleRevokeQr}
-                style={styles.revokeButton}
-                variant="destructive"
+                onPress={handleRegenerateQr}
+                style={styles.regenerateButton}
+                variant="outline"
                 disabled={!qrCodeToken || qrLoading}
               >
-                <Text style={styles.revokeButtonText}>Révoquer</Text>
+                <Text style={styles.regenerateButtonText}>Révoquer</Text>
               </Button>
             </View>
           </View>
@@ -572,14 +588,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  revokeButton: {
+  regenerateButton: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: '#FF4444',
+    borderColor: '#FF4444',
+    borderWidth: 1,
     borderRadius: 6,
   },
-  revokeButtonText: {
-    color: 'white',
+  regenerateButtonText: {
+    color: '#FF4444',
     fontSize: 14,
     fontWeight: '500',
   },

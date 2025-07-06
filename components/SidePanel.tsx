@@ -36,13 +36,12 @@ export function SidePanel({
   const animatedWidth = useRef(new Animated.Value(isCollapsed ? collapsedWidth : width)).current;
   const collapsedOpacity = useRef(new Animated.Value(isCollapsed ? 1 : 0)).current;
   const contentOpacity = useRef(new Animated.Value(isCollapsed ? 0 : 1)).current;
-  const rotationValue = useRef(new Animated.Value(0)).current;
+  const rotationValue = useRef(new Animated.Value(1)).current;
 
   // Initialisation optimisée pour iOS
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialized(true);
-      rotationValue.setValue(1);
     }, Platform.OS === 'ios' ? 0 : 10);
 
     return () => clearTimeout(timer);

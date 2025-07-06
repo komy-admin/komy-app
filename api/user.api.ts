@@ -24,26 +24,27 @@ export class UserApiService extends BaseApiService<User> {
   }
 
   /**
-   * Génère ou régénère un QR token pour un utilisateur (admin only)
+   * Récupère le QR token existant ou en crée un nouveau (admin only)
    */
-  async generateQrToken(userId: string): Promise<UserQrTokenResponse> {
+  async getOrGenerateQrToken(userId: string): Promise<UserQrTokenResponse> {
     try {
-      const response = await this.axiosInstance.post<UserQrTokenResponse>(`/admin/user/${userId}/generate-qr`);
+      const response = await this.axiosInstance.get<UserQrTokenResponse>(`/admin/user/${userId}/qr-token`);
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la génération du QR code:', error);
+      console.error('Erreur lors de la récupération du QR code:', error);
       throw error;
     }
   }
 
   /**
-   * Révoque le QR token d’un utilisateur (admin only)
+   * Force la génération d'un nouveau QR token (révoque l'ancien) (admin only)
    */
-  async revokeQrToken(userId: string): Promise<void> {
+  async regenerateQrToken(userId: string): Promise<UserQrTokenResponse> {
     try {
-      await this.axiosInstance.delete(`/admin/user/${userId}/revoke-qr`);
+      const response = await this.axiosInstance.post<UserQrTokenResponse>(`/admin/user/${userId}/generate-qr`);
+      return response.data;
     } catch (error) {
-      console.error('Erreur lors de la révocation du QR code:', error);
+      console.error('Erreur lors de la régénération du QR code:', error);
       throw error;
     }
   }
