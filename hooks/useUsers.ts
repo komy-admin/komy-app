@@ -52,8 +52,34 @@ export const useUsers = () => {
       const newUser = await userApiService.create(userData);
       dispatch(restaurantActions.createUser({ user: newUser }));
       return newUser;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la création de l\'utilisateur:', error);
+      
+      // Gestion des nouvelles réponses d'erreur structurées du backend
+      if (error?.response?.data?.message) {
+        const errorData = error.response.data;
+        
+        // Erreurs de conflit (409) - contraintes d'unicité
+        if (error.response.status === 409) {
+          throw new Error(errorData.message);
+        }
+        
+        // Erreurs de validation (422)
+        if (error.response.status === 422) {
+          throw new Error(errorData.message);
+        }
+        
+        // Erreurs 404
+        if (error.response.status === 404) {
+          throw new Error(errorData.message);
+        }
+        
+        // Erreurs 400
+        if (error.response.status === 400) {
+          throw new Error(errorData.message);
+        }
+      }
+      
       throw error;
     }
   }, [dispatch]);
@@ -63,8 +89,34 @@ export const useUsers = () => {
       const updatedUser = await userApiService.update(userId, userData);
       dispatch(restaurantActions.updateUser({ user: updatedUser }));
       return updatedUser;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
+      
+      // Gestion des nouvelles réponses d'erreur structurées du backend
+      if (error?.response?.data?.message) {
+        const errorData = error.response.data;
+        
+        // Erreurs de conflit (409) - contraintes d'unicité
+        if (error.response.status === 409) {
+          throw new Error(errorData.message);
+        }
+        
+        // Erreurs de validation (422)
+        if (error.response.status === 422) {
+          throw new Error(errorData.message);
+        }
+        
+        // Erreurs 404
+        if (error.response.status === 404) {
+          throw new Error(errorData.message);
+        }
+        
+        // Erreurs 400
+        if (error.response.status === 400) {
+          throw new Error(errorData.message);
+        }
+      }
+      
       throw error;
     }
   }, [dispatch]);

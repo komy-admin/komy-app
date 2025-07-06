@@ -12,7 +12,7 @@ export type User = {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone?: string;
   profil: UserProfile;
   profileImage?: string | null;
   password: string;

@@ -13,13 +13,13 @@ import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useUsers, useRestaurant } from '~/hooks/useRestaurant';
-import { FilterBar } from '~/components/filters/Filter';
-import { FilterConfig } from "~/hooks/useFilter/types";
+import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
+import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 
 export default function TeamPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<UserProfile | 'all'>('all');
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+  const [teamFilters, setTeamFilters] = useState<TeamFilterState>(createEmptyTeamFilters());
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [selectedUserForQr, setSelectedUserForQr] = useState<User | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -43,78 +43,27 @@ export default function TeamPage() {
   // Utilisation des hooks Redux (seulement si autorisé)
   const { users, loading, error, createUser, updateUser, deleteUser, generateQrToken, revokeQrToken, loadUsers, getUsersByProfile } = useUsers();
 
-  // Configuration des filtres
-  const filterConfig: FilterConfig<User>[] = [
-    {
-      field: 'firstName',
-      type: 'text',
-      label: 'Prénom',
-      operator: 'like',
-      show: true
-    },
-    {
-      field: 'lastName',
-      type: 'text',
-      label: 'Nom',
-      operator: 'like',
-      show: true
-    },
-    {
-      field: 'email',
-      type: 'text',
-      label: 'Email',
-      operator: 'like',
-      show: true
-    },
-    {
-      field: 'phone',
-      type: 'number',
-      label: 'Numéro de téléphone',
-      operator: 'like',
-      show: true
-    },
-  ];
 
   // Filtrer les utilisateurs avec les filtres appliqués
   const filteredUsers = useMemo(() => {
     let result = activeTab === 'all' ? users : getUsersByProfile(activeTab);
-
-    // Appliquer les filtres
-    Object.entries(filterValues).forEach(([field, value]) => {
-      if (value && value !== '') {
-        result = result.filter(user => {
-          switch (field) {
-            case 'firstName':
-              return user.firstName?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
-            case 'lastName':
-              return user.lastName?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
-            case 'email':
-              return user.email?.toLowerCase().includes(value.toString().toLowerCase()) ?? false;
-            case 'phone':
-              return user.phone?.toString().includes(value.toString()) ?? false;
-            default:
-              return false;
-          }
-        });
-      }
-    });
+    
+    // Appliquer les filtres TeamFilters
+    result = filterTeamUsers(result, teamFilters);
 
     return result.map(user => ({
       ...user,
       profil: getUserProfileText(user.profil)
     }));
-  }, [users, activeTab, filterValues, getUsersByProfile]);
+  }, [users, activeTab, teamFilters, getUsersByProfile]);
 
   // Gestion des filtres
-  const handleUpdateFilter = (field: string, value: any) => {
-    setFilterValues(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleFiltersChange = (filters: TeamFilterState) => {
+    setTeamFilters(filters);
   };
 
   const handleClearFilters = () => {
-    setFilterValues({});
+    setTeamFilters(createEmptyTeamFilters());
     setActiveTab('all');
   };
 
@@ -145,9 +94,12 @@ export default function TeamPage() {
         showToast('Utilisateur créé avec succès', 'success');
       }
       handleCloseModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving user:', err);
-      showToast('Erreur lors de la sauvegarde de l\'utilisateur', 'error');
+      
+      // Afficher le message d'erreur spécifique si disponible
+      const errorMessage = err?.message || 'Erreur lors de la sauvegarde de l\'utilisateur';
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -261,14 +213,11 @@ export default function TeamPage() {
         isCollapsed={isPanelCollapsed}
         onCollapsedChange={setIsPanelCollapsed}
       >
-        <View style={{ padding: 15 }}>
-          <FilterBar
-            config={filterConfig}
-            onUpdateFilter={handleUpdateFilter}
-            onClearFilters={handleClearFilters}
-            activeFilters={Object.entries(filterValues).map(([field, value]) => ({ field, value, operator: 'like' }))}
-          />
-        </View>
+        <TeamFilters
+          filters={teamFilters}
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+        />
       </SidePanel>
 
       <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

@@ -37,34 +37,44 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
   const validationRules: ValidationRules = {
     profil: {
       required: true,
-      message: 'Le rôle est requis'
+      message: 'Le profil est obligatoire'
     },
     firstName: {
       required: true,
-      message: 'Le prénom est requis'
+      minLength: 3,
+      maxLength: 50,
+      message: 'Le prénom doit contenir entre 3 et 50 caractères'
     },
     lastName: {
       required: true,
-      message: 'Le nom est requis'
+      minLength: 3,
+      maxLength: 50,
+      message: 'Le nom de famille doit contenir entre 3 et 50 caractères'
     },
     email: {
       required: true,
       email: true,
+      maxLength: 100,
       message: 'L\'adresse email n\'est pas valide'
     },
     phone: {
-      required: true,
+      required: false,
       phone: true,
-      message: 'Le numéro de téléphone n\'est pas valide'
+      minLength: 10,
+      maxLength: 20,
+      message: 'Le numéro de téléphone doit contenir entre 10 et 20 caractères'
     },
     loginId: {
       required: true,
-      message: 'L\'identifiant est requis'
+      minLength: 3,
+      maxLength: 30,
+      message: 'L\'identifiant doit contenir entre 3 et 30 caractères'
     },
     password: {
       required: (value, data) => !user || isPasswordModified,
       minLength: 8,
-      message: 'Un mot de passe est nécessaire et doit contenir au moins 8 caractères'
+      maxLength: 100,
+      message: 'Le mot de passe doit contenir entre 8 et 100 caractères'
     },
   };
 
@@ -138,6 +148,8 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
       ...formData,
       password: user && !isPasswordModified ? '' : formData.password,
     };
+    
+    
     onSave(submittedUser);
   };
 
@@ -207,11 +219,11 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
               />
             </View>
             <View style={styles.column}>
-              <Text style={styles.label}>Téléphone *</Text>
+              <Text style={styles.label}>Téléphone</Text>
               <TextInput
                 value={formData.phone}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, phone: text }))}
-                placeholder="Téléphone"
+                placeholder="Téléphone (optionnel)"
                 keyboardType="phone-pad"
                 style={styles.input}
                 autoComplete="off"
