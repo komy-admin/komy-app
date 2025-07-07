@@ -100,8 +100,8 @@ export const useRestaurant = () => {
     createUser: usersHook.createUser,
     updateUser: usersHook.updateUser,
     deleteUser: usersHook.deleteUser,
-    generateQrToken: usersHook.generateQrToken,
-    revokeQrToken: usersHook.revokeQrToken,
+    getOrGenerateQrToken: usersHook.getOrGenerateQrToken,
+    regenerateQrToken: usersHook.regenerateQrToken,
     
     // === UTILITAIRES ===
     getTableById: tablesHook.getTableById,
