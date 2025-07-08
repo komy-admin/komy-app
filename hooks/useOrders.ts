@@ -191,9 +191,6 @@ export const useOrders = () => {
   const updateOrderItemStatus = useCallback(async (orderItemIds: string[], status: Status) => {
     try {
       await orderItemApiService.updateManyStatus(orderItemIds, status);
-      
-      // Mettre à jour le store Redux
-      dispatch(restaurantActions.orderItemsStatusUpdated({ orderItemIds, status }));
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut des orderItems:', error);
       throw error;

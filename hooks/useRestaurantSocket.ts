@@ -56,9 +56,18 @@ export const useRestaurantSocket = () => {
       },
       
       orderitem_updated: (event: WebSocketEvent) => {
+        // Format legacy : pour les mises à jour individuelles (si nécessaires)
         console.log('📝 Article de commande mis à jour:', event.data.id);
-        // Mettre à jour le statut de l'item spécifique
         dispatch(restaurantActions.updateOrderItem({ orderItem: event.data }));
+      },
+
+      // Événement optimisé pour les mises à jour en lot
+      orderitem_batch_updated: (event: WebSocketEvent) => {
+        console.log('📦 Mise à jour batch d\'articles:', event.data.updatedCount, 'items');
+        dispatch(restaurantActions.orderItemsStatusUpdated({
+          orderItemIds: event.data.orderItemIds,
+          status: event.data.status
+        }));
       },
       
       orderitem_deleted: (event: WebSocketEvent) => {

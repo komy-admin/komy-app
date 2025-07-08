@@ -1,16 +1,13 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
-import { getMostImportantStatus } from '~/lib/utils';
-import { useSocket } from '~/hooks/useSocket';
 import { Status } from "~/types/status.enum";
-import { EventType } from '~/hooks/useSocket/types';
-import { orderItemApiService } from '~/api/order-item.api';
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { OrderItem } from '~/types/order-item.types';
 import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAllOrderItems } from '~/store/restaurant';
+import { useToast } from '~/components/ToastProvider';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -47,6 +44,7 @@ export default function KitchenPage() {
   // Utilisation des hooks Redux
   const { orders, loading, error, updateOrderItemStatus } = useOrders();
   const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
+  const { showToast } = useToast();
 
   // Filtrer les commandes et items selon les statuts disponibles en cuisine
   const kitchenOrders = useMemo(() => {
@@ -64,9 +62,20 @@ export default function KitchenPage() {
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
       await updateOrderItemStatus(order.orderItems.map(oi => oi.id), newStatus);
-    } catch (error) {
+      // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
+    } catch (error: any) {
       console.error('Error updating status:', error);
-      throw error;
+      
+      // Gestion d'éerreur spécifique pour le 500
+      if (error.response?.status === 500) {
+        showToast('Erreur serveur temporaire, l\'API est en cours de correction', 'error');
+      } else if (error.response?.status === 404) {
+        showToast('Commande introuvable', 'error');
+      } else if (error.response?.status === 403) {
+        showToast('Vous n\'avez pas les droits pour cette action', 'error');
+      } else {
+        showToast('Impossible de mettre à jour le statut, veuillez réessayer', 'error');
+      }
     }
   };
 
