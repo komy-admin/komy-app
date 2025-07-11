@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Table } from '~/types/table.types';
@@ -53,8 +53,20 @@ const Room: React.FC<RoomProps> = ({
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
   const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  
+  // Synchroniser selectedTable avec editingTableId
+  useEffect(() => {
+    if (editingTableId) {
+      const table = tables.find(t => t.id === editingTableId);
+      setSelectedTable(table || null);
+    } else {
+      setSelectedTable(null);
+    }
+  }, [editingTableId, tables]);
+  
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [lastValidPositions, setLastValidPositions] = useState<Map<string, {x: number, y: number}>>(new Map());
 
   const getInitialPanelPosition = () => {
     const screenWidth = Dimensions.get('window').width;
@@ -115,19 +127,31 @@ const Room: React.FC<RoomProps> = ({
 
   function isPositionValid(table: Table): boolean {
     if (table.id !== editingTableId) return true;
-
-    if (!isTableWithinRoom(table)) {
-      showToastMessage("Table hors limites - repositionnement automatique");
-      return false;
-    }
-
-    if (hasTableCollision(table, tables)) {
-      showToastMessage("Collision détectée - repositionnement automatique");
-      return false;
-    }
-
-    return true;
+    return isTableWithinRoom(table) && !hasTableCollision(table, tables);
   }
+
+  // Enregistrer la dernière position valide lors de la sélection
+  const saveLastValidPosition = useCallback((table: Table) => {
+    if (isPositionValid(table)) {
+      setLastValidPositions(prev => new Map(prev.set(table.id!, { x: table.xStart, y: table.yStart })));
+    }
+  }, []);
+
+  // Simple validation sans repositionnement automatique - laissé à RoomTable
+  const checkTableValidity = useCallback((table: Table) => {
+    if (table.id !== editingTableId) return;
+
+    const isValid = isPositionValid(table);
+    if (!isValid) {
+      // Juste afficher le toast, le repositionnement est géré par RoomTable
+      const lastValid = lastValidPositions.get(table.id!);
+      if (lastValid) {
+        showToastMessage("Table repositionnée à sa dernière position valide");
+      } else {
+        showToastMessage("Table repositionnée automatiquement");
+      }
+    }
+  }, [editingTableId, lastValidPositions]);
 
   function showToastMessage(message: string) {
     setToastMessage(message);
@@ -170,10 +194,10 @@ const Room: React.FC<RoomProps> = ({
     return true;
   }
 
-  // Expose la fonction via les props
+  // Expose la fonction via les props - Version corrigée
   useEffect(() => {
     if (onCheckAvailableSpace) {
-      onCheckAvailableSpace = canAddNewTable;
+      onCheckAvailableSpace = (width: number, height: number) => canAddNewTable(width, height);
     }
   }, [onCheckAvailableSpace]);
 
@@ -232,12 +256,26 @@ const Room: React.FC<RoomProps> = ({
     onTablePress(null);
   };
 
-  const handleTableSelect = (table: Table) => {
+  const handleTableSelect = useCallback((table: Table) => {
     console.log('Table selected in Room', table?.name);
-    if (selectedTable?.id === table.id) return;
+    if (editingTableId === table.id) return;
+    
+    // Sauvegarder la position valide lors de la sélection
+    saveLastValidPosition(table);
+    
     setSelectedTable(table);
     onTablePress(table);
-  };
+  }, [editingTableId, onTablePress, saveLastValidPosition]);
+
+  // Valider les tables en mode édition (sans repositionnement)
+  useEffect(() => {
+    if (editionMode && editingTableId) {
+      const editingTable = tables.find(t => t.id === editingTableId);
+      if (editingTable) {
+        checkTableValidity(editingTable);
+      }
+    }
+  }, [tables, editingTableId, editionMode, checkTableValidity]);
 
   const handlePanelMove = async (newPosition: { x: number; y: number }) => {
     setPanelPosition(newPosition);
@@ -294,7 +332,7 @@ const Room: React.FC<RoomProps> = ({
           />
           {visibleTables.map(table => (
             <RoomTable
-              key={`${table.id}_${currentZoom}`}
+              key={table.id}
               table={table}
               status={getTableStatus(table)}
               isEditing={editingTableId === table.id}
@@ -302,6 +340,7 @@ const Room: React.FC<RoomProps> = ({
               positionValid={isPositionValid(table)}
               CELL_SIZE={CELL_SIZE}
               currentZoom={currentZoom}
+              isSelected={editingTableId === table.id}
               onPress={() => handleTableSelect(table)}
               onLongPress={onTableLongPress}
               onUpdate={onTableUpdate}
@@ -309,7 +348,7 @@ const Room: React.FC<RoomProps> = ({
           ))}
         </View>
       </ReactNativeZoomableView>
-      {editionMode && selectedTable && tables.find(table => table.id === selectedTable.id) && (
+      {editionMode && editingTableId && tables.find(table => table.id === editingTableId) && (
         <TableActionPanel
           position={panelPosition}
           onPositionChange={handlePanelMove}

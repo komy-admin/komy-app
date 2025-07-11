@@ -45,18 +45,6 @@ export const useTables = () => {
   }, [setSelectedTable]);
 
   // Actions asynchrones
-  const loadTables = useCallback(async () => {
-    try {
-      dispatch(restaurantActions.setLoadingTables(true));
-      const { data: tables } = await tableApiService.getAll();
-      dispatch(restaurantActions.setTables({ tables }));
-      return tables;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des tables';
-      dispatch(restaurantActions.setErrorTables(errorMessage));
-      throw error;
-    }
-  }, [dispatch]);
 
   const createTable = useCallback(async (tableData: Omit<Table, "orders" | "id" | "createdAt" | "updatedAt" | "status" | "account" | "seats">) => {
     try {
@@ -135,7 +123,6 @@ export const useTables = () => {
     clearSelection,
     
     // Actions CRUD
-    loadTables,
     createTable,
     updateTable,
     deleteTable,

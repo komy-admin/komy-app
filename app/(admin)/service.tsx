@@ -3,7 +3,8 @@ import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Button, ConfirmDialog, ForkModal, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text, TextInput } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
 import { Grid3X3Icon, ListFilter, Minus, Plus } from "lucide-react-native";
 import OrderList from "~/components/Service/OrderList";
@@ -65,6 +66,16 @@ export default function ServicePage() {
       setMenuTabsValue(allItemTypes[0].id);
     }
   }, [allItemTypes, menuTabsValue]);
+
+  // Désélectionner la table lors de la navigation
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Cleanup : désélectionner lors du blur (navigation sortante)
+        setSelectedTable(null);
+      };
+    }, [setSelectedTable])
+  );
 
   const handleChangeRoom = (room: any) => {
     setSelectedTable(null);
@@ -353,7 +364,7 @@ export default function ServicePage() {
                 <Badge
                   variant="outline"
                   className='mx-1'
-                  active={room.name === currentRoom?.name}
+                  active={room.id === currentRoom?.id}
                   size='lg'
                 >
                   <Text>{room.name}</Text>

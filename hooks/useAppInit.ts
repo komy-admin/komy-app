@@ -4,7 +4,6 @@ import { RootState } from '~/store';
 import { useRooms } from './useRooms';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
-import { useTables } from './useTables';
 import { useUsers } from './useUsers';
 import { restaurantActions } from '~/store/restaurant';
 import { Room } from '@/types/room.types';
@@ -38,7 +37,6 @@ export const useAppInit = () => {
   const { loadRooms } = useRooms();
   const { loadOrdersForRoom } = useOrders();
   const { loadItemTypes, loadItems } = useMenu();
-  const { loadTables } = useTables();
   const { loadUsers } = useUsers();
 
   // État d'initialisation
@@ -121,13 +119,9 @@ export const useAppInit = () => {
       const results = await Promise.all(promises);
       const [rooms, itemTypes, users = []] = results;
 
-      // Étape 2: Charger les tables (dépend des rooms)
-      console.log('🪑 Chargement des tables...');
-      const tables = await loadTables().then(result => {
-        updateProgress('tables', true);
-        console.log('✅ Tables chargées:', result.length);
-        return result;
-      });
+      // Étape 2: Tables déjà chargées via loadRooms()
+      console.log('🪑 Tables déjà chargées via les rooms');
+      updateProgress('tables', true);
 
       // Étape 3: Charger le menu complet (dépend des itemTypes)
       console.log('🍽️ Chargement du menu...');
@@ -165,7 +159,6 @@ export const useAppInit = () => {
       
       return {
         rooms,
-        tables,
         itemTypes,
         items,
         users,
@@ -189,7 +182,6 @@ export const useAppInit = () => {
     state.isInitialized, 
     state.isLoading, 
     loadRooms, 
-    loadTables, 
     loadItemTypes, 
     loadItems, 
     loadOrdersForRoom,

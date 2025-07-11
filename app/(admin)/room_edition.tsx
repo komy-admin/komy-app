@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
 import { Badge, Button } from "~/components/ui";
 import { Room } from '~/types/room.types';
@@ -10,6 +11,7 @@ import { CustomModal } from '~/components/CustomModal';
 import TableForm from '~/components/form/TableForm';
 import { useToast } from '~/components/ToastProvider';
 import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
+import { useTableEditor } from '~/hooks/useTableEditor';
 
 export default function RoomPage() {
   const params = useLocalSearchParams();
@@ -20,36 +22,53 @@ export default function RoomPage() {
   const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
-  const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading, error: roomsError } = useRooms();
-  const { currentRoomTables, selectedTable, setSelectedTable, createTable, updateTable, deleteTable } = useTables();
+  const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading } = useRooms();
+  const { currentRoomTables, selectedTable, setSelectedTable } = useTables();
+  
+  // Hook spécialisé pour l'édition haute performance
+  const { createTableFast, updateTableFast, deleteTableFast, isCreateOperationInProgress } = useTableEditor();
 
   // Variables d'état local pour l'UI seulement
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [isTableUpdated, setIsTableUpdated] = useState(false);
 
-
-  const handleTableUpdate = async (id: string, updates: Partial<Table>) => {
-    try {
-      await updateTable(id, updates);
-
-      if (isTableUpdated) {
-        showToast('Table mise à jour avec succès', 'success');
-        setIsTableUpdated(false);
+  // Définir la salle courante basée sur le roomId des paramètres
+  useEffect(() => {
+    if (roomId && rooms.length > 0) {
+      const room = rooms.find(r => r.id === roomId);
+      if (room) {
+        setCurrentRoom(roomId);
       }
+    }
+  }, [roomId, rooms, setCurrentRoom]);
+
+  // Désélectionner la table lors de la navigation
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Cleanup : désélectionner lors du blur (navigation sortante)
+        setSelectedTable(null);
+      };
+    }, [setSelectedTable])
+  );
+
+  const handleTableUpdate = useCallback(async (id: string, updates: Partial<Table>) => {
+    try {
+      await updateTableFast(id, updates);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la table:', error);
-      showToast('Erreur lors de la mise à jour de la table', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la mise à jour de la table';
+      showToast(errorMessage, 'error');
     }
-  };
+  }, [updateTableFast, showToast]);
 
-  const handleTablePress = (table: Table | null) => {
+  const handleTablePress = useCallback((table: Table | null) => {
     if (selectedTable?.id === table?.id) {
       return;
     }
     setSelectedTable(table?.id || null);
-  };
+  }, [selectedTable?.id, setSelectedTable]);
 
   const handleEditTable = () => {
     setIsEditModalVisible(true);
@@ -63,13 +82,14 @@ export default function RoomPage() {
     if (!selectedTable?.id) return;
 
     try {
-      await deleteTable(selectedTable.id);
+      await deleteTableFast(selectedTable.id);
       setSelectedTable(null);
       setIsDeleteModalVisible(false);
       showToast('Table supprimée avec succès', 'success');
     } catch (error) {
       console.error('Erreur lors de la suppression de la table:', error);
-      showToast('Erreur lors de la suppression de la table', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la suppression de la table';
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -77,98 +97,110 @@ export default function RoomPage() {
     if (!selectedTable?.id) return;
 
     try {
-      setIsTableUpdated(true);
-      await handleTableUpdate(selectedTable.id, updates);
+      await updateTableFast(selectedTable.id, updates);
       setIsEditModalVisible(false);
+      showToast('Table modifiée avec succès', 'success');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de la table:', error);
-      showToast('Erreur lors de la sauvegarde de la table', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la sauvegarde de la table';
+      showToast(errorMessage, 'error');
     }
   };
 
-  const handleAddTable = async () => {
-    if (!currentRoom?.id) return;
+  // Fonction utilitaire pour générer un nom de table
+  const generateTableName = useCallback(() => {
+    const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    return `${letter}${number}`;
+  }, []);
 
-    if (isCreatingTable) return;
-    setIsCreatingTable(true);
+  // Fonction utilitaire pour trouver une position valide (optimisée)
+  const findAvailablePosition = useCallback((tableSize = 2) => {
+    if (!currentRoom) return null;
 
-    function generateName() {
-      const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-      const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-      return `${letter}${number}`;
-    }
-
-    const DEFAULT_TABLE_SIZE = 2;
-    const SPACING = 0;
-
-    const isPositionValid = (x: number, y: number): boolean => {
-      if (x < 0 || y < 0 || x >= (currentRoom?.width || 0) || y >= (currentRoom?.height || 0)) {
-        return false;
+    // Créer une grille d'occupation pour optimiser la recherche
+    const grid = Array(currentRoom.height).fill(null).map(() => Array(currentRoom.width).fill(false));
+    
+    // Marquer les zones occupées par les tables existantes
+    currentRoomTables.forEach(table => {
+      for (let y = table.yStart; y < table.yStart + table.height; y++) {
+        for (let x = table.xStart; x < table.xStart + table.width; x++) {
+          if (grid[y] && grid[y][x] !== undefined) {
+            grid[y][x] = true;
+          }
+        }
       }
-
-      if (x + DEFAULT_TABLE_SIZE > (currentRoom?.width || 0) ||
-        y + DEFAULT_TABLE_SIZE > (currentRoom?.height || 0)) {
-        return false;
-      }
-
-      return !currentRoomTables.some(table => {
-        const hasCollision = (x < table.xStart + table.width + SPACING &&
-          x + DEFAULT_TABLE_SIZE + SPACING > table.xStart &&
-          y < table.yStart + table.height + SPACING &&
-          y + DEFAULT_TABLE_SIZE + SPACING > table.yStart);
-        return hasCollision;
-      });
-    };
-
-    let validPosition = null;
-
-    const maxX = (currentRoom?.width || 0) - DEFAULT_TABLE_SIZE;
-    const maxY = (currentRoom?.height || 0) - DEFAULT_TABLE_SIZE;
-
-    for (let y = 0; y <= maxY && !validPosition; y++) {
-      for (let x = 0; x <= maxX && !validPosition; x++) {
-        if (isPositionValid(x, y)) {
-          validPosition = { x, y };
-          break;
+    });
+    
+    // Chercher une position libre en vérifiant la grille
+    for (let y = 0; y <= currentRoom.height - tableSize; y++) {
+      for (let x = 0; x <= currentRoom.width - tableSize; x++) {
+        let canPlace = true;
+        
+        // Vérifier si la zone est libre
+        for (let dy = 0; dy < tableSize && canPlace; dy++) {
+          for (let dx = 0; dx < tableSize && canPlace; dx++) {
+            if (grid[y + dy]?.[x + dx]) {
+              canPlace = false;
+            }
+          }
+        }
+        
+        if (canPlace) {
+          return { x, y };
         }
       }
     }
+    return null;
+  }, [currentRoom, currentRoomTables]);
 
-    if (!validPosition) {
-      const errorMessage = "Pas d'espace disponible pour une nouvelle table";
-      console.error(errorMessage);
-      showToast(errorMessage, 'error');
-      setIsCreatingTable(false);
-      return;
-    }
+  const handleAddTable = useCallback(async () => {
+    if (!currentRoom?.id || isCreatingTable || isCreateOperationInProgress()) return;
 
-    const tableToCreate = {
-      name: generateName(),
-      xStart: validPosition.x,
-      yStart: validPosition.y,
-      width: DEFAULT_TABLE_SIZE,
-      height: DEFAULT_TABLE_SIZE,
-      roomId: currentRoom.id,
-      seats: 2
-    };
+    setIsCreatingTable(true);
 
     try {
-      const newTable = await createTable(tableToCreate);
+      // Désélectionner la table courante avant d'ajouter une nouvelle
+      setSelectedTable(null);
+      
+      const position = findAvailablePosition(2);
+      if (!position) {
+        showToast("Pas d'espace disponible pour une nouvelle table", 'error');
+        setIsCreatingTable(false);
+        return;
+      }
+
+      const tableToCreate = {
+        name: generateTableName(),
+        xStart: position.x,
+        yStart: position.y,
+        width: 2,
+        height: 2,
+        roomId: currentRoom.id,
+        seats: 2
+      };
+
+      // Utiliser le hook dédié pour la création haute performance
+      const newTable = await createTableFast(tableToCreate);
+      
+      // Sélectionner la nouvelle table
       handleTablePress(newTable);
       showToast('Table créée avec succès', 'success');
+      
     } catch (error) {
       console.error("Erreur lors de la création de la table:", error);
-      showToast("Erreur lors de la création de la table", 'error');
+      const errorMessage = error instanceof Error ? error.message : "Erreur lors de la création de la table";
+      showToast(errorMessage, 'error');
     } finally {
       setIsCreatingTable(false);
     }
-  };
+  }, [currentRoom?.id, isCreatingTable, isCreateOperationInProgress, findAvailablePosition, generateTableName, createTableFast, handleTablePress, showToast, setSelectedTable]);
 
-  const handleChangeRoom = (room: Room) => {
+  const handleChangeRoom = useCallback((room: Room) => {
     if (!room.id) return;
     setCurrentRoom(room.id);
     setSelectedTable(null);
-  };
+  }, [setCurrentRoom, setSelectedTable]);
 
   return (
     <View style={styles.container}>
@@ -196,20 +228,22 @@ export default function RoomPage() {
         </ScrollView>
       </View>
 
-      <RoomComponent
-        key={currentRoom?.id || 'new-room'}
-        tables={currentRoomTables}
-        editingTableId={selectedTable?.id}
-        editionMode={true}
-        width={currentRoom?.width || 10}
-        height={currentRoom?.height || 10}
-        isLoading={roomsLoading}
-        onTablePress={handleTablePress}
-        onTableLongPress={handleTablePress}
-        onTableUpdate={handleTableUpdate}
-        onEditTable={handleEditTable}
-        onDeleteTable={handleDeleteTable}
-      />
+      {currentRoom && (
+        <RoomComponent
+          key={currentRoom.id}
+          tables={currentRoomTables}
+          editingTableId={selectedTable?.id}
+          editionMode={true}
+          width={currentRoom.width}
+          height={currentRoom.height}
+          isLoading={roomsLoading}
+          onTablePress={handleTablePress}
+          onTableLongPress={handleTablePress}
+          onTableUpdate={handleTableUpdate}
+          onEditTable={handleEditTable}
+          onDeleteTable={handleDeleteTable}
+        />
+      )}
 
       <View style={styles.cardContainer} pointerEvents="box-none">
         {currentRoom && (

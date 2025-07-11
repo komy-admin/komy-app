@@ -14,6 +14,7 @@ interface TableViewProps {
   positionValid: boolean;
   CELL_SIZE: number;
   currentZoom: number;
+  isSelected: boolean;
   onPress: (table: Table) => void;
   onLongPress: (table: Table) => void;
   onUpdate: (id: string, updates: Partial<Table>) => void;
@@ -27,6 +28,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
   positionValid,
   CELL_SIZE,
   currentZoom,
+  isSelected,
   onPress,
   onLongPress,
   onUpdate
@@ -40,34 +42,51 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const height = useRef(new Animated.Value(table.height * CELL_SIZE)).current;
   const xStart = useRef(new Animated.Value(table.xStart * CELL_SIZE)).current;
   const yStart = useRef(new Animated.Value(table.yStart * CELL_SIZE)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
 
   // const isSizeValid = table.width >= MIN_CELLS && table.height >= MIN_CELLS;
 
   useEffect(() => {
-    if (!positionValid) {
-      // Retour à la dernière position valide
+    // Si position invalide et en mode édition, repositionner automatiquement
+    if (!positionValid && isEditing) {
+      // Animation de fade pour le repositionnement
+      Animated.sequence([
+        Animated.timing(opacity, { 
+          toValue: 0, 
+          duration: 80, 
+          useNativeDriver: true 
+        }),
+        Animated.timing(opacity, { 
+          toValue: 1, 
+          duration: 100, 
+          useNativeDriver: true 
+        })
+      ]).start();
+
+      // Repositionner à la dernière position valide
       onUpdate(table.id, {
         width: lastValidWidth.current,
         height: lastValidHeight.current,
         xStart: lastValidXStart.current,
         yStart: lastValidYStart.current
       });
-    } else {
-      // Mise à jour des dernières positions valides
+      return;
+    }
+
+    // Mettre à jour les dernières positions valides si la position est valide
+    if (positionValid) {
       lastValidWidth.current = table.width;
       lastValidHeight.current = table.height;
       lastValidXStart.current = table.xStart;
       lastValidYStart.current = table.yStart;
-
-      // Animation vers la nouvelle position
-      Animated.parallel([
-        Animated.spring(width, { toValue: table.width * CELL_SIZE, useNativeDriver: false }),
-        Animated.spring(height, { toValue: table.height * CELL_SIZE, useNativeDriver: false }),
-        Animated.spring(xStart, { toValue: table.xStart * CELL_SIZE, useNativeDriver: false }),
-        Animated.spring(yStart, { toValue: table.yStart * CELL_SIZE, useNativeDriver: false })
-      ]).start();
     }
-  }, [positionValid, table]);
+
+    // Mise à jour normale des dimensions et positions
+    width.setValue(table.width * CELL_SIZE);
+    height.setValue(table.height * CELL_SIZE);
+    xStart.setValue(table.xStart * CELL_SIZE);
+    yStart.setValue(table.yStart * CELL_SIZE);
+  }, [table.width, table.height, table.xStart, table.yStart, positionValid, isEditing]);
 
   const dragPanResponder = useRef(
     PanResponder.create({
@@ -189,7 +208,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
         onPress={() => onPress(table)}
         onLongPress={() => onLongPress(table)}
         delayLongPress={500}
-        style={{ zIndex: 1000 }}
+        style={{ zIndex: isSelected ? 10000 : 1000 }}
       >
         <Animated.View
           style={[
@@ -267,8 +286,9 @@ export const RoomTable: React.FC<TableViewProps> = ({
             height,
             left: xStart,
             top: yStart,
-            zIndex: 10000,
-            elevation: 10000,
+            opacity,
+            zIndex: isSelected ? 20000 : 10000,
+            elevation: isSelected ? 20000 : 10000,
           },
         ]}
       >

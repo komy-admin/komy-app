@@ -42,6 +42,14 @@ export function SidePanel({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialized(true);
+      // Forcer l'animation de rotation initiale
+      if (isCollapsed) {
+        Animated.timing(rotationValue, {
+          toValue: 1,
+          duration: 0,
+          useNativeDriver: true,
+        }).start();
+      }
     }, Platform.OS === 'ios' ? 0 : 10);
 
     return () => clearTimeout(timer);

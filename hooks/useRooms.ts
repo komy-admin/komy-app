@@ -35,7 +35,16 @@ export const useRooms = () => {
     try {
       dispatch(restaurantActions.setLoadingRooms(true));
       const { data: rooms } = await roomApiService.getAll();
+      
+      // Extraire toutes les tables des rooms et les ajouter au store
+      const allTables = rooms.flatMap(room => room.tables || []);
+      
+      // Dispatch les rooms ET les tables
       dispatch(restaurantActions.setRooms({ rooms }));
+      if (allTables.length > 0) {
+        dispatch(restaurantActions.setTables({ tables: allTables }));
+      }
+      
       return rooms;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des salles';
@@ -49,10 +58,12 @@ export const useRooms = () => {
       dispatch(restaurantActions.setLoadingRooms(true));
       const newRoom = await roomApiService.create(roomData);
       dispatch(restaurantActions.createRoom({ room: newRoom }));
+      dispatch(restaurantActions.setLoadingRooms(false));
       return newRoom;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la création de la salle';
       dispatch(restaurantActions.setErrorRooms(errorMessage));
+      dispatch(restaurantActions.setLoadingRooms(false));
       throw error;
     }
   }, [dispatch]);

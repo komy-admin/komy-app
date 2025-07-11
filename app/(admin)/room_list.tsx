@@ -8,7 +8,7 @@ import { CustomModal } from '~/components/CustomModal';
 import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
-import { useRooms, useRestaurant } from '~/hooks/useRestaurant';
+import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
 import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
 import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
@@ -28,6 +28,7 @@ export default function RoomListPage() {
 
   // Utilisation des hooks Redux
   const { rooms, loading, error, createRoom, updateRoom, deleteRoom, getRoomById } = useRooms();
+  const { tables } = useTables();
 
   // State pour le filtrage
   const [filters, setFilters] = useState<RoomFilterState>(createEmptyFilters());
@@ -138,12 +139,15 @@ export default function RoomListPage() {
       label: 'Tables',
       key: 'tableCount',
       width: '25%',
-      render: (room: Room) => (
-        <View style={styles.tableCountContainer}>
-          <Text style={styles.tableCountText}>{room.tables?.length || 0}</Text>
-          <UtensilsCrossed size={14} color="#2A2E33" style={styles.tableIcon} />
-        </View>
-      )
+      render: (room: Room) => {
+        const roomTableCount = tables.filter(table => table.roomId === room.id).length;
+        return (
+          <View style={styles.tableCountContainer}>
+            <Text style={styles.tableCountText}>{roomTableCount}</Text>
+            <UtensilsCrossed size={14} color="#2A2E33" style={styles.tableIcon} />
+          </View>
+        );
+      }
     }
   ];
 
