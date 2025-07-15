@@ -14,5 +14,34 @@ export class OrderItemApiService extends BaseApiService<OrderItem> {
       throw error;
     }
   }
+
+  async deleteManyOrderItems(orderItemIds: string[]): Promise<{ deletedCount: number; deletedIds: string[] }> {
+    try {
+      const response = await this.axiosInstance.delete(`${this.endpoint}/bulk`, { 
+        data: { orderItemIds } 
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error in deleteManyOrderItems for ${this.endpoint}:`, error);
+      throw error;
+    }
+  }
+
+  async createBulk(bulkData: {
+    orderId: string;
+    items: Array<{
+      itemId: string;
+      quantity: number;
+      status?: Status;
+    }>;
+  }): Promise<OrderItem[]> {
+    try {
+      const response = await this.axiosInstance.post(`${this.endpoint}/bulk`, bulkData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error in createBulk for ${this.endpoint}:`, error);
+      throw error;
+    }
+  }
 }
 export const orderItemApiService = new OrderItemApiService()

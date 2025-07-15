@@ -137,6 +137,7 @@ export const restaurantActions = {
   deleteOrderItem: ordersActions.deleteOrderItem,
   updateOrderStatus: ordersActions.updateOrderStatus,
   orderItemsStatusUpdated: ordersActions.orderItemsStatusUpdated,
+  createOrderItemsBatch: ordersActions.createOrderItemsBatch,
   
   setItems: menuActions.setItems,
   setItemTypes: menuActions.setItemTypes,

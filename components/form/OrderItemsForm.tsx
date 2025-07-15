@@ -156,20 +156,19 @@ export default function OrderItemsForm({
         await Promise.all(deletePromises);
       }
 
-      // 4. Ajouter les nouveaux orderItems (SEULEMENT avec le statut DRAFT)
-      const newOrderItems = [];
-      for (const { itemId, quantity } of itemsToAdd) {
-        const item = items.find(i => i.id === itemId);
-        if (item) {
-          for (let i = 0; i < quantity; i++) {
-            const orderItem = await orderItemApiService.create({
-              orderId: order.id,
-              itemId: item.id,
-              status: Status.DRAFT // SEULEMENT les nouveaux items sont en DRAFT
-            });
-            newOrderItems.push(orderItem);
-          }
-        }
+      // 4. Ajouter les nouveaux orderItems en lot (SEULEMENT avec le statut DRAFT)
+      let newOrderItems = [];
+      if (itemsToAdd.length > 0) {
+        const bulkData = {
+          orderId: order.id,
+          items: itemsToAdd.map(({ itemId, quantity }) => ({
+            itemId,
+            quantity,
+            status: Status.DRAFT // SEULEMENT les nouveaux items sont en DRAFT
+          }))
+        };
+        
+        newOrderItems = await orderItemApiService.createBulk(bulkData);
       }
 
       // 5. Récupérer la commande mise à jour avec tous les orderItems
@@ -177,7 +176,7 @@ export default function OrderItemsForm({
 
       // 6. Calculer le nouveau statut global
       const mostImportantStatus = updatedOrder.orderItems.length > 0
-        ? getMostImportantStatus(updatedOrder.orderItems.map((orderItem: OrderItem) => orderItem.status))
+        ? getMostImportantStatus(updatedOrder.orderItems.map((orderItem: OrderItem) => orderItem.status)) || Status.DRAFT
         : Status.DRAFT;
 
       // 7. Mettre à jour le statut de la commande si nécessaire

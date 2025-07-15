@@ -46,8 +46,8 @@ const OrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, o
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
   const itemStatus = getMostImportantStatus(orderItems.map(orderItem => orderItem.status));
-  const nextStatus = getNextStatus(itemStatus);
-  const previousStatus = getPreviousStatus(itemStatus);
+  const nextStatus = itemStatus ? getNextStatus(itemStatus) : null;
+  const previousStatus = itemStatus ? getPreviousStatus(itemStatus) : null;
 
   const handleSwipeComplete = (direction: 'next' | 'previous') => {
     if (direction === 'next' && nextStatus) {
@@ -213,7 +213,7 @@ const OrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, o
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 16, fontWeight: '600' }}>{itemType.name}</Text>
-                    <Text style={{ fontSize: 14, color: '#666666' }}>{getStatusText(itemStatus)}</Text>
+                    <Text style={{ fontSize: 14, color: '#666666' }}>{itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}</Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -265,7 +265,7 @@ const OrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, o
                         color: '#666666',
                         textAlign: 'right'
                       }}>
-                        {getStatusText(itemStatus)}
+                        {itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}
                       </Text>
                     </View>
                   </View>
@@ -286,12 +286,14 @@ const OrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, o
                     Modifier statut
                   </Text>
                 </Button>
-                <StatusSelector
-                  visible={showStatusSelector}
-                  currentStatus={itemStatus}
-                  onClose={() => setShowStatusSelector(false)}
-                  onStatusSelect={onUpdateStatus}
-                />
+                {itemStatus && (
+                  <StatusSelector
+                    visible={showStatusSelector}
+                    currentStatus={itemStatus}
+                    onClose={() => setShowStatusSelector(false)}
+                    onStatusSelect={onUpdateStatus}
+                  />
+                )}
               </View>
             )}
           </Animated.View>

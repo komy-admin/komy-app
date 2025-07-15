@@ -9,29 +9,61 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const getTableStatus = (table: Table) => {
+export const getTableStatus = (table: Table): Status | undefined => {
   const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
+  
   return getMostImportantStatus(statuses);
 }
 
-export const getMostImportantStatus = (statuses: Status[]) => {
+export const getMostImportantStatus = (statuses: Status[]): Status | undefined => {
+  // Si pas de statuts, retourner undefined au lieu de DRAFT
+  if (statuses.length === 0) {
+    return undefined;
+  }
+  
+  // Règle spéciale: SERVED seulement si TOUS les statuts sont SERVED
+  if (statuses.every(status => status === Status.SERVED)) {
+    return Status.SERVED;
+  }
+  
+  // Sinon, exclure SERVED du calcul de priorité
+  const filteredStatuses = statuses.filter(status => status !== Status.SERVED);
+  
+  if (filteredStatuses.length === 0) {
+    // Tous les statuts étaient SERVED mais pas tous identiques
+    return Status.SERVED;
+  }
+  
+  // Ordre de priorité d'affichage: READY > INPROGRESS > PENDING > DRAFT
+  // Les index plus HAUTS = plus prioritaires
   const order = [
-    Status.DRAFT,
-    Status.TERMINATED,
-    Status.SERVED,
-    Status.INPROGRESS,
-    Status.PENDING,
-    Status.READY,
-    Status.ERROR,
+    Status.DRAFT,      // 0 - Moins prioritaire
+    Status.PENDING,    // 1
+    Status.INPROGRESS, // 2
+    Status.READY,      // 3 - Plus prioritaire (hors SERVED)
+    Status.ERROR,      // 4 - Erreur prioritaire
+    Status.TERMINATED, // 5 - Terminé prioritaire
   ];
-  return statuses.reduce((acc, status) => {
+  
+  return filteredStatuses.reduce((acc, status) => {
     const accIndex = order.indexOf(acc);
     const statusIndex = order.indexOf(status);
     return accIndex > statusIndex ? acc : status;
-  }, Status.DRAFT);
+  }, filteredStatuses[0]);
 }
 
-export const getStatusColor = (status: Status) => {
+export const hasDraftWithOtherStatus = (statuses: Status[]): boolean => {
+  const uniqueStatuses = [...new Set(statuses)];
+  return uniqueStatuses.includes(Status.DRAFT) && uniqueStatuses.length > 1;
+}
+
+export const shouldTableHaveDottedBorder = (table: Table): boolean => {
+  const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
+  return hasDraftWithOtherStatus(statuses);
+}
+
+export const getStatusColor = (status: Status | undefined) => {
+  if (!status) return '#D9D9D9'; // Gris par défaut pour les tables sans commande
   const colors = {
     [Status.READY]: '#D7E3FC',
     [Status.PENDING]: '#F9F1C8',
@@ -42,6 +74,35 @@ export const getStatusColor = (status: Status) => {
     [Status.DRAFT]: '#EBEBEB',
   };
   return colors[status as keyof typeof colors] || colors.error;
+}
+
+export const getStatusBorderStyle = (status: Status | undefined, table?: Table) => {
+  if (!status) {
+    return {
+      borderStyle: 'solid' as const,
+      borderColor: '#AAAAAA',
+      borderWidth: 2,
+    };
+  }
+  
+  // Bordure pointillée si:
+  // 1. Le statut principal est DRAFT (cas actuel)
+  // 2. OU il y a du DRAFT mélangé avec d'autres statuts (nouvelle règle)
+  const hasDraftMixed = table ? shouldTableHaveDottedBorder(table) : false;
+  
+  if (status === Status.DRAFT || hasDraftMixed) {
+    return {
+      borderStyle: 'dashed' as const,
+      borderColor: '#2A2E33',
+      borderWidth: 3,
+    };
+  }
+  
+  return {
+    borderStyle: 'solid' as const,
+    borderColor: '#AAAAAA',
+    borderWidth: 2,
+  };
 }
 
 export const getStatusText = (status: Status) => {

@@ -54,6 +54,14 @@ export const useRestaurantSocket = () => {
         // Ajouter le nouvel item
         dispatch(restaurantActions.updateOrderItem({ orderItem: event.data }));
       },
+
+      // Événement optimisé pour la création en lot
+      orderitem_batch_created: (event: WebSocketEvent) => {
+        console.log('📦 Création batch d\'articles:', event.data.createdCount, 'items');
+        dispatch(restaurantActions.createOrderItemsBatch({
+          orderItems: event.data.createdItems
+        }));
+      },
       
       orderitem_updated: (event: WebSocketEvent) => {
         // Format legacy : pour les mises à jour individuelles (si nécessaires)

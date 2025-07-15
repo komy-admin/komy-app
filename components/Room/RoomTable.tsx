@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, PanResponder, Platform, Pressable, StyleSheet, View, ViewStyle } from "react-native";
-import { getStatusColor } from "~/lib/utils";
+import { getStatusColor, getStatusBorderStyle } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
@@ -195,7 +195,6 @@ export const RoomTable: React.FC<TableViewProps> = ({
       onMoveShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponderCapture: () => false,
       onPanResponderGrant: () => {
-        console.log('Table pressed via PanResponder', table?.name);
         onPress(table);
       },
       onPanResponderTerminationRequest: () => false,
@@ -231,8 +230,10 @@ export const RoomTable: React.FC<TableViewProps> = ({
                 {
                   backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
                   opacity: 1,
-                  borderWidth: isEditing ? 3 : 2,
-                  borderColor: isEditing ? '#2A2E33' : '#AAAAAA',
+                  ...(isEditing 
+                    ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' }
+                    : (status ? getStatusBorderStyle(status, table) : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' })
+                  ),
                 },
               ]}
             >
@@ -302,8 +303,10 @@ export const RoomTable: React.FC<TableViewProps> = ({
               {
                 backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
                 opacity: 1,
-                borderWidth: isEditing ? 3 : 2,
-                borderColor: isEditing ? '#2A2E33' : '#AAAAAA',
+                ...(isEditing 
+                  ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' }
+                  : (status ? getStatusBorderStyle(status, table) : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' })
+                ),
               },
             ]}
           >

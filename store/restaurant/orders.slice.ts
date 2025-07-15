@@ -37,6 +37,10 @@ interface OrderItemsStatusUpdatedPayload {
   status: Status;
 }
 
+interface CreateOrderItemsBatchPayload {
+  orderItems: OrderItem[];
+}
+
 // Slice pour les orders
 const ordersSlice = createSlice({
   name: 'orders',
@@ -122,7 +126,7 @@ const ordersSlice = createSlice({
         
         // Recalculer le statut de l'order
         const statuses = orderItems.map(item => item.status);
-        state.orders[orderId].status = getMostImportantStatus(statuses);
+        state.orders[orderId].status = getMostImportantStatus(statuses) || Status.DRAFT;
       }
     },
     
@@ -141,7 +145,45 @@ const ordersSlice = createSlice({
           
           // Recalculer le statut de l'order
           const statuses = order.orderItems.map(item => item.status);
-          order.status = getMostImportantStatus(statuses);
+          order.status = getMostImportantStatus(statuses) || Status.DRAFT;
+        }
+      });
+    },
+
+    // WebSocket: Création d'orderItems en lot
+    createOrderItemsBatch: (state, action: PayloadAction<CreateOrderItemsBatchPayload>) => {
+      const { orderItems } = action.payload;
+      
+      if (orderItems.length === 0) return;
+      
+      // Groupe les orderItems par orderId pour optimiser les mises à jour
+      const orderItemsByOrderId = new Map<string, OrderItem[]>();
+      
+      orderItems.forEach(orderItem => {
+        // Ajouter l'orderItem au store normalisé
+        state.orderItems[orderItem.id] = orderItem;
+        
+        // Grouper par orderId
+        const orderId = orderItem.orderId;
+        if (!orderItemsByOrderId.has(orderId)) {
+          orderItemsByOrderId.set(orderId, []);
+        }
+        orderItemsByOrderId.get(orderId)!.push(orderItem);
+      });
+      
+      // Mettre à jour chaque order concerné
+      orderItemsByOrderId.forEach((newItems, orderId) => {
+        const order = state.orders[orderId];
+        if (order) {
+          // Ajouter les nouveaux items à l'order
+          if (!order.orderItems) {
+            order.orderItems = [];
+          }
+          order.orderItems.push(...newItems);
+          
+          // Recalculer le statut de l'order
+          const statuses = order.orderItems.map(item => item.status);
+          order.status = getMostImportantStatus(statuses) || Status.DRAFT;
         }
       });
     },
@@ -161,7 +203,7 @@ const ordersSlice = createSlice({
             
             // Recalculer le statut de l'order
             const statuses = order.orderItems.map(item => item.status);
-            order.status = getMostImportantStatus(statuses);
+            order.status = getMostImportantStatus(statuses) || Status.DRAFT;
           }
         }
       });
@@ -192,7 +234,7 @@ const ordersSlice = createSlice({
         // Recalculer le statut de l'order si des items ont été mis à jour
         if (hasUpdatedItems && order.orderItems) {
           const statuses = order.orderItems.map(item => item.status);
-          order.status = getMostImportantStatus(statuses);
+          order.status = getMostImportantStatus(statuses) || Status.DRAFT;
         }
       });
     },
@@ -218,7 +260,7 @@ const ordersSlice = createSlice({
         
         // Recalculer le statut global de l'order
         const statuses = order.orderItems.map(item => item.status);
-        order.status = getMostImportantStatus(statuses);
+        order.status = getMostImportantStatus(statuses) || Status.DRAFT;
       } else {
         // Mettre à jour tous les items et l'order
         order.orderItems.forEach(item => {
@@ -297,4 +339,5 @@ export type {
   SetOrdersPayload,
   UpdateOrderStatusPayload,
   OrderItemsStatusUpdatedPayload,
+  CreateOrderItemsBatchPayload,
 };

@@ -188,6 +188,22 @@ export const useOrders = () => {
     }
   }, [dispatch]);
 
+  const deleteManyOrderItems = useCallback(async (orderItemIds: string[]) => {
+    try {
+      const result = await orderItemApiService.deleteManyOrderItems(orderItemIds);
+      
+      // Mettre à jour le store Redux pour chaque item supprimé
+      result.deletedIds.forEach(orderItemId => {
+        dispatch(restaurantActions.deleteOrderItem({ orderItemId }));
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('Erreur lors de la suppression multiple d\'orderItems:', error);
+      throw error;
+    }
+  }, [dispatch]);
+
   const updateOrderItemStatus = useCallback(async (orderItemIds: string[], status: Status) => {
     try {
       await orderItemApiService.updateManyStatus(orderItemIds, status);
@@ -219,6 +235,7 @@ export const useOrders = () => {
     // Actions CRUD pour les orderItems
     createOrderItem,
     deleteOrderItem,
+    deleteManyOrderItems,
     updateOrderItemStatus,
     
     // Utilitaires

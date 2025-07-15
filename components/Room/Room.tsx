@@ -257,7 +257,6 @@ const Room: React.FC<RoomProps> = ({
   };
 
   const handleTableSelect = useCallback((table: Table) => {
-    console.log('Table selected in Room', table?.name);
     if (editingTableId === table.id) return;
     
     // Sauvegarder la position valide lors de la sélection

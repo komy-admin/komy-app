@@ -1,32 +1,18 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Lock, Utensils } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
-import { Order } from '~/types/order.types';
-import { getStatusText } from '~/lib/utils';
 
 interface StartOrderCardProps {
   table: Table;
-  order?: Order;
   onStartPress: () => void;
-  onContinuePress?: (order: Order) => void;
   isLocked?: boolean;
 }
 
 export default function StartOrderCard({ 
   table, 
-  order, 
   onStartPress,
-  onContinuePress,
   isLocked = false 
 }: StartOrderCardProps) {
-  
-  const handleButtonPress = () => {
-    if (order && onContinuePress) {
-      onContinuePress(order);
-    } else {
-      onStartPress();
-    }
-  };
 
   return (
     <View style={styles.outerContainer}>
@@ -37,8 +23,7 @@ export default function StartOrderCard({
           </View>
           <View style={styles.tableInfo}>
             <Text style={styles.tableName}>TABLE {table.name}</Text>
-            {!order && <Text style={styles.tableStatus}>Libre</Text>}
-            {order && <Text style={styles.tableStatus}>{ getStatusText(order.status) }</Text>}
+            <Text style={styles.tableStatus}>Libre</Text>
           </View>
         </View>
 
@@ -50,10 +35,10 @@ export default function StartOrderCard({
           )}
           <Pressable 
             style={styles.startButton}
-            onPress={handleButtonPress}
+            onPress={onStartPress}
           >
             <Text style={styles.startButtonText}>
-              {order ? 'Continue' : 'Start'}
+              Start
             </Text>
           </Pressable>
         </View>

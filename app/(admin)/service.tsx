@@ -11,6 +11,7 @@ import OrderList from "~/components/Service/OrderList";
 import StartOrderCard from "~/components/Service/StartOrderCard";
 import { Status } from "~/types/status.enum";
 import OrderDetailView from "~/components/Service/OrderDetailView";
+import AdminOrderDetailView from "~/components/Service/AdminOrderDetailView";
 import PaymentView from "~/components/Service/PaymentView";
 import { OrderItem } from '~/types/order-item.types';
 import { router } from 'expo-router';
@@ -32,7 +33,7 @@ export default function ServicePage() {
   const [orderCreatedFromStart, setOrderCreatedFromStart] = useState<boolean>(false);
   // Hooks spécialisés pour chaque domaine
   const { rooms, currentRoom, setCurrentRoom } = useRooms();
-  console.log('Rooms:', rooms);
+  // console.log('Rooms:', rooms); // Debug désactivé pour performance
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
     currentRoomOrders,
@@ -42,11 +43,12 @@ export default function ServicePage() {
     deleteOrder,
     createOrderItem,
     deleteOrderItem,
+    deleteManyOrderItems,
     updateOrderItemStatus
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
 
-  console.log('Selected table:', selectedTable)
+  // console.log('Selected table:', selectedTable) // Debug désactivé pour performance
 
   // État global
   const { isLoading } = useRestaurant();
@@ -57,6 +59,9 @@ export default function ServicePage() {
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [showOrderDetailModal, setShowOrderDetailModal] = useState<boolean>(false);
+  const [cameFromOrderDetailModal, setCameFromOrderDetailModal] = useState<boolean>(false);
+  const [modalTitle, setModalTitle] = useState<string>("");
 
   const { showToast } = useToast();
 
@@ -77,6 +82,37 @@ export default function ServicePage() {
     }, [setSelectedTable])
   );
 
+
+  // Fonction pour vérifier et supprimer une commande vide après suppression
+  const checkAndHandleEmptyOrder = async (deletedItemIds: string[]) => {
+    if (!selectedTableOrder) {
+      return false;
+    }
+
+    // Calculer les orderItems restants SANS attendre Redux
+    const remainingOrderItems = selectedTableOrder.orderItems.filter(
+      item => !deletedItemIds.includes(item.id)
+    );
+    
+    
+    if (remainingOrderItems.length === 0) {
+      try {
+        // FERMER LA MODAL EN PREMIER pour éviter l'effet de "vidage"
+        setShowOrderDetailModal(false);
+        setSelectedTable(null);
+        
+        // PUIS supprimer la commande vide
+        await deleteOrder(selectedTableOrder.id);
+        showToast('Commande supprimée car vide.', 'info');
+        return true; // Commande était vide et supprimée
+      } catch (error) {
+        console.error('Erreur lors de la suppression de la commande vide:', error);
+        showToast('Erreur lors de la suppression de la commande vide.', 'error');
+      }
+    }
+    return false; // Commande pas vide
+  };
+
   const handleChangeRoom = (room: any) => {
     setSelectedTable(null);
     setCurrentRoom(room.id);
@@ -95,6 +131,12 @@ export default function ServicePage() {
     }
 
     setSelectedTable(table.id);
+    
+    // Si la table a une commande, ouvrir directement la modal de détails
+    const tableOrder = currentRoomOrders.find(order => order.tableId === table.id);
+    if (tableOrder) {
+      handleOpenOrderDetailModal(tableOrder);
+    }
   };
 
   const handleCreateOrder = async () => {
@@ -110,7 +152,10 @@ export default function ServicePage() {
       }
 
       await createOrder(selectedTableId);
-      setShowMenu(true);
+      setOrderCreatedFromStart(true); // Marquer que la commande a été créée depuis "Start"
+      setCameFromOrderDetailModal(false); // Ne vient PAS de la modal détails
+      setModalTitle(`Créer la commande - ${selectedTable?.name}`); // Titre stable pour nouvelle commande
+      setIsOrderModalVisible(true); // Ouvrir la modal de commande
       showToast('Commande créée avec succès.', 'success');
     } catch (error) {
       showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
@@ -118,31 +163,53 @@ export default function ServicePage() {
     }
   };
 
-  const handleContinueOrder = (order: Order) => {
-    setSelectedTable(order.tableId);
-    setOrderCreatedFromStart(false); // Cette commande existait déjà
-    setIsOrderModalVisible(true);
-  };
 
   const handleOpenOrderModal = () => {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
+    setCameFromOrderDetailModal(true); // Marquer qu'on vient de la modal détails
+    setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table.name}` : "Modifier la commande"); // Titre stable pour modification
     setIsOrderModalVisible(true);
   };
 
-  const handleCloseOrderModal = async () => {
-    // Cette fonction est appelée SEULEMENT quand l'utilisateur ferme manuellement la modal
-    // ou appuie sur "Annuler"
-    if (selectedTableOrder && orderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
-      try {
-        await deleteOrder(selectedTableOrder.id);
-        showToast('Commande annulée car aucun article n\'a été ajouté.', 'info');
-      } catch (error) {
-        console.error('Erreur lors de la suppression de la commande vide:', error);
-      }
+  const handleOpenOrderDetailModal = (order?: Order) => {
+    if (order && order.tableId) {
+      setSelectedTable(order.tableId);
     }
+    setShowOrderDetailModal(true);
+  };
 
+  const handleCloseOrderDetailModal = () => {
+    setShowOrderDetailModal(false);
+    setSelectedTable(null); // Désélectionner la table à la fermeture
+  };
+
+  const handleCloseOrderModal = async () => {
+    // Fermer immédiatement la modal pour l'animation
     setIsOrderModalVisible(false);
-    setOrderCreatedFromStart(false);
+    
+    // Attendre un délai pour que l'animation se termine avant de supprimer la commande
+    setTimeout(async () => {
+      // Cette fonction est appelée SEULEMENT quand l'utilisateur ferme manuellement la modal
+      // ou appuie sur "Annuler"
+      if (selectedTableOrder && orderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
+        try {
+          await deleteOrder(selectedTableOrder.id);
+          showToast('Commande annulée car aucun article n\'a été ajouté.', 'info');
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la commande vide:', error);
+        }
+      }
+
+      setOrderCreatedFromStart(false);
+      
+      // Si on vient de la modal de détails ET qu'il y a une commande avec des items, la rouvrir
+      if (cameFromOrderDetailModal && selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
+        setShowOrderDetailModal(true);
+      }
+      
+      // Reset du flag
+      setCameFromOrderDetailModal(false);
+    }, 300); // Délai correspondant à la durée d'animation de fermeture
   };
 
   const handleSaveOrder = async (updatedOrder: Order) => {
@@ -154,43 +221,16 @@ export default function ServicePage() {
       setIsOrderModalVisible(false);
       setOrderCreatedFromStart(false);
 
+      // Rouvrir la modal de détails pour continuer la gestion (seulement si commande a des items)
+      if (updatedOrder && updatedOrder.orderItems && updatedOrder.orderItems.length > 0) {
+        setShowOrderDetailModal(true);
+      }
+      setCameFromOrderDetailModal(false); // Reset du flag
+
       showToast('Commande mise à jour avec succès.', 'success');
     } catch (error) {
       showToast('Erreur lors de la mise à jour de la commande.', 'error');
       console.error(error);
-    }
-  };
-  const getItemQuantity = (itemId: string) => {
-    if (!selectedTableOrder) return 0;
-    return selectedTableOrder.orderItems.filter(orderItem => orderItem.item.id === itemId).length;
-  };
-
-  const onUpdateQuantity = async (itemId: string, action: 'remove' | 'add') => {
-    if (!selectedTableOrder) {
-      showToast('Veuillez d\'abord créer une commande.', 'warning');
-      return;
-    }
-
-    const item = allItems.find(item => item.id === itemId);
-    if (!item) {
-      showToast('L\'article sélectionné n\'existe pas.', 'error');
-      return;
-    }
-
-    try {
-      if (action === 'add') {
-        // Utiliser l'action Redux au lieu de l'appel API direct
-        await createOrderItem(selectedTableOrder.id, item.id, Status.DRAFT);
-      } else if (action === 'remove') {
-        const orderItem = selectedTableOrder.orderItems.find(orderItem => orderItem.item.id === itemId);
-        if (!orderItem) return;
-        // Utiliser l'action Redux au lieu de l'appel API direct
-        await deleteOrderItem(orderItem.id);
-      }
-      showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la quantité:', error);
-      showToast('Erreur lors de la mise à jour de la quantité.', 'error');
     }
   };
 
@@ -231,6 +271,7 @@ export default function ServicePage() {
       console.log('Données de paiement:', paymentData);
       
       setShowPaymentModal(false);
+      setShowOrderDetailModal(true); // Rouvrir la modal de détails
       showToast('Paiement traité avec succès.', 'success');
       
       // Optionnel : fermer la commande ou changer son statut
@@ -267,83 +308,33 @@ export default function ServicePage() {
         style={{ flex: 1 }}
         hideCloseButton={true}
         width={width / 4}
-        showCloseButtonWhenTableSelected={!!isTableWithOrderSelected()}
-        title={selectedTableOrder ? `Commande ${selectedTableOrder.table.name}` : 'Service'}
+        title="Service"
         onBack={handleDeselectTable}
       >
-        {selectedTableOrder ? (
-          <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
-            <OrderDetailView order={selectedTableOrder} itemTypes={allItemTypes} onStatusUpdate={handleStatusUpdate} />
-            <View style={{ padding: 16 }}>
-              <PopoverButton
-                style={{ backgroundColor: '#2A2E33' }}
-                className='w-full h-[50px]'
-                variant="default"
-                side="top"
-                triggerContent={<Text>PLUS D'ACTION</Text>}
-                popoverContent={
-                  <View className="gap-4">
-                    <View className="gap-2">
-                      <Button variant="outline" onPress={() => setShowReassignModal(true)}>
-                        <Text>Assigner une autre table</Text>
-                      </Button>
-                      <Button variant="outline" onPress={() => setShowPaymentModal(true)}>
-                        <Text>Régler la note</Text>
-                      </Button>
-                      <Button variant="destructive" onPress={() => setShowDeleteOrderDialog(true)}>
-                        <Text>Supprimer la commande</Text>
-                      </Button>
-                    </View>
-                  </View>
-                }
+        <View style={{ padding: 16, flex: 1 }}>
+          {isLoading ? (
+            <Text>Chargement...</Text>
+          ) : (
+            <>
+              <View className='flex-row justify-between items-center'>
+                <Button className="rounded-full p-2" variant='outline'>
+                  <Grid3X3Icon color='black' />
+                </Button>
+                <TextInput className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
+                <Button className="rounded-full p-2" variant='outline'>
+                  <ListFilter color='black' />
+                </Button>
+              </View>
+              <OrderList
+                orders={currentRoomOrders.filter(order => order.orderItems && order.orderItems.length > 0)}
+                onOrderPress={(order) => {
+                  handleOpenOrderDetailModal(order);
+                }}
+                onOrderDelete={handleDeleteOrder}
               />
-              <Button
-                onPress={handleOpenOrderModal}
-                className="w-full h-[50px] flex items-center justify-center mt-2"
-                style={{ backgroundColor: '#2A2E33' }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: '#FBFBFB',
-                    fontWeight: '500',
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Modifier la commande
-                </Text>
-              </Button>
-            </View>
-          </View>
-        ) : (
-          <View style={{ padding: 16, flex: 1 }}>
-            {isLoading ? (
-              <Text>Chargement...</Text>
-            ) : (
-              <>
-                <View className='flex-row justify-between items-center'>
-                  <Button className="rounded-full p-2" variant='outline'>
-                    <Grid3X3Icon color='black' />
-                  </Button>
-                  <TextInput className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
-                  <Button className="rounded-full p-2" variant='outline'>
-                    <ListFilter color='black' />
-                  </Button>
-                </View>
-                <OrderList
-                  orders={currentRoomOrders}
-                  onOrderPress={(order) => {
-                    if (order.tableId) {
-                      setSelectedTable(order.tableId);
-                    }
-                  }}
-                  onOrderDelete={handleDeleteOrder}
-                />
-              </>
-            )}
-          </View>
-        )}
+            </>
+          )}
+        </View>
       </SidePanel>
 
       <View style={{ flex: 1, height: '100%', position: 'relative' }}>
@@ -391,12 +382,10 @@ export default function ServicePage() {
           </Button>
         </View>
 
-        {selectedTable && (
+        {selectedTable && !selectedTableOrder && (
           <StartOrderCard
             table={selectedTable}
-            order={selectedTableOrder ?? undefined}
             onStartPress={handleCreateOrder}
-            onContinuePress={handleContinueOrder}
           />
         )}
 
@@ -417,13 +406,111 @@ export default function ServicePage() {
         />
       </View>
 
+      {/* Modal pour les détails et actions de la commande */}
+      <CustomModal
+        isVisible={showOrderDetailModal}
+        onClose={handleCloseOrderDetailModal}
+        width={900}
+        height={700}
+        title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table.name}` : "Détails de la commande"}
+      >
+        {selectedTableOrder && (
+          <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
+            <AdminOrderDetailView 
+              order={selectedTableOrder} 
+              itemTypes={allItemTypes} 
+              onDeleteOrderItem={async (orderItemId) => {
+                try {
+                  await deleteOrderItem(orderItemId);
+                  showToast('Élément supprimé avec succès.', 'success');
+                  
+                  // Vérifier si la commande est maintenant vide IMMÉDIATEMENT
+                  await checkAndHandleEmptyOrder([orderItemId]);
+                } catch (error) {
+                  console.error('Erreur lors de la suppression:', error);
+                  showToast('Erreur lors de la suppression de l\'élément.', 'error');
+                }
+              }}
+              onDeleteManyOrderItems={async (orderItemIds) => {
+                try {
+                  const result = await deleteManyOrderItems(orderItemIds);
+                  showToast(`${result.deletedCount} éléments supprimés avec succès.`, 'success');
+                  
+                  // Vérifier si la commande est maintenant vide IMMÉDIATEMENT
+                  await checkAndHandleEmptyOrder(orderItemIds);
+                  
+                  return result;
+                } catch (error) {
+                  console.error('Erreur lors de la suppression multiple:', error);
+                  showToast('Erreur lors de la suppression des éléments.', 'error');
+                  throw error;
+                }
+              }}
+              onUpdateOrderItemStatus={handleStatusUpdate}
+            />
+            <View style={{ padding: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                <Button 
+                  variant="outline" 
+                  style={{ flex: 1 }}
+                  onPress={() => {
+                    setShowReassignModal(true);
+                  }}
+                >
+                  <Text>Assigner une autre table</Text>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  style={{ flex: 1 }}
+                  onPress={() => {
+                    setShowPaymentModal(true);
+                  }}
+                >
+                  <Text>Régler la note</Text>
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  style={{ flex: 1 }}
+                  onPress={() => {
+                    setShowDeleteOrderDialog(true);
+                  }}
+                >
+                  <Text>Supprimer</Text>
+                </Button>
+              </View>
+              <Button
+                onPress={() => {
+                  // Ne pas fermer la modal de détails, juste ouvrir la modal d'édition par-dessus
+                  handleOpenOrderModal();
+                }}
+                className="w-full h-[50px] flex items-center justify-center"
+                style={{ backgroundColor: '#2A2E33' }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#FBFBFB',
+                    fontWeight: '500',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Modifier la commande
+                </Text>
+              </Button>
+            </View>
+          </View>
+        )}
+      </CustomModal>
+
       {/* Modal pour l'ajout/modification de commande */}
       <CustomModal
         isVisible={isOrderModalVisible}
         onClose={handleCloseOrderModal}
         width={700}
         height={650}
-        title={selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table.name}` : "Créer une commande"}
+        style={{ zIndex: 10000 }}
+        title={modalTitle}
       >
         {selectedTableOrder && (
           <OrderItemsForm
@@ -444,11 +531,15 @@ export default function ServicePage() {
           }}
           title="Supprimer la commande"
           content="Êtes-vous sûr de vouloir supprimer cette commande ?"
-          onCancel={() => setShowDeleteOrderDialog(false)}
+          onCancel={() => {
+            setShowDeleteOrderDialog(false);
+            setShowOrderDetailModal(true); // Rouvrir la modal de détails si annulation
+          }}
           onConfirm={() => {
-            setShowDeleteOrderDialog(false)
-            deleteOrder(selectedTableOrder.id)
-            setSelectedTable(null)
+            setShowDeleteOrderDialog(false);
+            setShowOrderDetailModal(false);
+            deleteOrder(selectedTableOrder.id);
+            setSelectedTable(null);
           }}
           confirmText="Supprimer"
           variant="destructive"
@@ -456,7 +547,10 @@ export default function ServicePage() {
       )}
       <ForkModal
         visible={showReassignModal}
-        onClose={() => setShowReassignModal(false)}
+        onClose={() => {
+          setShowReassignModal(false);
+          setShowOrderDetailModal(true); // Rouvrir la modal de détails si fermeture
+        }}
         maxWidth={800}
         title="Sélectionner une table"
       >
@@ -472,6 +566,7 @@ export default function ServicePage() {
                 await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                 setSelectedTable(pressedTable.id);
                 setShowReassignModal(false);
+                setShowOrderDetailModal(true); // Rouvrir la modal de détails
                 showToast('Table réassignée avec succès.', 'success');
               } catch (error) {
                 console.error('Erreur lors de la réassignation:', error);
@@ -485,6 +580,7 @@ export default function ServicePage() {
                 await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                 setSelectedTable(pressedTable.id);
                 setShowReassignModal(false);
+                setShowOrderDetailModal(true); // Rouvrir la modal de détails
                 showToast('Table réassignée avec succès.', 'success');
               } catch (error) {
                 console.error('Erreur lors de la réassignation:', error);
@@ -499,14 +595,20 @@ export default function ServicePage() {
       {/* Modal de paiement */}
       <ForkModal
         visible={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setShowOrderDetailModal(true); // Rouvrir la modal de détails si fermeture
+        }}
         maxWidth={1200}
         title="Régler l'addition"
       >
         {selectedTableOrder && (
           <PaymentView
             order={selectedTableOrder}
-            onClose={() => setShowPaymentModal(false)}
+            onClose={() => {
+              setShowPaymentModal(false);
+              setShowOrderDetailModal(true); // Rouvrir la modal de détails
+            }}
             onPaymentComplete={handlePaymentComplete}
           />
         )}

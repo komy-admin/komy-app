@@ -13,9 +13,9 @@ interface StatusSelectorProps {
 const AVAILABLE_STATUSES = [
   Status.DRAFT,
   Status.PENDING,
+  Status.INPROGRESS,
   Status.READY,
   Status.SERVED,
-  Status.INPROGRESS,
 ];
 
 export default function StatusSelector({ 
