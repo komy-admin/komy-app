@@ -361,7 +361,7 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
 
     // Trier les groupes : d'abord par type, puis par priorité de statut
     const getStatusPriority = (status: Status): number => {
-      const order = [Status.DRAFT, Status.TERMINATED, Status.SERVED, Status.INPROGRESS, Status.PENDING, Status.READY, Status.ERROR];
+      const order = [Status.TERMINATED, Status.DRAFT, Status.INPROGRESS, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
       return order.indexOf(status);
     };
 

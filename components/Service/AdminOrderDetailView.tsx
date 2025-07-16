@@ -132,8 +132,10 @@ const AdminOrderItem = ({
   });
 
   const menuOpacity = useAnimatedStyle(() => {
+    const isMenuVisible = translateX.value < 0;
     return {
-      opacity: translateX.value < 0 ? Math.abs(translateX.value) / Math.abs(SWIPE_THRESHOLD) : 0,
+      opacity: isMenuVisible ? Math.abs(translateX.value) / Math.abs(SWIPE_THRESHOLD) : 0,
+      pointerEvents: isMenuVisible && Math.abs(translateX.value) > 20 ? 'auto' : 'none',
     };
   });
 
@@ -341,8 +343,10 @@ const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onTogg
   });
 
   const groupMenuOpacity = useAnimatedStyle(() => {
+    const isMenuVisible = translateX.value < 0;
     return {
-      opacity: translateX.value < 0 ? Math.abs(translateX.value) / Math.abs(SWIPE_THRESHOLD) : 0,
+      opacity: isMenuVisible ? Math.abs(translateX.value) / Math.abs(SWIPE_THRESHOLD) : 0,
+      pointerEvents: isMenuVisible && Math.abs(translateX.value) > 20 ? 'auto' : 'none',
     };
   });
 
@@ -640,7 +644,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
 
     // Trier les groupes : d'abord par type, puis par priorité de statut
     const getStatusPriority = (status: Status): number => {
-      const order = [Status.DRAFT, Status.TERMINATED, Status.SERVED, Status.INPROGRESS, Status.PENDING, Status.READY, Status.ERROR];
+      const order = [Status.TERMINATED, Status.DRAFT, Status.INPROGRESS, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
       return order.indexOf(status);
     };
 

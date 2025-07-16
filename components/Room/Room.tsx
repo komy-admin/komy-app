@@ -27,6 +27,7 @@ interface RoomProps {
   onEditTable?: () => void;
   onDeleteTable?: () => void;
   onCheckAvailableSpace?: (width: number, height: number) => boolean;
+  containerDimensions?: { width: number; height: number }; // Pour les modales
 }
 
 const Room: React.FC<RoomProps> = ({
@@ -42,7 +43,8 @@ const Room: React.FC<RoomProps> = ({
   onTablePress,
   onEditTable,
   onDeleteTable,
-  onCheckAvailableSpace
+  onCheckAvailableSpace,
+  containerDimensions
 }) => {
   const [dimensions, setDimensions] = useState<{
     gridWidth: number;
@@ -202,15 +204,29 @@ const Room: React.FC<RoomProps> = ({
   }, [onCheckAvailableSpace]);
 
   function calculateOptimalZoom(screenWidth: number, gridWidth: number, gridHeight: number, roomWidth: number, roomHeight: number) {
-    const SIDE_PANEL_WIDTH = screenWidth / 4;
-    const availableWidth = screenWidth - SIDE_PANEL_WIDTH;
+    let availableWidth: number;
+    let availableHeight: number;
+
+    if (containerDimensions) {
+      // Pour les modales : utiliser les dimensions du conteneur avec padding
+      availableWidth = containerDimensions.width - 40; // 20px padding de chaque côté
+      availableHeight = containerDimensions.height - 40;
+    } else {
+      // Comportement normal pour la vue service
+      const SIDE_PANEL_WIDTH = screenWidth / 4;
+      availableWidth = screenWidth - SIDE_PANEL_WIDTH;
+      availableHeight = Dimensions.get('window').height * 0.9;
+    }
 
     const horizontalZoom = (availableWidth * 0.95) / gridWidth;
-    const verticalZoom = (Dimensions.get('window').height * 0.9) / gridHeight;
+    const verticalZoom = (availableHeight * 0.9) / gridHeight;
 
     let optimalZoom = Math.min(horizontalZoom, verticalZoom);
 
-    if (roomWidth > 1 || roomHeight > 1) {
+    if (containerDimensions) {
+      // Pour les modales : zoom légèrement plus élevé
+      optimalZoom *= 0.9;
+    } else if (roomWidth > 1 || roomHeight > 1) {
       optimalZoom *= 0.7;
     }
 
@@ -244,7 +260,7 @@ const Room: React.FC<RoomProps> = ({
 
       return () => clearTimeout(timer);
     }
-  }, [width, height, isLoading]);
+  }, [width, height, isLoading, containerDimensions]);
 
   useEffect(() => {
     if (isGridReady && tables.length > 0) {

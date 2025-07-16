@@ -57,6 +57,7 @@ export default function ServicePage() {
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
+  const [isReassigning, setIsReassigning] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [showOrderDetailModal, setShowOrderDetailModal] = useState<boolean>(false);
@@ -545,52 +546,72 @@ export default function ServicePage() {
           variant="destructive"
         />
       )}
-      <ForkModal
-        visible={showReassignModal}
+      <CustomModal
+        isVisible={showReassignModal}
         onClose={() => {
           setShowReassignModal(false);
           setShowOrderDetailModal(true); // Rouvrir la modal de détails si fermeture
         }}
-        maxWidth={800}
-        title="Sélectionner une table"
+        width={800}
+        height={600}
+        title={isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
       >
-        <RoomComponent
-          tables={currentRoomTables.filter(table => !table.currentOrder)}
-          width={currentRoom?.width}
-          height={currentRoom?.height}
-          editionMode={false}
-          isLoading={isLoading}
-          onTablePress={async (pressedTable: Table | null) => {
-            if (pressedTable && selectedTableOrder) {
-              try {
-                await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
-                setSelectedTable(pressedTable.id);
-                setShowReassignModal(false);
-                setShowOrderDetailModal(true); // Rouvrir la modal de détails
-                showToast('Table réassignée avec succès.', 'success');
-              } catch (error) {
-                console.error('Erreur lors de la réassignation:', error);
-                showToast('Erreur lors de la réassignation.', 'error');
-              }
-            }
-          }}
-          onTableLongPress={async (pressedTable: Table | null) => {
-            if (pressedTable && selectedTableOrder) {
-              try {
-                await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
-                setSelectedTable(pressedTable.id);
-                setShowReassignModal(false);
-                setShowOrderDetailModal(true); // Rouvrir la modal de détails
-                showToast('Table réassignée avec succès.', 'success');
-              } catch (error) {
-                console.error('Erreur lors de la réassignation:', error);
-                showToast('Erreur lors de la réassignation.', 'error');
-              }
-            }
-          }}
-          onTableUpdate={() => { }}
-        />
-      </ForkModal>
+        <View style={{ flex: 1, padding: 20 }}>
+          <View style={{ 
+            flex: 1, 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            width: '100%',
+            height: '100%'
+          }}>
+            <RoomComponent
+              tables={currentRoomTables.filter(table => !table.currentOrder)}
+              width={currentRoom?.width}
+              height={currentRoom?.height}
+              editionMode={false}
+              isLoading={isLoading || isReassigning}
+              containerDimensions={{ width: 760, height: 560 }} // 800-40 et 600-40 pour les paddings
+              onTablePress={async (pressedTable: Table | null) => {
+                if (pressedTable && selectedTableOrder && !isReassigning) {
+                  setIsReassigning(true); // Bloquer les autres clics
+                  
+                  try {
+                    await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
+                    setSelectedTable(pressedTable.id);
+                    setShowReassignModal(false);
+                    setShowOrderDetailModal(true);
+                    showToast('Table réassignée avec succès.', 'success');
+                  } catch (error) {
+                    console.error('Erreur lors de la réassignation:', error);
+                    showToast('Erreur lors de la réassignation.', 'error');
+                  } finally {
+                    setIsReassigning(false); // Débloquer
+                  }
+                }
+              }}
+              onTableLongPress={async (pressedTable: Table | null) => {
+                if (pressedTable && selectedTableOrder && !isReassigning) {
+                  setIsReassigning(true); // Bloquer les autres clics
+                  
+                  try {
+                    await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
+                    setSelectedTable(pressedTable.id);
+                    setShowReassignModal(false);
+                    setShowOrderDetailModal(true);
+                    showToast('Table réassignée avec succès.', 'success');
+                  } catch (error) {
+                    console.error('Erreur lors de la réassignation:', error);
+                    showToast('Erreur lors de la réassignation.', 'error');
+                  } finally {
+                    setIsReassigning(false); // Débloquer
+                  }
+                }
+              }}
+              onTableUpdate={() => { }}
+            />
+          </View>
+        </View>
+      </CustomModal>
 
       {/* Modal de paiement */}
       <ForkModal

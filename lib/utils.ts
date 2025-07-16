@@ -21,35 +21,23 @@ export const getMostImportantStatus = (statuses: Status[]): Status | undefined =
     return undefined;
   }
   
-  // Règle spéciale: SERVED seulement si TOUS les statuts sont SERVED
-  if (statuses.every(status => status === Status.SERVED)) {
-    return Status.SERVED;
-  }
-  
-  // Sinon, exclure SERVED du calcul de priorité
-  const filteredStatuses = statuses.filter(status => status !== Status.SERVED);
-  
-  if (filteredStatuses.length === 0) {
-    // Tous les statuts étaient SERVED mais pas tous identiques
-    return Status.SERVED;
-  }
-  
-  // Ordre de priorité d'affichage: READY > INPROGRESS > PENDING > DRAFT
+  // Ordre de priorité d'affichage: ERROR > SERVED > READY > PENDING > INPROGRESS > DRAFT > TERMINATED
   // Les index plus HAUTS = plus prioritaires
   const order = [
-    Status.DRAFT,      // 0 - Moins prioritaire
-    Status.PENDING,    // 1
-    Status.INPROGRESS, // 2
-    Status.READY,      // 3 - Plus prioritaire (hors SERVED)
-    Status.ERROR,      // 4 - Erreur prioritaire
-    Status.TERMINATED, // 5 - Terminé prioritaire
+    Status.TERMINATED, // 0 - Moins prioritaire (historique/stats, non affiché)
+    Status.SERVED,     // 1 - Servi
+    Status.DRAFT,      // 2
+    Status.INPROGRESS, // 3
+    Status.PENDING,    // 4
+    Status.READY,      // 5
+    Status.ERROR,      // 6 - Plus prioritaire
   ];
   
-  return filteredStatuses.reduce((acc, status) => {
+  return statuses.reduce((acc, status) => {
     const accIndex = order.indexOf(acc);
     const statusIndex = order.indexOf(status);
     return accIndex > statusIndex ? acc : status;
-  }, filteredStatuses[0]);
+  }, statuses[0]);
 }
 
 export const hasDraftWithOtherStatus = (statuses: Status[]): boolean => {
