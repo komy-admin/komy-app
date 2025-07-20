@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { currentUser } from '~/types/auth.types';
 import { User, UserProfile } from '~/types/user.types';
 import { userApiService } from '~/api/user.api';
+import { clearSavedFilters } from '~/hooks/useOrderFilters';
 
 interface AuthState {
   token: string | null;
@@ -53,6 +54,8 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.imageUpdateLoading = false;
       state.error = null;
+      // Nettoyer les filtres sauvegardés lors de la déconnexion
+      clearSavedFilters();
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;

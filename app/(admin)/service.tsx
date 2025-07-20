@@ -1,13 +1,15 @@
 import React from 'react';
 import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, ConfirmDialog, ForkModal, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text, TextInput } from "~/components/ui";
+import { Badge, Button, ConfirmDialog, ForkModal, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState, useCallback } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
-import { Grid3X3Icon, ListFilter, Minus, Plus } from "lucide-react-native";
+import { Minus, Plus } from "lucide-react-native";
 import OrderList from "~/components/Service/OrderList";
+import { SearchBar } from "~/components/Service/SearchBar";
+import { useOrderFilters } from "~/hooks/useOrderFilters";
 import StartOrderCard from "~/components/Service/StartOrderCard";
 import { Status } from "~/types/status.enum";
 import OrderDetailView from "~/components/Service/OrderDetailView";
@@ -65,6 +67,17 @@ export default function ServicePage() {
   const [modalTitle, setModalTitle] = useState<string>("");
 
   const { showToast } = useToast();
+
+  // Hook pour la gestion des filtres et recherche
+  const {
+    searchQuery,
+    filters,
+    filteredOrders,
+    handleSearchChange,
+    handleFiltersChange,
+    handleClearFilters,
+    isLoaded: filtersLoaded,
+  } = useOrderFilters(currentRoomOrders.filter(order => order.orderItems && order.orderItems.length > 0));
 
   // Initialiser le premier type d'article comme onglet par défaut
   useEffect(() => {
@@ -313,21 +326,19 @@ export default function ServicePage() {
         onBack={handleDeselectTable}
       >
         <View style={{ padding: 16, flex: 1 }}>
-          {isLoading ? (
+          {isLoading || !filtersLoaded ? (
             <Text>Chargement...</Text>
           ) : (
             <>
-              <View className='flex-row justify-between items-center'>
-                <Button className="rounded-full p-2" variant='outline'>
-                  <Grid3X3Icon color='black' />
-                </Button>
-                <TextInput className="mx-2 rounded-full" style={{ flex: 1, height: 40 }} placeholder="Rechercher..." />
-                <Button className="rounded-full p-2" variant='outline'>
-                  <ListFilter color='black' />
-                </Button>
-              </View>
+              <SearchBar
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                onClearFilters={handleClearFilters}
+              />
               <OrderList
-                orders={currentRoomOrders.filter(order => order.orderItems && order.orderItems.length > 0)}
+                orders={filteredOrders}
                 onOrderPress={(order) => {
                   handleOpenOrderDetailModal(order);
                 }}
