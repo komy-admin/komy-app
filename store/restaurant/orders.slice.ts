@@ -30,11 +30,13 @@ interface UpdateOrderStatusPayload {
   orderId: string;
   status: Status;
   itemTypeId?: string;
+  updatedAt?: string;
 }
 
 interface OrderItemsStatusUpdatedPayload {
   orderItemIds: string[];
   status: Status;
+  updatedAt?: string;
 }
 
 interface CreateOrderItemsBatchPayload {
@@ -211,12 +213,14 @@ const ordersSlice = createSlice({
     
     // WebSocket: Mise à jour du statut des order items
     orderItemsStatusUpdated: (state, action: PayloadAction<OrderItemsStatusUpdatedPayload>) => {
-      const { orderItemIds, status } = action.payload;
+      const { orderItemIds, status, updatedAt } = action.payload;
+      const currentTimestamp = updatedAt || new Date().toISOString();
       
       // Mettre à jour tous les orderItems concernés
       orderItemIds.forEach(orderItemId => {
         if (state.orderItems[orderItemId]) {
           state.orderItems[orderItemId].status = status;
+          state.orderItems[orderItemId].updatedAt = currentTimestamp;
         }
       });
       
@@ -227,6 +231,7 @@ const ordersSlice = createSlice({
         order.orderItems?.forEach(item => {
           if (orderItemIds.includes(item.id)) {
             item.status = status;
+            item.updatedAt = currentTimestamp;
             hasUpdatedItems = true;
           }
         });
@@ -241,7 +246,8 @@ const ordersSlice = createSlice({
     
     // API: Mise à jour du statut d'une order complète
     updateOrderStatus: (state, action: PayloadAction<UpdateOrderStatusPayload>) => {
-      const { orderId, status, itemTypeId } = action.payload;
+      const { orderId, status, itemTypeId, updatedAt } = action.payload;
+      const currentTimestamp = updatedAt || new Date().toISOString();
       
       const order = state.orders[orderId];
       if (!order || !order.orderItems) return;
@@ -251,9 +257,11 @@ const ordersSlice = createSlice({
         order.orderItems.forEach(item => {
           if (item.item.itemType.id === itemTypeId) {
             item.status = status;
+            item.updatedAt = currentTimestamp;
             // Mettre à jour aussi l'orderItem normalisé
             if (state.orderItems[item.id]) {
               state.orderItems[item.id].status = status;
+              state.orderItems[item.id].updatedAt = currentTimestamp;
             }
           }
         });
@@ -265,9 +273,11 @@ const ordersSlice = createSlice({
         // Mettre à jour tous les items et l'order
         order.orderItems.forEach(item => {
           item.status = status;
+          item.updatedAt = currentTimestamp;
           // Mettre à jour aussi l'orderItem normalisé
           if (state.orderItems[item.id]) {
             state.orderItems[item.id].status = status;
+            state.orderItems[item.id].updatedAt = currentTimestamp;
           }
         });
         order.status = status;

@@ -117,11 +117,13 @@ export const useOrders = () => {
       // Mise à jour via l'API
       await orderItemApiService.updateManyStatus(orderItemsIds, status);
 
-      // Mise à jour du store (optimiste)
+      // Mise à jour du store (optimiste) avec timestamp
+      const currentTimestamp = new Date().toISOString();
       dispatch(restaurantActions.updateOrderStatus({
         orderId,
         status,
-        itemTypeId
+        itemTypeId,
+        updatedAt: currentTimestamp
       }));
 
       return { orderId, status, itemTypeId };
@@ -208,11 +210,14 @@ export const useOrders = () => {
     try {
       await orderItemApiService.updateManyStatus(orderItemIds, status);
       
-      // Mettre à jour le store Redux immédiatement pour éviter les délais WebSocket
+      // Mettre à jour le store Redux immédiatement avec le timestamp actuel
+      const currentTimestamp = new Date().toISOString();
       dispatch(restaurantActions.orderItemsStatusUpdated({
         orderItemIds,
-        status
+        status,
+        updatedAt: currentTimestamp
       }));
+
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut des orderItems:', error);
       throw error;

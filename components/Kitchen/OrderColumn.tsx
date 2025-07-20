@@ -5,10 +5,11 @@ import { Status } from "~/types/status.enum";
 import { Text } from "../ui";
 import OrderCard from "./OrderCard";
 
-export default function OrderColumn({ orders = [], status, onStatusChange }: {
+export default function OrderColumn({ orders = [], status, onStatusChange, overdueOrderItemIds = [] }: {
   orders: Order[]; 
   status: Status;
   onStatusChange: (order: Order, newStatus: Status) => void;
+  overdueOrderItemIds?: string[];
 }) {
 
   return (
@@ -34,6 +35,7 @@ export default function OrderColumn({ orders = [], status, onStatusChange }: {
               order={order} 
               status={status} 
               onStatusChange={onStatusChange}
+              overdueOrderItemIds={overdueOrderItemIds}
             />
           ))
         ) : (

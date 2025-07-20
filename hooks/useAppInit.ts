@@ -6,9 +6,11 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useUsers } from './useUsers';
 import { restaurantActions } from '~/store/restaurant';
+import { setAlertTimeConfig } from '~/store/config.slice';
 import { Room } from '@/types/room.types';
 import { ItemType } from '@/types/item-type.types';
 import { User } from '@/types/user.types';
+import { configApiService } from '~/api/config.api';
 
 interface InitializationState {
   isInitialized: boolean;
@@ -21,6 +23,7 @@ interface InitializationState {
     items: boolean;
     orders: boolean;
     users: boolean;
+    config: boolean;
   };
 }
 
@@ -51,6 +54,7 @@ export const useAppInit = () => {
       items: false,
       orders: false,
       users: false,
+      config: false,
     }
   });
 
@@ -83,6 +87,19 @@ export const useAppInit = () => {
     }));
 
     try {
+      // Étape 0: Charger la configuration globale du compte
+      console.log('⚙️ Chargement de la configuration...');
+      try {
+        // Charger la configuration depuis l'API backend
+        const accountConfig = await configApiService.getConfig();
+        dispatch(setAlertTimeConfig(accountConfig.alert_time_minutes));
+        updateProgress('config', true);
+        console.log('✅ Configuration chargée');
+      } catch (error) {
+        console.error('⚠️ Erreur lors du chargement de la configuration:', error);
+        updateProgress('config', true); // Continue même si erreur
+      }
+
       // Étape 1: Charger les données de base en parallèle
       console.log('📦 Chargement des données de base...');
       
@@ -206,6 +223,7 @@ export const useAppInit = () => {
           items: false,
           orders: false,
           users: false,
+          config: false,
         }
       });
     }

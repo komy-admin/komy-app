@@ -20,7 +20,9 @@ export default function LoginScreen() {
       const { token, ...user } = await authApiService.login({ loginId, password });
       dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
       dispatch(setCurrentUser(user));
-      router.replace(`/${user.profil}/` as any);
+      
+      // Laisser _layout.tsx gérer la redirection automatiquement
+      // router.replace(`/${user.profil}/` as any);
     } catch (error) {
       console.error(error);
     }
@@ -38,7 +40,9 @@ export default function LoginScreen() {
     console.log('QR login response:', qrLogin);
     dispatch(setCredentials({ token: qrLogin.token.token, userProfile: currentUser.profil }));
     dispatch(setCurrentUser(currentUser));
-    router.replace(`/${currentUser.profil}/` as any);
+    
+    // Laisser _layout.tsx gérer la redirection automatiquement
+    // router.replace(`/${currentUser.profil}/` as any);
   };
 
   return (

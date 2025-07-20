@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useAppInit } from '~/hooks/useAppInit';
+import { useAlertMonitor } from '~/hooks/useAlertMonitor';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -28,6 +29,9 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
     progressPercentage,
     reinitializeApp 
   } = useAppInit();
+
+  // Le hook useAlertMonitor gère automatiquement l'initialisation et les conditions
+  useAlertMonitor();
 
   // Si pas authentifié, passer directement au contenu (pages de login)
   if (!isAuthenticated) {

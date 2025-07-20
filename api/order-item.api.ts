@@ -7,7 +7,11 @@ export class OrderItemApiService extends BaseApiService<OrderItem> {
 
   async updateManyStatus(orderItemIds: string[], status: Status): Promise<any> {
     try {
-      const response = await this.axiosInstance.put(`${this.endpoint}/update-many-status`, { orderItemIds, status });
+      const response = await this.axiosInstance.put(`${this.endpoint}/update-many-status`, { 
+        orderItemIds, 
+        status,
+        updatedAt: new Date().toISOString() // Forcer la mise à jour du timestamp
+      });
       return response.data;
     } catch (error) {
       console.error(`Error in updateManyStatus for ${this.endpoint}:`, error);

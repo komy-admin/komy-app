@@ -8,6 +8,8 @@ import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAllOrderItems } from '~/store/restaurant';
 import { useToast } from '~/components/ToastProvider';
+import { useAlertMonitor } from '~/hooks/useAlertMonitor';
+import { RootState } from '~/store';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -15,7 +17,7 @@ const AVAILABLE_STATUSES = [
   Status.READY,
 ];
 
-function useOrderGrouping(orders: Order[], orderItems: OrderItem[]) {
+function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrderIds: string[], overdueOrderItemIds: string[]) {
   const groupedOrders = useMemo(() => {
     const orderMap = new Map();
 
@@ -24,27 +26,49 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[]) {
       if (!order) return;
 
       const key = `${order.id}-${item.status}`;
+      
       if (!orderMap.has(key)) {
-        orderMap.set(key, { ...order, status: item.status, orderItems: [item] });
+        // Vérifier si au moins un orderItem de ce groupe est en retard
+        const hasOverdueItems = orderItems
+          .filter((oi: OrderItem) => oi.orderId === order.id && oi.status === item.status)
+          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
+        
+        orderMap.set(key, { 
+          ...order, 
+          status: item.status, 
+          orderItems: [item],
+          isOverdue: hasOverdueItems
+        });
       } else {
         orderMap.get(key).orderItems.push(item);
+        // Recalculer si le groupe a des items en retard
+        const hasOverdueItems = orderMap.get(key).orderItems
+          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
+        orderMap.get(key).isOverdue = hasOverdueItems;
       }
     });
 
-    return orderMap;
-  }, [orders, orderItems]);
+    // Trier pour mettre les commandes en retard en premier
+    const sortedEntries = Array.from(orderMap.entries()).sort(([, a], [, b]) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+      return 0;
+    });
+
+    return new Map(sortedEntries);
+  }, [orders, orderItems, overdueOrderIds, overdueOrderItemIds]);
 
   return groupedOrders;
 }
 
 export default function KitchenPage() {
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
-
-  // Utilisation des hooks Redux
+  // Utilisation des hooks Redux uniquement
   const { orders, loading, error, updateOrderItemStatus } = useOrders();
   const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
+  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.config);
   const { showToast } = useToast();
+
+  // Le monitoring est déjà démarré dans AppInitializer
 
   // Filtrer les commandes et items selon les statuts disponibles en cuisine
   const kitchenOrders = useMemo(() => {
@@ -57,7 +81,7 @@ export default function KitchenPage() {
     return orderItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
   }, [orderItems]);
 
-  const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems);
+  const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems, overdueOrderIds, overdueOrderItemIds);
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
@@ -79,11 +103,11 @@ export default function KitchenPage() {
     }
   };
 
-  if (loading || globalLoading || error) {
+  if (loading || error) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>
-          {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+          {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
         </Text>
       </View>
     );
@@ -104,6 +128,7 @@ export default function KitchenPage() {
               .filter(order => order.status === status)}
             status={status}
             onStatusChange={handleStatusChange}
+            overdueOrderItemIds={overdueOrderItemIds}
           />
         ))}
       </View>
