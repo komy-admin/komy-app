@@ -30,7 +30,7 @@ interface UpdateOrderStatusPayload {
   orderId: string;
   status: Status;
   itemTypeId?: string;
-  updatedAt?: string;
+  // updatedAt pas nécessaire - géré par le backend
 }
 
 interface OrderItemsStatusUpdatedPayload {
@@ -128,7 +128,7 @@ const ordersSlice = createSlice({
         
         // Recalculer le statut de l'order
         const statuses = orderItems.map(item => item.status);
-        state.orders[orderId].status = getMostImportantStatus(statuses) || Status.DRAFT;
+        state.orders[orderId].status = getMostImportantStatus(statuses);
       }
     },
     
@@ -147,7 +147,7 @@ const ordersSlice = createSlice({
           
           // Recalculer le statut de l'order
           const statuses = order.orderItems.map(item => item.status);
-          order.status = getMostImportantStatus(statuses) || Status.DRAFT;
+          order.status = getMostImportantStatus(statuses);
         }
       });
     },
@@ -185,7 +185,7 @@ const ordersSlice = createSlice({
           
           // Recalculer le statut de l'order
           const statuses = order.orderItems.map(item => item.status);
-          order.status = getMostImportantStatus(statuses) || Status.DRAFT;
+          order.status = getMostImportantStatus(statuses);
         }
       });
     },
@@ -205,7 +205,7 @@ const ordersSlice = createSlice({
             
             // Recalculer le statut de l'order
             const statuses = order.orderItems.map(item => item.status);
-            order.status = getMostImportantStatus(statuses) || Status.DRAFT;
+            order.status = getMostImportantStatus(statuses);
           }
         }
       });
@@ -239,15 +239,16 @@ const ordersSlice = createSlice({
         // Recalculer le statut de l'order si des items ont été mis à jour
         if (hasUpdatedItems && order.orderItems) {
           const statuses = order.orderItems.map(item => item.status);
-          order.status = getMostImportantStatus(statuses) || Status.DRAFT;
+          order.status = getMostImportantStatus(statuses);
+          // Note: updatedAt de l'Order est géré automatiquement par le backend
         }
       });
     },
     
     // API: Mise à jour du statut d'une order complète
     updateOrderStatus: (state, action: PayloadAction<UpdateOrderStatusPayload>) => {
-      const { orderId, status, itemTypeId, updatedAt } = action.payload;
-      const currentTimestamp = updatedAt || new Date().toISOString();
+      const { orderId, status, itemTypeId } = action.payload;
+      const currentTimestamp = new Date().toISOString(); // Pour les OrderItems seulement (local, coté back la données est a jour)
       
       const order = state.orders[orderId];
       if (!order || !order.orderItems) return;
@@ -268,7 +269,8 @@ const ordersSlice = createSlice({
         
         // Recalculer le statut global de l'order
         const statuses = order.orderItems.map(item => item.status);
-        order.status = getMostImportantStatus(statuses) || Status.DRAFT;
+        order.status = getMostImportantStatus(statuses);
+        // Note: updatedAt de l'Order est géré automatiquement par le backend
       } else {
         // Mettre à jour tous les items et l'order
         order.orderItems.forEach(item => {
@@ -281,6 +283,7 @@ const ordersSlice = createSlice({
           }
         });
         order.status = status;
+        // Note: updatedAt de l'Order est géré automatiquement par le backend
       }
     },
     

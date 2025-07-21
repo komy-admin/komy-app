@@ -126,14 +126,14 @@ export default function NotificationsPage() {
                         />
                         <Text style={styles.inputSuffix}>min</Text>
                       </View>
-                      {localTimeValue && parseInt(localTimeValue) >= 5 && parseInt(localTimeValue) <= 120 && (
+                      {localTimeValue && parseInt(localTimeValue) >= 2 && parseInt(localTimeValue) <= 60 && (
                         <Text style={styles.previewText}>
                           → Alerte déclenchée après {localTimeValue} minute{parseInt(localTimeValue) > 1 ? 's' : ''}
                         </Text>
                       )}
-                      {localTimeValue && (parseInt(localTimeValue) < 5 || parseInt(localTimeValue) > 120) && (
+                      {localTimeValue && (parseInt(localTimeValue) < 2 || parseInt(localTimeValue) > 60) && (
                         <Text style={styles.errorText}>
-                          ⚠️ La valeur doit être entre 5 et 120 minutes
+                          ⚠️ La valeur doit être entre 2 et 60 minutes
                         </Text>
                       )}
                     </View>

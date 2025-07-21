@@ -68,8 +68,6 @@ export default function KitchenPage() {
   const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.config);
   const { showToast } = useToast();
 
-  // Le monitoring est déjà démarré dans AppInitializer
-
   // Filtrer les commandes et items selon les statuts disponibles en cuisine
   const kitchenOrders = useMemo(() => {
     return orders.filter(order =>

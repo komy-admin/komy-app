@@ -62,38 +62,33 @@ export const useAlertMonitor = () => {
     
     const overdueOrderIds: string[] = [];
     const overdueOrderItemIds: string[] = [];
-
-    // Optimisation: for loops au lieu de forEach (plus rapide)
-    if (Array.isArray(orders)) {
-      for (let i = 0; i < orders.length; i++) {
-        const order = orders[i];
-        
-        let hasOverdueItems = false;
-        
-        if (order.orderItems?.length) {
-          for (let j = 0; j < order.orderItems.length; j++) {
-            const orderItem = order.orderItems[j];
-            const itemUpdateTime = orderItem.updatedAt 
-              ? new Date(orderItem.updatedAt).getTime()
-              : new Date(order.createdAt).getTime();
+    for (let i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      
+      let hasOverdueItems = false;
+      
+      if (order.orderItems?.length) {
+        for (let j = 0; j < order.orderItems.length; j++) {
+          const orderItem = order.orderItems[j];
+          const itemUpdateTime = orderItem.updatedAt 
+            ? new Date(orderItem.updatedAt).getTime()
+            : new Date(order.createdAt).getTime();
+          
+          const timeDiff = currentTime - itemUpdateTime;
+          
+          // Vérifier si en retard (optimisé sans calcul inutile de minutes)
+          if (timeDiff > alertTimeMs) {
+            overdueOrderItemIds.push(orderItem.id);
+            hasOverdueItems = true;
             
-            const timeDiff = currentTime - itemUpdateTime;
-            
-            // Vérifier si en retard (optimisé sans calcul inutile de minutes)
-            if (timeDiff > alertTimeMs) {
-              overdueOrderItemIds.push(orderItem.id);
-              hasOverdueItems = true;
-              
-            }
           }
         }
-        
-        if (hasOverdueItems) {
-          overdueOrderIds.push(order.id);
-        }
+      }
+      
+      if (hasOverdueItems) {
+        overdueOrderIds.push(order.id);
       }
     }
-
 
     const newResults = {
       overdueOrderIds,

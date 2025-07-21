@@ -17,12 +17,17 @@ type GroupedOrderItems = {
 };
 
 export default function OrderCard({ order, status, onStatusChange, overdueOrderItemIds = [] }: { 
-    order: Order & { isOverdue?: boolean };
+    order: Order;
     status: Status;
     onStatusChange: (order: Order, newStatus: Status) => void;
     overdueOrderItemIds?: string[];
   }) {
     const [isExpanded, setIsExpanded] = useState(false);
+    
+    // Vérifier si cette commande a des items en alerte
+    const hasOverdueItems = order.orderItems?.some(item => 
+      overdueOrderItemIds.includes(item.id)
+    ) ?? false;
 
     const groupedItems: GroupedOrderItems = React.useMemo(() => {
       return order?.orderItems?.reduce((acc, item) => {
@@ -88,7 +93,7 @@ export default function OrderCard({ order, status, onStatusChange, overdueOrderI
       <TouchableOpacity 
         style={[
           styles.card,
-          order.isOverdue && styles.overdueCard
+          hasOverdueItems && styles.overdueCard
         ]}
         onPress={toggleExpanded}
         activeOpacity={0.95}
@@ -139,19 +144,19 @@ export default function OrderCard({ order, status, onStatusChange, overdueOrderI
                       <View key={index} style={styles.orderItem}>
                         <View style={[
                           styles.itemBullet,
-                          isItemOverdue && styles.overdueItemBullet
+                          isItemOverdue && { backgroundColor: '#DC2626', width: 8, height: 8, borderRadius: 4 }
                         ]} />
                         <View style={styles.itemDetails}>
                           <Text style={[
                             styles.itemName,
-                            isItemOverdue && styles.overdueItemName
+                            isItemOverdue && { color: '#DC2626', fontWeight: '700' }
                           ]}>
                             {orderItem.item.name}
                           </Text>
                           {orderItem.note && (
                             <Text style={[
                               styles.itemNote,
-                              isItemOverdue && styles.overdueItemNote
+                              isItemOverdue && { color: '#DC2626', fontWeight: '600' }
                             ]}>
                               {orderItem.note}
                             </Text>
@@ -298,12 +303,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginRight: 12,
   },
-  overdueItemBullet: {
-    backgroundColor: '#DC2626',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
   itemDetails: {
     flex: 1,
   },
@@ -312,19 +311,11 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
   },
-  overdueItemName: {
-    color: '#DC2626',
-    fontWeight: '700',
-  },
   itemNote: {
     fontSize: 12,
     color: '#9CA3AF',
     fontStyle: 'italic',
     marginTop: 2,
-  },
-  overdueItemNote: {
-    color: '#DC2626',
-    fontWeight: '600',
   },
   buttonContainer: {
     flexDirection: 'row',

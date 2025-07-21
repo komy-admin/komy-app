@@ -10,7 +10,6 @@ export class OrderItemApiService extends BaseApiService<OrderItem> {
       const response = await this.axiosInstance.put(`${this.endpoint}/update-many-status`, { 
         orderItemIds, 
         status,
-        updatedAt: new Date().toISOString() // Forcer la mise à jour du timestamp
       });
       return response.data;
     } catch (error) {

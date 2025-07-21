@@ -176,7 +176,7 @@ export default function OrderItemsForm({
 
       // 6. Calculer le nouveau statut global
       const mostImportantStatus = updatedOrder.orderItems.length > 0
-        ? getMostImportantStatus(updatedOrder.orderItems.map((orderItem: OrderItem) => orderItem.status)) || Status.DRAFT
+        ? getMostImportantStatus(updatedOrder.orderItems.map((orderItem: OrderItem) => orderItem.status))
         : Status.DRAFT;
 
       // 7. Mettre à jour le statut de la commande si nécessaire

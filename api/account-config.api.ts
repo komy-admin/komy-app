@@ -58,27 +58,6 @@ export class ConfigApiService extends BaseApiService<AccountConfig> {
       alert_time_minutes: alertConfig
     });
   }
-
-  /**
-   * Valider la configuration côté client
-   */
-  validateAlertConfig(config: ConfigModule): { isValid: boolean; error?: string } {
-    if (config.enabled && (config.value < 5 || config.value > 120)) {
-      return {
-        isValid: false,
-        error: 'La valeur doit être entre 5 et 120 minutes'
-      };
-    }
-    
-    if (config.enabled && !Number.isInteger(config.value)) {
-      return {
-        isValid: false,
-        error: 'La valeur doit être un nombre entier'
-      };
-    }
-
-    return { isValid: true };
-  }
 }
 
 export const configApiService = new ConfigApiService();

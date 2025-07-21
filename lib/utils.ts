@@ -9,16 +9,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const getTableStatus = (table: Table): Status | undefined => {
+export const getTableStatus = (table: Table): Status => {
   const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
   
   return getMostImportantStatus(statuses);
 }
 
-export const getMostImportantStatus = (statuses: Status[]): Status | undefined => {
-  // Si pas de statuts, retourner undefined au lieu de DRAFT
+export const getMostImportantStatus = (statuses: Status[]): Status => {
+  // Si pas de statuts, retourner DRAFT par défaut
   if (statuses.length === 0) {
-    return undefined;
+    return Status.DRAFT;
   }
   
   // Ordre de priorité d'affichage: ERROR > SERVED > READY > PENDING > INPROGRESS > DRAFT > TERMINATED
@@ -50,8 +50,7 @@ export const shouldTableHaveDottedBorder = (table: Table): boolean => {
   return hasDraftWithOtherStatus(statuses);
 }
 
-export const getStatusColor = (status: Status | undefined) => {
-  if (!status) return '#D9D9D9'; // Gris par défaut pour les tables sans commande
+export const getStatusColor = (status: Status) => {
   const colors = {
     [Status.READY]: '#D7E3FC',
     [Status.PENDING]: '#F9F1C8',
@@ -59,26 +58,23 @@ export const getStatusColor = (status: Status | undefined) => {
     [Status.SERVED]: '#B7E1CC',
     [Status.ERROR]: '#F7BFB5',
     [Status.TERMINATED]: '#EBEBEB',
-    [Status.DRAFT]: '#EBEBEB',
+    [Status.DRAFT]: '#EBEBEB', // Gris par défaut pour les tables sans commande
   };
-  return colors[status as keyof typeof colors] || colors.error;
+  return colors[status] || colors[Status.ERROR];
 }
 
-export const getStatusBorderStyle = (status: Status | undefined, table?: Table) => {
-  if (!status) {
-    return {
-      borderStyle: 'solid' as const,
-      borderColor: '#AAAAAA',
-      borderWidth: 2,
-    };
-  }
+export const getStatusBorderStyle = (status: Status, table?: Table) => {
+  // Vérifier si la table a vraiment des orderItems (pas juste vide)
+  const hasActualOrderItems = table?.orders?.some(order => 
+    order.orderItems && order.orderItems.length > 0
+  ) ?? false;
   
-  // Bordure pointillée si:
-  // 1. Le statut principal est DRAFT (cas actuel)
-  // 2. OU il y a du DRAFT mélangé avec d'autres statuts (nouvelle règle)
+  // Bordure pointillée SEULEMENT si:
+  // 1. La table a des orderItems réels ET le statut est DRAFT
+  // 2. OU il y a du DRAFT mélangé avec d'autres statuts
   const hasDraftMixed = table ? shouldTableHaveDottedBorder(table) : false;
   
-  if (status === Status.DRAFT || hasDraftMixed) {
+  if ((status === Status.DRAFT && hasActualOrderItems) || hasDraftMixed) {
     return {
       borderStyle: 'dashed' as const,
       borderColor: '#2A2E33',

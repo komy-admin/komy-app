@@ -115,15 +115,13 @@ export const useOrders = () => {
       const orderItemsIds = orderItemsToUpdate.map(orderItem => orderItem.id);
       
       // Mise à jour via l'API
-      await orderItemApiService.updateManyStatus(orderItemsIds, status);
+      const result = await orderItemApiService.updateManyStatus(orderItemsIds, status);
 
-      // Mise à jour du store (optimiste) avec timestamp
-      const currentTimestamp = new Date().toISOString();
       dispatch(restaurantActions.updateOrderStatus({
         orderId,
         status,
         itemTypeId,
-        updatedAt: currentTimestamp
+        // Note: updatedAt de l'Order géré par le backend
       }));
 
       return { orderId, status, itemTypeId };
@@ -208,14 +206,13 @@ export const useOrders = () => {
 
   const updateOrderItemStatus = useCallback(async (orderItemIds: string[], status: Status) => {
     try {
-      await orderItemApiService.updateManyStatus(orderItemIds, status);
+      const result = await orderItemApiService.updateManyStatus(orderItemIds, status);
       
-      // Mettre à jour le store Redux immédiatement avec le timestamp actuel
-      const currentTimestamp = new Date().toISOString();
+      // Mise à jour du store avec les données du backend (incluant updatedAt)
       dispatch(restaurantActions.orderItemsStatusUpdated({
         orderItemIds,
         status,
-        updatedAt: currentTimestamp
+        updatedAt: result.updatedAt || new Date().toISOString()
       }));
 
     } catch (error) {

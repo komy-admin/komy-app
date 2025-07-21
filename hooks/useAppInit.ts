@@ -10,7 +10,7 @@ import { setAlertTimeConfig } from '~/store/config.slice';
 import { Room } from '@/types/room.types';
 import { ItemType } from '@/types/item-type.types';
 import { User } from '@/types/user.types';
-import { configApiService } from '~/api/config.api';
+import { configApiService } from '~/api/account-config.api';
 
 interface InitializationState {
   isInitialized: boolean;

@@ -2,7 +2,7 @@ import { useSelector } from 'react-redux';
 import { useAppDispatch } from '~/store/hooks';
 import { RootState } from '~/store';
 import { setAlertTimeConfig } from '~/store/config.slice';
-import { configApiService, ConfigModule } from '~/api/config.api';
+import { configApiService, ConfigModule } from '~/api/account-config.api';
 import { useCallback, useState } from 'react';
 
 /**
