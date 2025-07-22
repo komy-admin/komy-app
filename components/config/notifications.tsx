@@ -10,7 +10,6 @@ export default function NotificationsPage() {
     alertValue,
     isLoading,
     error,
-    canUpdate,
     updateAlertTime,
     clearError
   } = useAccountConfig();
@@ -38,7 +37,6 @@ export default function NotificationsPage() {
   };
 
   const handleToggleEnabled = (enabled: boolean) => {
-    if (!canUpdate) return; // Bloque si pas les permissions
     
     setLocalEnabled(enabled);
     const newTimeValue = parseInt(localTimeValue) || 0;
@@ -85,15 +83,10 @@ export default function NotificationsPage() {
                   <Switch
                     value={localEnabled}
                     onValueChange={handleToggleEnabled}
-                    trackColor={{ false: '#E2E8F0', true: canUpdate ? '#6366F1' : '#94A3B8' }}
+                    trackColor={{ false: '#E2E8F0', true: '#6366F1' }}
                     thumbColor={localEnabled ? '#FFFFFF' : '#94A3B8'}
-                    disabled={isLoading || !canUpdate}
+                    disabled={isLoading}
                   />
-                  {!canUpdate && (
-                    <Text style={styles.disabledSwitchText}>
-                      (Lecture seule)
-                    </Text>
-                  )}
                 </View>
               </View>
               
@@ -111,44 +104,32 @@ export default function NotificationsPage() {
                     </Text>
                   </View>
                   
-                  {/* Configuration pour admin */}
-                  {canUpdate && (
-                    <View style={styles.inputSection}>
-                      <Text style={styles.inputLabel}>Délai d'alerte</Text>
-                      <View style={styles.inputWrapper}>
-                        <TextInput
-                          style={[styles.timeInput, isLoading && styles.timeInputDisabled]}
-                          value={localTimeValue}
-                          onChangeText={handleTimeChange}
-                          placeholder="15"
-                          keyboardType="numeric"
-                          editable={!isLoading}
-                        />
-                        <Text style={styles.inputSuffix}>min</Text>
-                      </View>
-                      {localTimeValue && parseInt(localTimeValue) >= 2 && parseInt(localTimeValue) <= 60 && (
-                        <Text style={styles.previewText}>
-                          → Alerte déclenchée après {localTimeValue} minute{parseInt(localTimeValue) > 1 ? 's' : ''}
-                        </Text>
-                      )}
-                      {localTimeValue && (parseInt(localTimeValue) < 2 || parseInt(localTimeValue) > 60) && (
-                        <Text style={styles.errorText}>
-                          ⚠️ La valeur doit être entre 2 et 60 minutes
-                        </Text>
-                      )}
+                  {/* Configuration */}
+                  <View style={styles.inputSection}>
+                    <Text style={styles.inputLabel}>Délai d'alerte</Text>
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        style={[styles.timeInput, isLoading && styles.timeInputDisabled]}
+                        value={localTimeValue}
+                        onChangeText={handleTimeChange}
+                        placeholder="15"
+                        keyboardType="numeric"
+                        editable={!isLoading}
+                      />
+                      <Text style={styles.inputSuffix}>min</Text>
                     </View>
-                  )}
+                    {localTimeValue && parseInt(localTimeValue) >= 2 && parseInt(localTimeValue) <= 60 && (
+                      <Text style={styles.previewText}>
+                        → Alerte déclenchée après {localTimeValue} minute{parseInt(localTimeValue) > 1 ? 's' : ''}
+                      </Text>
+                    )}
+                    {localTimeValue && (parseInt(localTimeValue) < 2 || parseInt(localTimeValue) > 60) && (
+                      <Text style={styles.errorText}>
+                        ⚠️ La valeur doit être entre 2 et 60 minutes
+                      </Text>
+                    )}
+                  </View>
                   
-                  {/* Affichage lecture seule pour les autres rôles */}
-                  {!canUpdate && (
-                    <View style={styles.readOnlySection}>
-                      <Text style={styles.readOnlyTitle}>Configuration actuelle</Text>
-                      <View style={styles.readOnlyRow}>
-                        <Text style={styles.readOnlyLabel}>Délai d'alerte :</Text>
-                        <Text style={styles.readOnlyValue}>{localTimeValue} minute{parseInt(localTimeValue) > 1 ? 's' : ''}</Text>
-                      </View>
-                    </View>
-                  )}
                 </>
               ) : (
                 /* Affichage quand désactivé */
@@ -193,7 +174,7 @@ export default function NotificationsPage() {
         </ScrollView>
         
         {/* Bouton de sauvegarde global en sticky */}
-        {canUpdate && hasChanges && (
+        {hasChanges && (
           <View style={styles.stickyButtonContainer}>
             <TouchableOpacity
               style={styles.globalSaveButton}
@@ -399,42 +380,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontStyle: 'italic',
   },
-  readOnlySection: {
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  readOnlyTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  readOnlyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  readOnlyLabel: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  readOnlyValue: {
-    fontSize: 13,
-    color: '#374151',
-    fontWeight: '600',
-  },
-  readOnlyEnabled: {
-    color: '#059669',
-  },
-  readOnlyDisabled: {
-    color: '#DC2626',
-  },
   disabledContainer: {
     backgroundColor: '#F8FAFC',
     padding: 16,
@@ -451,12 +396,6 @@ const styles = StyleSheet.create({
   },
   switchContainer: {
     alignItems: 'center',
-  },
-  disabledSwitchText: {
-    fontSize: 10,
-    color: '#94A3B8',
-    fontStyle: 'italic',
-    marginTop: 4,
   },
   saveButton: {
     flexDirection: 'row',

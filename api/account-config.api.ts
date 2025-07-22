@@ -17,46 +17,21 @@ export interface ConfigUpdateResponse {
 export class ConfigApiService extends BaseApiService<AccountConfig> {
   protected endpoint = '/account-config';
 
-  constructor() {
-    super();
-  }
-
   /**
-   * Récupérer la configuration du compte
-   * Accessible par tous les rôles (admin, manager, chef, serveur)
+   * Récupération simple - pas de try/catch redondant (BaseApiService gère déjà)
    */
   async getConfig(): Promise<AccountConfig> {
-    try {
-      const response = await this.axiosInstance.get<AccountConfig>(this.endpoint);
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la configuration:', error);
-      throw error;
-    }
+    const response = await this.axiosInstance.get<AccountConfig>(this.endpoint);
+    return response.data;
   }
 
   /**
-   * Mettre à jour la configuration du compte
-   * Accessible seulement par admin/superadmin
+   * Mise à jour générique de la configuration
+   * Permet de mettre à jour n'importe quelle partie de la config
    */
-  async updateConfig(config: AccountConfig): Promise<ConfigUpdateResponse> {
-    try {
-      const response = await this.axiosInstance.put<ConfigUpdateResponse>(this.endpoint, config);
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la configuration:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Mettre à jour uniquement la configuration des alertes
-   * Helper method pour simplifier les appels
-   */
-  async updateAlertConfig(alertConfig: ConfigModule): Promise<ConfigUpdateResponse> {
-    return this.updateConfig({
-      alert_time_minutes: alertConfig
-    });
+  async updateConfig(config: Partial<AccountConfig>): Promise<ConfigUpdateResponse> {
+    const response = await this.axiosInstance.put<ConfigUpdateResponse>(this.endpoint, config);
+    return response.data;
   }
 }
 

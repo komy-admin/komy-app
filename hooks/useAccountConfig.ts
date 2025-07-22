@@ -39,28 +39,17 @@ export const useAccountConfig = () => {
   }, [dispatch]);
 
   /**
-   * Mettre à jour la configuration des alertes (Admin/SuperAdmin seulement)
+   * Mettre à jour la configuration des alertes
+   * Les droits et validations sont gérés par le middleware backend
    */
   const updateAlertTime = useCallback(async (enabled: boolean, value: number) => {
-    // Vérifier les permissions côté client
-    if (!canUpdate) {
-      const error = new Error('Seuls les administrateurs peuvent modifier cette configuration');
-      setError(error.message);
-      throw error;
-    }
-
     setIsLoading(true);
     setError(null);
     
     try {
-      const newConfig: ConfigModule = { enabled, value };
-      
-      // Valider les données côté client
-      if (enabled && (value < 2 || value > 60)) {
-        throw new Error('La valeur doit être entre 2 et 60 minutes');
-      }
-      
-      const response = await configApiService.updateAlertConfig(newConfig);
+      const response = await configApiService.updateConfig({
+        alert_time_minutes: { enabled, value }
+      });
       
       // Mettre à jour le store avec la réponse du serveur
       dispatch(setAlertTimeConfig(response.config.alert_time_minutes));
@@ -73,7 +62,7 @@ export const useAccountConfig = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [dispatch, canUpdate]);
+  }, [dispatch]);
 
   /**
    * Activer/Désactiver les alertes sans changer la valeur
@@ -104,7 +93,6 @@ export const useAccountConfig = () => {
     // Helpers
     isAlertEnabled: config.alertTimeMinutes.enabled,
     alertValue: config.alertTimeMinutes.value,
-    canUpdate, // Indique si l'utilisateur peut modifier
     clearError: () => setError(null)
   };
 };

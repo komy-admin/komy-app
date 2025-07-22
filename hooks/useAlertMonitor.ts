@@ -34,11 +34,9 @@ export const useAlertMonitor = () => {
   const [alertResults, setAlertResults] = useState<{
     overdueOrderIds: string[];
     overdueOrderItemIds: string[];
-    hasItemsNearThreshold: boolean;
   }>({
     overdueOrderIds: [],
-    overdueOrderItemIds: [],
-    hasItemsNearThreshold: false
+    overdueOrderItemIds: []
   });
 
   // Fonction de calcul et mise à jour des alertes
@@ -47,8 +45,7 @@ export const useAlertMonitor = () => {
     if (!isAuthenticated || !orders?.length || !alertTimeMinutes.enabled || !alertTimeMinutes.value || alertTimeMinutes.value === 0) {
       const emptyResults = {
         overdueOrderIds: [],
-        overdueOrderItemIds: [],
-        hasItemsNearThreshold: false
+        overdueOrderItemIds: []
       };
       setAlertResults(emptyResults);
       dispatch(setOverdueOrders([]));
@@ -92,8 +89,7 @@ export const useAlertMonitor = () => {
 
     const newResults = {
       overdueOrderIds,
-      overdueOrderItemIds,
-      hasItemsNearThreshold: false // Plus utilisé, mais gardé pour compatibilité
+      overdueOrderItemIds
     };
     
     setAlertResults(newResults);
@@ -110,8 +106,7 @@ export const useAlertMonitor = () => {
       // Nettoyer immédiatement les alertes visuelles quand désactivées
       const emptyResults = {
         overdueOrderIds: [],
-        overdueOrderItemIds: [],
-        hasItemsNearThreshold: false
+        overdueOrderItemIds: []
       };
       setAlertResults(emptyResults);
       dispatch(setOverdueOrders([]));
