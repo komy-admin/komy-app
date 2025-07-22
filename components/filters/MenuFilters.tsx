@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
 import { Button } from '~/components/ui';
 import { NumberInput } from '~/components/ui/number-input';
 
@@ -7,6 +7,7 @@ export interface MenuFilterState {
   name: string;
   minPrice: number | null;
   maxPrice: number | null;
+  status: 'active' | 'inactive' | null;
 }
 
 interface MenuFiltersProps {
@@ -29,7 +30,8 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
   const hasActiveFilters = () => {
     return filters.name !== '' || 
            filters.minPrice !== null || 
-           filters.maxPrice !== null;
+           filters.maxPrice !== null ||
+           filters.status !== null;
   };
 
   return (
@@ -44,6 +46,41 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
           placeholder="Rechercher..."
           placeholderTextColor="#999"
         />
+      </View>
+
+      {/* Statut */}
+      <View style={styles.filterGroup}>
+        <Text style={styles.filterLabel}>Statut</Text>
+        <View style={styles.statusButtons}>
+          <Pressable
+            style={[
+              styles.statusButton,
+              filters.status === 'active' && styles.statusButtonActive
+            ]}
+            onPress={() => updateFilter('status', filters.status === 'active' ? null : 'active')}
+          >
+            <Text style={[
+              styles.statusButtonText,
+              filters.status === 'active' && styles.statusButtonTextActive
+            ]}>
+              Actif
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.statusButton,
+              filters.status === 'inactive' && styles.statusButtonActive
+            ]}
+            onPress={() => updateFilter('status', filters.status === 'inactive' ? null : 'inactive')}
+          >
+            <Text style={[
+              styles.statusButtonText,
+              filters.status === 'inactive' && styles.statusButtonTextActive
+            ]}>
+              Inactif
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Prix */}
@@ -187,5 +224,33 @@ const styles = StyleSheet.create({
   },
   clearButtonTextInactive: {
     color: '#A0A0A0',
+  },
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+  },
+  statusButtonActive: {
+    backgroundColor: '#2A2E33',
+    borderColor: '#2A2E33',
+  },
+  statusButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  statusButtonTextActive: {
+    color: '#FFFFFF',
   },
 });

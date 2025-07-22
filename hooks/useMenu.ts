@@ -137,6 +137,25 @@ export const useMenu = () => {
     return orderItems.filter(orderItem => orderItem.item.id === itemId).length;
   }, []);
 
+  const toggleItemStatus = useCallback(async (itemId: string) => {
+    try {
+      const item = getItemById(itemId);
+      if (!item) {
+        throw new Error('Article non trouvé');
+      }
+
+      const updatedItem = await itemApiService.update(itemId, {
+        isActive: !item.isActive
+      });
+      
+      dispatch(restaurantActions.updateMenuItem({ item: updatedItem }));
+      return updatedItem;
+    } catch (error) {
+      console.error('Erreur lors du changement de statut de l\'article:', error);
+      throw error;
+    }
+  }, [dispatch, getItemById]);
+
   return {
     // Données
     items,
@@ -165,5 +184,6 @@ export const useMenu = () => {
     getItemTypeById,
     getItemsByType,
     getItemQuantityInOrder,
+    toggleItemStatus,
   };
 };

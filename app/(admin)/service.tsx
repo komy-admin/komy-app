@@ -527,7 +527,7 @@ export default function ServicePage() {
         {selectedTableOrder && (
           <OrderItemsForm
             order={selectedTableOrder}
-            items={allItems}
+            items={allItems.filter(item => item.isActive)}
             itemTypes={allItemTypes}
             onSave={handleSaveOrder}
             onCancel={handleCloseOrderModal}

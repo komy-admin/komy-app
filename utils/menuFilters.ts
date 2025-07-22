@@ -12,7 +12,12 @@ export const filterMenuItems = (items: Item[], filters: MenuFilterState): Item[]
     const matchesPrice = (filters.minPrice === null || item.price >= filters.minPrice) && 
                         (filters.maxPrice === null || item.price <= filters.maxPrice);
     
-    return matchesName && matchesPrice;
+    // Filtrage par statut
+    const matchesStatus = filters.status === null ||
+                         (filters.status === 'active' && item.isActive) ||
+                         (filters.status === 'inactive' && !item.isActive);
+    
+    return matchesName && matchesPrice && matchesStatus;
   });
 };
 
@@ -22,5 +27,6 @@ export const filterMenuItems = (items: Item[], filters: MenuFilterState): Item[]
 export const createEmptyMenuFilters = (): MenuFilterState => ({
   name: '',
   minPrice: null,
-  maxPrice: null
+  maxPrice: null,
+  status: null
 });

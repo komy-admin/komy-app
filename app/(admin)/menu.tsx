@@ -10,6 +10,8 @@ import { useToast } from '~/components/ToastProvider';
 import { useMenu, useRestaurant } from '~/hooks/useRestaurant';
 import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
+import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
+import { ActionItem } from '~/components/ActionMenu';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -25,12 +27,18 @@ export default function MenuPage() {
   const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
-  const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType } = useMenu();
+  const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
 
-  // Filtrer les articles avec les filtres appliqués
+  // Filtrer les articles avec les filtres appliqués et trier par statut
   const filteredItems = useMemo(() => {
     let result = activeTab === 'ALL' ? items : getItemsByType(activeTab);
-    return filterMenuItems(result, filters);
+    result = filterMenuItems(result, filters);
+    // Trier pour mettre les items actifs en premier
+    return result.sort((a, b) => {
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+      return 0;
+    });
   }, [items, activeTab, filters, getItemsByType]);
 
   // Gestion des filtres
@@ -110,6 +118,37 @@ export default function MenuPage() {
     }
   };
 
+  const handleToggleItemStatus = async (id: string) => {
+    try {
+      await toggleItemStatus(id);
+      showToast('Statut modifié avec succès', 'success');
+    } catch (err) {
+      console.error('Error toggling item status:', err);
+      showToast('Erreur lors de la modification du statut', 'error');
+    }
+  };
+
+  const getItemActions = (item: Item): ActionItem[] => {
+    return [
+      {
+        label: 'Modifier',
+        icon: <Edit2 size={16} color="#4F46E5" />,
+        onPress: () => handleEditItem(item.id ? item.id : '')
+      },
+      {
+        label: item.isActive ? 'Désactiver' : 'Activer',
+        icon: <Power size={16} color={item.isActive ? '#EF4444' : '#10B981'} />,
+        onPress: () => handleToggleItemStatus(item.id ? item.id : '')
+      },
+      {
+        label: 'Supprimer',
+        icon: <Trash size={16} color="#ef4444" />,
+        type: 'destructive',
+        onPress: () => handleDeleteItem(item.id ? item.id : '')
+      }
+    ];
+  };
+
   const { width, height } = useWindowDimensions();
 
   const itemTableColumns = [
@@ -127,6 +166,14 @@ export default function MenuPage() {
       label: 'Statut',
       key: 'statut',
       width: '20%',
+      render: (item: Item) => (
+        <Text style={{ 
+          color: item.isActive ? '#10B981' : '#EF4444',
+          fontWeight: '500'
+        }}>
+          {item.isActive ? 'Actif' : 'Inactif'}
+        </Text>
+      )
     },
     {
       key: 'actions',
@@ -261,6 +308,11 @@ export default function MenuPage() {
                 columns={itemTableColumns}
                 onRowPress={handleEditItem}
                 onRowDelete={handleDeleteItem}
+                useActionMenu={true}
+                getActions={getItemActions}
+                isLoading={loading}
+                loadingMessage="Chargement des articles..."
+                emptyMessage="Aucun article trouvé"
               />
             )}
           </TabsContent>

@@ -8,4 +8,5 @@ export type Item = {
   description?: string;
   itemType: ItemType;
   itemTypeId?: string;
+  isActive: boolean;
 };
