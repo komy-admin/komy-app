@@ -1,13 +1,9 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-interface ConfigModule {
-  enabled: boolean;
-  value: any;
-}
-
 interface ConfigState {
   // Configuration modulaire
-  alertTimeMinutes: ConfigModule;
+  reminderMinutes: number;
+  reminderNotificationsEnabled: boolean;
   // Données d'exécution des alertes
   overdueOrderIds: string[];
   overdueOrderItemIds: string[];
@@ -16,10 +12,8 @@ interface ConfigState {
 }
 
 const initialState: ConfigState = {
-  alertTimeMinutes: {
-    enabled: false,
-    value: 15
-  },
+  reminderMinutes: 15,
+  reminderNotificationsEnabled: false,
   overdueOrderIds: [],
   overdueOrderItemIds: [],
   lastAlertCheck: Date.now(),
@@ -30,13 +24,9 @@ const configSlice = createSlice({
   name: 'config',
   initialState,
   reducers: {
-    setAlertTimeConfig: (state, action: PayloadAction<{enabled: boolean, value: number}>) => {
-      state.alertTimeMinutes = action.payload;
-    },
-    // Pour compatibilité temporaire avec l'ancien système AsyncStorage
-    setAlertTimeValue: (state, action: PayloadAction<number>) => {
-      state.alertTimeMinutes.value = action.payload;
-      state.alertTimeMinutes.enabled = action.payload > 0;
+    setReminderConfig: (state, action: PayloadAction<{reminderMinutes: number, reminderNotificationsEnabled: boolean}>) => {
+      state.reminderMinutes = action.payload.reminderMinutes;
+      state.reminderNotificationsEnabled = action.payload.reminderNotificationsEnabled;
     },
     setOverdueOrders: (state, action: PayloadAction<string[]>) => {
       state.overdueOrderIds = action.payload;
@@ -62,8 +52,7 @@ const configSlice = createSlice({
 });
 
 export const {
-  setAlertTimeConfig,
-  setAlertTimeValue,
+  setReminderConfig,
   setOverdueOrders,
   setOverdueOrderItems,
   addOverdueOrder,

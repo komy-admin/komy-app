@@ -23,7 +23,7 @@ export const useAlertMonitor = () => {
   const dispatch = useAppDispatch();
   const intervalRef = useRef<number | null>(null);
   
-  const { alertTimeMinutes } = useSelector((state: RootState) => state.config);
+  const { reminderMinutes, reminderNotificationsEnabled } = useSelector((state: RootState) => state.config);
   const { token, userProfile } = useSelector((state: RootState) => state.auth);
   const isAuthenticated = !!(token && userProfile);
   
@@ -42,7 +42,7 @@ export const useAlertMonitor = () => {
   // Fonction de calcul et mise à jour des alertes
   const updateAlertState = useCallback(() => {
     // Ne pas calculer si pas authentifié, pas d'orders ou alertes désactivées
-    if (!isAuthenticated || !orders?.length || !alertTimeMinutes.enabled || !alertTimeMinutes.value || alertTimeMinutes.value === 0) {
+    if (!isAuthenticated || !orders?.length || !reminderNotificationsEnabled || !reminderMinutes || reminderMinutes === 0) {
       const emptyResults = {
         overdueOrderIds: [],
         overdueOrderItemIds: []
@@ -54,7 +54,7 @@ export const useAlertMonitor = () => {
     }
 
     const currentTime = Date.now();
-    const alertTimeMs = alertTimeMinutes.value * 60 * 1000;
+    const alertTimeMs = reminderMinutes * 60 * 1000;
     // Plus besoin de warningTimeMs car pas d'interval adaptatif
     
     const overdueOrderIds: string[] = [];
@@ -96,13 +96,13 @@ export const useAlertMonitor = () => {
     dispatch(setOverdueOrders(overdueOrderIds));
     dispatch(setOverdueOrderItems(overdueOrderItemIds));
     dispatch(updateLastAlertCheck());
-  }, [isAuthenticated, alertTimeMinutes, orders, dispatch]);
+  }, [isAuthenticated, reminderMinutes, reminderNotificationsEnabled, orders, dispatch]);
 
   // Initialisation des alertes au démarrage et nettoyage quand désactivées
   useEffect(() => {
-    if (isAuthenticated && orders?.length && alertTimeMinutes.enabled) {
+    if (isAuthenticated && orders?.length && reminderNotificationsEnabled) {
       updateAlertState();
-    } else if (!alertTimeMinutes.enabled) {
+    } else if (!reminderNotificationsEnabled) {
       // Nettoyer immédiatement les alertes visuelles quand désactivées
       const emptyResults = {
         overdueOrderIds: [],
@@ -112,12 +112,12 @@ export const useAlertMonitor = () => {
       dispatch(setOverdueOrders([]));
       dispatch(setOverdueOrderItems([]));
     }
-  }, [isAuthenticated, orders, alertTimeMinutes.enabled, updateAlertState, dispatch]);
+  }, [isAuthenticated, orders, reminderNotificationsEnabled, updateAlertState, dispatch]);
 
   // Effet pour gérer l'intervalle de vérification
   useEffect(() => {
     // Ne démarrer que si authentifié, qu'il y a des orders et que les alertes sont activées
-    if (!isAuthenticated || !orders?.length || !alertTimeMinutes.enabled) {
+    if (!isAuthenticated || !orders?.length || !reminderNotificationsEnabled) {
       // Nettoyer l'intervalle si les conditions ne sont plus remplies
       if (intervalRef.current) {
         window.clearInterval(intervalRef.current);
@@ -128,7 +128,7 @@ export const useAlertMonitor = () => {
 
     // Démarrer l'intervalle de vérification fixe (60s)
     intervalRef.current = window.setInterval(() => {
-      console.log(`🔄 TICK - Seuil: ${alertTimeMinutes.value}min, Orders: ${orders?.length || 0}`);
+      console.log(`🔄 TICK - Seuil: ${reminderMinutes}min, Orders: ${orders?.length || 0}`);
       updateAlertState();
     }, CHECK_INTERVAL);
 
@@ -138,21 +138,21 @@ export const useAlertMonitor = () => {
         intervalRef.current = null;
       }
     };
-  }, [isAuthenticated, orders, alertTimeMinutes.enabled, updateAlertState]);
+  }, [isAuthenticated, orders, reminderNotificationsEnabled, updateAlertState]);
 
 
   // Fonction pour forcer une vérification manuelle
   const forceCheck = useCallback(() => {
-    if (alertTimeMinutes.enabled) {
+    if (reminderNotificationsEnabled) {
       updateAlertState();
     }
-  }, [alertTimeMinutes.enabled, updateAlertState]);
+  }, [reminderNotificationsEnabled, updateAlertState]);
 
   return { 
     forceCheck,
     // Exposer les résultats calculés
     alertResults,
     // Statut des alertes
-    isEnabled: alertTimeMinutes.enabled
+    isEnabled: reminderNotificationsEnabled
   };
 };
