@@ -47,7 +47,10 @@ export default function NotificationsPage() {
     if (!hasChanges) return;
     
     try {
-      await updateAlertTime(localEnabled, parseInt(localTimeValue) || 15);
+      await updateAlertTime({
+        reminderNotificationsEnabled: localEnabled,
+        reminderMinutes: parseInt(localTimeValue) || 15
+      });
       setHasChanges(false);
       showToast('Configuration sauvegardée avec succès', 'success');
     } catch (error) {

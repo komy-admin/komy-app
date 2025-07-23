@@ -27,7 +27,11 @@ export const useAccountConfig = () => {
     
     try {
       const data = await accountConfigApiService.getAccountConfig();
-      dispatch(setReminderConfig(data));
+      dispatch(setReminderConfig({
+        configId: data.id,
+        reminderMinutes: data.reminderMinutes,
+        reminderNotificationsEnabled: data.reminderNotificationsEnabled
+      }));
       return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement de la configuration';
@@ -42,15 +46,19 @@ export const useAccountConfig = () => {
    * Mettre à jour la configuration des alertes
    * Les droits et validations sont gérés par le middleware backend
    */
-  const updateAlertTime = useCallback(async (id: string, data: { reminderNotificationsEnabled: boolean, reminderMinutes: number }) => {
+  const updateAlertTime = useCallback(async (data: { reminderNotificationsEnabled: boolean, reminderMinutes: number }) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const response = await accountConfigApiService.update(id , data);
+      const response = await accountConfigApiService.update(config.configId, data);
       
       // Mettre à jour le store avec la réponse du serveur
-      dispatch(setReminderConfig(response));
+      dispatch(setReminderConfig({
+        configId: response.id,
+        reminderMinutes: response.reminderMinutes,
+        reminderNotificationsEnabled: response.reminderNotificationsEnabled
+      }));
       
       return response;
     } catch (err) {
@@ -65,15 +73,15 @@ export const useAccountConfig = () => {
   /**
    * Activer/Désactiver les alertes sans changer la valeur
    */
-  const toggleAlerts = useCallback(async (id: string, enabled: boolean) => {
-    return updateAlertTime(id, { reminderNotificationsEnabled: enabled, reminderMinutes: config.reminderMinutes });
+  const toggleAlerts = useCallback(async (enabled: boolean) => {
+    return updateAlertTime({ reminderNotificationsEnabled: enabled, reminderMinutes: config.reminderMinutes });
   }, [updateAlertTime, config.reminderMinutes]);
 
   /**
    * Changer seulement la valeur des alertes (garde l'état enabled)
    */
-  const setAlertValue = useCallback(async (id: string, value: number) => {
-    return updateAlertTime(id, { reminderNotificationsEnabled: config.reminderNotificationsEnabled, reminderMinutes: value });
+  const setAlertValue = useCallback(async (value: number) => {
+    return updateAlertTime({ reminderNotificationsEnabled: config.reminderNotificationsEnabled, reminderMinutes: value });
   }, [updateAlertTime, config.reminderNotificationsEnabled]);
 
   return {

@@ -6,11 +6,11 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useUsers } from './useUsers';
 import { restaurantActions } from '~/store/restaurant';
-import { setAlertTimeConfig } from '~/store/config.slice';
+import { setReminderConfig } from '~/store/config.slice';
 import { Room } from '@/types/room.types';
 import { ItemType } from '@/types/item-type.types';
 import { User } from '@/types/user.types';
-import { configApiService } from '~/api/account-config.api';
+import { accountConfigApiService } from '~/api/account-config.api';
 
 interface InitializationState {
   isInitialized: boolean;
@@ -91,8 +91,12 @@ export const useAppInit = () => {
       console.log('⚙️ Chargement de la configuration...');
       try {
         // Charger la configuration depuis l'API backend
-        const accountConfig = await configApiService.getConfig();
-        dispatch(setAlertTimeConfig(accountConfig.alert_time_minutes));
+        const accountConfig = await accountConfigApiService.getAccountConfig();
+        dispatch(setReminderConfig({
+          configId: accountConfig.id,
+          reminderMinutes: accountConfig.reminderMinutes,
+          reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
+        }));
         updateProgress('config', true);
         console.log('✅ Configuration chargée');
       } catch (error) {

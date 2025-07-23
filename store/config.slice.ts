@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface ConfigState {
   // Configuration modulaire
+  configId: string; // ID de la config pour les updates
   reminderMinutes: number;
   reminderNotificationsEnabled: boolean;
   // Données d'exécution des alertes
@@ -12,6 +13,7 @@ interface ConfigState {
 }
 
 const initialState: ConfigState = {
+  configId: '',
   reminderMinutes: 15,
   reminderNotificationsEnabled: false,
   overdueOrderIds: [],
@@ -24,7 +26,8 @@ const configSlice = createSlice({
   name: 'config',
   initialState,
   reducers: {
-    setReminderConfig: (state, action: PayloadAction<{reminderMinutes: number, reminderNotificationsEnabled: boolean}>) => {
+    setReminderConfig: (state, action: PayloadAction<{configId: string, reminderMinutes: number, reminderNotificationsEnabled: boolean}>) => {
+      state.configId = action.payload.configId;
       state.reminderMinutes = action.payload.reminderMinutes;
       state.reminderNotificationsEnabled = action.payload.reminderNotificationsEnabled;
     },
