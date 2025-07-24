@@ -6,7 +6,7 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useUsers } from './useUsers';
 import { restaurantActions } from '~/store/restaurant';
-import { setReminderConfig } from '~/store/config.slice';
+import { setAccountConfig } from '@/store/account-config.slice';
 import { Room } from '@/types/room.types';
 import { ItemType } from '@/types/item-type.types';
 import { User } from '@/types/user.types';
@@ -23,7 +23,7 @@ interface InitializationState {
     items: boolean;
     orders: boolean;
     users: boolean;
-    config: boolean;
+    accountConfig: boolean;
   };
 }
 
@@ -54,7 +54,7 @@ export const useAppInit = () => {
       items: false,
       orders: false,
       users: false,
-      config: false,
+      accountConfig: false,
     }
   });
 
@@ -92,16 +92,16 @@ export const useAppInit = () => {
       try {
         // Charger la configuration depuis l'API backend
         const accountConfig = await accountConfigApiService.getAccountConfig();
-        dispatch(setReminderConfig({
-          configId: accountConfig.id,
+        dispatch(setAccountConfig({
+          id: accountConfig.id,
           reminderMinutes: accountConfig.reminderMinutes,
           reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
         }));
-        updateProgress('config', true);
+        updateProgress('accountConfig', true);
         console.log('✅ Configuration chargée');
       } catch (error) {
         console.error('⚠️ Erreur lors du chargement de la configuration:', error);
-        updateProgress('config', true); // Continue même si erreur
+        updateProgress('accountConfig', true); // Continue même si erreur
       }
 
       // Étape 1: Charger les données de base en parallèle
@@ -227,7 +227,7 @@ export const useAppInit = () => {
           items: false,
           orders: false,
           users: false,
-          config: false,
+          accountConfig: false,
         }
       });
     }

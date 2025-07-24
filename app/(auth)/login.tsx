@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
-import { router, Link } from 'expo-router';
+import { Link } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner'; // chemin relatif à ajuster si besoin
 
@@ -20,7 +20,7 @@ export default function LoginScreen() {
       const { token, ...user } = await authApiService.login({ loginId, password });
       dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
       dispatch(setCurrentUser(user));
-      
+
       // Laisser _layout.tsx gérer la redirection automatiquement
       // router.replace(`/${user.profil}/` as any);
     } catch (error) {
@@ -40,7 +40,7 @@ export default function LoginScreen() {
     console.log('QR login response:', qrLogin);
     dispatch(setCredentials({ token: qrLogin.token.token, userProfile: currentUser.profil }));
     dispatch(setCurrentUser(currentUser));
-    
+
     // Laisser _layout.tsx gérer la redirection automatiquement
     // router.replace(`/${currentUser.profil}/` as any);
   };

@@ -1,7 +1,7 @@
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '~/store/hooks';
 import { RootState } from '~/store';
-import { setReminderConfig } from '~/store/config.slice';
+import { setAccountConfig } from '@/store/account-config.slice';
 import { accountConfigApiService } from '~/api/account-config.api';
 import { useCallback, useState } from 'react';
 
@@ -10,13 +10,9 @@ import { useCallback, useState } from 'react';
  */
 export const useAccountConfig = () => {
   const dispatch = useAppDispatch();
-  const config = useSelector((state: RootState) => state.config);
-  const { userProfile } = useSelector((state: RootState) => state.auth);
+  const config = useSelector((state: RootState) => state.accountConfig);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Vérifier si l'utilisateur peut modifier la config
-  const canUpdate = userProfile && ['admin', 'superadmin'].includes(userProfile as string);
 
   /**
    * Charger la configuration depuis l'API
@@ -27,8 +23,8 @@ export const useAccountConfig = () => {
     
     try {
       const data = await accountConfigApiService.getAccountConfig();
-      dispatch(setReminderConfig({
-        configId: data.id,
+      dispatch(setAccountConfig({
+        id: data.id,
         reminderMinutes: data.reminderMinutes,
         reminderNotificationsEnabled: data.reminderNotificationsEnabled
       }));
@@ -51,11 +47,11 @@ export const useAccountConfig = () => {
     setError(null);
     
     try {
-      const response = await accountConfigApiService.update(config.configId, data);
+      const response = await accountConfigApiService.update(config.id, data);
       
       // Mettre à jour le store avec la réponse du serveur
-      dispatch(setReminderConfig({
-        configId: response.id,
+      dispatch(setAccountConfig({
+        id: response.id,
         reminderMinutes: response.reminderMinutes,
         reminderNotificationsEnabled: response.reminderNotificationsEnabled
       }));

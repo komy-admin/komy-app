@@ -1,8 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-interface ConfigState {
+interface AccountConfigState {
   // Configuration modulaire
-  configId: string; // ID de la config pour les updates
+  id: string; // ID de la config pour les updates
   reminderMinutes: number;
   reminderNotificationsEnabled: boolean;
   // Données d'exécution des alertes
@@ -12,8 +12,8 @@ interface ConfigState {
   triggerAlertCheck: number; // Timestamp pour déclencher une vérification
 }
 
-const initialState: ConfigState = {
-  configId: '',
+const initialState: AccountConfigState = {
+  id: '',
   reminderMinutes: 15,
   reminderNotificationsEnabled: false,
   overdueOrderIds: [],
@@ -22,12 +22,12 @@ const initialState: ConfigState = {
   triggerAlertCheck: 0,
 };
 
-const configSlice = createSlice({
-  name: 'config',
+const accountConfigSlice = createSlice({
+  name: 'accountConfig',
   initialState,
   reducers: {
-    setReminderConfig: (state, action: PayloadAction<{configId: string, reminderMinutes: number, reminderNotificationsEnabled: boolean}>) => {
-      state.configId = action.payload.configId;
+    setAccountConfig: (state, action: PayloadAction<{id: string, reminderMinutes: number, reminderNotificationsEnabled: boolean}>) => {
+      state.id = action.payload.id;
       state.reminderMinutes = action.payload.reminderMinutes;
       state.reminderNotificationsEnabled = action.payload.reminderNotificationsEnabled;
     },
@@ -55,13 +55,13 @@ const configSlice = createSlice({
 });
 
 export const {
-  setReminderConfig,
+  setAccountConfig,
   setOverdueOrders,
   setOverdueOrderItems,
   addOverdueOrder,
   removeOverdueOrder,
   updateLastAlertCheck,
   triggerAlertCheck,
-} = configSlice.actions;
+} = accountConfigSlice.actions;
 
-export default configSlice.reducer;
+export default accountConfigSlice.reducer;

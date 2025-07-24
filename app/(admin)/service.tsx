@@ -1,18 +1,17 @@
 import React from 'react';
 import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, ConfirmDialog, ForkModal, PopoverButton, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "~/components/ui";
+import { Badge, Button, ConfirmDialog, ForkModal, Text, TextInput } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState, useCallback } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
-import { Minus, Plus } from "lucide-react-native";
+import { Minus, Plus, Grid3X3Icon, ListFilter } from "lucide-react-native";
 import OrderList from "~/components/Service/OrderList";
 import { SearchBar } from "~/components/Service/SearchBar";
 import { useOrderFilters } from "~/hooks/useOrderFilters";
 import StartOrderCard from "~/components/Service/StartOrderCard";
 import { Status } from "~/types/status.enum";
-import OrderDetailView from "~/components/Service/OrderDetailView";
 import AdminOrderDetailView from "~/components/Service/AdminOrderDetailView";
 import PaymentView from "~/components/Service/PaymentView";
 import { OrderItem } from '~/types/order-item.types';
@@ -20,7 +19,6 @@ import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import {
   useRestaurant,
-  useRestaurantInit,
   useRooms,
   useMenu,
   useTables,
@@ -57,7 +55,6 @@ export default function ServicePage() {
 
   // État local de l'interface seulement
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
-  const [showMenu, setShowMenu] = useState<boolean>(false);
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [isReassigning, setIsReassigning] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
@@ -107,14 +104,14 @@ export default function ServicePage() {
     const remainingOrderItems = selectedTableOrder.orderItems.filter(
       item => !deletedItemIds.includes(item.id)
     );
-    
-    
+
+
     if (remainingOrderItems.length === 0) {
       try {
         // FERMER LA MODAL EN PREMIER pour éviter l'effet de "vidage"
         setShowOrderDetailModal(false);
         setSelectedTable(null);
-        
+
         // PUIS supprimer la commande vide
         await deleteOrder(selectedTableOrder.id);
         showToast('Commande supprimée car vide.', 'info');
@@ -145,7 +142,7 @@ export default function ServicePage() {
     }
 
     setSelectedTable(table.id);
-    
+
     // Si la table a une commande, ouvrir directement la modal de détails
     const tableOrder = currentRoomOrders.find(order => order.tableId === table.id);
     if (tableOrder) {
@@ -200,7 +197,7 @@ export default function ServicePage() {
   const handleCloseOrderModal = async () => {
     // Fermer immédiatement la modal pour l'animation
     setIsOrderModalVisible(false);
-    
+
     // Attendre un délai pour que l'animation se termine avant de supprimer la commande
     setTimeout(async () => {
       // Cette fonction est appelée SEULEMENT quand l'utilisateur ferme manuellement la modal
@@ -215,12 +212,12 @@ export default function ServicePage() {
       }
 
       setOrderCreatedFromStart(false);
-      
+
       // Si on vient de la modal de détails ET qu'il y a une commande avec des items, la rouvrir
       if (cameFromOrderDetailModal && selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
         setShowOrderDetailModal(true);
       }
-      
+
       // Reset du flag
       setCameFromOrderDetailModal(false);
     }, 300); // Délai correspondant à la durée d'animation de fermeture
@@ -283,11 +280,11 @@ export default function ServicePage() {
       // Ici, vous pouvez ajouter la logique pour traiter le paiement
       // Par exemple, appeler une API pour enregistrer le paiement
       console.log('Données de paiement:', paymentData);
-      
+
       setShowPaymentModal(false);
       setShowOrderDetailModal(true); // Rouvrir la modal de détails
       showToast('Paiement traité avec succès.', 'success');
-      
+
       // Optionnel : fermer la commande ou changer son statut
       // await updateOrder({ ...selectedTableOrder, status: Status.PAID });
     } catch (error) {
@@ -428,14 +425,14 @@ export default function ServicePage() {
       >
         {selectedTableOrder && (
           <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
-            <AdminOrderDetailView 
-              order={selectedTableOrder} 
-              itemTypes={allItemTypes} 
+            <AdminOrderDetailView
+              order={selectedTableOrder}
+              itemTypes={allItemTypes}
               onDeleteOrderItem={async (orderItemId) => {
                 try {
                   await deleteOrderItem(orderItemId);
                   showToast('Élément supprimé avec succès.', 'success');
-                  
+
                   // Vérifier si la commande est maintenant vide IMMÉDIATEMENT
                   await checkAndHandleEmptyOrder([orderItemId]);
                 } catch (error) {
@@ -447,10 +444,10 @@ export default function ServicePage() {
                 try {
                   const result = await deleteManyOrderItems(orderItemIds);
                   showToast(`${result.deletedCount} éléments supprimés avec succès.`, 'success');
-                  
+
                   // Vérifier si la commande est maintenant vide IMMÉDIATEMENT
                   await checkAndHandleEmptyOrder(orderItemIds);
-                  
+
                   return result;
                 } catch (error) {
                   console.error('Erreur lors de la suppression multiple:', error);
@@ -462,8 +459,8 @@ export default function ServicePage() {
             />
             <View style={{ padding: 16 }}>
               <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   style={{ flex: 1 }}
                   onPress={() => {
                     setShowReassignModal(true);
@@ -471,8 +468,8 @@ export default function ServicePage() {
                 >
                   <Text>Assigner une autre table</Text>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   style={{ flex: 1 }}
                   onPress={() => {
                     setShowPaymentModal(true);
@@ -480,8 +477,8 @@ export default function ServicePage() {
                 >
                   <Text>Régler la note</Text>
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   style={{ flex: 1 }}
                   onPress={() => {
                     setShowDeleteOrderDialog(true);
@@ -568,9 +565,9 @@ export default function ServicePage() {
         title={isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
       >
         <View style={{ flex: 1, padding: 20 }}>
-          <View style={{ 
-            flex: 1, 
-            justifyContent: 'center', 
+          <View style={{
+            flex: 1,
+            justifyContent: 'center',
             alignItems: 'center',
             width: '100%',
             height: '100%'
@@ -585,7 +582,7 @@ export default function ServicePage() {
               onTablePress={async (pressedTable: Table | null) => {
                 if (pressedTable && selectedTableOrder && !isReassigning) {
                   setIsReassigning(true); // Bloquer les autres clics
-                  
+
                   try {
                     await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
@@ -603,7 +600,7 @@ export default function ServicePage() {
               onTableLongPress={async (pressedTable: Table | null) => {
                 if (pressedTable && selectedTableOrder && !isReassigning) {
                   setIsReassigning(true); // Bloquer les autres clics
-                  
+
                   try {
                     await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);

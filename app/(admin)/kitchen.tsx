@@ -1,14 +1,13 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { OrderItem } from '~/types/order-item.types';
-import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
+import { useOrders } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAllOrderItems } from '~/store/restaurant';
 import { useToast } from '~/components/ToastProvider';
-import { useAlertMonitor } from '~/hooks/useAlertMonitor';
 import { RootState } from '~/store';
 
 const AVAILABLE_STATUSES = [
@@ -26,16 +25,16 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrder
       if (!order) return;
 
       const key = `${order.id}-${item.status}`;
-      
+
       if (!orderMap.has(key)) {
         // Vérifier si au moins un orderItem de ce groupe est en retard
         const hasOverdueItems = orderItems
           .filter((oi: OrderItem) => oi.orderId === order.id && oi.status === item.status)
           .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
-        
-        orderMap.set(key, { 
-          ...order, 
-          status: item.status, 
+
+        orderMap.set(key, {
+          ...order,
+          status: item.status,
           orderItems: [item],
           isOverdue: hasOverdueItems
         });
@@ -65,7 +64,7 @@ export default function KitchenPage() {
   // Utilisation des hooks Redux uniquement
   const { orders, loading, error, updateOrderItemStatus } = useOrders();
   const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
-  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.config);
+  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
   const { showToast } = useToast();
 
   // Filtrer les commandes et items selon les statuts disponibles en cuisine
@@ -87,7 +86,7 @@ export default function KitchenPage() {
       // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
     } catch (error: any) {
       console.error('Error updating status:', error);
-      
+
       // Gestion d'éerreur spécifique pour le 500
       if (error.response?.status === 500) {
         showToast('Erreur serveur temporaire, l\'API est en cours de correction', 'error');

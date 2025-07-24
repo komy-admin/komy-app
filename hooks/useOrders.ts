@@ -113,15 +113,13 @@ export const useOrders = () => {
       }
 
       const orderItemsIds = orderItemsToUpdate.map(orderItem => orderItem.id);
-      
-      // Mise à jour via l'API
-      const result = await orderItemApiService.updateManyStatus(orderItemsIds, status);
+
+      await orderItemApiService.updateManyStatus(orderItemsIds, status);
 
       dispatch(restaurantActions.updateOrderStatus({
         orderId,
         status,
         itemTypeId,
-        // Note: updatedAt de l'Order géré par le backend
       }));
 
       return { orderId, status, itemTypeId };
@@ -208,7 +206,6 @@ export const useOrders = () => {
     try {
       const result = await orderItemApiService.updateManyStatus(orderItemIds, status);
       
-      // Mise à jour du store avec les données du backend (incluant updatedAt)
       dispatch(restaurantActions.orderItemsStatusUpdated({
         orderItemIds,
         status,

@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { createSelector } from '@reduxjs/toolkit';
 import { useAppDispatch } from '~/store/hooks';
 import { RootState } from '~/store';
-import { setOverdueOrders, setOverdueOrderItems, updateLastAlertCheck } from '~/store/config.slice';
+import { setOverdueOrders, setOverdueOrderItems, updateLastAlertCheck } from '@/store/account-config.slice';
 import { Order } from '~/types/order.types';
 
 const CHECK_INTERVAL = 60000; // 1 minute - interval fixe et simple
@@ -23,7 +23,7 @@ export const useAlertMonitor = () => {
   const dispatch = useAppDispatch();
   const intervalRef = useRef<number | null>(null);
   
-  const { reminderMinutes, reminderNotificationsEnabled } = useSelector((state: RootState) => state.config);
+  const { reminderMinutes, reminderNotificationsEnabled } = useSelector((state: RootState) => state.accountConfig);
   const { token, userProfile } = useSelector((state: RootState) => state.auth);
   const isAuthenticated = !!(token && userProfile);
   
