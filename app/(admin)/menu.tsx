@@ -3,23 +3,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/c
 import { SidePanel } from "~/components/SidePanel";
 import React, { useState, useMemo } from "react";
 import { Item } from "~/types/item.types";
+import { Menu } from "~/types/menu.types";
 import { CustomModal } from "~/components/CustomModal";
 import { MenuForm } from "~/components/form/MenuForm";
 import { useToast } from '~/components/ToastProvider';
 import { useMenu, useRestaurant } from '~/hooks/useRestaurant';
+import { useMenus } from '~/hooks/useMenus';
+import { MenuCategoryItem } from '~/types/menu.types';
 import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
-import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
+import { CreditCard as Edit2, Trash, Power, UtensilsCrossed } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
+import { MenuEditor } from '~/components/admin/MenuEditor';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>("ALL");
+  const [activeTab, setActiveTab] = useState<string>("items");
   const [filters, setFilters] = useState<MenuFilterState>(createEmptyMenuFilters());
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  
+  // États pour les items
+  const [isItemModalVisible, setIsItemModalVisible] = useState(false);
+  const [isDeleteItemModalVisible, setIsDeleteItemModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+  
+  // États pour les menus
+  const [isMenuModalVisible, setIsMenuModalVisible] = useState(false);
+  const [isDeleteMenuModalVisible, setIsDeleteMenuModalVisible] = useState(false);
+  const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
+  const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+  
+  
   const { showToast } = useToast();
 
   // Initialiser la connexion WebSocket via useRestaurant
@@ -27,10 +41,13 @@ export default function MenuPage() {
 
   // Utilisation des hooks Redux
   const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
+  const { allMenus, loading: menusLoading, error: menusError, createMenu, updateMenu, deleteMenu, createMenuCategoryItem, updateMenuCategoryItem, deleteMenuCategoryItem, loadMenuCategoryItems } = useMenus();
 
   // Filtrer les articles avec les filtres appliqués et trier par statut
   const filteredItems = useMemo(() => {
-    let result = activeTab === 'ALL' ? items : getItemsByType(activeTab);
+    if (activeTab === 'menus') return [];
+    
+    let result = activeTab === 'items' ? items : getItemsByType(activeTab);
     result = filterMenuItems(result, filters);
     // Trier pour mettre les items actifs en premier
     return result.sort((a, b) => {
@@ -40,6 +57,15 @@ export default function MenuPage() {
     });
   }, [items, activeTab, filters, getItemsByType]);
 
+  // Filtrer les menus
+  const filteredMenus = useMemo(() => {
+    return allMenus.sort((a, b) => {
+      if (a.isActive && !b.isActive) return -1;
+      if (!a.isActive && b.isActive) return 1;
+      return 0;
+    });
+  }, [allMenus]);
+
   // Gestion des filtres
   const handleFiltersChange = (newFilters: MenuFilterState) => {
     setFilters(newFilters);
@@ -47,25 +73,26 @@ export default function MenuPage() {
 
   const handleClearFilters = () => {
     setFilters(createEmptyMenuFilters());
-    setActiveTab('ALL');
+    setActiveTab('items');
   };
 
   // Plus besoin de charger manuellement - useAppInit gère l'initialisation automatique
 
+  // Gestion des items
   const handleCreateItem = () => {
     setCurrentItem(null);
-    setIsModalVisible(true);
+    setIsItemModalVisible(true);
   };
 
   const handleEditItem = (id: string) => {
     const item = items.find(item => item.id === id);
     if (!item) return;
     setCurrentItem(item);
-    setIsModalVisible(true);
+    setIsItemModalVisible(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalVisible(false);
+  const handleCloseItemModal = () => {
+    setIsItemModalVisible(false);
     setCurrentItem(null);
   };
 
@@ -88,7 +115,7 @@ export default function MenuPage() {
         await createMenuItem(itemWithType);
         showToast('Article créé avec succès', 'success');
       }
-      handleCloseModal();
+      handleCloseItemModal();
     } catch (err) {
       console.error('Error saving item:', err);
       showToast('Erreur lors de la sauvegarde de l\'article', 'error');
@@ -99,10 +126,10 @@ export default function MenuPage() {
     const item = items.find(item => item.id === id);
     if (!item) return;
     setItemToDelete(item);
-    setIsDeleteModalVisible(true);
+    setIsDeleteItemModalVisible(true);
   };
 
-  const confirmDelete = async () => {
+  const confirmDeleteItem = async () => {
     if (!itemToDelete) return;
 
     try {
@@ -112,7 +139,7 @@ export default function MenuPage() {
       console.error('Error deleting item:', err);
       showToast('Erreur lors de la suppression de l\'article', 'error');
     } finally {
-      setIsDeleteModalVisible(false);
+      setIsDeleteItemModalVisible(false);
       setItemToDelete(null);
     }
   };
@@ -124,6 +151,62 @@ export default function MenuPage() {
     } catch (err) {
       console.error('Error toggling item status:', err);
       showToast('Erreur lors de la modification du statut', 'error');
+    }
+  };
+
+  // Gestion des menus
+  const handleCreateMenu = () => {
+    setCurrentMenu(null);
+    setIsMenuModalVisible(true);
+  };
+
+  const handleEditMenu = (id: string) => {
+    const menu = allMenus.find(menu => menu.id === id);
+    if (!menu) return;
+    setCurrentMenu(menu);
+    setIsMenuModalVisible(true);
+  };
+
+  const handleCloseMenuModal = () => {
+    setIsMenuModalVisible(false);
+    setCurrentMenu(null);
+  };
+
+  const handleSaveMenu = async (menuData: Partial<Menu>) => {
+    try {
+      if (menuData.id) {
+        await updateMenu(menuData.id, menuData);
+        showToast('Menu modifié avec succès', 'success');
+      } else {
+        await createMenu(menuData);
+        showToast('Menu créé avec succès', 'success');
+      }
+      handleCloseMenuModal();
+    } catch (err) {
+      console.error('Error saving menu:', err);
+      showToast('Erreur lors de la sauvegarde du menu', 'error');
+    }
+  };
+
+  const handleDeleteMenu = async (id: string) => {
+    const menu = allMenus.find(menu => menu.id === id);
+    if (!menu) return;
+    setMenuToDelete(menu);
+    setIsDeleteMenuModalVisible(true);
+  };
+
+  const confirmDeleteMenu = async () => {
+    if (!menuToDelete) return;
+
+    try {
+      await deleteMenu(menuToDelete.id);
+      showToast('Menu supprimé avec succès', 'success');
+    } catch (err) {
+      console.error('Error deleting menu:', err);
+      showToast('Erreur lors de la suppression du menu', 'error');
+    } finally {
+      setIsDeleteMenuModalVisible(false);
+      setMenuToDelete(null);
     }
   };
 
@@ -144,6 +227,22 @@ export default function MenuPage() {
         icon: <Trash size={16} color="#ef4444" />,
         type: 'destructive',
         onPress: () => handleDeleteItem(item.id ? item.id : '')
+      }
+    ];
+  };
+
+  const getMenuActions = (menu: Menu): ActionItem[] => {
+    return [
+      {
+        label: 'Modifier',
+        icon: <Edit2 size={16} color="#4F46E5" />,
+        onPress: () => handleEditMenu(menu.id)
+      },
+      {
+        label: 'Supprimer',
+        icon: <Trash size={16} color="#ef4444" />,
+        type: 'destructive',
+        onPress: () => handleDeleteMenu(menu.id)
       }
     ];
   };
@@ -171,6 +270,49 @@ export default function MenuPage() {
           fontWeight: '500'
         }}>
           {item.isActive ? 'Actif' : 'Inactif'}
+        </Text>
+      )
+    },
+    {
+      key: 'actions',
+      width: '10%',
+    }
+  ];
+
+  const menuTableColumns = [
+    {
+      label: 'Nom',
+      key: 'name',
+      width: '40%',
+    },
+    {
+      label: 'Prix de base',
+      key: 'basePrice',
+      width: '15%',
+      render: (menu: Menu) => (
+        <Text>{menu.basePrice.toFixed(2)}€</Text>
+      )
+    },
+    {
+      label: 'Catégories',
+      key: 'categories',
+      width: '25%',
+      render: (menu: Menu) => (
+        <Text style={{ fontSize: 12, color: '#666666' }}>
+          {menu.categories?.length || 0} catégorie{(menu.categories?.length || 0) > 1 ? 's' : ''}
+        </Text>
+      )
+    },
+    {
+      label: 'Statut',
+      key: 'statut',
+      width: '10%',
+      render: (menu: Menu) => (
+        <Text style={{ 
+          color: menu.isActive ? '#10B981' : '#EF4444',
+          fontWeight: '500'
+        }}>
+          {menu.isActive ? 'Actif' : 'Inactif'}
         </Text>
       )
     },
@@ -230,11 +372,18 @@ export default function MenuPage() {
                   height: 50,
                 }}
               >
-                <TabsTrigger value="ALL" className="flex-row h-full" style={{ width: 100, minWidth: 100 }}>
+                <TabsTrigger value="menus" className="flex-row h-full" style={{ width: 100, minWidth: 100 }}>
                   <Text
-                    style={{ color: activeTab === 'ALL' ? '#2A2E33' : '#A0A0A0' }}
+                    style={{ color: activeTab === 'menus' ? '#2A2E33' : '#A0A0A0' }}
                   >
-                    Tous
+                    Menus
+                  </Text>
+                </TabsTrigger>
+                <TabsTrigger value="items" className="flex-row h-full" style={{ width: 100, minWidth: 100 }}>
+                  <Text
+                    style={{ color: activeTab === 'items' ? '#2A2E33' : '#A0A0A0' }}
+                  >
+                    Articles
                   </Text>
                 </TabsTrigger>
                 {itemTypes.map((type) => (
@@ -270,7 +419,7 @@ export default function MenuPage() {
               }}
             >
               <Button
-                onPress={handleCreateItem}
+                onPress={activeTab === 'menus' ? handleCreateMenu : handleCreateItem}
                 className="w-[200px] h-[50px] flex items-center justify-center"
                 style={{
                   backgroundColor: '#2A2E33',
@@ -288,39 +437,65 @@ export default function MenuPage() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  Créer un article
+                  {activeTab === 'menus' ? 'Créer un menu' : 'Créer un article'}
                 </Text>
               </Button>
             </View>
           </View>
 
           <TabsContent style={{ flex: 1 }} value={activeTab}>
-            {loading || globalLoading || error ? (
-              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
-                  {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
-                </Text>
-              </View>
+            {activeTab === 'menus' ? (
+              // Affichage des menus
+              menusLoading || globalLoading || menusError ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                  <Text style={{ color: menusError ? '#ef4444' : '#666', fontSize: 16 }}>
+                    {menusLoading || globalLoading ? 'Chargement...' : menusError || 'Erreur lors du chargement'}
+                  </Text>
+                </View>
+              ) : (
+                // Table des menus
+                <ForkTable
+                  data={filteredMenus}
+                  columns={menuTableColumns}
+                  onRowPress={handleEditMenu}
+                  onRowDelete={handleDeleteMenu}
+                  useActionMenu={true}
+                  getActions={getMenuActions}
+                  isLoading={menusLoading}
+                  loadingMessage="Chargement des menus..."
+                  emptyMessage="Aucun menu trouvé"
+                />
+              )
             ) : (
-              <ForkTable
-                data={filteredItems}
-                columns={itemTableColumns}
-                onRowPress={handleEditItem}
-                onRowDelete={handleDeleteItem}
-                useActionMenu={true}
-                getActions={getItemActions}
-                isLoading={loading}
-                loadingMessage="Chargement des articles..."
-                emptyMessage="Aucun article trouvé"
-              />
+              // Affichage des items (articles)
+              loading || globalLoading || error ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                  <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
+                    {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+                  </Text>
+                </View>
+              ) : (
+                <ForkTable
+                  data={filteredItems}
+                  columns={itemTableColumns}
+                  onRowPress={handleEditItem}
+                  onRowDelete={handleDeleteItem}
+                  useActionMenu={true}
+                  getActions={getItemActions}
+                  isLoading={loading}
+                  loadingMessage="Chargement des articles..."
+                  emptyMessage="Aucun article trouvé"
+                />
+              )
             )}
           </TabsContent>
         </Tabs>
       </View>
 
+      {/* Modal pour les items */}
       <CustomModal
-        isVisible={isModalVisible}
-        onClose={handleCloseModal}
+        isVisible={isItemModalVisible}
+        onClose={handleCloseItemModal}
         width={600}
         height={560}
         title={currentItem ? "Modifier l'article" : "Créer un article"}
@@ -329,15 +504,37 @@ export default function MenuPage() {
           item={currentItem}
           itemTypes={itemTypes}
           onSave={handleSaveItem}
-          onCancel={handleCloseModal}
+          onCancel={handleCloseItemModal}
           activeTab={activeTab}
         />
       </CustomModal>
 
+      {/* Modal pour les menus */}
       <CustomModal
-        isVisible={isDeleteModalVisible}
+        isVisible={isMenuModalVisible}
+        onClose={handleCloseMenuModal}
+        width={900}
+        height={800}
+        title={currentMenu ? "Modifier le menu" : "Créer un menu"}
+      >
+        <MenuEditor
+          menu={currentMenu}
+          items={items}
+          itemTypes={itemTypes}
+          onSave={handleSaveMenu}
+          onCancel={handleCloseMenuModal}
+          onCreateMenuCategoryItem={createMenuCategoryItem}
+          onUpdateMenuCategoryItem={updateMenuCategoryItem}
+          onDeleteMenuCategoryItem={deleteMenuCategoryItem}
+          onLoadMenuCategoryItems={loadMenuCategoryItems}
+        />
+      </CustomModal>
+
+      {/* Modal de suppression des items */}
+      <CustomModal
+        isVisible={isDeleteItemModalVisible}
         onClose={() => {
-          setIsDeleteModalVisible(false);
+          setIsDeleteItemModalVisible(false);
           setItemToDelete(null);
         }}
         width={600}
@@ -356,7 +553,7 @@ export default function MenuPage() {
           </View>
           <View style={styles.deleteButtonContainer}>
             <Button
-              onPress={confirmDelete}
+              onPress={confirmDeleteItem}
               style={styles.deleteButton}
               variant="destructive"
             >
@@ -364,8 +561,51 @@ export default function MenuPage() {
             </Button>
             <Button
               onPress={() => {
-                setIsDeleteModalVisible(false);
+                setIsDeleteItemModalVisible(false);
                 setItemToDelete(null);
+              }}
+              variant="ghost"
+              style={styles.cancelButton}
+            >
+              <Text style={styles.cancelButtonText}>Annuler</Text>
+            </Button>
+          </View>
+        </View>
+      </CustomModal>
+
+      {/* Modal de suppression des menus */}
+      <CustomModal
+        isVisible={isDeleteMenuModalVisible}
+        onClose={() => {
+          setIsDeleteMenuModalVisible(false);
+          setMenuToDelete(null);
+        }}
+        width={600}
+        height={320}
+        title="Confirmation de suppression"
+        titleColor="#FF4444"
+      >
+        <View style={styles.deleteModalContent}>
+          <View style={{ paddingTop: 20 }}>
+            <Text style={styles.deleteMessage}>
+              Êtes-vous sûr de vouloir supprimer le menu {menuToDelete?.name} ?
+            </Text>
+            <Text style={styles.deleteWarning}>
+              {'(Cette action est irréversible.)'}
+            </Text>
+          </View>
+          <View style={styles.deleteButtonContainer}>
+            <Button
+              onPress={confirmDeleteMenu}
+              style={styles.deleteButton}
+              variant="destructive"
+            >
+              <Text style={styles.deleteButtonText}>Supprimer</Text>
+            </Button>
+            <Button
+              onPress={() => {
+                setIsDeleteMenuModalVisible(false);
+                setMenuToDelete(null);
               }}
               variant="ghost"
               style={styles.cancelButton}

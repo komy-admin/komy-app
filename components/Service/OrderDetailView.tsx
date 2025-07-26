@@ -16,6 +16,7 @@ import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStat
 import { Button } from '../ui';
 import StatusSelector from './StatusSelector';
 import { Order } from '~/types/order.types';
+import MenuGroupView from './MenuGroupView';
 
 interface OrderItemsGroupProps {
   itemType: ItemType;
@@ -311,6 +312,7 @@ interface OrderDetailViewProps {
 
 export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: OrderDetailViewProps) {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const toggleExpanded = (groupId: string) => {
     setExpandedGroups(prev =>
@@ -320,8 +322,16 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
     );
   };
 
-  // Créer une structure de groupement par type ET par statut
-  const createGroupedItems = () => {
+  const toggleMenuExpanded = (menuId: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(menuId)
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
+
+  // Créer une structure de groupement par type ET par statut pour les items individuels
+  const createGroupedIndividualItems = () => {
     const groups: Array<{
       id: string;
       itemType: ItemType;
@@ -329,10 +339,19 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
       orderItems: OrderItem[];
     }> = [];
 
+    // Obtenir les items individuels (nouvelle structure ou fallback)
+    let individualItems: OrderItem[] = [];
+    if (order.individualItems) {
+      individualItems = order.individualItems;
+    } else if (order.orderItems) {
+      // Fallback: filtrer les items sans menuGroupId
+      individualItems = order.orderItems.filter(item => !item.menuGroupId);
+    }
+
     // Pour chaque type d'item
     itemTypes.forEach(itemType => {
-      // Récupérer tous les orderItems de ce type
-      const itemsOfType = order.orderItems.filter(
+      // Récupérer tous les orderItems individuels de ce type
+      const itemsOfType = individualItems.filter(
         orderItem => orderItem.item.itemType.id === itemType.id
       );
 
@@ -377,7 +396,8 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
     });
   };
 
-  const groupedItems = createGroupedItems();
+  const groupedIndividualItems = createGroupedIndividualItems();
+  const orderMenus = order.menus || [];
 
   return (
     <ScrollView
@@ -390,17 +410,74 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
       scrollEnabled={true}
       nestedScrollEnabled={true}
     >
-      {groupedItems.map((group) => (
-        <OrderItemsGroup
-          key={group.id}
-          itemType={group.itemType}
-          status={group.status}
-          orderItems={group.orderItems}
-          isExpanded={expandedGroups.includes(group.id)}
-          onToggle={() => toggleExpanded(group.id)}
-          onUpdateStatus={(newStatus) => onStatusUpdate(group.orderItems, newStatus)}
-        />
-      ))}
+      {/* Section Menus */}
+      {orderMenus.length > 0 && (
+        <View>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: '600',
+            color: '#1A1A1A',
+            marginBottom: 12,
+          }}>
+            🍽️ Menus
+          </Text>
+          {orderMenus.map((menuGroup) => (
+            <MenuGroupView
+              key={menuGroup.id}
+              menuGroup={menuGroup}
+              isExpanded={expandedMenus.includes(menuGroup.id)}
+              onToggle={() => toggleMenuExpanded(menuGroup.id)}
+              onStatusUpdate={onStatusUpdate}
+            />
+          ))}
+        </View>
+      )}
+
+      {/* Section Items individuels */}
+      {groupedIndividualItems.length > 0 && (
+        <View style={{ marginTop: orderMenus.length > 0 ? 24 : 0 }}>
+          {orderMenus.length > 0 && (
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: '#1A1A1A',
+              marginBottom: 12,
+            }}>
+              🍹 Items à la carte
+            </Text>
+          )}
+          {groupedIndividualItems.map((group) => (
+            <OrderItemsGroup
+              key={group.id}
+              itemType={group.itemType}
+              status={group.status}
+              orderItems={group.orderItems}
+              isExpanded={expandedGroups.includes(group.id)}
+              onToggle={() => toggleExpanded(group.id)}
+              onUpdateStatus={(newStatus) => onStatusUpdate(group.orderItems, newStatus)}
+            />
+          ))}
+        </View>
+      )}
+
+      {/* Message si aucun item */}
+      {orderMenus.length === 0 && groupedIndividualItems.length === 0 && (
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 40,
+        }}>
+          <Text style={{
+            fontSize: 16,
+            color: '#666666',
+            textAlign: 'center',
+          }}>
+            Aucun item dans cette commande
+          </Text>
+        </View>
+      )}
+
       <View style={{ height: 20 }} />
     </ScrollView>
   );

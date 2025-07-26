@@ -25,6 +25,11 @@ import ordersReducer, {
   selectOrderItemById,
   selectOrdersLoading,
   selectOrdersError,
+  selectOrderIndividualItems,
+  selectOrderMenus,
+  selectOrderAllItems,
+  selectOrderHasMenus,
+  selectOrderHasIndividualItems,
 } from './orders.slice';
 import menuReducer, { 
   menuActions,
@@ -37,6 +42,17 @@ import menuReducer, {
   selectMenuLoading,
   selectMenuError,
 } from './menu.slice';
+import menusReducer, { 
+  menusActions,
+  type MenusState,
+  selectAllMenus,
+  selectActiveMenus,
+  selectMenuById,
+  selectMenuCategoryItems,
+  selectAvailableMenuCategoryItems,
+  selectMenusLoading,
+  selectMenusError,
+} from './menus.slice';
 import usersReducer, { 
   usersActions,
   type UsersState,
@@ -70,6 +86,7 @@ export interface RestaurantState {
   tables: TablesState;
   orders: OrdersState;
   menu: MenuState;
+  menus: MenusState;
   users: UsersState;
   ui: UiState;
 }
@@ -80,6 +97,7 @@ export const restaurantReducer = combineReducers({
   tables: tablesReducer,
   orders: ordersReducer,
   menu: menuReducer,
+  menus: menusReducer,
   users: usersReducer,
   ui: uiReducer,
 });
@@ -104,6 +122,11 @@ export const restaurantActions = {
   // Actions du menu
   ...Object.fromEntries(
     Object.entries(menuActions).map(([key, action]) => [`menu_${key}`, action])
+  ),
+  
+  // Actions des menus
+  ...Object.fromEntries(
+    Object.entries(menusActions).map(([key, action]) => [`menus_${key}`, action])
   ),
   
   // Actions des users
@@ -148,6 +171,15 @@ export const restaurantActions = {
   updateMenuItem: menuActions.updateMenuItem,
   deleteMenuItem: menuActions.deleteMenuItem,
   
+  setMenus: menusActions.setMenus,
+  setMenuCategoryItems: menusActions.setMenuCategoryItems,
+  createMenu: menusActions.createMenu,
+  updateMenu: menusActions.updateMenu,
+  deleteMenu: menusActions.deleteMenu,
+  createMenuCategoryItem: menusActions.createMenuCategoryItem,
+  updateMenuCategoryItem: menusActions.updateMenuCategoryItem,
+  deleteMenuCategoryItem: menusActions.deleteMenuCategoryItem,
+  
   setUsers: usersActions.setUsers,
   createUser: usersActions.createUser,
   updateUser: usersActions.updateUser,
@@ -160,12 +192,14 @@ export const restaurantActions = {
   setLoadingTables: tablesActions.setLoadingTables,
   setLoadingOrders: ordersActions.setLoadingOrders,
   setLoadingMenu: menuActions.setLoadingMenu,
+  setLoadingMenus: menusActions.setLoadingMenus,
   setLoadingUsers: usersActions.setLoadingUsers,
   
   setErrorRooms: roomsActions.setErrorRooms,
   setErrorTables: tablesActions.setErrorTables,
   setErrorOrders: ordersActions.setErrorOrders,
   setErrorMenu: menuActions.setErrorMenu,
+  setErrorMenus: menusActions.setErrorMenus,
   setErrorUsers: usersActions.setErrorUsers,
   setErrorItemTypes: menuActions.setErrorMenu,
   
@@ -175,6 +209,7 @@ export const restaurantActions = {
     dispatch(tablesActions.resetTablesState());
     dispatch(ordersActions.resetOrdersState());
     dispatch(menuActions.resetMenuState());
+    dispatch(menusActions.resetMenusState());
     dispatch(usersActions.resetUsersState());
     dispatch(uiActions.resetUiState());
   },
@@ -285,6 +320,11 @@ export {
   selectOrderItemById,
   selectOrdersLoading,
   selectOrdersError,
+  selectOrderIndividualItems,
+  selectOrderMenus,
+  selectOrderAllItems,
+  selectOrderHasMenus,
+  selectOrderHasIndividualItems,
   
   // Menu
   selectAllItems,
@@ -294,6 +334,15 @@ export {
   selectItemTypeById,
   selectMenuLoading,
   selectMenuError,
+  
+  // Menus
+  selectAllMenus,
+  selectActiveMenus,
+  selectMenuById,
+  selectMenuCategoryItems,
+  selectAvailableMenuCategoryItems,
+  selectMenusLoading,
+  selectMenusError,
   
   // Users
   selectUsers,
@@ -321,6 +370,7 @@ export type {
   TablesState,
   OrdersState,
   MenuState,
+  MenusState,
   UsersState,
   UiState,
 };

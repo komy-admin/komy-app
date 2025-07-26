@@ -14,4 +14,5 @@ export type OrderItem = {
   updatedAt: string;
   item: Item;
   itemId: string;
+  menuGroupId?: string | null;  // ID du groupe de menu (null pour items à la carte)
 };
