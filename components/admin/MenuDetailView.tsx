@@ -73,7 +73,7 @@ export function MenuDetailView({
       console.log(`🔄 Chargement des items pour la catégorie: ${categoryId}`);
       const items = await onLoadMenuCategoryItems(categoryId);
       console.log(`✅ Items chargés pour ${categoryId}:`, items.length);
-      
+
       setCategoryItems(prev => ({ ...prev, [categoryId]: items }));
       setLoadedCategories(prev => new Set([...prev, categoryId]));
     } catch (error) {
@@ -86,7 +86,7 @@ export function MenuDetailView({
 
   const getAvailableItems = (category: MenuCategory) => {
     const assignedItemIds = categoryItems[category.id]?.map(ci => ci.itemId) || [];
-    return items.filter(item => 
+    return items.filter(item =>
       item.itemType?.id === category.itemTypeId &&
       !assignedItemIds.includes(item.id) &&
       item.isActive
@@ -110,17 +110,17 @@ export function MenuDetailView({
 
       await onCreateMenuCategoryItem(menuCategoryItemData);
       showToast('Article ajouté avec succès', 'success');
-      
+
       // Forcer le rechargement en retirant la catégorie des catégories chargées
       setLoadedCategories(prev => {
         const newSet = new Set(prev);
         newSet.delete(categoryId);
         return newSet;
       });
-      
+
       // Recharger les items de cette catégorie
       loadCategoryItems(categoryId);
-      
+
       // Reset form
       setFormData(prev => ({ ...prev, [categoryId]: { itemId: '', supplement: '0', isAvailable: true } }));
       setShowAddForm(prev => ({ ...prev, [categoryId]: false }));
@@ -134,14 +134,14 @@ export function MenuDetailView({
     try {
       await onUpdateMenuCategoryItem(menuCategoryItem.id, updates);
       showToast('Article mis à jour', 'success');
-      
+
       // Forcer le rechargement
       setLoadedCategories(prev => {
         const newSet = new Set(prev);
         newSet.delete(menuCategoryItem.menuCategoryId);
         return newSet;
       });
-      
+
       loadCategoryItems(menuCategoryItem.menuCategoryId);
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
@@ -150,35 +150,17 @@ export function MenuDetailView({
   };
 
   const handleDeleteItem = async (menuCategoryItem: MenuCategoryItem) => {
-    Alert.alert(
-      'Supprimer l\'article',
-      `Êtes-vous sûr de vouloir retirer "${menuCategoryItem.item?.name}" de cette catégorie ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDeleteMenuCategoryItem(menuCategoryItem.id);
-              showToast('Article retiré avec succès', 'success');
-              
-              // Forcer le rechargement
-              setLoadedCategories(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(menuCategoryItem.menuCategoryId);
-                return newSet;
-              });
-              
-              loadCategoryItems(menuCategoryItem.menuCategoryId);
-            } catch (error) {
-              console.error('Erreur lors de la suppression:', error);
-              showToast('Erreur lors de la suppression', 'error');
-            }
-          }
-        }
-      ]
-    );
+    await onDeleteMenuCategoryItem(menuCategoryItem.id);
+    showToast('Article retiré avec succès', 'success');
+
+    // Forcer le rechargement
+    setLoadedCategories(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(menuCategoryItem.menuCategoryId);
+      return newSet;
+    });
+
+    loadCategoryItems(menuCategoryItem.menuCategoryId);
   };
 
   const initFormData = (categoryId: string) => {
@@ -241,7 +223,7 @@ export function MenuDetailView({
               </Text>
             </View>
           </View>
-          
+
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
               onPress={() => onEditMenu(menu.id)}
@@ -311,7 +293,7 @@ export function MenuDetailView({
                       )}
                     </Text>
                   </View>
-                  
+
                   {availableItems.length > 0 && (
                     <Button
                       onPress={() => {
@@ -346,7 +328,7 @@ export function MenuDetailView({
                     <Text style={{ fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                       Ajouter un article
                     </Text>
-                    
+
                     <View style={{ gap: 8 }}>
                       <Select
                         choices={availableItems.map(item => ({
@@ -366,7 +348,7 @@ export function MenuDetailView({
                         }}
                         placeholder="Sélectionner un article"
                       />
-                      
+
                       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 12, marginBottom: 4 }}>Supplément (€)</Text>
@@ -386,7 +368,7 @@ export function MenuDetailView({
                             }}
                           />
                         </View>
-                        
+
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                           <Button
                             onPress={() => handleAddItem(category.id)}
@@ -411,7 +393,7 @@ export function MenuDetailView({
                   <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 }}>
                     Articles assignés ({categoryItemsList.length})
                   </Text>
-                  
+
                   {isLoading ? (
                     <Text style={{ color: '#6B7280', fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>
                       Chargement...
@@ -420,8 +402,8 @@ export function MenuDetailView({
                     <View style={{ alignItems: 'center', paddingVertical: 16 }}>
                       <Package size={24} color="#D1D5DB" />
                       <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 4 }}>
-                        {availableItems.length === 0 ? 
-                          'Tous les articles de ce type sont déjà assignés' : 
+                        {availableItems.length === 0 ?
+                          'Tous les articles de ce type sont déjà assignés' :
                           'Aucun article assigné'
                         }
                       </Text>
@@ -452,7 +434,7 @@ export function MenuDetailView({
                               )}
                             </Text>
                           </View>
-                          
+
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             {/* Toggle disponibilité */}
                             <Pressable
@@ -472,7 +454,7 @@ export function MenuDetailView({
                                 <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>✓</Text>
                               )}
                             </Pressable>
-                            
+
                             {/* Bouton supprimer */}
                             <Pressable
                               onPress={() => handleDeleteItem(menuCategoryItem)}

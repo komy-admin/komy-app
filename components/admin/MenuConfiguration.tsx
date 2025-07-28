@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput } from 'react-native';
 import { Button, ForkTable } from '~/components/ui';
 import { Select } from '~/components/ui/select';
 import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
@@ -147,27 +147,9 @@ export function MenuConfiguration({
   };
 
   const handleDeleteItem = async (menuCategoryItemId: string) => {
-    Alert.alert(
-      'Supprimer l\'article',
-      'Êtes-vous sûr de vouloir retirer cet article de cette catégorie ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDeleteMenuCategoryItem(menuCategoryItemId);
-              showToast('Article retiré avec succès', 'success');
-              loadCategoryItems();
-            } catch (error) {
-              console.error('Erreur lors de la suppression:', error);
-              showToast('Erreur lors de la suppression', 'error');
-            }
-          }
-        }
-      ]
-    );
+    await onDeleteMenuCategoryItem(menuCategoryItemId);
+    showToast('Article retiré avec succès', 'success');
+    loadCategoryItems();
   };
 
   // Items disponibles pour assignation (non déjà assignés à cette catégorie)

@@ -138,20 +138,20 @@ export function MenuEditor({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Le nom est obligatoire';
     }
-    
+
     const basePrice = parseFloat(formData.basePrice);
     if (!formData.basePrice || isNaN(basePrice) || basePrice < 0) {
       newErrors.basePrice = 'Le prix de base doit être un nombre positif';
     }
-    
+
     if (formData.categories.length === 0) {
       newErrors.categories = 'Au moins une catégorie est requise';
     }
-    
+
     formData.categories.forEach((category, index) => {
       if (!category.itemTypeId) {
         newErrors[`category_${index}_type`] = 'Type d\'item requis';
@@ -164,14 +164,14 @@ export function MenuEditor({
         newErrors[`category_${index}_price`] = 'Le modificateur de prix doit être un nombre positif ou zéro';
       }
     });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
     try {
       const menuData: Partial<Menu> = {
@@ -183,11 +183,11 @@ export function MenuEditor({
           itemType: itemTypes.find(type => type.id === cat.itemTypeId)!,
         } as Partial<MenuCategory>)),
       };
-      
+
       if (menu?.id) {
         menuData.id = menu.id;
       }
-      
+
       await onSave(menuData);
       showToast(menu ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
     } catch (error) {
@@ -205,7 +205,7 @@ export function MenuEditor({
       maxSelections: 1,
       priceModifier: '0',
     };
-    
+
     setFormData(prev => ({
       ...prev,
       categories: [...prev.categories, newCategory]
@@ -214,7 +214,7 @@ export function MenuEditor({
 
   const removeCategory = (index: number) => {
     const categoryToRemove = formData.categories[index];
-    
+
     Alert.alert(
       'Supprimer la catégorie',
       'Êtes-vous sûr de vouloir supprimer cette catégorie ? Tous les articles assignés seront également supprimés.',
@@ -228,7 +228,7 @@ export function MenuEditor({
               ...prev,
               categories: prev.categories.filter((_, i) => i !== index)
             }));
-            
+
             // Réindexer les sélections
             const newSelections: Record<number, any> = {};
             Object.entries(categorySelections).forEach(([key, value]) => {
@@ -249,7 +249,7 @@ export function MenuEditor({
   const updateCategory = (index: number, field: keyof MenuCategoryFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
-      categories: prev.categories.map((cat, i) => 
+      categories: prev.categories.map((cat, i) =>
         i === index ? { ...cat, [field]: value } : cat
       )
     }));
@@ -260,7 +260,7 @@ export function MenuEditor({
       ...prev,
       [index]: selectedOption
     }));
-    
+
     updateCategory(index, 'itemTypeId', selectedOption.id);
   };
 
@@ -268,9 +268,9 @@ export function MenuEditor({
   const getAvailableItems = (categoryIndex: number) => {
     const category = formData.categories[categoryIndex];
     if (!category || !category.id) return items.filter(item => item.itemType?.id === category.itemTypeId);
-    
+
     const assignedItemIds = categoryItems[category.id]?.map(ci => ci.itemId) || [];
-    return items.filter(item => 
+    return items.filter(item =>
       item.itemType?.id === category.itemTypeId &&
       !assignedItemIds.includes(item.id) &&
       item.isActive
@@ -300,17 +300,17 @@ export function MenuEditor({
 
       const newItem = await onCreateMenuCategoryItem(menuCategoryItemData);
       showToast('Article ajouté avec succès', 'success');
-      
+
       // Mettre à jour immédiatement l'état local
       setCategoryItems(prev => ({
         ...prev,
         [category.id!]: [...(prev[category.id!] || []), newItem as MenuCategoryItem]
       }));
-      
+
       // Reset form
-      setItemFormData(prev => ({ 
-        ...prev, 
-        [categoryIndex]: { itemId: '', supplement: '0', isAvailable: true } 
+      setItemFormData(prev => ({
+        ...prev,
+        [categoryIndex]: { itemId: '', supplement: '0', isAvailable: true }
       }));
       setShowAddItemForm(prev => ({ ...prev, [categoryIndex]: false }));
     } catch (error) {
@@ -323,11 +323,11 @@ export function MenuEditor({
     try {
       await onUpdateMenuCategoryItem(menuCategoryItem.id, { isAvailable: !menuCategoryItem.isAvailable });
       showToast('Article mis à jour', 'success');
-      
+
       // Mettre à jour immédiatement l'état local
       setCategoryItems(prev => ({
         ...prev,
-        [menuCategoryItem.menuCategoryId]: prev[menuCategoryItem.menuCategoryId]?.map(item => 
+        [menuCategoryItem.menuCategoryId]: prev[menuCategoryItem.menuCategoryId]?.map(item =>
           item.id === menuCategoryItem.id ? { ...item, isAvailable: !item.isAvailable } : item
         ) || []
       }));
@@ -338,34 +338,16 @@ export function MenuEditor({
   };
 
   const handleDeleteItem = async (menuCategoryItem: MenuCategoryItem) => {
-    Alert.alert(
-      'Supprimer l\'article',
-      `Êtes-vous sûr de vouloir retirer "${menuCategoryItem.item?.name}" de cette catégorie ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await onDeleteMenuCategoryItem(menuCategoryItem.id);
-              showToast('Article retiré avec succès', 'success');
-              
-              // Mettre à jour immédiatement l'état local
-              setCategoryItems(prev => ({
-                ...prev,
-                [menuCategoryItem.menuCategoryId]: prev[menuCategoryItem.menuCategoryId]?.filter(
-                  item => item.id !== menuCategoryItem.id
-                ) || []
-              }));
-            } catch (error) {
-              console.error('Erreur lors de la suppression:', error);
-              showToast('Erreur lors de la suppression', 'error');
-            }
-          }
-        }
-      ]
-    );
+    await onDeleteMenuCategoryItem(menuCategoryItem.id);
+    showToast('Article retiré avec succès', 'success');
+
+    // Mettre à jour immédiatement l'état local
+    setCategoryItems(prev => ({
+      ...prev,
+      [menuCategoryItem.menuCategoryId]: prev[menuCategoryItem.menuCategoryId]?.filter(
+        item => item.id !== menuCategoryItem.id
+      ) || []
+    }));
   };
 
   return (
@@ -394,7 +376,7 @@ export function MenuEditor({
         <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 16, color: '#1A1A1A' }}>
           Informations générales
         </Text>
-        
+
         <View style={{ marginBottom: 16 }}>
           <Text style={{ fontSize: 14, fontWeight: '500', marginBottom: 8, color: '#374151' }}>
             Nom du menu *
@@ -498,11 +480,11 @@ export function MenuEditor({
 
       {/* Section Catégories */}
       <View style={{ marginBottom: 24 }}>
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: 16 
+        <View style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16
         }}>
           <Text style={{ fontSize: 18, fontWeight: '600', color: '#1A1A1A' }}>
             Catégories du menu
@@ -594,11 +576,11 @@ export function MenuEditor({
                 >
                   {/* Configuration de la catégorie */}
                   <View style={{ marginBottom: 16 }}>
-                    <View style={{ 
-                      flexDirection: 'row', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      marginBottom: 12 
+                    <View style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 12
                     }}>
                       <Text style={{ fontSize: 16, fontWeight: '600', color: '#1A1A1A' }}>
                         Catégorie {index + 1}
@@ -622,10 +604,10 @@ export function MenuEditor({
                         Type d'item *
                       </Text>
                       <Select
-                        choices={itemTypes.map(type => ({ 
-                          label: type.name, 
-                          value: type.name, 
-                          id: type.id 
+                        choices={itemTypes.map(type => ({
+                          label: type.name,
+                          value: type.name,
+                          id: type.id
                         }))}
                         selectedValue={categorySelections[index]}
                         placeholder="Sélectionner un type"
@@ -732,16 +714,16 @@ export function MenuEditor({
                       borderTopColor: '#E5E7EB',
                       paddingTop: 16
                     }}>
-                      <View style={{ 
-                        flexDirection: 'row', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        marginBottom: 12 
+                      <View style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 12
                       }}>
                         <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151' }}>
                           Articles assignés ({categoryItemsList.length})
                         </Text>
-                        
+
                         {availableItems.length > 0 && (
                           <Button
                             onPress={() => {
@@ -808,7 +790,7 @@ export function MenuEditor({
                               }}
                               placeholder="Sélectionner un article"
                             />
-                            
+
                             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                               <View style={{ flex: 1 }}>
                                 <Text style={{ fontSize: 12, marginBottom: 4 }}>Supplément (€)</Text>
@@ -831,7 +813,7 @@ export function MenuEditor({
                                   }}
                                 />
                               </View>
-                              
+
                               <View style={{ flexDirection: 'row', gap: 8 }}>
                                 <Button
                                   onPress={() => handleAddItem(index)}
@@ -860,8 +842,8 @@ export function MenuEditor({
                         <View style={{ alignItems: 'center', paddingVertical: 16 }}>
                           <Package size={24} color="#D1D5DB" />
                           <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 4 }}>
-                            {availableItems.length === 0 ? 
-                              'Tous les articles de ce type sont déjà assignés' : 
+                            {availableItems.length === 0 ?
+                              'Tous les articles de ce type sont déjà assignés' :
                               'Aucun article assigné'
                             }
                           </Text>
@@ -892,7 +874,7 @@ export function MenuEditor({
                                   )}
                                 </Text>
                               </View>
-                              
+
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                 <Pressable
                                   onPress={() => handleUpdateItem(menuCategoryItem)}
@@ -911,7 +893,7 @@ export function MenuEditor({
                                     <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>✓</Text>
                                   )}
                                 </Pressable>
-                                
+
                                 <Pressable
                                   onPress={() => handleDeleteItem(menuCategoryItem)}
                                   style={{
@@ -965,7 +947,7 @@ export function MenuEditor({
         >
           <Text style={{ color: '#374151', fontWeight: '500' }}>Annuler</Text>
         </Button>
-        
+
         <Button
           onPress={handleSave}
           disabled={isLoading}
