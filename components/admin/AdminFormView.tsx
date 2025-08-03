@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
     flexDirection: 'row',
     alignItems: 'center',
-    height: 72,
+    height: 60,
     paddingHorizontal: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

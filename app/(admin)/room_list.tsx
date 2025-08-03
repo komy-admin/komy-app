@@ -12,13 +12,14 @@ import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
 import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
 import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
+import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
 
 export default function RoomListPage() {
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
+  const roomFormView = useAdminFormView();
   const { showToast } = useToast();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -38,23 +39,29 @@ export default function RoomListPage() {
 
   const handleCreateRoom = () => {
     setCurrentRoom(null);
-    setIsModalVisible(true);
+    roomFormView.openCreate();
   };
 
   const handleEditRoom = (id: string) => {
     const room = rooms.find(room => room.id === id);
     if (!room) return;
     setCurrentRoom(room);
-    setIsModalVisible(true);
+    roomFormView.openEdit();
   };
 
   const handleCloseModal = () => {
-    setIsModalVisible(false);
+    roomFormView.close();
     setCurrentRoom(null);
   };
 
-  const handleSaveRoom = async (room: Room) => {
+  const handleSaveRoom = async (getFormData: () => any) => {
     try {
+      const formResult = getFormData();
+      if (!formResult.isValid) {
+        return false;
+      }
+
+      const room = formResult.data;
       if (room.id) {
         await updateRoom(room.id, room);
         showToast('Salle modifiée avec succès', 'success');
@@ -63,9 +70,14 @@ export default function RoomListPage() {
         showToast('Salle créée avec succès', 'success');
       }
       handleCloseModal();
-    } catch (err) {
+      return true;
+    } catch (err: any) {
       console.error('Error saving room:', err);
-      showToast('Erreur lors de la sauvegarde de la salle', 'error');
+      
+      // Afficher le message d'erreur spécifique si disponible
+      const errorMessage = err?.message || 'Erreur lors de la sauvegarde de la salle';
+      showToast(errorMessage, 'error');
+      return false;
     }
   };
 
@@ -231,19 +243,18 @@ export default function RoomListPage() {
         )}
       </View>
 
-      <CustomModal
-        isVisible={isModalVisible}
-        onClose={handleCloseModal}
-        width={600}
-        height={550}
-        title={currentRoom ? "Modifier la salle" : "Créer une salle"}
+      <AdminFormView
+        visible={roomFormView.isVisible}
+        mode={roomFormView.mode}
+        title={roomFormView.mode === 'create' ? "Création d'une salle" : `Modification de "${currentRoom?.name}"`}
+        onClose={roomFormView.close}
+        onCancel={roomFormView.close}
+        onSave={handleSaveRoom}
       >
         <RoomForm
           room={currentRoom}
-          onSave={handleSaveRoom}
-          onCancel={handleCloseModal}
         />
-      </CustomModal>
+      </AdminFormView>
 
       <CustomModal
         isVisible={isDeleteModalVisible}
