@@ -1,7 +1,7 @@
 import { useWindowDimensions, View, ScrollView, Text, StyleSheet } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { Item } from "~/types/item.types";
 import { Menu } from "~/types/menu.types";
 import { CustomModal } from "~/components/CustomModal";
@@ -15,6 +15,7 @@ import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
 import { CreditCard as Edit2, Trash, Power, UtensilsCrossed } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
 import { MenuEditor } from '~/components/admin/MenuEditor';
+import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -22,16 +23,19 @@ export default function MenuPage() {
   const [filters, setFilters] = useState<MenuFilterState>(createEmptyMenuFilters());
   
   // États pour les items
-  const [isItemModalVisible, setIsItemModalVisible] = useState(false);
+  const itemFormView = useAdminFormView();
   const [isDeleteItemModalVisible, setIsDeleteItemModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   
   // États pour les menus
-  const [isMenuModalVisible, setIsMenuModalVisible] = useState(false);
+  const menuFormView = useAdminFormView();
   const [isDeleteMenuModalVisible, setIsDeleteMenuModalVisible] = useState(false);
   const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+  
+  // Référence pour le scroll automatique du menu editor
+  const menuScrollViewRef = useRef<ScrollView>(null);
   
   
   const { showToast } = useToast();
@@ -81,18 +85,18 @@ export default function MenuPage() {
   // Gestion des items
   const handleCreateItem = () => {
     setCurrentItem(null);
-    setIsItemModalVisible(true);
+    itemFormView.openCreate();
   };
 
   const handleEditItem = (id: string) => {
     const item = items.find(item => item.id === id);
     if (!item) return;
     setCurrentItem(item);
-    setIsItemModalVisible(true);
+    itemFormView.openEdit();
   };
 
   const handleCloseItemModal = () => {
-    setIsItemModalVisible(false);
+    itemFormView.close();
     setCurrentItem(null);
   };
 
@@ -157,18 +161,18 @@ export default function MenuPage() {
   // Gestion des menus
   const handleCreateMenu = () => {
     setCurrentMenu(null);
-    setIsMenuModalVisible(true);
+    menuFormView.openCreate();
   };
 
   const handleEditMenu = (id: string) => {
     const menu = allMenus.find(menu => menu.id === id);
     if (!menu) return;
     setCurrentMenu(menu);
-    setIsMenuModalVisible(true);
+    menuFormView.openEdit();
   };
 
   const handleCloseMenuModal = () => {
-    setIsMenuModalVisible(false);
+    menuFormView.close();
     setCurrentMenu(null);
   };
 
@@ -185,6 +189,106 @@ export default function MenuPage() {
     } catch (err) {
       console.error('Error saving menu:', err);
       showToast('Erreur lors de la sauvegarde du menu', 'error');
+    }
+  };
+
+  // Nouvelle fonction de sauvegarde complexe pour les menus avec catégories et articles locaux
+  const handleComplexMenuSave = async (menuData: any) => {
+    try {
+      // Préparer les données : convertir les localItems en vraies catégories avec leurs items
+      const processedCategories = menuData.categories?.map((category: any) => {
+        // Créer la catégorie de base
+        const categoryBase = {
+          id: category.id,
+          itemTypeId: category.itemTypeId,
+          isRequired: category.isRequired,
+          maxSelections: category.maxSelections,
+          priceModifier: category.priceModifier,
+          itemType: category.itemType
+        };
+        
+        return categoryBase;
+      }) || [];
+      
+      const processedMenuData = {
+        ...menuData,
+        categories: processedCategories
+      };
+      
+      let savedMenu: Menu;
+      const isUpdate = Boolean(menuData.id);
+      
+      // 1. Sauvegarder le menu avec ses catégories (le hook gère déjà cela)
+      if (isUpdate) {
+        savedMenu = await updateMenu(menuData.id, processedMenuData);
+      } else {
+        savedMenu = await createMenu(processedMenuData);
+      }
+      
+      // 2. Traiter SEULEMENT les nouveaux articles ajoutés localement
+      if (menuData.categories && savedMenu.categories) {
+        
+        for (let i = 0; i < menuData.categories.length; i++) {
+          const originalCategory = menuData.categories[i];
+          const savedCategory = savedMenu.categories[i];
+          
+          if (originalCategory.localItems && originalCategory.localItems.length > 0) {
+            // Séparer les différents types d'opérations
+            const newLocalItems = originalCategory.localItems.filter((localItem: any) => 
+              localItem.tempId.startsWith('local-')
+            );
+            
+            const modifiedItems = originalCategory.localItems.filter((localItem: any) => 
+              localItem.originalId && localItem.isModified && !localItem.isDeleted
+            );
+            
+            const deletedItems = originalCategory.localItems.filter((localItem: any) => 
+              localItem.originalId && localItem.isDeleted
+            );
+            
+            // 1. Créer les nouveaux items
+            for (const localItem of newLocalItems) {
+              if (localItem.itemId && savedCategory.id) {
+                const menuCategoryItemData = {
+                  menuCategoryId: savedCategory.id,
+                  itemId: localItem.itemId,
+                  supplement: Number(localItem.supplement) || 0,
+                  isAvailable: Boolean(localItem.isAvailable)
+                };
+                
+                await createMenuCategoryItem(menuCategoryItemData);
+              }
+            }
+            
+            // 2. Mettre à jour les items modifiés
+            for (const localItem of modifiedItems) {
+              if (localItem.originalId) {
+                const updateData = {
+                  supplement: Number(localItem.supplement) || 0,
+                  isAvailable: Boolean(localItem.isAvailable)
+                };
+                
+                await updateMenuCategoryItem(localItem.originalId, updateData);
+              }
+            }
+            
+            // 3. Supprimer les items marqués comme supprimés
+            for (const localItem of deletedItems) {
+              if (localItem.originalId) {
+                await deleteMenuCategoryItem(localItem.originalId);
+              }
+            }
+          }
+        }
+      }
+      
+      showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
+      handleCloseMenuModal();
+      
+    } catch (err) {
+      console.error('Error saving complex menu:', err);
+      showToast('Erreur lors de la sauvegarde du menu', 'error');
+      throw err; // Re-throw pour que AdminFormView sache que ça a échoué
     }
   };
 
@@ -492,43 +596,77 @@ export default function MenuPage() {
         </Tabs>
       </View>
 
-      {/* Modal pour les items */}
-      <CustomModal
-        isVisible={isItemModalVisible}
+      {/* Vue formulaire pour les items */}
+      <AdminFormView
+        visible={itemFormView.isVisible}
+        mode={itemFormView.mode}
+        title={
+          itemFormView.mode === 'create' 
+            ? "Création d'un article" 
+            : currentItem 
+              ? `Modification de "${currentItem.name}"` 
+              : "Modifier l'article"
+        }
         onClose={handleCloseItemModal}
-        width={600}
-        height={560}
-        title={currentItem ? "Modifier l'article" : "Créer un article"}
+        onCancel={handleCloseItemModal}
+        onSave={async (getFormData) => {
+          const formData = getFormData();
+          if (!formData.isValid) return false;
+          
+          try {
+            await handleSaveItem(formData.data);
+            return true;
+          } catch (error) {
+            console.error('Erreur lors de la sauvegarde de l\'article:', error);
+            return false;
+          }
+        }}
       >
         <MenuForm
           item={currentItem}
           itemTypes={itemTypes}
-          onSave={handleSaveItem}
-          onCancel={handleCloseItemModal}
           activeTab={activeTab}
         />
-      </CustomModal>
+      </AdminFormView>
 
-      {/* Modal pour les menus */}
-      <CustomModal
-        isVisible={isMenuModalVisible}
+      {/* Vue formulaire pour les menus */}
+      <AdminFormView
+        visible={menuFormView.isVisible}
+        mode={menuFormView.mode}
+        title={
+          menuFormView.mode === 'create' 
+            ? "Création d'un menu" 
+            : currentMenu 
+              ? `Modification de "${currentMenu.name}"` 
+              : "Modifier le menu"
+        }
         onClose={handleCloseMenuModal}
-        width={900}
-        height={800}
-        title={currentMenu ? "Modifier le menu" : "Créer un menu"}
+        onCancel={handleCloseMenuModal}
+        scrollViewRef={menuScrollViewRef}
+        onSave={async (getFormData) => {
+          const formData = getFormData();
+          if (!formData.isValid) return false;
+          
+          try {
+            await handleComplexMenuSave(formData.data);
+            return true;
+          } catch (error) {
+            console.error('Erreur lors de la sauvegarde du menu:', error);
+            return false;
+          }
+        }}
       >
         <MenuEditor
           menu={currentMenu}
           items={items}
           itemTypes={itemTypes}
-          onSave={handleSaveMenu}
-          onCancel={handleCloseMenuModal}
           onCreateMenuCategoryItem={createMenuCategoryItem}
           onUpdateMenuCategoryItem={updateMenuCategoryItem}
           onDeleteMenuCategoryItem={deleteMenuCategoryItem}
           onLoadMenuCategoryItems={loadMenuCategoryItems}
+          scrollViewRef={menuScrollViewRef}
         />
-      </CustomModal>
+      </AdminFormView>
 
       {/* Modal de suppression des items */}
       <CustomModal
