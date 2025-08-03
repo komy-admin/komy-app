@@ -55,7 +55,10 @@ export function AdminFormView({
     const formData = getFormData();
 
     if (!formData.isValid) {
-      // Les erreurs sont déjà gérées par le formulaire
+      // Appeler la méthode de validation du formulaire pour afficher les erreurs
+      if (formRef.current.validateForm) {
+        formRef.current.validateForm();
+      }
       return;
     }
 

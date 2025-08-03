@@ -4,6 +4,7 @@ import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState, useMemo } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
+import { AdminFormView, useAdminFormView } from "~/components/admin/AdminFormView";
 import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
 import { useToast } from '~/components/ToastProvider';
@@ -22,7 +23,7 @@ export default function TeamPage() {
   const [teamFilters, setTeamFilters] = useState<TeamFilterState>(createEmptyTeamFilters());
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [selectedUserForQr, setSelectedUserForQr] = useState<User | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const teamFormView = useAdminFormView();
   const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
@@ -69,23 +70,29 @@ export default function TeamPage() {
 
   const handleCreateUser = () => {
     setUser(null);
-    setIsModalVisible(true);
+    teamFormView.openCreate();
   };
 
   const handleEditUser = (id: string) => {
     const user = users.find(user => user.id === id);
     if (!user) return;
     setUser(user);
-    setIsModalVisible(true);
+    teamFormView.openEdit();
   };
 
   const handleCloseModal = () => {
-    setIsModalVisible(false);
+    teamFormView.close();
     setUser(null);
   };
 
-  const handleSaveUser = async (user: User) => {
+  const handleSaveUser = async (getFormData: () => any) => {
     try {
+      const formResult = getFormData();
+      if (!formResult.isValid) {
+        return false;
+      }
+
+      const user = formResult.data;
       if (user.id) {
         await updateUser(user.id, user);
         showToast('Utilisateur modifié avec succès', 'success');
@@ -94,12 +101,14 @@ export default function TeamPage() {
         showToast('Utilisateur créé avec succès', 'success');
       }
       handleCloseModal();
+      return true;
     } catch (err: any) {
       console.error('Error saving user:', err);
       
       // Afficher le message d'erreur spécifique si disponible
       const errorMessage = err?.message || 'Erreur lors de la sauvegarde de l\'utilisateur';
       showToast(errorMessage, 'error');
+      return false;
     }
   };
 
@@ -366,20 +375,19 @@ export default function TeamPage() {
         </Tabs>
       </View>
 
-      <CustomModal
-        isVisible={isModalVisible}
-        onClose={handleCloseModal}
-        width={600}
-        height={675}
-        title={User ? "Modifier l'utilisateur" : "Créer un utilisateur"}
+      <AdminFormView
+        visible={teamFormView.isVisible}
+        mode={teamFormView.mode}
+        title={teamFormView.mode === 'create' ? "Création d'un utilisateur" : `Modification de "${User?.firstName} ${User?.lastName}"`}
+        onClose={teamFormView.close}
+        onCancel={teamFormView.close}
+        onSave={handleSaveUser}
       >
         <TeamForm
           user={User}
-          onSave={handleSaveUser}
-          onCancel={handleCloseModal}
           activeTab={activeTab}
         />
-      </CustomModal>
+      </AdminFormView>
 
       <CustomModal
         isVisible={isDeleteModalVisible}
