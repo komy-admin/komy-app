@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
     elevation: 1,
     ...(Platform.OS === 'web' && {
       cursor: 'text',
-      outline: 'none',
       transition: 'all 0.2s ease',
       ':focus': {
         borderColor: '#2A2E33',

@@ -427,7 +427,6 @@ const styles = StyleSheet.create({
     elevation: 1,
     ...(Platform.OS === 'web' && {
       cursor: 'text',
-      outline: 'none',
       transition: 'all 0.2s ease',
       ':focus': {
         borderColor: '#2A2E33',
@@ -567,9 +566,6 @@ const styles = StyleSheet.create({
   statusPulseActive: {
     borderColor: '#10B981',
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    ...(Platform.OS === 'web' && {
-      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-    })
   },
   
   statusCore: {
