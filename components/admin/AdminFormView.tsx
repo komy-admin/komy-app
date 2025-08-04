@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
 import { ArrowLeftToLine } from 'lucide-react-native';
 import { Button } from '~/components/ui';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 export type AdminFormViewMode = 'create' | 'edit';
 
@@ -18,6 +19,22 @@ export interface AdminFormRef<T = any> {
   getFormData: () => AdminFormData<T>;
   resetForm?: () => void;
   validateForm?: () => boolean;
+}
+
+// Interface pour le contexte de confirmation
+export interface AdminConfirmationContext {
+  showConfirmation: (config: Omit<AdminConfirmationModal, 'isVisible' | 'isLoading'>) => void;
+  hideConfirmation: () => void;
+}
+
+// Interface pour la modal de confirmation intégrée - Compatible avec DeleteConfirmationModal
+export interface AdminConfirmationModal {
+  isVisible: boolean;
+  entityName: string;
+  entityType: string;
+  isLoading?: boolean;
+  onConfirm: () => void | Promise<void>;
+  onCancel: () => void;
 }
 
 export interface AdminFormViewProps {
@@ -45,7 +62,13 @@ export function AdminFormView({
   backgroundColor = '#FFFFFF',
   scrollViewRef
 }: AdminFormViewProps) {
+  // ✅ Return conditionnel AVANT tous les hooks
+  if (!visible) {
+    return null;
+  }
+
   const [isSaving, setIsSaving] = React.useState(false);
+  const [confirmationModal, setConfirmationModal] = React.useState<AdminConfirmationModal | null>(null);
   const formRef = React.useRef<AdminFormRef>(null);
 
   const handleSave = async () => {
@@ -75,13 +98,22 @@ export function AdminFormView({
     }
   };
 
-  if (!visible) {
-    return null;
-  }
+  // Créer le contexte pour les confirmations
+  const confirmationContext = React.useMemo(() => ({
+    showConfirmation: (config: Omit<AdminConfirmationModal, 'isVisible'>) => {
+      setConfirmationModal({ ...config, isVisible: true });
+    },
+    hideConfirmation: () => {
+      setConfirmationModal(null);
+    }
+  }), []);
 
-  // Clone l'enfant pour lui passer la ref en utilisant React.cloneElement correctement
+  // Clone l'enfant pour lui passer la ref et le contexte de confirmation
   const childWithRef = React.isValidElement(children) 
-    ? React.cloneElement(children, { ref: formRef } as any)
+    ? React.cloneElement(children, { 
+        ref: formRef,
+        confirmationContext 
+      } as any)
     : children;
 
   return (
@@ -158,6 +190,30 @@ export function AdminFormView({
             </Button>
           </View>
         </View>
+      )}
+
+      {/* Modal de confirmation intégrée utilisant DeleteConfirmationModal */}
+      {confirmationModal && (
+        <DeleteConfirmationModal
+          isVisible={confirmationModal.isVisible}
+          onClose={() => {
+            confirmationModal.onCancel();
+            setConfirmationModal(null);
+          }}
+          onConfirm={async () => {
+            setConfirmationModal(prev => prev ? { ...prev, isLoading: true } : null);
+            try {
+              await confirmationModal.onConfirm();
+              setConfirmationModal(null);
+            } catch (error) {
+              console.error('Erreur lors de la confirmation:', error);
+              setConfirmationModal(prev => prev ? { ...prev, isLoading: false } : null);
+            }
+          }}
+          entityName={confirmationModal.entityName}
+          entityType={confirmationModal.entityType}
+          isLoading={confirmationModal.isLoading}
+        />
       )}
     </View>
   );

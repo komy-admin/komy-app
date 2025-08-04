@@ -5,6 +5,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
 import { AdminFormView, useAdminFormView } from "~/components/admin/AdminFormView";
+import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
 import { useToast } from '~/components/ToastProvider';
@@ -32,6 +33,7 @@ export default function TeamPage() {
   const { currentUser } = useSelector((state: RootState) => state.auth);
   const [User, setUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { showToast } = useToast();
 
   // Vérifier les droits d'accès aux utilisateurs
@@ -122,6 +124,7 @@ export default function TeamPage() {
   const confirmDelete = async () => {
     if (!userToDelete) return;
 
+    setIsDeleting(true);
     try {
       await deleteUser(userToDelete.id);
       showToast('Utilisateur supprimé avec succès', 'success');
@@ -129,9 +132,15 @@ export default function TeamPage() {
       console.error('Error deleting user:', err);
       showToast('Erreur lors de la suppression de l\'utilisateur', 'error');
     } finally {
+      setIsDeleting(false);
       setIsDeleteModalVisible(false);
       setUserToDelete(null);
     }
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalVisible(false);
+    setUserToDelete(null);
   };
 
   const handleShowQrCode = async (user: User) => {
@@ -389,47 +398,14 @@ export default function TeamPage() {
         />
       </AdminFormView>
 
-      <CustomModal
+      <DeleteConfirmationModal
         isVisible={isDeleteModalVisible}
-        onClose={() => {
-          setIsDeleteModalVisible(false);
-          setUserToDelete(null);
-        }}
-        width={600}
-        height={320}
-        title="Confirmation de suppression"
-        titleColor="#FF4444"
-      >
-        <View style={styles.deleteModalContent}>
-          <View style={{ paddingTop: 20 }}>
-            <Text style={styles.deleteMessage}>
-              Êtes-vous sûr de vouloir supprimer le profil {userToDelete?.firstName} {userToDelete?.lastName} ?
-            </Text>
-            <Text style={styles.deleteWarning}>
-              {'(Cette action est irréversible.)'}
-            </Text>
-          </View>
-          <View style={styles.deleteButtonContainer}>
-            <Button
-              onPress={confirmDelete}
-              style={styles.deleteButton}
-              variant="destructive"
-            >
-              <Text style={styles.deleteButtonText}>Supprimer</Text>
-            </Button>
-            <Button
-              onPress={() => {
-                setIsDeleteModalVisible(false);
-                setUserToDelete(null);
-              }}
-              style={styles.cancelButton}
-              variant="ghost"
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          </View>
-        </View>
-      </CustomModal>
+        onClose={handleCloseDeleteModal}
+        onConfirm={confirmDelete}
+        entityName={userToDelete ? `${userToDelete.firstName} ${userToDelete.lastName}` : ''}
+        entityType="le profil"
+        isLoading={isDeleting}
+      />
 
       <CustomModal
         isVisible={qrModalVisible}
@@ -492,55 +468,6 @@ export default function TeamPage() {
 }
 
 const styles = StyleSheet.create({
-  deleteModalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  deleteMessage: {
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-    color: '#2A2E33',
-  },
-  deleteWarning: {
-    fontSize: 14,
-    color: '#FF4444',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  deleteButtonContainer: {
-    width: '100%',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  cancelButton: {
-    width: '100%',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginBottom: 7,
-  },
-  cancelButtonText: {
-    color: '#2A2E33',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  deleteButton: {
-    width: '100%',
-    backgroundColor: '#FF4444',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   qrModalContent: {
     flex: 1,
     paddingHorizontal: 20,

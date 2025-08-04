@@ -13,11 +13,13 @@ import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
 import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
 import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 export default function RoomListPage() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const roomFormView = useAdminFormView();
   const { showToast } = useToast();
@@ -91,6 +93,7 @@ export default function RoomListPage() {
   const confirmDelete = async () => {
     if (!roomToDelete?.id) return;
 
+    setIsDeleting(true);
     try {
       await deleteRoom(roomToDelete.id);
       showToast('Salle supprimée avec succès', 'success');
@@ -98,9 +101,15 @@ export default function RoomListPage() {
       console.error('Error deleting room:', err);
       showToast('Erreur lors de la suppression de la salle', 'error');
     } finally {
+      setIsDeleting(false);
       setIsDeleteModalVisible(false);
       setRoomToDelete(null);
     }
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalVisible(false);
+    setRoomToDelete(null);
   };
 
   const navigateToRoomEdit = (roomId: string) => {
@@ -256,47 +265,14 @@ export default function RoomListPage() {
         />
       </AdminFormView>
 
-      <CustomModal
+      <DeleteConfirmationModal
         isVisible={isDeleteModalVisible}
-        onClose={() => {
-          setIsDeleteModalVisible(false);
-          setRoomToDelete(null);
-        }}
-        width={600}
-        height={320}
-        title="Confirmation de suppression"
-        titleColor="#FF4444"
-      >
-        <View style={styles.deleteModalContent}>
-          <View style={{ paddingTop: 20 }}>
-            <Text style={styles.deleteMessage}>
-              Êtes-vous sûr de vouloir supprimer la salle {roomToDelete?.name} ?
-            </Text>
-            <Text style={styles.deleteWarning}>
-              {'(Cette action est irréversible.)'}
-            </Text>
-          </View>
-          <View style={styles.deleteButtonContainer}>
-            <Button
-              onPress={confirmDelete}
-              style={styles.deleteButton}
-              variant="destructive"
-            >
-              <Text style={styles.deleteButtonText}>Supprimer</Text>
-            </Button>
-            <Button
-              onPress={() => {
-                setIsDeleteModalVisible(false);
-                setRoomToDelete(null);
-              }}
-              variant="ghost"
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          </View>
-        </View>
-      </CustomModal>
+        onClose={handleCloseDeleteModal}
+        onConfirm={confirmDelete}
+        entityName={roomToDelete?.name || ''}
+        entityType="la salle"
+        isLoading={isDeleting}
+      />
     </View>
   );
 }
@@ -321,55 +297,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-  },
-  deleteModalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  deleteMessage: {
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-    color: '#2A2E33',
-  },
-  deleteWarning: {
-    fontSize: 14,
-    color: '#FF4444',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  deleteButtonContainer: {
-    width: '100%',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  cancelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    marginBottom: 7,
-  },
-  cancelButtonText: {
-    color: '#2A2E33',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  deleteButton: {
-    backgroundColor: '#FF4444',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
   },
   tableCountContainer: {
     flexDirection: 'row',

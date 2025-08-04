@@ -218,11 +218,9 @@ export function ActionMenu({ actions, width = 180, withSeparator = false, fullWi
 const styles = StyleSheet.create({
   menuButtonContainer: {
     paddingHorizontal: 4,
-    paddingLeft: 8,
   },
   menuButton: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
     borderRadius: 28,
     minWidth: 60,
     alignItems: 'center',

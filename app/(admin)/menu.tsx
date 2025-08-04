@@ -16,6 +16,7 @@ import { CreditCard as Edit2, Trash, Power, UtensilsCrossed } from 'lucide-react
 import { ActionItem } from '~/components/ActionMenu';
 import { MenuEditor } from '~/components/admin/MenuEditor';
 import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -27,12 +28,14 @@ export default function MenuPage() {
   const [isDeleteItemModalVisible, setIsDeleteItemModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // États pour les menus
   const menuFormView = useAdminFormView();
   const [isDeleteMenuModalVisible, setIsDeleteMenuModalVisible] = useState(false);
   const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+  const [isDeletingMenu, setIsDeletingMenu] = useState(false);
   
   // Référence pour le scroll automatique du menu editor
   const menuScrollViewRef = useRef<ScrollView>(null);
@@ -136,6 +139,7 @@ export default function MenuPage() {
   const confirmDeleteItem = async () => {
     if (!itemToDelete) return;
 
+    setIsDeleting(true);
     try {
       await deleteMenuItem(itemToDelete.id);
       showToast('Article supprimé avec succès', 'success');
@@ -143,9 +147,15 @@ export default function MenuPage() {
       console.error('Error deleting item:', err);
       showToast('Erreur lors de la suppression de l\'article', 'error');
     } finally {
+      setIsDeleting(false);
       setIsDeleteItemModalVisible(false);
       setItemToDelete(null);
     }
+  };
+
+  const handleCloseDeleteItemModal = () => {
+    setIsDeleteItemModalVisible(false);
+    setItemToDelete(null);
   };
 
   const handleToggleItemStatus = async (id: string) => {
@@ -302,6 +312,7 @@ export default function MenuPage() {
   const confirmDeleteMenu = async () => {
     if (!menuToDelete) return;
 
+    setIsDeletingMenu(true);
     try {
       await deleteMenu(menuToDelete.id);
       showToast('Menu supprimé avec succès', 'success');
@@ -309,9 +320,15 @@ export default function MenuPage() {
       console.error('Error deleting menu:', err);
       showToast('Erreur lors de la suppression du menu', 'error');
     } finally {
+      setIsDeletingMenu(false);
       setIsDeleteMenuModalVisible(false);
       setMenuToDelete(null);
     }
+  };
+
+  const handleCloseDeleteMenuModal = () => {
+    setIsDeleteMenuModalVisible(false);
+    setMenuToDelete(null);
   };
 
   const getItemActions = (item: Item): ActionItem[] => {
@@ -669,142 +686,26 @@ export default function MenuPage() {
       </AdminFormView>
 
       {/* Modal de suppression des items */}
-      <CustomModal
+      <DeleteConfirmationModal
         isVisible={isDeleteItemModalVisible}
-        onClose={() => {
-          setIsDeleteItemModalVisible(false);
-          setItemToDelete(null);
-        }}
-        width={600}
-        height={320}
-        title="Confirmation de suppression"
-        titleColor="#FF4444"
-      >
-        <View style={styles.deleteModalContent}>
-          <View style={{ paddingTop: 20 }}>
-            <Text style={styles.deleteMessage}>
-              Êtes-vous sûr de vouloir supprimer l'article {itemToDelete?.name} ?
-            </Text>
-            <Text style={styles.deleteWarning}>
-              {'(Cette action est irréversible.)'}
-            </Text>
-          </View>
-          <View style={styles.deleteButtonContainer}>
-            <Button
-              onPress={confirmDeleteItem}
-              style={styles.deleteButton}
-              variant="destructive"
-            >
-              <Text style={styles.deleteButtonText}>Supprimer</Text>
-            </Button>
-            <Button
-              onPress={() => {
-                setIsDeleteItemModalVisible(false);
-                setItemToDelete(null);
-              }}
-              variant="ghost"
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          </View>
-        </View>
-      </CustomModal>
+        onClose={handleCloseDeleteItemModal}
+        onConfirm={confirmDeleteItem}
+        entityName={itemToDelete?.name || ''}
+        entityType="l'article"
+        isLoading={isDeleting}
+      />
 
       {/* Modal de suppression des menus */}
-      <CustomModal
+      <DeleteConfirmationModal
         isVisible={isDeleteMenuModalVisible}
-        onClose={() => {
-          setIsDeleteMenuModalVisible(false);
-          setMenuToDelete(null);
-        }}
-        width={600}
-        height={320}
-        title="Confirmation de suppression"
-        titleColor="#FF4444"
-      >
-        <View style={styles.deleteModalContent}>
-          <View style={{ paddingTop: 20 }}>
-            <Text style={styles.deleteMessage}>
-              Êtes-vous sûr de vouloir supprimer le menu {menuToDelete?.name} ?
-            </Text>
-            <Text style={styles.deleteWarning}>
-              {'(Cette action est irréversible.)'}
-            </Text>
-          </View>
-          <View style={styles.deleteButtonContainer}>
-            <Button
-              onPress={confirmDeleteMenu}
-              style={styles.deleteButton}
-              variant="destructive"
-            >
-              <Text style={styles.deleteButtonText}>Supprimer</Text>
-            </Button>
-            <Button
-              onPress={() => {
-                setIsDeleteMenuModalVisible(false);
-                setMenuToDelete(null);
-              }}
-              variant="ghost"
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          </View>
-        </View>
-      </CustomModal>
+        onClose={handleCloseDeleteMenuModal}
+        onConfirm={confirmDeleteMenu}
+        entityName={menuToDelete?.name || ''}
+        entityType="le menu"
+        isLoading={isDeletingMenu}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  deleteModalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  deleteMessage: {
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-    color: '#2A2E33',
-  },
-  deleteWarning: {
-    fontSize: 14,
-    color: '#FF4444',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  deleteButtonContainer: {
-    width: '100%',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  cancelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    marginBottom: 7,
-  },
-  cancelButtonText: {
-    color: '#2A2E33',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  deleteButton: {
-    backgroundColor: '#FF4444',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-});
+const styles = StyleSheet.create({});

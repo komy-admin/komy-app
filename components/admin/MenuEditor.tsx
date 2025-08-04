@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Alert, Platform, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Platform, StyleSheet } from 'react-native';
 import { Button } from '~/components/ui';
 import { Select } from '~/components/ui/select';
 import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
@@ -7,7 +7,7 @@ import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { Plus, Trash2, Edit3, Save, X, Package, Settings, Eye, EyeOff, FileText, PencilLine } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
-import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
+import { AdminFormRef, AdminFormData, AdminConfirmationContext } from '~/components/admin/AdminFormView';
 
 interface MenuEditorProps {
   menu?: Menu | null; // Si null = création, sinon modification
@@ -21,6 +21,7 @@ interface MenuEditorProps {
   onDeleteMenuCategoryItem: (id: string) => Promise<void>;
   onLoadMenuCategoryItems: (menuCategoryId: string) => Promise<MenuCategoryItem[]>;
   scrollViewRef?: React.RefObject<ScrollView | null>;
+  confirmationContext?: AdminConfirmationContext;
 }
 
 interface MenuFormData {
@@ -67,7 +68,8 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
   onUpdateMenuCategoryItem,
   onDeleteMenuCategoryItem,
   onLoadMenuCategoryItems,
-  scrollViewRef
+  scrollViewRef,
+  confirmationContext
 }, ref) => {
   const [formData, setFormData] = useState<MenuFormData>({
     name: menu?.name || '',
@@ -285,36 +287,67 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
 
   const removeCategory = (index: number) => {
     const categoryToRemove = formData.categories[index];
+    const itemType = itemTypes.find(type => type.id === categoryToRemove.itemTypeId);
+    const categoryName = itemType?.name || `Catégorie ${index + 1}`;
+    
+    if (!confirmationContext) {
+      // Fallback si pas de contexte de confirmation
+      console.warn('Contexte de confirmation non disponible');
+      return;
+    }
 
-    Alert.alert(
-      'Supprimer la catégorie',
-      'Êtes-vous sûr de vouloir supprimer cette catégorie ? Tous les articles assignés seront également supprimés.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: () => {
-            setFormData(prev => ({
-              ...prev,
-              categories: prev.categories.filter((_, i) => i !== index)
-            }));
+    confirmationContext.showConfirmation({
+      entityName: categoryName,
+      entityType: 'la catégorie',
+      onConfirm: async () => {
+        try {
+          setFormData(prev => ({
+            ...prev,
+            categories: prev.categories.filter((_, i) => i !== index)
+          }));
 
-            // Réindexer les sélections
-            const newSelections: Record<number, any> = {};
-            Object.entries(categorySelections).forEach(([key, value]) => {
+          // Réindexer les sélections
+          const newSelections: Record<number, any> = {};
+          Object.entries(categorySelections).forEach(([key, value]) => {
+            const idx = parseInt(key);
+            if (idx < index) {
+              newSelections[idx] = value;
+            } else if (idx > index) {
+              newSelections[idx - 1] = value;
+            }
+          });
+          setCategorySelections(newSelections);
+          
+          // Supprimer les items locaux de cette catégorie
+          setLocalCategoryItems(prev => {
+            const newItems = { ...prev };
+            delete newItems[index];
+            
+            // Réindexer les items locaux
+            const reindexedItems: Record<number, LocalMenuCategoryItem[]> = {};
+            Object.entries(newItems).forEach(([key, value]) => {
               const idx = parseInt(key);
               if (idx < index) {
-                newSelections[idx] = value;
+                reindexedItems[idx] = value;
               } else if (idx > index) {
-                newSelections[idx - 1] = value;
+                reindexedItems[idx - 1] = value;
               }
             });
-            setCategorySelections(newSelections);
-          }
+            
+            return reindexedItems;
+          });
+          
+          showToast('Catégorie supprimée avec succès', 'success');
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la catégorie:', error);
+          showToast('Erreur lors de la suppression de la catégorie', 'error');
+          throw error; // Re-throw pour que AdminFormView sache que ça a échoué
         }
-      ]
-    );
+      },
+      onCancel: () => {
+        // Rien à faire, la modal se ferme automatiquement
+      }
+    });
   };
 
   const updateCategory = (index: number, field: keyof MenuCategoryFormData, value: any) => {
@@ -422,27 +455,48 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
   };
 
   const handleDeleteItem = (categoryIndex: number, localItem: LocalMenuCategoryItem) => {
-    if (localItem.originalId) {
-      // Pour les items existants, marquer comme supprimé au lieu de les supprimer
-      setLocalCategoryItems(prev => ({
-        ...prev,
-        [categoryIndex]: prev[categoryIndex]?.map(item =>
-          item.tempId === localItem.tempId 
-            ? { ...item, isDeleted: true }
-            : item
-        ) || []
-      }));
-    } else {
-      // Pour les nouveaux items locaux, les supprimer directement
-      setLocalCategoryItems(prev => ({
-        ...prev,
-        [categoryIndex]: prev[categoryIndex]?.filter(
-          item => item.tempId !== localItem.tempId
-        ) || []
-      }));
+    if (!confirmationContext) {
+      // Fallback si pas de contexte de confirmation
+      console.warn('Contexte de confirmation non disponible');
+      return;
     }
 
-    showToast('Article retiré avec succès', 'success');
+    confirmationContext.showConfirmation({
+      entityName: localItem.item?.name || 'cet article',
+      entityType: 'l\'article',
+      onConfirm: async () => {
+        try {
+          if (localItem.originalId) {
+            // Pour les items existants, marquer comme supprimé au lieu de les supprimer
+            setLocalCategoryItems(prev => ({
+              ...prev,
+              [categoryIndex]: prev[categoryIndex]?.map(item =>
+                item.tempId === localItem.tempId 
+                  ? { ...item, isDeleted: true }
+                  : item
+              ) || []
+            }));
+          } else {
+            // Pour les nouveaux items locaux, les supprimer directement
+            setLocalCategoryItems(prev => ({
+              ...prev,
+              [categoryIndex]: prev[categoryIndex]?.filter(
+                item => item.tempId !== localItem.tempId
+              ) || []
+            }));
+          }
+
+          showToast('Article retiré avec succès', 'success');
+        } catch (error) {
+          console.error('Erreur lors de la suppression de l\'article:', error);
+          showToast('Erreur lors de la suppression de l\'article', 'error');
+          throw error;
+        }
+      },
+      onCancel: () => {
+        // Rien à faire, la modal se ferme automatiquement
+      }
+    });
   };
 
   const handleEditItem = (categoryIndex: number, localItem: LocalMenuCategoryItem) => {
