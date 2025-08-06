@@ -1,53 +1,448 @@
-import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Settings, ChefHat, Utensils, LayoutGrid as Layout } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Platform, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import { Plus, PencilLine, Trash2, Check, X, Utensils, Save } from 'lucide-react-native';
+import { useItemTypes } from '~/hooks/useItemTypes';
+import { useToast } from '~/components/ToastProvider';
+import { ItemType } from '~/types/item-type.types';
+
+interface ItemTypeCardProps {
+  itemType: ItemType;
+  isEditing: boolean;
+  onEdit: () => void;
+  onSave: (data: Partial<ItemType>) => void;
+  onCancel: () => void;
+  onDelete: () => void;
+}
+
+// Couleur par défaut pour tous les itemTypes
+const getItemTypeColor = () => '#6366F1';
+
+// Génère les initiales du nom (1 ou 2 lettres)
+const getItemTypeInitials = (itemTypeName: string) => {
+  const words = itemTypeName.trim().split(' ');
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+  return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
+};
+
+const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
+  itemType,
+  isEditing,
+  onEdit,
+  onSave,
+  onCancel,
+  onDelete
+}) => {
+  const [editedName, setEditedName] = useState(itemType.name);
+
+  React.useEffect(() => {
+    setEditedName(itemType.name);
+  }, [itemType.name, isEditing]);
+
+  const handleSave = () => {
+    if (editedName.trim() && editedName.trim() !== itemType.name) {
+      onSave({ name: editedName.trim() });
+    } else {
+      onCancel(); // Si pas de changement, juste annuler
+    }
+  };
+
+  const handleCancel = () => {
+    setEditedName(itemType.name);
+    onCancel();
+  };
+
+  return (
+    <View style={styles.itemTypeCard}>
+      <View style={styles.itemTypeCardHeader}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.iconText}>
+            {getItemTypeInitials(itemType.name)}
+          </Text>
+        </View>
+        
+        {isEditing ? (
+          <>
+            <View style={styles.editInputContainer}>
+              <TextInput
+                style={styles.editInput}
+                value={editedName}
+                onChangeText={setEditedName}
+                placeholder="Nom du type"
+                autoFocus
+              />
+            </View>
+            
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.validateButton, (!editedName.trim() || editedName.trim() === itemType.name) && styles.disabledButton]}
+                onPress={handleSave}
+                disabled={!editedName.trim()}
+              >
+                <Check size={16} color="#FFFFFF" strokeWidth={2} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={handleCancel}
+              >
+                <X size={16} color="#EF4444" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.itemTypeInfo}>
+              <Text style={styles.itemTypeName}>{itemType.name}</Text>
+            </View>
+            
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={onEdit}
+              >
+                <PencilLine size={16} color="#6366F1" strokeWidth={1.5} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={onDelete}
+              >
+                <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
+    </View>
+  );
+};
 
 export default function ConfigurationRestoPage() {
+  const {
+    itemTypes,
+    loading,
+    error,
+    createItemType,
+    updateItemType,
+    deleteItemType
+  } = useItemTypes();
+
+  const { showToast } = useToast();
+  const isMountedRef = React.useRef(true);
+  
+  const [isCreating, setIsCreating] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [localItemTypes, setLocalItemTypes] = useState<ItemType[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [localEditingItemId, setLocalEditingItemId] = useState<string | null>(null);
+  
+  // Synchroniser l'état local avec les itemTypes du store
+  React.useEffect(() => {
+    if (itemTypes && itemTypes.length > 0 && !hasChanges) {
+      setLocalItemTypes([...itemTypes]);
+    }
+  }, [itemTypes, hasChanges]);
+
+  // Cleanup pour éviter les memory leaks
+  React.useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const handleCreateItemType = () => {
+    if (!newItemName.trim()) return;
+    
+    // Vérification des doublons
+    const isDuplicate = localItemTypes.some(
+      item => item.name.toLowerCase() === newItemName.trim().toLowerCase()
+    );
+    
+    if (isDuplicate) {
+      showToast('Ce nom de type existe déjà', 'error');
+      return;
+    }
+    
+    const newItemType: ItemType = {
+      id: `temp-${Date.now()}`, // ID temporaire
+      name: newItemName.trim()
+    };
+    
+    console.log('🆕 Création local itemType:', newItemType);
+    setLocalItemTypes(prev => {
+      const newList = [...prev, newItemType];
+      console.log('📝 Nouvelle liste locale:', newList);
+      return newList;
+    });
+    setNewItemName('');
+    setIsCreating(false);
+    setHasChanges(true);
+    console.log('✅ HasChanges défini à true');
+  };
+
+  const handleUpdateItemType = (id: string, data: Partial<ItemType>) => {
+    // Vérifier si il y a vraiment un changement
+    const currentItem = localItemTypes.find(item => item.id === id);
+    if (!currentItem || !data.name || currentItem.name === data.name.trim()) {
+      setLocalEditingItemId(null);
+      return;
+    }
+    
+    // Appliquer le changement
+    setLocalItemTypes(prev => 
+      prev.map(item => 
+        item.id === id ? { ...item, ...data } : item
+      )
+    );
+    setLocalEditingItemId(null);
+    setHasChanges(true);
+  };
+
+  const handleDeleteItemType = (itemType: ItemType) => {
+    setLocalItemTypes(prev => prev.filter(item => item.id !== itemType.id));
+    setHasChanges(true);
+  };
+
+  const handleSaveAllChanges = async () => {
+    console.log('🔄 Tentative de sauvegarde, hasChanges:', hasChanges, 'isMounted:', isMountedRef.current);
+    if (!hasChanges || !isMountedRef.current) return;
+    
+    try {
+      // Créer les nouveaux items (ceux avec ID temporaire)
+      const newItems = localItemTypes.filter(item => item.id.startsWith('temp-'));
+      for (const item of newItems) {
+        if (!isMountedRef.current) return;
+        await createItemType({ name: item.name });
+      }
+      
+      // Mettre à jour les items existants qui ont été modifiés
+      const existingItems = localItemTypes.filter(item => !item.id.startsWith('temp-'));
+      for (const item of existingItems) {
+        if (!isMountedRef.current) return;
+        const originalItem = itemTypes.find(original => original.id === item.id);
+        if (originalItem && originalItem.name !== item.name) {
+          await updateItemType(item.id, { name: item.name });
+        }
+      }
+      
+      // Supprimer les items qui ne sont plus dans la liste locale
+      const deletedItems = itemTypes.filter(original => 
+        !localItemTypes.some(local => local.id === original.id)
+      );
+      for (const item of deletedItems) {
+        if (!isMountedRef.current) return;
+        await deleteItemType(item.id);
+      }
+      
+      if (!isMountedRef.current) return;
+      setHasChanges(false);
+      showToast('Types d\'article sauvegardés avec succès', 'success');
+    } catch (error) {
+      if (!isMountedRef.current) return;
+      console.error('Erreur lors de la sauvegarde:', error);
+      showToast('Erreur lors de la sauvegarde des types', 'error');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Effet de flou en arrière-plan */}
       <View style={styles.blurOverlay}>
-        {/* Card principale */}
-        <View style={styles.comingSoonCard}>
-          {/* Icône avec animation */}
-          <View style={styles.iconContainer}>
-            <Settings size={48} color="#6366F1" strokeWidth={1.5} />
-          </View>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.row}>
+            <View style={styles.activeCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.iconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                  <Utensils size={20} color="#6366F1" strokeWidth={1.5} />
+                </View>
+                <View style={styles.headerContent}>
+                  <Text style={styles.cardTitle}>Types d'articles</Text>
+                  <Text style={styles.cardSubtitle}>
+                    Gérer les catégories de votre menu
+                  </Text>
+                </View>
+                
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => setIsCreating(true)}
+                  disabled={isCreating}
+                >
+                  <Plus size={16} color="#FFFFFF" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
 
-          <View style={{ alignItems: 'center' }}>
-            {/* Titre principal */}
-            <Text style={styles.title}>Configuration Restaurant</Text>
-            {/* Sous-titre */}
-            <Text style={styles.subtitle}>
-              Personnalisation et paramètres arrivent bientôt
-            </Text>
+
+              {/* Liste des types d'articles */}
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Chargement...</Text>
+                </View>
+              ) : error ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : (
+                <View style={styles.itemTypesGrid}>
+                  {localItemTypes.length === 0 && !isCreating ? (
+                    <View style={styles.emptyContainer}>
+                      <Text style={styles.emptyText}>
+                        Aucun type d'article configuré
+                      </Text>
+                      <Text style={styles.emptySubtext}>
+                        Ajoutez votre premier type pour commencer
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      {/* Créer les rangées de 2 éléments pour les items existants */}
+                      {Array.from({ length: Math.ceil(localItemTypes.length / 2) }, (_, rowIndex) => {
+                        const startIndex = rowIndex * 2;
+                        const rowItems = localItemTypes.slice(startIndex, startIndex + 2);
+                        const isLastRow = startIndex + 2 >= localItemTypes.length;
+                        const hasOddNumberInLastRow = isLastRow && rowItems.length === 1;
+                        
+                        return (
+                          <View key={rowIndex} style={styles.itemTypesRow}>
+                            {rowItems.map((itemType) => (
+                              <View key={itemType.id} style={styles.itemTypeColumn}>
+                                <ItemTypeCard
+                                  itemType={itemType}
+                                  isEditing={localEditingItemId === itemType.id}
+                                  onEdit={() => setLocalEditingItemId(itemType.id)}
+                                  onSave={(data) => handleUpdateItemType(itemType.id, data)}
+                                  onCancel={() => setLocalEditingItemId(null)}
+                                  onDelete={() => handleDeleteItemType(itemType)}
+                                />
+                              </View>
+                            ))}
+                            
+                            {/* Si création et dernière rangée avec nombre impair, ajouter le formulaire */}
+                            {isCreating && hasOddNumberInLastRow ? (
+                              <View style={styles.itemTypeColumn}>
+                                <View style={styles.itemTypeCard}>
+                                  <View style={styles.itemTypeCardHeader}>
+                                    <View style={styles.iconContainer}>
+                                      <Text style={styles.iconText}>
+                                        {getItemTypeInitials(newItemName || 'Nouveau')}
+                                      </Text>
+                                    </View>
+                                    
+                                    <View style={styles.editInputContainer}>
+                                      <TextInput
+                                        style={styles.editInput}
+                                        value={newItemName}
+                                        onChangeText={setNewItemName}
+                                        placeholder="Nom du nouveau type..."
+                                        autoFocus
+                                      />
+                                    </View>
+                                    
+                                    <View style={styles.cardActions}>
+                                      <TouchableOpacity
+                                        style={[styles.actionButton, styles.validateButton, !newItemName.trim() && styles.disabledButton]}
+                                        onPress={handleCreateItemType}
+                                        disabled={!newItemName.trim()}
+                                      >
+                                        <Check size={16} color="#FFFFFF" strokeWidth={2} />
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        style={[styles.actionButton, styles.cancelButton]}
+                                        onPress={() => {
+                                          setIsCreating(false);
+                                          setNewItemName('');
+                                        }}
+                                      >
+                                        <X size={16} color="#EF4444" strokeWidth={2} />
+                                      </TouchableOpacity>
+                                    </View>
+                                  </View>
+                                </View>
+                              </View>
+                            ) : (
+                              /* Colonne vide si pas de création ou si nombre pair - mais pas de flex pour éviter débordement */
+                              rowItems.length === 1 && !isCreating && (
+                                <View style={styles.itemTypeEmptyColumn} />
+                              )
+                            )}
+                          </View>
+                        );
+                      })}
+                      
+                      {/* Formulaire de création sur nouvelle rangée (si nombre pair d'items ou aucun item) */}
+                      {isCreating && localItemTypes.length % 2 === 0 && (
+                        <View style={styles.itemTypesRow}>
+                          <View style={styles.itemTypeColumn}>
+                            <View style={styles.itemTypeCard}>
+                              <View style={styles.itemTypeCardHeader}>
+                                <View style={styles.iconContainer}>
+                                  <Text style={styles.iconText}>
+                                    {getItemTypeInitials(newItemName || 'Nouveau')}
+                                  </Text>
+                                </View>
+                                
+                                <View style={styles.editInputContainer}>
+                                  <TextInput
+                                    style={styles.editInput}
+                                    value={newItemName}
+                                    onChangeText={setNewItemName}
+                                    placeholder="Nom du nouveau type..."
+                                    autoFocus
+                                  />
+                                </View>
+                                
+                                <View style={styles.cardActions}>
+                                  <TouchableOpacity
+                                    style={[styles.actionButton, styles.validateButton, !newItemName.trim() && styles.disabledButton]}
+                                    onPress={handleCreateItemType}
+                                    disabled={!newItemName.trim()}
+                                  >
+                                    <Check size={16} color="#FFFFFF" strokeWidth={2} />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={[styles.actionButton, styles.cancelButton]}
+                                    onPress={() => {
+                                      setIsCreating(false);
+                                      setNewItemName('');
+                                    }}
+                                  >
+                                    <X size={16} color="#EF4444" strokeWidth={2} />
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                          <View style={styles.itemTypeEmptyColumn} />
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
-          
-          
-          {/* Barre de progression */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '45%' }]} />
-            </View>
-            <Text style={styles.progressText}>45% terminé</Text>
+        </ScrollView>
+        
+        {hasChanges && (
+          <View style={styles.stickyButtonContainer}>
+            <TouchableOpacity
+              style={styles.globalSaveButton}
+              onPress={() => {
+                console.log('🔘 Bouton d\'enregistrement cliqué');
+                handleSaveAllChanges();
+              }}
+              disabled={loading}
+            >
+              <Save size={18} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.globalSaveButtonText}>
+                Enregistrer les modifications
+              </Text>
+            </TouchableOpacity>
           </View>
-          
-          {/* Fonctionnalités à venir */}
-          <View style={styles.featuresContainer}>
-            <View style={styles.featureItem}>
-              <Utensils size={16} color="#10B981" />
-              <Text style={styles.featureText}>Gestion des types de menu</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Layout size={16} color="#10B981" />
-              <Text style={styles.featureText}>Personnalisation de la cuisine</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Settings size={16} color="#10B981" />
-              <Text style={styles.featureText}>Configuration des colonnes</Text>
-            </View>
-          </View>
-        </View>
+        )}
       </View>
     </View>
   );
@@ -60,8 +455,6 @@ const styles = StyleSheet.create({
   },
   blurOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: 'rgba(248, 250, 252, 0.9)',
     ...Platform.select({
       web: {
@@ -70,87 +463,233 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  comingSoonCard: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 20,
+    paddingBottom: 100,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    gap: 20,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  activeCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 50,
-    paddingHorizontal: 40,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    maxWidth: 400,
-    marginHorizontal: 20,
+    borderRadius: 16,
+    padding: 20,
+    flex: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 4,
     },
-    height: 500,
-    width: '60%',
     shadowOpacity: 0.1,
-    shadowRadius: 25,
-    elevation: 10,
+    shadowRadius: 12,
+    elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.8)',
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E293B',
-    textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  progressContainer: {
-    width: '100%',
-    marginBottom: 32,
-  },
-  progressBar: {
-    width: '100%',
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    marginBottom: 8,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#6366F1',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  featuresContainer: {
-    width: '100%',
-    gap: 12,
-  },
-  featureItem: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  headerContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  cardSubtitle: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  addButton: {
+    backgroundColor: '#6366F1',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  validateButton: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  cancelButton: {
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FEF2F2',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  itemTypesGrid: {
+    flex: 1,
+  },
+  itemTypesRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  itemTypeColumn: {
+    flex: 1,
+  },
+  itemTypeEmptyColumn: {
+    flex: 1,
+    minHeight: 1, // Juste pour forcer l'espace sans contenu visible
+  },
+  itemTypeCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flex: 1,
+  },
+  itemTypeInfo: {
+    flex: 1,
+  },
+  itemTypeName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  itemTypeCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 40,
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  deleteButton: {
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FEF2F2',
+  },
+  editInputContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  editInput: {
+    height: 40,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#6366F1',
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+  errorContainer: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#DC2626',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  stickyButtonContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  globalSaveButton: {
+    backgroundColor: '#6366F1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#6366F1',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
     gap: 12,
   },
-  featureText: {
-    fontSize: 14,
-    color: '#475569',
-    fontWeight: '500',
+  globalSaveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
