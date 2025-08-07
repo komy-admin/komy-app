@@ -16,6 +16,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   const dispatch = useDispatch();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  
+  // Les managers ont accès à l'interface admin mais pas à la config
+  const isManager = currentUser?.profil === 'manager'
+  const shouldEnableConfigClick = enableConfigClick && !isManager
 
   // Fonction pour formater la date
   const updateDate = () => {
@@ -109,7 +113,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
           </View>
           
           <View style={{ position: 'relative' }}>
-            {enableConfigClick ? (
+            {shouldEnableConfigClick ? (
               <Link href={`/(admin)${configUser}` as Href} key={configUser} asChild>
                 <Pressable onPress={() => setShowProfileMenu(false)}>
                   <View 
@@ -187,7 +191,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
             )}
 
             {/* Menu dropdown */}
-            {showProfileMenu && !enableConfigClick && (
+            {showProfileMenu && !shouldEnableConfigClick && (
               <View style={{
                 position: 'absolute',
                 top: '100%',

@@ -39,6 +39,8 @@ export default function TeamPage() {
   // Vérifier les droits d'accès aux utilisateurs
   const { userProfile } = useSelector((state: RootState) => state.auth);
   const canManageUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile);
+  const canModifyUsers = userProfile && ['superadmin', 'admin'].includes(userProfile);
+  const isManager = userProfile === 'manager';
 
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
@@ -71,11 +73,15 @@ export default function TeamPage() {
   };
 
   const handleCreateUser = () => {
+    // Les managers ne peuvent pas créer d'utilisateurs
+    if (isManager) return;
     setUser(null);
     teamFormView.openCreate();
   };
 
   const handleEditUser = (id: string) => {
+    // Les managers ne peuvent pas modifier les utilisateurs
+    if (isManager) return;
     const user = users.find(user => user.id === id);
     if (!user) return;
     setUser(user);
@@ -189,24 +195,35 @@ export default function TeamPage() {
   };
 
   const getUserActions = (user: User): ActionItem[] => {
-    return [
-      {
+    const actions: ActionItem[] = [];
+    
+    // Seuls admin et superadmin peuvent modifier
+    if (canModifyUsers) {
+      actions.push({
         label: 'Modifier',
         icon: <Edit2 size={16} color="#4F46E5" />,
         onPress: () => handleEditUser(user.id ? user.id : '')
-      },
-      ...(currentUser?.profil === 'admin' || 'superadmin' ? [{
-        label: 'QR Code',
-        icon: <QrCode size={16} color="#4F46E5" />,
-        onPress: () => handleShowQrCode(user)
-      }] : []),
-      {
+      });
+    }
+    
+    // QR Code accessible à tous (admin, superadmin, manager)
+    actions.push({
+      label: 'QR Code',
+      icon: <QrCode size={16} color="#4F46E5" />,
+      onPress: () => handleShowQrCode(user)
+    });
+    
+    // Seuls admin et superadmin peuvent supprimer
+    if (canModifyUsers) {
+      actions.push({
         label: 'Supprimer',
         icon: <Trash size={16} color="#ef4444" />,
         type: 'destructive',
         onPress: () => handleDeleteUser(user.id ? user.id : '')
-      }
-    ];
+      });
+    }
+    
+    return actions;
   };
 
   const { width } = useWindowDimensions();
@@ -314,43 +331,45 @@ export default function TeamPage() {
               </TabsList>
             </ScrollView>
 
-            <View
-              style={{
-                width: 200,
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                backgroundColor: '#FBFBFB',
-                zIndex: 10,
-                shadowColor: '#000',
-                shadowOffset: { width: -4, height: 0 },
-                shadowOpacity: 0.05,
-                shadowRadius: 2,
-              }}
-            >
-              <Button
-                onPress={handleCreateUser}
-                className="w-[200px] h-[50px] flex items-center justify-center"
+            {/* Bouton "Créer un utilisateur" - caché pour les managers */}
+            {canModifyUsers && (
+              <View
                 style={{
-                  backgroundColor: canManageUsers ? '#2A2E33' : '#CCCCCC',
-                  borderRadius: 0,
-                  height: 50,
-                  width: 200
+                  width: 200,
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  backgroundColor: '#FBFBFB',
+                  zIndex: 10,
+                  shadowColor: '#000',
+                  shadowOffset: { width: -4, height: 0 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
                 }}
-                disabled={!canManageUsers}
               >
-                <Text style={{
-                  fontSize: 14,
-                  color: canManageUsers ? '#FBFBFB' : '#888888',
-                  fontWeight: '500',
-                  textAlign: 'center',
-                  textTransform: 'uppercase',
-                }}>
-                  Créer un utilisateur
-                </Text>
-              </Button>
-            </View>
+                <Button
+                  onPress={handleCreateUser}
+                  className="w-[200px] h-[50px] flex items-center justify-center"
+                  style={{
+                    backgroundColor: '#2A2E33',
+                    borderRadius: 0,
+                    height: 50,
+                    width: 200
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#FBFBFB',
+                    fontWeight: '500',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                  }}>
+                    Créer un utilisateur
+                  </Text>
+                </Button>
+              </View>
+            )}
           </View>
 
           <TabsContent style={{ flex: 1 }} value={activeTab}>
@@ -371,8 +390,8 @@ export default function TeamPage() {
               <ForkTable
                 data={filteredUsers}
                 columns={teamTableColumns}
-                onRowPress={handleEditUser}
-                onRowDelete={handleDeleteUser}
+                onRowPress={canModifyUsers ? handleEditUser : undefined}
+                onRowDelete={canModifyUsers ? handleDeleteUser : undefined}
                 useActionMenu={true}
                 getActions={getUserActions}
                 isLoading={loading}
@@ -384,28 +403,34 @@ export default function TeamPage() {
         </Tabs>
       </View>
 
-      <AdminFormView
-        visible={teamFormView.isVisible}
-        mode={teamFormView.mode}
-        title={teamFormView.mode === 'create' ? "Création d'un utilisateur" : `Modification de "${User?.firstName} ${User?.lastName}"`}
-        onClose={teamFormView.close}
-        onCancel={teamFormView.close}
-        onSave={handleSaveUser}
-      >
-        <TeamForm
-          user={User}
-          activeTab={activeTab}
-        />
-      </AdminFormView>
+      {/* Modal de modification - cachée pour les managers */}
+      {canModifyUsers && (
+        <AdminFormView
+          visible={teamFormView.isVisible}
+          mode={teamFormView.mode}
+          title={teamFormView.mode === 'create' ? "Création d'un utilisateur" : `Modification de "${User?.firstName} ${User?.lastName}"`}
+          onClose={teamFormView.close}
+          onCancel={teamFormView.close}
+          onSave={handleSaveUser}
+        >
+          <TeamForm
+            user={User}
+            activeTab={activeTab}
+          />
+        </AdminFormView>
+      )}
 
-      <DeleteConfirmationModal
-        isVisible={isDeleteModalVisible}
-        onClose={handleCloseDeleteModal}
-        onConfirm={confirmDelete}
-        entityName={userToDelete ? `${userToDelete.firstName} ${userToDelete.lastName}` : ''}
-        entityType="le profil"
-        isLoading={isDeleting}
-      />
+      {/* Modal de suppression - cachée pour les managers */}
+      {canModifyUsers && (
+        <DeleteConfirmationModal
+          isVisible={isDeleteModalVisible}
+          onClose={handleCloseDeleteModal}
+          onConfirm={confirmDelete}
+          entityName={userToDelete ? `${userToDelete.firstName} ${userToDelete.lastName}` : ''}
+          entityType="le profil"
+          isLoading={isDeleting}
+        />
+      )}
 
       <CustomModal
         isVisible={qrModalVisible}

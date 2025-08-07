@@ -32,6 +32,7 @@ type ProtectedRoutes = {
   admin: string[];
   superadmin: string[];
   chef: string[];
+  manager: string[];
 };
 
 const PROTECTED_ROUTES: ProtectedRoutes = {
@@ -39,6 +40,7 @@ const PROTECTED_ROUTES: ProtectedRoutes = {
   admin: ['(admin)'],
   superadmin: ['(admin)'],
   chef: ['(cook)'],
+  manager: ['(admin)'],
 };
 
 const LOGIN_ROUTE = '/login';
@@ -47,6 +49,7 @@ const HOME_ROUTES = {
   admin: '/(admin)',
   superadmin: '/(admin)',
   chef: '/(cook)',
+  manager: '/(admin)',
 };
 
 function AuthenticationGate() {
