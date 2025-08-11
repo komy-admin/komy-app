@@ -4,7 +4,7 @@ import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { OrderItem } from '~/types/order-item.types';
-import { useOrders } from '~/hooks/useRestaurant';
+import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAllOrderItems } from '~/store/restaurant';
 import { useToast } from '~/components/ToastProvider';
@@ -67,6 +67,9 @@ export default function CookKitchenPage() {
   const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
   const { showToast } = useToast();
 
+  // Initialiser la connexion WebSocket via useRestaurant
+  const { isLoading: globalLoading } = useRestaurant();
+
   // Filtrer les commandes et items selon les statuts disponibles en cuisine
   const kitchenOrders = useMemo(() => {
     return orders.filter(order =>
@@ -100,7 +103,7 @@ export default function CookKitchenPage() {
     }
   };
 
-  if (loading || error) {
+  if (loading || error || globalLoading) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>
