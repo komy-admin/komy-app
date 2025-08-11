@@ -24,34 +24,34 @@ interface CategorySelectionProps {
   maxSelections: number;
 }
 
-function CategorySelection({ 
-  category, 
-  availableItems, 
-  selectedItems, 
-  onItemToggle, 
-  maxSelections 
+function CategorySelection({
+  category,
+  availableItems,
+  selectedItems,
+  onItemToggle,
+  maxSelections
 }: CategorySelectionProps) {
   return (
     <View style={{ marginBottom: 20 }}>
-      <View style={{ 
-        flexDirection: 'row', 
-        alignItems: 'center', 
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 12,
         paddingBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB'
       }}>
-        <Text style={{ 
-          fontSize: 16, 
-          fontWeight: '600', 
+        <Text style={{
+          fontSize: 16,
+          fontWeight: '600',
           color: '#1A1A1A',
           flex: 1
         }}>
           {category.itemType.name}
         </Text>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ 
-            fontSize: 12, 
+          <Text style={{
+            fontSize: 12,
             color: category.isRequired ? '#DC2626' : '#666666',
             fontWeight: '500'
           }}>
@@ -66,7 +66,7 @@ function CategorySelection({
       {availableItems.map((item) => {
         const isSelected = selectedItems.includes(item.itemId);
         const canSelect = selectedItems.length < maxSelections || isSelected;
-        const supplement = parseFloat(item.supplement);
+        const supplement = item.supplement;
 
         return (
           <Pressable
@@ -87,17 +87,17 @@ function CategorySelection({
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ 
-                fontSize: 15, 
-                fontWeight: '500', 
+              <Text style={{
+                fontSize: 15,
+                fontWeight: '500',
                 color: '#1A1A1A',
                 marginBottom: 2
               }}>
                 {item.item.name}
               </Text>
               {item.item.description && (
-                <Text style={{ 
-                  fontSize: 13, 
+                <Text style={{
+                  fontSize: 13,
                   color: '#666666',
                   marginBottom: 4
                 }}>
@@ -115,7 +115,7 @@ function CategorySelection({
                 )}
               </View>
             </View>
-            
+
             <View style={{
               width: 24,
               height: 24,
@@ -136,7 +136,7 @@ function CategorySelection({
 export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSelectorProps) {
   const { activeMenus, loadActiveMenus, loadMenuCategoryItems } = useMenus();
   const { calculateLocalMenuPrice, validateMenuSelection } = useMenuCalculator();
-  
+
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
   const [categoryItems, setCategoryItems] = useState<Record<string, MenuCategoryItem[]>>({});
   const [selectedItemsByCategory, setSelectedItemsByCategory] = useState<Record<string, string[]>>({});
@@ -156,18 +156,18 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
 
   const loadCategoryItems = async () => {
     if (!selectedMenu) return;
-    
+
     setLoading(true);
     try {
       const items: Record<string, MenuCategoryItem[]> = {};
-      
+
       await Promise.all(
         selectedMenu.categories.map(async (category) => {
           const categoryItems = await loadMenuCategoryItems(category.id);
           items[category.id] = categoryItems.filter(item => item.isAvailable);
         })
       );
-      
+
       setCategoryItems(items);
     } catch (error) {
       console.error('Erreur lors du chargement des items:', error);
@@ -186,7 +186,7 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
     setSelectedItemsByCategory(prev => {
       const categorySelections = prev[categoryId] || [];
       const isSelected = categorySelections.includes(itemId);
-      
+
       if (isSelected) {
         // Désélectionner
         return {
@@ -203,7 +203,7 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
           };
         }
       }
-      
+
       return prev;
     });
   };
@@ -220,10 +220,10 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
 
     // Calculer le prix
     const priceCalculation = calculateLocalMenuPrice(selectedMenu, selectedItemsByCategory, categoryItems);
-    
+
     // Créer la liste des items sélectionnés avec leurs menuCategoryItemId
     const selectedItems: Array<{ itemId: string; menuCategoryItemId: string }> = [];
-    
+
     Object.entries(selectedItemsByCategory).forEach(([categoryId, itemIds]) => {
       itemIds.forEach(itemId => {
         const menuCategoryItem = categoryItems[categoryId]?.find(item => item.itemId === itemId);
@@ -250,8 +250,8 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
   if (!visible) return null;
 
   // Calculer le prix en temps réel
-  const currentPrice = selectedMenu ? 
-    calculateLocalMenuPrice(selectedMenu, selectedItemsByCategory, categoryItems) : 
+  const currentPrice = selectedMenu ?
+    calculateLocalMenuPrice(selectedMenu, selectedItemsByCategory, categoryItems) :
     null;
 
   return (
@@ -335,11 +335,11 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
                 <>
                   {/* Description du menu */}
                   {selectedMenu.description && (
-                    <Text style={{ 
-                      fontSize: 14, 
-                      color: '#666666', 
+                    <Text style={{
+                      fontSize: 14,
+                      color: '#666666',
                       marginBottom: 20,
-                      fontStyle: 'italic' 
+                      fontStyle: 'italic'
                     }}>
                       {selectedMenu.description}
                     </Text>
@@ -376,12 +376,12 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
                 {currentPrice.totalPrice.toFixed(2)}€
               </Text>
             </View>
-            
+
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <Button
                 onPress={() => setSelectedMenu(null)}
-                style={{ 
-                  flex: 1, 
+                style={{
+                  flex: 1,
                   backgroundColor: '#F3F4F6',
                   borderWidth: 1,
                   borderColor: '#D1D5DB'
@@ -389,7 +389,7 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
               >
                 <Text style={{ color: '#374151', fontWeight: '500' }}>Retour</Text>
               </Button>
-              
+
               <Button
                 onPress={handleConfirmSelection}
                 style={{ flex: 2, backgroundColor: '#059669' }}

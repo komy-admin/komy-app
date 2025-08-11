@@ -8,7 +8,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { Menu as MenuIcon } from 'lucide-react-native';
+import { LucideIcon, Menu as MenuIcon } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -16,7 +16,7 @@ export type ActionItem = {
   label?: string;
   content?: React.ReactNode;
   onPress: () => void;
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | LucideIcon;
   type?: 'default' | 'destructive';
 };
 

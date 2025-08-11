@@ -112,7 +112,7 @@ export function MenuConfiguration({
       const menuCategoryItemData: Partial<MenuCategoryItem> = {
         menuCategoryId: selectedCategory.id,
         itemId: assignFormData.itemId,
-        supplement: assignFormData.supplement,
+        supplement: parseFloat(assignFormData.supplement),
         isAvailable: assignFormData.isAvailable
       };
 
@@ -256,7 +256,7 @@ export function MenuConfiguration({
                 id: selectedMenu.id
               } : { label: 'Sélectionner un menu', value: '', id: '' }}
               onValueChange={(option) => {
-                if (option) {
+                if (option && option.id) {
                   handleMenuSelect(option.id);
                 }
               }}
@@ -287,7 +287,7 @@ export function MenuConfiguration({
                 id: selectedCategory.id
               } : { label: 'Sélectionner une catégorie', value: '', id: '' }}
               onValueChange={(option) => {
-                if (option) {
+                if (option && option.id) {
                   handleCategorySelect(option.id);
                 }
               }}
@@ -337,7 +337,7 @@ export function MenuConfiguration({
                 Assigner un nouvel article
               </Text>
 
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'end' }}>
+              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-end' }}>
                 <View style={{ flex: 2 }}>
                   <Text style={{ fontSize: 12, marginBottom: 4, color: '#374151' }}>Article</Text>
                   <Select
@@ -352,7 +352,7 @@ export function MenuConfiguration({
                       id: assignFormData.itemId
                     } : { label: 'Sélectionner un article', value: '', id: '' }}
                     onValueChange={(option) => {
-                      if (option) {
+                      if (option && option.id) {
                         setAssignFormData(prev => ({ ...prev, itemId: option.id }));
                       }
                     }}

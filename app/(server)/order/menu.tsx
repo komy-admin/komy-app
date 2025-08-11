@@ -16,15 +16,15 @@ export default function OrderMenuPage() {
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
   const [isMenuSelectorVisible, setIsMenuSelectorVisible] = useState(false);
   const { showToast } = useToast();
-  
+
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
-  
+
   // Utilisation des hooks Redux
   const { getOrderById, loading, error, createMenuOrderItems, createIndividualOrderItem } = useOrders();
   const { items, itemTypes } = useMenu();
   const { activeMenus } = useMenus();
-  
+
   // Récupération de la commande depuis le store
   const order = getOrderById(orderId as string);
 
@@ -34,7 +34,7 @@ export default function OrderMenuPage() {
       setMenuTabsValue(itemTypes[0].id);
     }
   }, [itemTypes, menuTabsValue]);
-  
+
   // Plus besoin de loadData, useFilter ou d'appels API - tout est géré par Redux
 
   const getItemQuantity = (itemId: string) => {
@@ -44,8 +44,7 @@ export default function OrderMenuPage() {
 
   const handleMenuSelect = async (
     menu: Menu,
-    selectedItems: Array<{ itemId: string; menuCategoryItemId: string }>,
-    totalPrice: number
+    selectedItems: Array<{ itemId: string; menuCategoryItemId: string }>
   ) => {
     if (!order) {
       showToast('Aucune commande trouvée.', 'warning');
@@ -53,7 +52,7 @@ export default function OrderMenuPage() {
     }
 
     try {
-      await createMenuOrderItems(order.id, menu.id, selectedItems, totalPrice);
+      await createMenuOrderItems(order.id, menu.id, selectedItems);
       showToast('Menu ajouté à la commande avec succès.', 'success');
     } catch (error) {
       console.error('Erreur lors de l\'ajout du menu:', error);
@@ -81,10 +80,10 @@ export default function OrderMenuPage() {
         if (!orderItem) return;
         await orderItemApiService.delete(orderItem.id);
       }
-      
+
       // Le store Redux se met à jour automatiquement via WebSockets
       // Plus besoin de setOrder manuel
-      
+
       showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la quantité:', error);
@@ -136,7 +135,7 @@ export default function OrderMenuPage() {
             {order?.orderItems.length || 0} article{(order?.orderItems.length || 0) > 1 ? 's' : ''}
           </Text>
         </View>
-        
+
         {/* Menu selection button */}
         {activeMenus.length > 0 && (
           <Pressable

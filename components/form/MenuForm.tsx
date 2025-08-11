@@ -15,12 +15,12 @@ interface MenuFormProps {
   activeTab: string;
 }
 
-export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({ 
-  item, 
-  itemTypes, 
-  onSave, 
-  onCancel, 
-  activeTab 
+export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
+  item,
+  itemTypes,
+  onSave,
+  onCancel,
+  activeTab
 }, ref) => {
   const [formData, setFormData] = useState({
     name: item?.name || '',
@@ -76,7 +76,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         itemTypeId: item.itemType?.id || '',
         isActive: item.isActive ?? true
       });
-      
+
       if (item.itemType) {
         setSelectedItemTypeId(item.itemType.id);
       }
@@ -87,7 +87,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
         isActive: true
       });
-      
+
       if (activeTab !== 'ALL') {
         setSelectedItemTypeId(activeTab);
       } else {
@@ -106,7 +106,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
 
       const errors = validateForm(dataToValidate, validationRules);
       const formErrors: Record<string, string> = {};
-      
+
       if (errors.length > 0) {
         errors.forEach(error => {
           formErrors[error.field || 'general'] = error.message;
@@ -145,7 +145,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         errors: formErrors
       };
     },
-    
+
     resetForm: () => {
       setFormData({
         name: '',
@@ -155,7 +155,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
     },
-    
+
     validateForm: () => {
       const result = (ref as any).current?.getFormData();
       if (!result.isValid && Object.keys(result.errors).length > 0) {
@@ -165,15 +165,6 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     }
   }), [formData, selectedItemTypeId, validationRules, itemTypes, item?.id, activeTab, showToast]);
 
-  // Fonction de soumission héritée (pour compatibilité si nécessaire)
-  const handleSubmit = React.useCallback(() => {
-    const formDataResult = (ref as any).current?.getFormData();
-    if (formDataResult && formDataResult.isValid && onSave) {
-      isClosingRef.current = true;
-      onSave(formDataResult.data);
-    }
-  }, [onSave]);
-
   return (
     <View style={styles.container}>
       {/* Formulaire en grille compacte */}
@@ -181,11 +172,11 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         {/* Section principale - Informations de base */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Informations de base</Text>
-          
+
           {/* Ligne 1: Nom + Prix + Statut */}
           <View style={styles.row}>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Nom de l'article *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Nom de l'article *</Text>
               <TextInput
                 value={formData.name}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, name: text }))}
@@ -194,14 +185,14 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
                 style={styles.input}
               />
             </View>
-            
+
             <View style={[styles.field, styles.fieldSmall]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Prix (€) *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Prix (€) *</Text>
               <NumberInput
                 style={styles.input}
                 value={formData.price ?? null}
                 onChangeText={(value) => setFormData(prev => ({
-                  ...prev, 
+                  ...prev,
                   price: value
                 }))}
                 decimalPlaces={2}
@@ -212,8 +203,8 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
               />
             </View>
 
-            <View style={[styles.field, styles.fieldSmall, {marginLeft: 12, justifyContent: 'center'}]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Statut</Text>
+            <View style={[styles.field, styles.fieldSmall, { marginLeft: 12, justifyContent: 'center' }]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Statut</Text>
               <Pressable
                 style={[styles.statusToggleV2, formData.isActive && styles.statusToggleV2Active]}
                 onPress={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
@@ -261,11 +252,11 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
               </Pressable>
             </View>
           </View>
-          
+
           {/* Ligne 2: Catégories (s'adapte dynamiquement) */}
-          <View style={[styles.row, {marginBottom: 0}]}>
+          <View style={[styles.row, { marginBottom: 0 }]}>
             <View style={styles.categorySection}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Catégorie *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Catégorie *</Text>
               <View style={styles.categoryButtons}>
                 {itemTypes.map((itemType) => (
                   Platform.OS === 'web' ? (
@@ -326,12 +317,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   // Structure en grille
   formGrid: {
     flex: 1,
   },
-  
+
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -346,7 +337,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -357,7 +348,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
     letterSpacing: 0.5,
   },
-  
+
   // Système de lignes et colonnes
   row: {
     flexDirection: 'row',
@@ -368,35 +359,35 @@ const styles = StyleSheet.create({
       gap: 16,
     })
   },
-  
+
   field: {
     // Base pour tous les champs
     ...(Platform.OS === 'web' && {
       marginRight: 16,
     })
   },
-  
+
   fieldSmall: {
     flex: 1, // 1/3 de la largeur
     ...(Platform.OS === 'web' && {
       marginRight: 16,
     })
   },
-  
+
   fieldMedium: {
     flex: 1.5, // 1/2 de la largeur équilibré
     ...(Platform.OS === 'web' && {
       marginRight: 16,
     })
   },
-  
+
   fieldLarge: {
     flex: 2, // 2/3 de la largeur
     ...(Platform.OS === 'web' && {
       marginRight: 16,
     })
   },
-  
+
   // Éléments de form
   label: {
     fontSize: 14,
@@ -408,7 +399,7 @@ const styles = StyleSheet.create({
       fontFamily: 'system-ui, -apple-system, sans-serif',
     })
   },
-  
+
   input: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -434,7 +425,7 @@ const styles = StyleSheet.create({
       }
     }),
   },
-  
+
   // Section catégories (occupe toute la largeur)
   categorySection: {
     flex: 1,
@@ -448,7 +439,7 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
   },
-  
+
   categoryButton: {
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -476,7 +467,7 @@ const styles = StyleSheet.create({
       }
     }),
   },
-  
+
   categoryButtonActive: {
     backgroundColor: '#2A2E33',
     borderColor: '#2A2E33',
@@ -486,7 +477,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  
+
   categoryButtonText: {
     fontSize: 13,
     fontWeight: '600',
@@ -494,12 +485,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-  
+
   categoryButtonTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  
+
   // Version 2: Toggle premium avec animation pulsante et sous-texte
   statusToggleV2: {
     flexDirection: 'row',
@@ -527,7 +518,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   statusToggleV2Active: {
     backgroundColor: '#ECFDF5',
     borderColor: '#34D399',
@@ -539,7 +530,7 @@ const styles = StyleSheet.create({
       boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
     })
   },
-  
+
   statusIconContainer: {
     width: 12,
     height: 12,
@@ -548,11 +539,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
+
   statusIconContainerActive: {
     // Container reste le même mais gère les animations
   },
-  
+
   statusPulse: {
     position: 'absolute',
     width: 12,
@@ -562,12 +553,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
   },
-  
+
   statusPulseActive: {
     borderColor: '#10B981',
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
-  
+
   statusCore: {
     width: 6,
     height: 6,
@@ -575,7 +566,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
     zIndex: 1,
   },
-  
+
   statusCoreActive: {
     backgroundColor: '#10B981',
     shadowColor: '#10B981',
@@ -584,12 +575,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  
+
   statusTextContainer: {
     flex: 1,
     justifyContent: 'center',
   },
-  
+
   statusLabelV2: {
     fontSize: 14,
     fontWeight: '600',
@@ -600,12 +591,12 @@ const styles = StyleSheet.create({
       fontFamily: 'system-ui, -apple-system, sans-serif',
     })
   },
-  
+
   statusLabelV2Active: {
     color: '#047857',
     fontWeight: '700',
   },
-  
+
   statusSubtext: {
     fontSize: 12,
     fontWeight: '500',
@@ -617,7 +608,7 @@ const styles = StyleSheet.create({
       fontFamily: 'system-ui, -apple-system, sans-serif',
     })
   },
-  
+
   statusSubtextActive: {
     color: '#059669',
   },
@@ -631,7 +622,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
     marginTop: 32,
   },
-  
+
   submitButton: {
     flex: 2,
     backgroundColor: '#2A2E33',
@@ -654,14 +645,14 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   submitButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 0.5,
   },
-  
+
   cancelButton: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -686,7 +677,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   cancelButtonText: {
     color: '#6B7280',
     fontWeight: '600',

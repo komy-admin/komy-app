@@ -77,12 +77,12 @@ export const useMenuCalculator = () => {
     menu: Menu,
     menuCategoryItems: Record<string, MenuCategoryItem[]> // categoryId -> items[]
   ): number => {
-    let totalPrice = parseFloat(menu.basePrice);
+    let totalPrice = menu.basePrice;
 
     menu.categories.forEach(category => {
       if (category.isRequired) {
         // Ajouter le modificateur de prix de la catégorie
-        totalPrice += parseFloat(category.priceModifier);
+        totalPrice += category.priceModifier;
         
         // Trouver l'item le moins cher dans cette catégorie
         const categoryItems = menuCategoryItems[category.id] || [];
@@ -90,9 +90,9 @@ export const useMenuCalculator = () => {
         
         if (availableItems.length > 0) {
           const cheapestItem = availableItems.reduce((min, item) => 
-            parseFloat(item.supplement) < parseFloat(min.supplement) ? item : min
+            item.supplement < min.supplement ? item : min
           );
-          totalPrice += parseFloat(cheapestItem.supplement);
+          totalPrice += cheapestItem.supplement;
         }
       }
     });
@@ -105,11 +105,11 @@ export const useMenuCalculator = () => {
     menu: Menu,
     menuCategoryItems: Record<string, MenuCategoryItem[]> // categoryId -> items[]
   ): number => {
-    let totalPrice = parseFloat(menu.basePrice);
+    let totalPrice = menu.basePrice;
 
     menu.categories.forEach(category => {
       // Ajouter le modificateur de prix de la catégorie
-      totalPrice += parseFloat(category.priceModifier);
+      totalPrice += category.priceModifier;
       
       // Trouver les items les plus chers dans cette catégorie (jusqu'à maxSelections)
       const categoryItems = menuCategoryItems[category.id] || [];
@@ -118,13 +118,13 @@ export const useMenuCalculator = () => {
       if (availableItems.length > 0) {
         // Trier par supplément décroissant
         const sortedItems = availableItems.sort((a, b) => 
-          parseFloat(b.supplement) - parseFloat(a.supplement)
+          b.supplement - a.supplement
         );
         
         // Prendre jusqu'à maxSelections items
         const selectedItems = sortedItems.slice(0, category.maxSelections);
         selectedItems.forEach(item => {
-          totalPrice += parseFloat(item.supplement);
+          totalPrice += item.supplement;
         });
       }
     });
@@ -151,7 +151,7 @@ export const useMenuCalculator = () => {
   ): number => {
     const categoryItems = menuCategoryItems[categoryId] || [];
     const item = categoryItems.find(item => item.itemId === itemId);
-    return item ? parseFloat(item.supplement) : 0;
+    return item ? item.supplement : 0;
   }, []);
 
   // Calculer le prix d'une sélection locale (sans appel API)
@@ -160,7 +160,7 @@ export const useMenuCalculator = () => {
     selectedItemsByCategory: Record<string, string[]>, // categoryId -> itemIds[]
     menuCategoryItems: Record<string, MenuCategoryItem[]> // categoryId -> items[]
   ): { basePrice: number; categoryModifiers: number; itemSupplements: number; totalPrice: number } => {
-    let basePrice = parseFloat(menu.basePrice);
+    let basePrice = menu.basePrice;
     let categoryModifiers = 0;
     let itemSupplements = 0;
 
@@ -169,7 +169,7 @@ export const useMenuCalculator = () => {
       
       if (selectedItemIds.length > 0) {
         // Ajouter le modificateur de catégorie
-        categoryModifiers += parseFloat(category.priceModifier);
+        categoryModifiers += category.priceModifier;
         
         // Ajouter les suppléments des items sélectionnés
         selectedItemIds.forEach(itemId => {

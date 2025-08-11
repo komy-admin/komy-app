@@ -22,25 +22,25 @@ export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("items");
   const [filters, setFilters] = useState<MenuFilterState>(createEmptyMenuFilters());
-  
+
   // États pour les items
   const itemFormView = useAdminFormView();
   const [isDeleteItemModalVisible, setIsDeleteItemModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // États pour les menus
   const menuFormView = useAdminFormView();
   const [isDeleteMenuModalVisible, setIsDeleteMenuModalVisible] = useState(false);
   const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
-  
+
   // Référence pour le scroll automatique du menu editor
   const menuScrollViewRef = useRef<ScrollView>(null);
-  
-  
+
+
   const { showToast } = useToast();
 
   // Initialiser la connexion WebSocket via useRestaurant
@@ -53,7 +53,7 @@ export default function MenuPage() {
   // Filtrer les articles avec les filtres appliqués et trier par statut
   const filteredItems = useMemo(() => {
     if (activeTab === 'menus') return [];
-    
+
     let result = activeTab === 'items' ? items : getItemsByType(activeTab);
     result = filterMenuItems(result, filters);
     // Trier pour mettre les items actifs en premier
@@ -186,22 +186,6 @@ export default function MenuPage() {
     setCurrentMenu(null);
   };
 
-  const handleSaveMenu = async (menuData: Partial<Menu>) => {
-    try {
-      if (menuData.id) {
-        await updateMenu(menuData.id, menuData);
-        showToast('Menu modifié avec succès', 'success');
-      } else {
-        await createMenu(menuData);
-        showToast('Menu créé avec succès', 'success');
-      }
-      handleCloseMenuModal();
-    } catch (err) {
-      console.error('Error saving menu:', err);
-      showToast('Erreur lors de la sauvegarde du menu', 'error');
-    }
-  };
-
   // Nouvelle fonction de sauvegarde complexe pour les menus avec catégories et articles locaux
   const handleComplexMenuSave = async (menuData: any) => {
     try {
@@ -216,46 +200,46 @@ export default function MenuPage() {
           priceModifier: category.priceModifier,
           itemType: category.itemType
         };
-        
+
         return categoryBase;
       }) || [];
-      
+
       const processedMenuData = {
         ...menuData,
         categories: processedCategories
       };
-      
+
       let savedMenu: Menu;
       const isUpdate = Boolean(menuData.id);
-      
+
       // 1. Sauvegarder le menu avec ses catégories (le hook gère déjà cela)
       if (isUpdate) {
         savedMenu = await updateMenu(menuData.id, processedMenuData);
       } else {
         savedMenu = await createMenu(processedMenuData);
       }
-      
+
       // 2. Traiter SEULEMENT les nouveaux articles ajoutés localement
       if (menuData.categories && savedMenu.categories) {
-        
+
         for (let i = 0; i < menuData.categories.length; i++) {
           const originalCategory = menuData.categories[i];
           const savedCategory = savedMenu.categories[i];
-          
+
           if (originalCategory.localItems && originalCategory.localItems.length > 0) {
             // Séparer les différents types d'opérations
-            const newLocalItems = originalCategory.localItems.filter((localItem: any) => 
+            const newLocalItems = originalCategory.localItems.filter((localItem: any) =>
               localItem.tempId.startsWith('local-')
             );
-            
-            const modifiedItems = originalCategory.localItems.filter((localItem: any) => 
+
+            const modifiedItems = originalCategory.localItems.filter((localItem: any) =>
               localItem.originalId && localItem.isModified && !localItem.isDeleted
             );
-            
-            const deletedItems = originalCategory.localItems.filter((localItem: any) => 
+
+            const deletedItems = originalCategory.localItems.filter((localItem: any) =>
               localItem.originalId && localItem.isDeleted
             );
-            
+
             // 1. Créer les nouveaux items
             for (const localItem of newLocalItems) {
               if (localItem.itemId && savedCategory.id) {
@@ -265,11 +249,11 @@ export default function MenuPage() {
                   supplement: Number(localItem.supplement) || 0,
                   isAvailable: Boolean(localItem.isAvailable)
                 };
-                
+
                 await createMenuCategoryItem(menuCategoryItemData);
               }
             }
-            
+
             // 2. Mettre à jour les items modifiés
             for (const localItem of modifiedItems) {
               if (localItem.originalId) {
@@ -277,11 +261,11 @@ export default function MenuPage() {
                   supplement: Number(localItem.supplement) || 0,
                   isAvailable: Boolean(localItem.isAvailable)
                 };
-                
+
                 await updateMenuCategoryItem(localItem.originalId, updateData);
               }
             }
-            
+
             // 3. Supprimer les items marqués comme supprimés
             for (const localItem of deletedItems) {
               if (localItem.originalId) {
@@ -291,10 +275,10 @@ export default function MenuPage() {
           }
         }
       }
-      
+
       showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
       handleCloseMenuModal();
-      
+
     } catch (err) {
       console.error('Error saving complex menu:', err);
       showToast('Erreur lors de la sauvegarde du menu', 'error');
@@ -368,7 +352,7 @@ export default function MenuPage() {
     ];
   };
 
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
 
   const itemTableColumns = [
     {
@@ -386,7 +370,7 @@ export default function MenuPage() {
       key: 'statut',
       width: '20%',
       render: (item: Item) => (
-        <Text style={{ 
+        <Text style={{
           color: item.isActive ? '#10B981' : '#EF4444',
           fontWeight: '500'
         }}>
@@ -429,7 +413,7 @@ export default function MenuPage() {
       key: 'statut',
       width: '10%',
       render: (menu: Menu) => (
-        <Text style={{ 
+        <Text style={{
           color: menu.isActive ? '#10B981' : '#EF4444',
           fontWeight: '500'
         }}>
@@ -618,10 +602,10 @@ export default function MenuPage() {
         visible={itemFormView.isVisible}
         mode={itemFormView.mode}
         title={
-          itemFormView.mode === 'create' 
-            ? "Création d'un article" 
-            : currentItem 
-              ? `Modification de "${currentItem.name}"` 
+          itemFormView.mode === 'create'
+            ? "Création d'un article"
+            : currentItem
+              ? `Modification de "${currentItem.name}"`
               : "Modifier l'article"
         }
         onClose={handleCloseItemModal}
@@ -629,7 +613,7 @@ export default function MenuPage() {
         onSave={async (getFormData) => {
           const formData = getFormData();
           if (!formData.isValid) return false;
-          
+
           try {
             await handleSaveItem(formData.data);
             return true;
@@ -651,10 +635,10 @@ export default function MenuPage() {
         visible={menuFormView.isVisible}
         mode={menuFormView.mode}
         title={
-          menuFormView.mode === 'create' 
-            ? "Création d'un menu" 
-            : currentMenu 
-              ? `Modification de "${currentMenu.name}"` 
+          menuFormView.mode === 'create'
+            ? "Création d'un menu"
+            : currentMenu
+              ? `Modification de "${currentMenu.name}"`
               : "Modifier le menu"
         }
         onClose={handleCloseMenuModal}
@@ -663,7 +647,7 @@ export default function MenuPage() {
         onSave={async (getFormData) => {
           const formData = getFormData();
           if (!formData.isValid) return false;
-          
+
           try {
             await handleComplexMenuSave(formData.data);
             return true;
@@ -707,5 +691,3 @@ export default function MenuPage() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({});

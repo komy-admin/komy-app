@@ -11,8 +11,8 @@ interface RoomFormProps {
   onSave?: (room: Room) => void; // Optionnel car maintenant géré par AdminFormView
 }
 
-export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({ 
-  room, 
+export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
+  room,
   onSave
 }, ref) => {
   const [formData, setFormData] = useState({
@@ -20,7 +20,7 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
     width: 15,
     height: 15
   });
-  
+
   const { showToast } = useToast();
 
   const validationRules: ValidationRules = {
@@ -61,7 +61,7 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
     getFormData: (): AdminFormData<Room> => {
       const errors = validateForm(formData, validationRules);
       const formErrors: Record<string, string> = {};
-      
+
       if (errors.length > 0) {
         errors.forEach(error => {
           formErrors[error.field || 'general'] = error.message;
@@ -90,7 +90,7 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
         errors: formErrors
       };
     },
-    
+
     resetForm: () => {
       setFormData({
         name: '',
@@ -98,7 +98,7 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
         height: 15
       });
     },
-    
+
     validateForm: () => {
       const result = (ref as any).current?.getFormData();
       if (!result.isValid && Object.keys(result.errors).length > 0) {
@@ -108,14 +108,6 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
     }
   }), [formData, validationRules, room, showToast]);
 
-  // Fonction de soumission héritée (pour compatibilité si nécessaire)
-  const handleSubmit = React.useCallback(() => {
-    const formDataResult = (ref as any).current?.getFormData();
-    if (formDataResult && formDataResult.isValid && onSave) {
-      onSave(formDataResult.data);
-    }
-  }, [onSave]);
-
   return (
     <View style={styles.container}>
       {/* Formulaire en grille compacte */}
@@ -123,11 +115,11 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
         {/* Section principale - Informations de base */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Informations de la salle</Text>
-          
+
           {/* Ligne 1: Nom */}
           <View style={styles.row}>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Nom de la salle *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Nom de la salle *</Text>
               <TextInput
                 value={formData.name}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
@@ -140,9 +132,9 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
           </View>
 
           {/* Ligne 2: Dimensions */}
-          <View style={[styles.row, {marginBottom: 0}]}>
+          <View style={[styles.row, { marginBottom: 0 }]}>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Largeur *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Largeur *</Text>
               <NumberInput
                 value={formData.width}
                 onChangeText={(value) => setFormData(prev => ({ ...prev, width: value || 15 }))}
@@ -154,7 +146,7 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
               />
             </View>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Hauteur *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Hauteur *</Text>
               <NumberInput
                 value={formData.height}
                 onChangeText={(value) => setFormData(prev => ({ ...prev, height: value || 15 }))}
@@ -176,12 +168,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   // Structure en grille
   formGrid: {
     flex: 1,
   },
-  
+
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -196,7 +188,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -207,23 +199,23 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
     letterSpacing: 0.5,
   },
-  
+
   // Système de lignes et colonnes
   row: {
     flexDirection: 'row',
     marginBottom: 24,
     ...(Platform.OS === 'web' ? {} : { gap: 16 })
   },
-  
+
   field: {
     ...(Platform.OS === 'web' && { marginRight: 16 })
   },
-  
+
   fieldLarge: {
     flex: 2,
     ...(Platform.OS === 'web' && { marginRight: 16 })
   },
-  
+
   // Éléments de form
   label: {
     fontSize: 14,
@@ -235,7 +227,7 @@ const styles = StyleSheet.create({
       fontFamily: 'system-ui, -apple-system, sans-serif',
     })
   },
-  
+
   input: {
     borderWidth: 1,
     borderColor: '#E5E7EB',

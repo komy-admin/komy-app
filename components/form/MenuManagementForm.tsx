@@ -18,7 +18,7 @@ interface MenuCategoryFormData {
   itemTypeId: string;
   isRequired: boolean;
   maxSelections: number;
-  priceModifier: string;
+  priceModifier: number;
 }
 
 interface CategorySelectOption {
@@ -31,10 +31,10 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
   const [formData, setFormData] = useState({
     name: menu?.name || '',
     description: menu?.description || '',
-    basePrice: menu?.basePrice || '',
+    basePrice: menu?.basePrice || 0,
     isActive: menu?.isActive ?? true,
   });
-  
+
   const [categories, setCategories] = useState<MenuCategoryFormData[]>(
     menu?.categories?.map(cat => ({
       id: cat.id,
@@ -59,25 +59,25 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
       return acc;
     }, {} as Record<number, CategorySelectOption>)
   );
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Le nom est obligatoire';
     }
-    
-    if (!formData.basePrice || parseFloat(formData.basePrice) < 0) {
+
+    if (!formData.basePrice || formData.basePrice < 0) {
       newErrors.basePrice = 'Le prix de base doit être un nombre positif';
     }
-    
+
     if (categories.length === 0) {
       newErrors.categories = 'Au moins une catégorie est requise';
     }
-    
+
     categories.forEach((category, index) => {
       if (!category.itemTypeId) {
         newErrors[`category_${index}_type`] = 'Type d\'item requis';
@@ -85,23 +85,23 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
       if (category.maxSelections < 1) {
         newErrors[`category_${index}_max`] = 'Au moins 1 sélection requise';
       }
-      if (parseFloat(category.priceModifier) < 0) {
+      if (category.priceModifier < 0) {
         newErrors[`category_${index}_price`] = 'Le modificateur de prix ne peut pas être négatif';
       }
     });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
     if (!validateForm()) return;
-    
+
     setSaving(true);
     try {
       console.log('💾 MenuManagementForm.handleSave() - formData:', formData);
       console.log('💾 MenuManagementForm.handleSave() - categories raw:', categories);
-      
+
       const menuData: Partial<Menu> = {
         ...formData,
         categories: categories.map(cat => ({
@@ -110,14 +110,14 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
           // Ne pas inclure menuId lors de la création, il sera ajouté par le hook
         } as Partial<MenuCategory>)),
       };
-      
+
       if (menu?.id) {
         menuData.id = menu.id;
       }
-      
+
       console.log('💾 MenuManagementForm.handleSave() - menuData final:', menuData);
       console.log('💾 MenuManagementForm.handleSave() - categories mappées:', menuData.categories);
-      
+
       await onSave(menuData);
       console.log('✅ MenuManagementForm.handleSave() - sauvegarde réussie');
     } catch (error) {
@@ -134,9 +134,9 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
       itemTypeId: '',
       isRequired: true,
       maxSelections: 1,
-      priceModifier: '0',
+      priceModifier: 0,
     }]);
-    
+
     // Initialiser la sélection vide pour la nouvelle catégorie
     setCategorySelections(prev => ({
       ...prev,
@@ -146,7 +146,7 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
 
   const removeCategory = (index: number) => {
     setCategories(prev => prev.filter((_, i) => i !== index));
-    
+
     // Supprimer la sélection correspondante et réindexer les autres
     setCategorySelections(prev => {
       const newSelections: Record<number, CategorySelectOption> = {};
@@ -163,7 +163,7 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
   };
 
   const updateCategory = (index: number, field: keyof MenuCategoryFormData, value: any) => {
-    setCategories(prev => prev.map((cat, i) => 
+    setCategories(prev => prev.map((cat, i) =>
       i === index ? { ...cat, [field]: value } : cat
     ));
   };
@@ -174,7 +174,7 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
       ...prev,
       [index]: selectedOption
     }));
-    
+
     // Mettre à jour la catégorie avec le nouvel itemTypeId
     updateCategory(index, 'itemTypeId', selectedOption.id);
   };
@@ -186,7 +186,7 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
         <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 16, color: '#1A1A1A' }}>
           Informations générales
         </Text>
-        
+
         <View style={{ marginBottom: 16 }}>
           <Text style={{ fontSize: 14, fontWeight: '500', marginBottom: 8, color: '#374151' }}>
             Nom du menu *
@@ -352,10 +352,10 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
                 Type d'item *
               </Text>
               <Select
-                choices={itemTypes.map(type => ({ 
-                  label: type.name, 
-                  value: type.name, 
-                  id: type.id 
+                choices={itemTypes.map(type => ({
+                  label: type.name,
+                  value: type.name,
+                  id: type.id
                 }))}
                 selectedValue={categorySelections[index] || { value: '', label: 'Sélectionner un type', id: '' }}
                 placeholder="Sélectionner un type"
@@ -463,7 +463,7 @@ export function MenuManagementForm({ menu, itemTypes, onSave, onCancel }: MenuMa
         >
           <Text style={{ color: '#374151', fontWeight: '500' }}>Annuler</Text>
         </Button>
-        
+
         <Button
           onPress={handleSave}
           disabled={saving}

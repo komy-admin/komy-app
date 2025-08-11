@@ -90,7 +90,7 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
     } else {
       setFormData(initialFormData);
       setIsPasswordModified(false);
-      
+
       if (activeTab !== 'all') {
         setSelectedProfileId(activeTab);
       } else {
@@ -114,7 +114,7 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
 
       const errors = validateForm(dataToValidate, validationRules);
       const formErrors: Record<string, string> = {};
-      
+
       if (errors.length > 0) {
         errors.forEach(error => {
           formErrors[error.field || 'general'] = error.message;
@@ -144,13 +144,13 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
         errors: formErrors
       };
     },
-    
+
     resetForm: () => {
       setFormData(initialFormData);
       setIsPasswordModified(false);
       setSelectedProfileId(activeTab !== 'all' ? activeTab : '');
     },
-    
+
     validateForm: () => {
       const result = (ref as any).current?.getFormData();
       if (!result.isValid && Object.keys(result.errors).length > 0) {
@@ -159,14 +159,6 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
       return result.isValid;
     }
   }), [formData, selectedProfileId, validationRules, user, isPasswordModified, activeTab, showToast]);
-
-  // Fonction de soumission héritée (pour compatibilité si nécessaire)
-  const handleSubmit = React.useCallback(() => {
-    const formDataResult = (ref as any).current?.getFormData();
-    if (formDataResult && formDataResult.isValid && onSave) {
-      onSave(formDataResult.data);
-    }
-  }, [onSave]);
 
   const handlePasswordChange = (text: string) => {
     setIsPasswordModified(true);
@@ -180,11 +172,11 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
         {/* Section principale - Informations de base */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Informations de base</Text>
-          
+
           {/* Ligne 1: Rôle */}
-          <View style={[styles.row, {marginBottom: 16}]}>
+          <View style={[styles.row, { marginBottom: 16 }]}>
             <View style={styles.profileSection}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Rôle *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Rôle *</Text>
               <View style={styles.profileButtons}>
                 {Object.values(UserProfile)
                   .filter(profile => !['superadmin', 'admin'].includes(profile))
@@ -240,7 +232,7 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
           {/* Ligne 2: Prénom + Nom */}
           <View style={styles.row}>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Prénom *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Prénom *</Text>
               <TextInput
                 value={formData.firstName}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
@@ -251,7 +243,7 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
               />
             </View>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Nom *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Nom *</Text>
               <TextInput
                 value={formData.lastName}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
@@ -266,7 +258,7 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
           {/* Ligne 3: Email + Téléphone */}
           <View style={styles.row}>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Email *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Email *</Text>
               <TextInput
                 value={formData.email}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, email: text }))}
@@ -283,7 +275,7 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
               />
             </View>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Téléphone</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Téléphone</Text>
               <TextInput
                 value={formData.phone}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, phone: text }))}
@@ -297,9 +289,9 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
           </View>
 
           {/* Ligne 4: Identifiant + Mot de passe */}
-          <View style={[styles.row, {marginBottom: 0}]}>
+          <View style={[styles.row, { marginBottom: 0 }]}>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Identifiant *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Identifiant *</Text>
               <TextInput
                 value={formData.loginId}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, loginId: text }))}
@@ -315,7 +307,7 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
               />
             </View>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Mot de passe {!user && '*'}</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Mot de passe {!user && '*'}</Text>
               <TextInput
                 value={formData.password}
                 onChangeText={handlePasswordChange}
@@ -341,12 +333,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   // Structure en grille
   formGrid: {
     flex: 1,
   },
-  
+
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -361,7 +353,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -372,23 +364,23 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
     letterSpacing: 0.5,
   },
-  
+
   // Système de lignes et colonnes
   row: {
     flexDirection: 'row',
     marginBottom: 24,
     ...(Platform.OS === 'web' ? {} : { gap: 16 })
   },
-  
+
   field: {
     ...(Platform.OS === 'web' && { marginRight: 16 })
   },
-  
+
   fieldLarge: {
     flex: 2,
     ...(Platform.OS === 'web' && { marginRight: 16 })
   },
-  
+
   // Éléments de form
   label: {
     fontSize: 14,
@@ -400,7 +392,7 @@ const styles = StyleSheet.create({
       fontFamily: 'system-ui, -apple-system, sans-serif',
     })
   },
-  
+
   input: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -426,7 +418,7 @@ const styles = StyleSheet.create({
       }
     }),
   },
-  
+
   // Section profils (comme catégories dans MenuForm)
   profileSection: {
     flex: 1,
@@ -439,7 +431,7 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
   },
-  
+
   profileButton: {
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -467,7 +459,7 @@ const styles = StyleSheet.create({
       }
     }),
   },
-  
+
   profileButtonActive: {
     backgroundColor: '#2A2E33',
     borderColor: '#2A2E33',
@@ -477,7 +469,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  
+
   profileButtonText: {
     fontSize: 13,
     fontWeight: '600',
@@ -485,7 +477,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-  
+
   profileButtonTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',

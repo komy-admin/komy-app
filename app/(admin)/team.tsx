@@ -30,7 +30,6 @@ export default function TeamPage() {
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrSuccess, setQrSuccess] = useState<string | null>(null);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const { currentUser } = useSelector((state: RootState) => state.auth);
   const [User, setUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -52,7 +51,7 @@ export default function TeamPage() {
   // Filtrer les utilisateurs avec les filtres appliqués
   const filteredUsers = useMemo(() => {
     let result = activeTab === 'all' ? users : getUsersByProfile(activeTab);
-    
+
     // Appliquer les filtres TeamFilters
     result = filterTeamUsers(result, teamFilters);
 
@@ -112,7 +111,7 @@ export default function TeamPage() {
       return true;
     } catch (err: any) {
       console.error('Error saving user:', err);
-      
+
       // Afficher le message d'erreur spécifique si disponible
       const errorMessage = err?.message || 'Erreur lors de la sauvegarde de l\'utilisateur';
       showToast(errorMessage, 'error');
@@ -174,16 +173,16 @@ export default function TeamPage() {
 
   const handleRegenerateQr = async () => {
     if (!selectedUserForQr) return;
-    
+
     try {
       setQrLoading(true);
       setQrError(null);
       setQrSuccess(null);
-      
+
       // Force la génération d'un nouveau QR (révoque l'ancien automatiquement)
       const res = await regenerateQrToken(selectedUserForQr.id);
       setQrCodeToken(res.qrData.token);
-      
+
       showToast('QR code régénéré avec succès', 'success');
     } catch (error) {
       console.error('Erreur lors de la régénération du QR code:', error);
@@ -196,7 +195,7 @@ export default function TeamPage() {
 
   const getUserActions = (user: User): ActionItem[] => {
     const actions: ActionItem[] = [];
-    
+
     // Seuls admin et superadmin peuvent modifier
     if (canModifyUsers) {
       actions.push({
@@ -205,14 +204,14 @@ export default function TeamPage() {
         onPress: () => handleEditUser(user.id ? user.id : '')
       });
     }
-    
+
     // QR Code accessible à tous (admin, superadmin, manager)
     actions.push({
       label: 'QR Code',
       icon: <QrCode size={16} color="#4F46E5" />,
       onPress: () => handleShowQrCode(user)
     });
-    
+
     // Seuls admin et superadmin peuvent supprimer
     if (canModifyUsers) {
       actions.push({
@@ -222,7 +221,7 @@ export default function TeamPage() {
         onPress: () => handleDeleteUser(user.id ? user.id : '')
       });
     }
-    
+
     return actions;
   };
 
