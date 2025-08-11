@@ -131,6 +131,54 @@ export const useRestaurantSocket = () => {
         dispatch(restaurantActions.deleteMenuItem({ itemId: event.data.id }));
       },
 
+      // Événements Menu (Menus structurés)
+      menu_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouveau menu créé:', event.data.id);
+        dispatch(restaurantActions.createMenu({ menu: event.data }));
+      },
+      
+      menu_updated: (event: WebSocketEvent) => {
+        console.log('📝 Menu mis à jour:', event.data.id);
+        dispatch(restaurantActions.updateMenu({ menu: event.data }));
+      },
+      
+      menu_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Menu supprimé:', event.data.id);
+        dispatch(restaurantActions.deleteMenu({ menuId: event.data.id }));
+      },
+
+      // Événements MenuCategory (Catégories de menu)
+      menucategory_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvelle catégorie de menu créée:', event.data.id);
+        dispatch(restaurantActions.createMenuCategory({ menuCategory: event.data }));
+      },
+      
+      menucategory_updated: (event: WebSocketEvent) => {
+        console.log('📝 Catégorie de menu mise à jour:', event.data.id);
+        dispatch(restaurantActions.updateMenuCategory({ menuCategory: event.data }));
+      },
+      
+      menucategory_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Catégorie de menu supprimée:', event.data.id);
+        dispatch(restaurantActions.deleteMenuCategory({ menuCategoryId: event.data.id }));
+      },
+
+      // Événements MenuCategoryItem (Articles dans les catégories de menu)
+      menucategoryitem_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouvel article de catégorie créé:', event.data.id);
+        dispatch(restaurantActions.createMenuCategoryItem({ menuCategoryItem: event.data }));
+      },
+      
+      menucategoryitem_updated: (event: WebSocketEvent) => {
+        console.log('📝 Article de catégorie mis à jour:', event.data.id);
+        dispatch(restaurantActions.updateMenuCategoryItem({ menuCategoryItem: event.data }));
+      },
+      
+      menucategoryitem_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Article de catégorie supprimé:', event.data.id);
+        dispatch(restaurantActions.deleteMenuCategoryItem({ menuCategoryItemId: event.data.id }));
+      },
+
       // Événements Users
       user_created: (event: WebSocketEvent) => {
         console.log('🆕 Nouvel utilisateur créé:', event.data.id);

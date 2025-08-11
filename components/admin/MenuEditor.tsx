@@ -19,7 +19,7 @@ interface MenuEditorProps {
   onCreateMenuCategoryItem: (data: Partial<MenuCategoryItem>) => Promise<MenuCategoryItem>;
   onUpdateMenuCategoryItem: (id: string, data: Partial<MenuCategoryItem>) => Promise<MenuCategoryItem>;
   onDeleteMenuCategoryItem: (id: string) => Promise<void>;
-  onLoadMenuCategoryItems: (menuCategoryId: string) => Promise<MenuCategoryItem[]>;
+  onLoadMenuCategoryItems: (menuCategoryId: string) => MenuCategoryItem[];
   scrollViewRef?: React.RefObject<ScrollView | null>;
   confirmationContext?: AdminConfirmationContext;
 }
@@ -97,33 +97,34 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
 
   const { showToast } = useToast();
 
+  // Fonction pour charger les items d'une catégorie depuis le store
+  const loadCategoryItemsFromStore = useCallback((categoryId: string, categoryIndex: number) => {
+    // Récupérer directement depuis le store - Single Source of Truth
+    const existingItems = onLoadMenuCategoryItems(categoryId);
+    
+    const localItems = existingItems.map((item, itemIndex) => ({
+      tempId: `existing-${categoryId}-${itemIndex}`,
+      originalId: item.id,
+      itemId: item.itemId,
+      supplement: item.supplement,
+      isAvailable: item.isAvailable,
+      item: items.find(i => i.id === item.itemId),
+      isModified: false,
+      isDeleted: false
+    }));
+    
+    setLocalCategoryItems(prev => ({
+      ...prev,
+      [categoryIndex]: localItems
+    }));
+  }, [items, onLoadMenuCategoryItems]);
+
   // Charger et convertir les items des catégories existantes en données locales (pour modification)
   useEffect(() => {
     if (menu && menu.categories) {
-      const localItems: Record<number, LocalMenuCategoryItem[]> = {};
-      
       menu.categories.forEach((category, index) => {
         if (category.id) {
-          // Simuler le chargement des items existants et les convertir en local
-          onLoadMenuCategoryItems(category.id).then((existingItems) => {
-            localItems[index] = existingItems.map((item, itemIndex) => ({
-              tempId: `existing-${category.id}-${itemIndex}`,
-              originalId: item.id, // Conserver l'ID original pour les mises à jour/suppressions
-              itemId: item.itemId,
-              supplement: item.supplement,
-              isAvailable: item.isAvailable,
-              item: items.find(i => i.id === item.itemId),
-              isModified: false,
-              isDeleted: false
-            }));
-            
-            setLocalCategoryItems(prev => ({
-              ...prev,
-              [index]: localItems[index]
-            }));
-          }).catch(error => {
-            console.error('Erreur lors du chargement des items:', error);
-          });
+          loadCategoryItemsFromStore(category.id, index);
         }
       });
     } else {
@@ -132,7 +133,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
       setShowAddItemForm({});
       setItemFormData({});
     }
-  }, [menu?.id, items, onLoadMenuCategoryItems]);
+  }, [menu?.id, loadCategoryItemsFromStore]);
 
   // Initialiser les sélections de catégories
   useEffect(() => {

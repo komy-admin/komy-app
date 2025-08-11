@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
-import { Menu, MenuCategoryItem } from '~/types/menu.types';
+import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
 
 // Types pour le state des menus
 export interface MenusState {
@@ -95,6 +95,52 @@ const menusSlice = createSlice({
           delete state.menuCategoryItems[categoryId];
         }
       });
+    },
+    
+    // Actions WebSocket CRUD pour les menuCategories
+    createMenuCategory: (state, action: PayloadAction<{ menuCategory: MenuCategory }>) => {
+      const { menuCategory } = action.payload;
+      const menuId = menuCategory.menuId;
+      
+      if (state.menus[menuId]) {
+        // Vérifier si la catégorie existe déjà
+        const existingIndex = state.menus[menuId].categories.findIndex(
+          cat => cat.id === menuCategory.id
+        );
+        
+        if (existingIndex >= 0) {
+          state.menus[menuId].categories[existingIndex] = menuCategory;
+        } else {
+          state.menus[menuId].categories.push(menuCategory);
+        }
+      }
+    },
+    
+    updateMenuCategory: (state, action: PayloadAction<{ menuCategory: MenuCategory }>) => {
+      const { menuCategory } = action.payload;
+      const menuId = menuCategory.menuId;
+      
+      if (state.menus[menuId]) {
+        const categoryIndex = state.menus[menuId].categories.findIndex(
+          cat => cat.id === menuCategory.id
+        );
+        
+        if (categoryIndex >= 0) {
+          state.menus[menuId].categories[categoryIndex] = menuCategory;
+        }
+      }
+    },
+    
+    deleteMenuCategory: (state, action: PayloadAction<{ menuCategoryId: string }>) => {
+      const { menuCategoryId } = action.payload;
+      
+      // Trouver le menu qui contient cette catégorie et la supprimer
+      Object.values(state.menus).forEach(menu => {
+        menu.categories = menu.categories.filter(cat => cat.id !== menuCategoryId);
+      });
+      
+      // Supprimer aussi les items associés à cette catégorie
+      delete state.menuCategoryItems[menuCategoryId];
     },
     
     // Actions WebSocket CRUD pour les menuCategoryItems

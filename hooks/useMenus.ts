@@ -26,6 +26,9 @@ export const useMenus = () => {
   const activeMenus = useSelector((state: any) => selectActiveMenus({ menus: state.restaurant.menus }));
   const loading = useSelector((state: any) => selectMenusLoading({ menus: state.restaurant.menus }));
   const error = useSelector((state: any) => selectMenusError({ menus: state.restaurant.menus }));
+  
+  // Sélecteur pour tous les MenuCategoryItems (pour éviter useSelector dans callbacks)
+  const allMenuCategoryItems = useSelector((state: any) => state.restaurant.menus.menuCategoryItems || {});
 
   // Actions asynchrones pour charger les données
   const loadAllMenus = useCallback(async () => {
@@ -37,6 +40,25 @@ export const useMenus = () => {
       const menus = Array.isArray(response?.data) ? response.data : [];
       
       dispatch(restaurantActions.setMenus({ menus }));
+      
+      // Extraire les MenuCategoryItems déjà présents dans la réponse API
+      console.log('📦 Extraction des MenuCategoryItems depuis la réponse API...');
+      for (const menu of menus) {
+        if (menu.categories && menu.categories.length > 0) {
+          for (const category of menu.categories) {
+            if (category.id && category.items && Array.isArray(category.items)) {
+              // Les items sont déjà dans la réponse, pas besoin d'appel API !
+              dispatch(restaurantActions.setMenuCategoryItems({ 
+                menuCategoryId: category.id, 
+                items: category.items 
+              }));
+              console.log(`✅ ${category.items.length} items extraits pour catégorie ${category.id}`);
+            }
+          }
+        }
+      }
+      console.log('✅ Tous les MenuCategoryItems extraits et stockés dans le store');
+      
       return menus;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des menus';
@@ -62,22 +84,6 @@ export const useMenus = () => {
     }
   }, [dispatch]);
 
-  const loadMenuCategoryItems = useCallback(async (menuCategoryId: string) => {
-    try {
-      console.log(`📡 API call: loadMenuCategoryItems pour ${menuCategoryId}`);
-      const items = await menuCategoryItemApiService.getByMenuCategoryId(menuCategoryId);
-      console.log(`📡 API response: ${items.length} items pour ${menuCategoryId}`);
-      
-      // Ne pas dispatcher setLoading pour éviter les re-renders
-      // dispatch(restaurantActions.setMenuCategoryItems({ menuCategoryId, items }));
-      return items;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des items de catégorie';
-      console.error(`❌ Erreur loadMenuCategoryItems:`, errorMessage);
-      dispatch(restaurantActions.setErrorMenus(errorMessage));
-      throw error;
-    }
-  }, [dispatch]);
 
   const loadAvailableMenuCategoryItems = useCallback(async (menuCategoryId: string) => {
     try {
@@ -274,12 +280,24 @@ export const useMenus = () => {
   }, [allMenus]);
 
   const getMenuCategoryItems = useCallback((menuCategoryId: string) => {
-    return useSelector((state: any) => selectMenuCategoryItems(menuCategoryId)({ menus: state.restaurant.menus }));
-  }, []);
+    return allMenuCategoryItems[menuCategoryId] || [];
+  }, [allMenuCategoryItems]);
+
+  const loadMenuCategoryItems = useCallback((menuCategoryId: string) => {
+    // Retourner directement les données du store - Single Source of Truth
+    console.log(`📦 Store read: loadMenuCategoryItems pour ${menuCategoryId}`);
+    return getMenuCategoryItems(menuCategoryId);
+  }, [getMenuCategoryItems]);
+
+  const hasMenuCategoryItems = useCallback((menuCategoryId: string) => {
+    const items = allMenuCategoryItems[menuCategoryId] || [];
+    return items.length > 0;
+  }, [allMenuCategoryItems]);
 
   const getAvailableMenuCategoryItems = useCallback((menuCategoryId: string) => {
-    return useSelector((state: any) => selectAvailableMenuCategoryItems(menuCategoryId)({ menus: state.restaurant.menus }));
-  }, []);
+    const items = allMenuCategoryItems[menuCategoryId] || [];
+    return items.filter(item => item.isAvailable);
+  }, [allMenuCategoryItems]);
 
   const isMenuAvailable = useCallback((menuId: string) => {
     const menu = getMenuById(menuId);
@@ -329,6 +347,7 @@ export const useMenus = () => {
     // Utilitaires
     getMenuById,
     getMenuCategoryItems,
+    hasMenuCategoryItems,
     getAvailableMenuCategoryItems,
     isMenuAvailable,
     getMenuCategories,

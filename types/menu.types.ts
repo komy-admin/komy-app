@@ -19,6 +19,7 @@ export type MenuCategory = {
   maxSelections: number;
   priceModifier: number;
   itemType: ItemType;
+  items?: MenuCategoryItem[];
 };
 
 export type MenuCategoryItem = {
