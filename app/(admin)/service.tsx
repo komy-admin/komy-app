@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Button, ConfirmDialog, ForkModal, Text, TextInput } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
 import { Minus, Plus, Grid3X3Icon, ListFilter } from "lucide-react-native";
@@ -27,13 +27,19 @@ import {
 import { CustomModal } from '@/components/CustomModal';
 import OrderItemsForm from '@/components/form/OrderItemsForm';
 import { Order } from '@/types/order.types';
+import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
 
 export default function ServicePage() {
-  const [isOrderModalVisible, setIsOrderModalVisible] = useState<boolean>(false);
+  // AdminFormView pour la modal de commande
+  const orderFormView = useAdminFormView();
   const [orderCreatedFromStart, setOrderCreatedFromStart] = useState<boolean>(false);
+  const [isConfiguringMenu, setIsConfiguringMenu] = useState<boolean>(false);
+  const [menuConfigActions, setMenuConfigActions] = useState<{
+    onCancel: () => void;
+    onConfirm: () => void;
+  } | null>(null);
   // Hooks spécialisés pour chaque domaine
   const { rooms, currentRoom, setCurrentRoom } = useRooms();
-  // console.log('Rooms:', rooms); // Debug désactivé pour performance
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
     currentRoomOrders,
@@ -48,13 +54,11 @@ export default function ServicePage() {
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
 
-  // console.log('Selected table:', selectedTable) // Debug désactivé pour performance
 
   // État global
   const { isLoading } = useRestaurant();
 
   // État local de l'interface seulement
-  const [menuTabsValue, setMenuTabsValue] = useState<string>('');
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [isReassigning, setIsReassigning] = useState<boolean>(false);
   const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
@@ -62,6 +66,7 @@ export default function ServicePage() {
   const [showOrderDetailModal, setShowOrderDetailModal] = useState<boolean>(false);
   const [cameFromOrderDetailModal, setCameFromOrderDetailModal] = useState<boolean>(false);
   const [modalTitle, setModalTitle] = useState<string>("");
+
 
   const { showToast } = useToast();
 
@@ -76,12 +81,6 @@ export default function ServicePage() {
     isLoaded: filtersLoaded,
   } = useOrderFilters(currentRoomOrders.filter(order => order.orderItems && order.orderItems.length > 0));
 
-  // Initialiser le premier type d'article comme onglet par défaut
-  useEffect(() => {
-    if (allItemTypes.length > 0 && !menuTabsValue) {
-      setMenuTabsValue(allItemTypes[0].id);
-    }
-  }, [allItemTypes, menuTabsValue]);
 
   // Désélectionner la table lors de la navigation
   useFocusEffect(
@@ -166,7 +165,8 @@ export default function ServicePage() {
       setOrderCreatedFromStart(true); // Marquer que la commande a été créée depuis "Start"
       setCameFromOrderDetailModal(false); // Ne vient PAS de la modal détails
       setModalTitle(`Créer la commande - ${selectedTable?.name}`); // Titre stable pour nouvelle commande
-      setIsOrderModalVisible(true); // Ouvrir la modal de commande
+      // selectedTableOrder sera mis à jour par Redux, on l'utilisera dans un useEffect
+      orderFormView.openCreate(); // Ouvrir la AdminFormView
       showToast('Commande créée avec succès.', 'success');
     } catch (error) {
       showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
@@ -179,7 +179,8 @@ export default function ServicePage() {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
     setCameFromOrderDetailModal(true); // Marquer qu'on vient de la modal détails
     setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table.name}` : "Modifier la commande"); // Titre stable pour modification
-    setIsOrderModalVisible(true);
+    // La commande courante est déjà disponible via selectedTableOrder
+    orderFormView.openEdit(); // Ouvrir en mode édition
   };
 
   const handleOpenOrderDetailModal = (order?: Order) => {
@@ -194,54 +195,97 @@ export default function ServicePage() {
     setSelectedTable(null); // Désélectionner la table à la fermeture
   };
 
-  const handleCloseOrderModal = async () => {
-    // Fermer immédiatement la modal pour l'animation
-    setIsOrderModalVisible(false);
 
-    // Attendre un délai pour que l'animation se termine avant de supprimer la commande
-    setTimeout(async () => {
-      // Cette fonction est appelée SEULEMENT quand l'utilisateur ferme manuellement la modal
-      // ou appuie sur "Annuler"
-      if (selectedTableOrder && orderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
-        try {
-          await deleteOrder(selectedTableOrder.id);
-          showToast('Commande annulée car aucun article n\'a été ajouté.', 'info');
-        } catch (error) {
-          console.error('Erreur lors de la suppression de la commande vide:', error);
-        }
-      }
+  // Ref pour tracker les sauvegardes en cours (persiste entre les renders)
+  const isSavingOrderRef = useRef(false);
 
+  // Handler intelligent qui s'adapte selon le contexte
+  const handleSmartCloseOrderModal = () => {    
+    if (isSavingOrderRef.current) {
+      // Si on est en train de sauvegarder, c'est AdminFormView qui ferme après succès
+      orderFormView.close();
+      isSavingOrderRef.current = false;
+    } else {
+      // Sinon, c'est une fermeture manuelle/annulation
+      
+      // Fermer immédiatement la modal
+      orderFormView.close();
+
+      // Reset tous les flags AVANT la logique de nettoyage pour éviter les conflits
+      const wasOrderCreatedFromStart = orderCreatedFromStart;
       setOrderCreatedFromStart(false);
+
+      // Exécuter la logique de nettoyage SEULEMENT lors d'une fermeture manuelle
+      if (selectedTableOrder && wasOrderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
+        deleteOrder(selectedTableOrder.id)
+          .then(() => {
+            showToast('Commande annulée car aucun article n\'a été ajouté.', 'info');
+          })
+          .catch((error) => {
+            console.error('Erreur lors de la suppression:', error);
+          });
+      }
 
       // Si on vient de la modal de détails ET qu'il y a une commande avec des items, la rouvrir
       if (cameFromOrderDetailModal && selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
         setShowOrderDetailModal(true);
       }
 
-      // Reset du flag
       setCameFromOrderDetailModal(false);
-    }, 300); // Délai correspondant à la durée d'animation de fermeture
+    }
   };
 
-  const handleSaveOrder = async (updatedOrder: Order) => {
+  const handleConfigurationModeChange = useCallback((configuring: boolean) => {
+    setIsConfiguringMenu(configuring);
+    // Si on sort du mode configuration, nettoyer immédiatement les actions pour éviter la latence
+    if (!configuring) {
+      setMenuConfigActions(null);
+    }
+  }, []);
+
+  const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void } | null) => {
+    setMenuConfigActions(actions);
+  }, []);
+
+  const handleSaveOrder = async (getFormData: () => any) => {
     try {
-      updateOrder(updatedOrder);
-
-      // Fermer la modal directement sans passer par handleCloseOrderModal
-      // pour éviter la logique de suppression
-      setIsOrderModalVisible(false);
-      setOrderCreatedFromStart(false);
-
-      // Rouvrir la modal de détails pour continuer la gestion (seulement si commande a des items)
-      if (updatedOrder && updatedOrder.orderItems && updatedOrder.orderItems.length > 0) {
-        setShowOrderDetailModal(true);
+      const formResult = getFormData();
+      
+      if (!formResult.isValid) {
+        return false;
       }
-      setCameFromOrderDetailModal(false); // Reset du flag
 
-      showToast('Commande mise à jour avec succès.', 'success');
+      // Indiquer qu'on est en train de sauvegarder pour que handleSmartCloseOrderModal le sache
+      isSavingOrderRef.current = true;
+
+      // Utiliser la fonction de sauvegarde complexe fournie par OrderItemsForm
+      if (formResult.data.processComplexSave && formResult.hasChanges) {
+        const updatedOrder = await formResult.data.processComplexSave();
+        
+        // Désactiver les flags avant que AdminFormView appelle onClose automatiquement
+        setOrderCreatedFromStart(false);
+        setCameFromOrderDetailModal(false);
+
+        // Planifier la réouverture de la modal détails après la fermeture automatique
+        requestAnimationFrame(() => {
+          if (updatedOrder && updatedOrder.orderItems && updatedOrder.orderItems.length > 0) {
+            setShowOrderDetailModal(true);
+          }
+        });
+
+        showToast('Commande mise à jour avec succès.', 'success');
+        return true;
+      } else {
+        // Pas de modifications, AdminFormView va fermer automatiquement
+        setOrderCreatedFromStart(false);
+        setCameFromOrderDetailModal(false);
+        return true;
+      }
     } catch (error) {
+      console.error('Erreur dans handleSaveOrder:', error);
       showToast('Erreur lors de la mise à jour de la commande.', 'error');
-      console.error(error);
+      isSavingOrderRef.current = false;
+      return false;
     }
   };
 
@@ -275,11 +319,10 @@ export default function ServicePage() {
     }
   };
 
-  const handlePaymentComplete = async (paymentData: any) => {
+  const handlePaymentComplete = async (_paymentData: any) => {
     try {
       // Ici, vous pouvez ajouter la logique pour traiter le paiement
       // Par exemple, appeler une API pour enregistrer le paiement
-      console.log('Données de paiement:', paymentData);
 
       setShowPaymentModal(false);
       setShowOrderDetailModal(true); // Rouvrir la modal de détails
@@ -301,17 +344,12 @@ export default function ServicePage() {
     });
   };
 
-  // Fonction pour déterminer si une table avec commande est sélectionnée
-  const isTableWithOrderSelected = () => {
-    return selectedTable && selectedTableOrder && selectedTableOrder.orderItems && selectedTableOrder.orderItems.length > 0;
-  };
-
   // Fonction pour gérer la déselection de table
   const handleDeselectTable = () => {
     setSelectedTable(null);
   };
 
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -512,25 +550,34 @@ export default function ServicePage() {
         )}
       </CustomModal>
 
-      {/* Modal pour l'ajout/modification de commande */}
-      <CustomModal
-        isVisible={isOrderModalVisible}
-        onClose={handleCloseOrderModal}
-        width={700}
-        height={650}
-        style={{ zIndex: 10000 }}
+      {/* AdminFormView pour l'ajout/modification de commande */}
+      <AdminFormView
+        visible={orderFormView.isVisible}
+        mode={orderFormView.mode}
         title={modalTitle}
+        onClose={handleSmartCloseOrderModal}
+        onCancel={handleSmartCloseOrderModal}
+        onSave={handleSaveOrder}
+        hideHeaderAndActions={isConfiguringMenu}
+        disableGlobalScroll={true} // Désactiver le scroll global pour permettre le layout custom d'OrderItemsForm
+        configurationActions={menuConfigActions ? {
+          onCancel: menuConfigActions.onCancel,
+          onConfirm: menuConfigActions.onConfirm,
+          cancelLabel: 'Annuler',
+          confirmLabel: 'Confirmer la sélection',
+          confirmButtonColor: '#059669' // Vert pour différencier de l'enregistrement normal
+        } : undefined}
       >
         {selectedTableOrder && (
           <OrderItemsForm
             order={selectedTableOrder}
             items={allItems.filter(item => item.isActive)}
             itemTypes={allItemTypes}
-            onSave={handleSaveOrder}
-            onCancel={handleCloseOrderModal}
+            onConfigurationModeChange={handleConfigurationModeChange}
+            onConfigurationActionsChange={handleConfigurationActionsChange}
           />
         )}
-      </CustomModal>
+      </AdminFormView>
 
       {selectedTableOrder && showDeleteOrderDialog && (
         <ConfirmDialog

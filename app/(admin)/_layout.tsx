@@ -1,7 +1,7 @@
 import { Slot } from 'expo-router';
 import { View, Text, Dimensions, StyleSheet, Platform, Pressable } from 'react-native';
 import { AdminSidebar } from '~/components/admin/Sidebar';
-import { AdminTopbar } from '~/components/admin/TopBar';
+import { Topbar } from '~/components/TopBar';
 import { ToastProvider } from '~/components/ToastProvider';
 import { Monitor, Smartphone } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
@@ -118,7 +118,7 @@ export default function AdminLayout() {
     <ToastProvider>
       <AdminScreenSizeGate>
         <View style={{ flex: 1, flexDirection: 'column' }}>
-          <AdminTopbar />
+          <Topbar />
           <View style={{ flex: 1, flexDirection: 'row' }}>
             <AdminSidebar />
             <View style={{ flex: 1 }}>

@@ -4,12 +4,10 @@ import { RootState } from '~/store';
 import { useRooms } from './useRooms';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
+import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
 import { restaurantActions } from '~/store/restaurant';
 import { setAccountConfig } from '@/store/account-config.slice';
-import { Room } from '@/types/room.types';
-import { ItemType } from '@/types/item-type.types';
-import { User } from '@/types/user.types';
 import { accountConfigApiService } from '~/api/account-config.api';
 
 interface InitializationState {
@@ -21,6 +19,7 @@ interface InitializationState {
     tables: boolean;
     itemTypes: boolean;
     items: boolean;
+    menus: boolean;
     orders: boolean;
     users: boolean;
     accountConfig: boolean;
@@ -40,6 +39,7 @@ export const useAppInit = () => {
   const { loadRooms } = useRooms();
   const { loadOrdersForRoom } = useOrders();
   const { loadItemTypes, loadItems } = useMenu();
+  const { loadAllMenus } = useMenus();
   const { loadUsers } = useUsers();
 
   // État d'initialisation
@@ -52,6 +52,7 @@ export const useAppInit = () => {
       tables: false,
       itemTypes: false,
       items: false,
+      menus: false,
       orders: false,
       users: false,
       accountConfig: false,
@@ -144,13 +145,24 @@ export const useAppInit = () => {
       console.log('🪑 Tables déjà chargées via les rooms');
       updateProgress('tables', true);
 
-      // Étape 3: Charger le menu complet (dépend des itemTypes)
-      console.log('🍽️ Chargement du menu...');
-      const items = await loadItems().then(result => {
-        updateProgress('items', true);
-        console.log('✅ Articles du menu chargés:', result.length);
-        return result;
-      });
+      // Étape 3: Charger le menu complet et les menus structurés (dépend des itemTypes)
+      console.log('🍽️ Chargement du menu et des menus...');
+      const [items, menus] = await Promise.all([
+        loadItems().then(result => {
+          updateProgress('items', true);
+          console.log('✅ Articles du menu chargés:', result.length);
+          return result;
+        }),
+        loadAllMenus().then(result => {
+          updateProgress('menus', true);
+          console.log('✅ Menus structurés chargés:', Array.isArray(result) ? result.length : 0);
+          return result;
+        }).catch(error => {
+          console.error('⚠️ Erreur lors du chargement des menus:', error);
+          updateProgress('menus', true); // Continuer même si erreur
+          return [];
+        })
+      ]);
 
       // Étape 4: Charger les commandes de la première salle
       if (rooms.length > 0) {
@@ -182,6 +194,7 @@ export const useAppInit = () => {
         rooms,
         itemTypes,
         items,
+        menus,
         users,
         success: true
       };
@@ -204,7 +217,8 @@ export const useAppInit = () => {
     state.isLoading, 
     loadRooms, 
     loadItemTypes, 
-    loadItems, 
+    loadItems,
+    loadAllMenus,
     loadOrdersForRoom,
     loadUsers,
     dispatch
@@ -225,6 +239,7 @@ export const useAppInit = () => {
           tables: false,
           itemTypes: false,
           items: false,
+          menus: false,
           orders: false,
           users: false,
           accountConfig: false,

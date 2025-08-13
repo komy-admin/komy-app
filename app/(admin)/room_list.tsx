@@ -1,24 +1,26 @@
-import { View, StyleSheet, Text, useWindowDimensions, TextInput } from 'react-native';
+import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Button, ForkTable } from '~/components/ui';
 import { CreditCard as Edit2, UtensilsCrossed, Trash } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
-import { CustomModal } from '~/components/CustomModal';
 import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
-import { ActionMenu, ActionItem } from '~/components/ActionMenu';
+import { ActionItem } from '~/components/ActionMenu';
 import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
 import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
 import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
+import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 export default function RoomListPage() {
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
+  const roomFormView = useAdminFormView();
   const { showToast } = useToast();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -38,23 +40,29 @@ export default function RoomListPage() {
 
   const handleCreateRoom = () => {
     setCurrentRoom(null);
-    setIsModalVisible(true);
+    roomFormView.openCreate();
   };
 
   const handleEditRoom = (id: string) => {
     const room = rooms.find(room => room.id === id);
     if (!room) return;
     setCurrentRoom(room);
-    setIsModalVisible(true);
+    roomFormView.openEdit();
   };
 
   const handleCloseModal = () => {
-    setIsModalVisible(false);
+    roomFormView.close();
     setCurrentRoom(null);
   };
 
-  const handleSaveRoom = async (room: Room) => {
+  const handleSaveRoom = async (getFormData: () => any) => {
     try {
+      const formResult = getFormData();
+      if (!formResult.isValid) {
+        return false;
+      }
+
+      const room = formResult.data;
       if (room.id) {
         await updateRoom(room.id, room);
         showToast('Salle modifiée avec succès', 'success');
@@ -63,9 +71,14 @@ export default function RoomListPage() {
         showToast('Salle créée avec succès', 'success');
       }
       handleCloseModal();
-    } catch (err) {
+      return true;
+    } catch (err: any) {
       console.error('Error saving room:', err);
-      showToast('Erreur lors de la sauvegarde de la salle', 'error');
+
+      // Afficher le message d'erreur spécifique si disponible
+      const errorMessage = err?.message || 'Erreur lors de la sauvegarde de la salle';
+      showToast(errorMessage, 'error');
+      return false;
     }
   };
 
@@ -79,6 +92,7 @@ export default function RoomListPage() {
   const confirmDelete = async () => {
     if (!roomToDelete?.id) return;
 
+    setIsDeleting(true);
     try {
       await deleteRoom(roomToDelete.id);
       showToast('Salle supprimée avec succès', 'success');
@@ -86,9 +100,15 @@ export default function RoomListPage() {
       console.error('Error deleting room:', err);
       showToast('Erreur lors de la suppression de la salle', 'error');
     } finally {
+      setIsDeleting(false);
       setIsDeleteModalVisible(false);
       setRoomToDelete(null);
     }
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalVisible(false);
+    setRoomToDelete(null);
   };
 
   const navigateToRoomEdit = (roomId: string) => {
@@ -231,61 +251,27 @@ export default function RoomListPage() {
         )}
       </View>
 
-      <CustomModal
-        isVisible={isModalVisible}
-        onClose={handleCloseModal}
-        width={600}
-        height={550}
-        title={currentRoom ? "Modifier la salle" : "Créer une salle"}
+      <AdminFormView
+        visible={roomFormView.isVisible}
+        mode={roomFormView.mode}
+        title={roomFormView.mode === 'create' ? "Création d'une salle" : `Modification de "${currentRoom?.name}"`}
+        onClose={roomFormView.close}
+        onCancel={roomFormView.close}
+        onSave={handleSaveRoom}
       >
         <RoomForm
           room={currentRoom}
-          onSave={handleSaveRoom}
-          onCancel={handleCloseModal}
         />
-      </CustomModal>
+      </AdminFormView>
 
-      <CustomModal
+      <DeleteConfirmationModal
         isVisible={isDeleteModalVisible}
-        onClose={() => {
-          setIsDeleteModalVisible(false);
-          setRoomToDelete(null);
-        }}
-        width={600}
-        height={320}
-        title="Confirmation de suppression"
-        titleColor="#FF4444"
-      >
-        <View style={styles.deleteModalContent}>
-          <View style={{ paddingTop: 20 }}>
-            <Text style={styles.deleteMessage}>
-              Êtes-vous sûr de vouloir supprimer la salle {roomToDelete?.name} ?
-            </Text>
-            <Text style={styles.deleteWarning}>
-              {'(Cette action est irréversible.)'}
-            </Text>
-          </View>
-          <View style={styles.deleteButtonContainer}>
-            <Button
-              onPress={confirmDelete}
-              style={styles.deleteButton}
-              variant="destructive"
-            >
-              <Text style={styles.deleteButtonText}>Supprimer</Text>
-            </Button>
-            <Button
-              onPress={() => {
-                setIsDeleteModalVisible(false);
-                setRoomToDelete(null);
-              }}
-              variant="ghost"
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          </View>
-        </View>
-      </CustomModal>
+        onClose={handleCloseDeleteModal}
+        onConfirm={confirmDelete}
+        entityName={roomToDelete?.name || ''}
+        entityType="la salle"
+        isLoading={isDeleting}
+      />
     </View>
   );
 }
@@ -310,55 +296,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-  },
-  deleteModalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  deleteMessage: {
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-    color: '#2A2E33',
-  },
-  deleteWarning: {
-    fontSize: 14,
-    color: '#FF4444',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  deleteButtonContainer: {
-    width: '100%',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  cancelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    marginBottom: 7,
-  },
-  cancelButtonText: {
-    color: '#2A2E33',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  deleteButton: {
-    backgroundColor: '#FF4444',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
   },
   tableCountContainer: {
     flexDirection: 'row',

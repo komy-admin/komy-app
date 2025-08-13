@@ -2,24 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
-import { Status } from '~/types/status.enum';
 import { orderItemApiService } from '~/api/order-item.api';
 import { useToast } from '~/components/ToastProvider';
-import { ArrowLeft, Plus, Minus } from 'lucide-react-native';
+import { ArrowLeft, Plus, Minus, UtensilsCrossed } from 'lucide-react-native';
 import { useOrders, useMenu, useRestaurant } from '~/hooks/useRestaurant';
+import { useMenus } from '~/hooks/useMenus';
+import MenuSelector from '~/components/Service/MenuSelector';
+import { Menu } from '~/types/menu.types';
 
 export default function OrderMenuPage() {
   const { orderId } = useLocalSearchParams();
   const [menuTabsValue, setMenuTabsValue] = useState<string>('');
+  const [isMenuSelectorVisible, setIsMenuSelectorVisible] = useState(false);
   const { showToast } = useToast();
-  
+
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
-  
+
   // Utilisation des hooks Redux
-  const { getOrderById, loading, error } = useOrders();
+  const { getOrderById, loading, error, createMenuOrderItems, createIndividualOrderItem } = useOrders();
   const { items, itemTypes } = useMenu();
-  
+  const { activeMenus } = useMenus();
+
   // Récupération de la commande depuis le store
   const order = getOrderById(orderId as string);
 
@@ -29,12 +33,30 @@ export default function OrderMenuPage() {
       setMenuTabsValue(itemTypes[0].id);
     }
   }, [itemTypes, menuTabsValue]);
-  
+
   // Plus besoin de loadData, useFilter ou d'appels API - tout est géré par Redux
 
   const getItemQuantity = (itemId: string) => {
     if (!order) return 0;
     return order.orderItems.filter(orderItem => orderItem.item.id === itemId).length;
+  };
+
+  const handleMenuSelect = async (
+    menu: Menu,
+    selectedItems: Array<{ itemId: string; menuCategoryItemId: string }>
+  ) => {
+    if (!order) {
+      showToast('Aucune commande trouvée.', 'warning');
+      return;
+    }
+
+    try {
+      await createMenuOrderItems(order.id, menu.id, selectedItems);
+      showToast('Menu ajouté à la commande avec succès.', 'success');
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du menu:', error);
+      showToast('Erreur lors de l\'ajout du menu.', 'error');
+    }
   };
 
   const onUpdateQuantity = async (itemId: string, action: 'remove' | 'add') => {
@@ -51,20 +73,12 @@ export default function OrderMenuPage() {
 
     try {
       if (action === 'add') {
-        await orderItemApiService.create({
-          orderId: order.id,
-          itemId: item.id,
-          status: Status.DRAFT
-        });
+        await createIndividualOrderItem(order.id, item.id);
       } else if (action === 'remove') {
         const orderItem = order.orderItems.find(orderItem => orderItem.item.id === itemId);
         if (!orderItem) return;
         await orderItemApiService.delete(orderItem.id);
       }
-      
-      // Le store Redux se met à jour automatiquement via WebSockets
-      // Plus besoin de setOrder manuel
-      
       showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la quantité:', error);
@@ -102,18 +116,33 @@ export default function OrderMenuPage() {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-background border-b border-border">
-        <Pressable
-          onPress={() => router.back()}
-          className="flex-row items-center"
-        >
-          <ArrowLeft size={24} color="#374151" />
-          <Text className="ml-2 text-lg font-medium text-gray-900">Retour</Text>
-        </Pressable>
-        <Text className="text-lg font-bold text-gray-900">Menu - Table {order?.table.name}</Text>
-        <Text className="text-sm text-muted-foreground">
-          {order?.orderItems.length || 0} article{(order?.orderItems.length || 0) > 1 ? 's' : ''}
-        </Text>
+      <View className="px-4 py-3 bg-background border-b border-border">
+        <View className="flex-row items-center justify-between mb-3">
+          <Pressable
+            onPress={() => router.back()}
+            className="flex-row items-center"
+          >
+            <ArrowLeft size={24} color="#374151" />
+            <Text className="ml-2 text-lg font-medium text-gray-900">Retour</Text>
+          </Pressable>
+          <Text className="text-lg font-bold text-gray-900">Menu - Table {order?.table.name}</Text>
+          <Text className="text-sm text-muted-foreground">
+            {order?.orderItems.length || 0} article{(order?.orderItems.length || 0) > 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        {/* Menu selection button */}
+        {activeMenus.length > 0 && (
+          <Pressable
+            onPress={() => setIsMenuSelectorVisible(true)}
+            className="flex-row items-center justify-center bg-primary rounded-lg py-3 px-4"
+          >
+            <UtensilsCrossed size={20} color="white" />
+            <Text className="ml-2 text-primary-foreground font-medium">
+              Choisir un menu ({activeMenus.length} disponible{activeMenus.length > 1 ? 's' : ''})
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Menu Content */}
@@ -188,6 +217,13 @@ export default function OrderMenuPage() {
           </Text>
         </Button>
       </View>
+
+      {/* Menu Selector Modal */}
+      <MenuSelector
+        visible={isMenuSelectorVisible}
+        onClose={() => setIsMenuSelectorVisible(false)}
+        onMenuSelect={handleMenuSelect}
+      />
     </View>
   );
 }

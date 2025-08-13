@@ -4,6 +4,8 @@ import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState, useMemo } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
+import { AdminFormView, useAdminFormView } from "~/components/admin/AdminFormView";
+import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
 import { useToast } from '~/components/ToastProvider';
@@ -22,20 +24,22 @@ export default function TeamPage() {
   const [teamFilters, setTeamFilters] = useState<TeamFilterState>(createEmptyTeamFilters());
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [selectedUserForQr, setSelectedUserForQr] = useState<User | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const teamFormView = useAdminFormView();
   const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrSuccess, setQrSuccess] = useState<string | null>(null);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const { currentUser } = useSelector((state: RootState) => state.auth);
   const [User, setUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { showToast } = useToast();
 
   // Vérifier les droits d'accès aux utilisateurs
   const { userProfile } = useSelector((state: RootState) => state.auth);
   const canManageUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile);
+  const canModifyUsers = userProfile && ['superadmin', 'admin'].includes(userProfile);
+  const isManager = userProfile === 'manager';
 
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
@@ -47,7 +51,7 @@ export default function TeamPage() {
   // Filtrer les utilisateurs avec les filtres appliqués
   const filteredUsers = useMemo(() => {
     let result = activeTab === 'all' ? users : getUsersByProfile(activeTab);
-    
+
     // Appliquer les filtres TeamFilters
     result = filterTeamUsers(result, teamFilters);
 
@@ -68,24 +72,34 @@ export default function TeamPage() {
   };
 
   const handleCreateUser = () => {
+    // Les managers ne peuvent pas créer d'utilisateurs
+    if (isManager) return;
     setUser(null);
-    setIsModalVisible(true);
+    teamFormView.openCreate();
   };
 
   const handleEditUser = (id: string) => {
+    // Les managers ne peuvent pas modifier les utilisateurs
+    if (isManager) return;
     const user = users.find(user => user.id === id);
     if (!user) return;
     setUser(user);
-    setIsModalVisible(true);
+    teamFormView.openEdit();
   };
 
   const handleCloseModal = () => {
-    setIsModalVisible(false);
+    teamFormView.close();
     setUser(null);
   };
 
-  const handleSaveUser = async (user: User) => {
+  const handleSaveUser = async (getFormData: () => any) => {
     try {
+      const formResult = getFormData();
+      if (!formResult.isValid) {
+        return false;
+      }
+
+      const user = formResult.data;
       if (user.id) {
         await updateUser(user.id, user);
         showToast('Utilisateur modifié avec succès', 'success');
@@ -94,12 +108,14 @@ export default function TeamPage() {
         showToast('Utilisateur créé avec succès', 'success');
       }
       handleCloseModal();
+      return true;
     } catch (err: any) {
       console.error('Error saving user:', err);
-      
+
       // Afficher le message d'erreur spécifique si disponible
       const errorMessage = err?.message || 'Erreur lors de la sauvegarde de l\'utilisateur';
       showToast(errorMessage, 'error');
+      return false;
     }
   };
 
@@ -113,6 +129,7 @@ export default function TeamPage() {
   const confirmDelete = async () => {
     if (!userToDelete) return;
 
+    setIsDeleting(true);
     try {
       await deleteUser(userToDelete.id);
       showToast('Utilisateur supprimé avec succès', 'success');
@@ -120,9 +137,15 @@ export default function TeamPage() {
       console.error('Error deleting user:', err);
       showToast('Erreur lors de la suppression de l\'utilisateur', 'error');
     } finally {
+      setIsDeleting(false);
       setIsDeleteModalVisible(false);
       setUserToDelete(null);
     }
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalVisible(false);
+    setUserToDelete(null);
   };
 
   const handleShowQrCode = async (user: User) => {
@@ -150,16 +173,16 @@ export default function TeamPage() {
 
   const handleRegenerateQr = async () => {
     if (!selectedUserForQr) return;
-    
+
     try {
       setQrLoading(true);
       setQrError(null);
       setQrSuccess(null);
-      
+
       // Force la génération d'un nouveau QR (révoque l'ancien automatiquement)
       const res = await regenerateQrToken(selectedUserForQr.id);
       setQrCodeToken(res.qrData.token);
-      
+
       showToast('QR code régénéré avec succès', 'success');
     } catch (error) {
       console.error('Erreur lors de la régénération du QR code:', error);
@@ -171,24 +194,35 @@ export default function TeamPage() {
   };
 
   const getUserActions = (user: User): ActionItem[] => {
-    return [
-      {
+    const actions: ActionItem[] = [];
+
+    // Seuls admin et superadmin peuvent modifier
+    if (canModifyUsers) {
+      actions.push({
         label: 'Modifier',
         icon: <Edit2 size={16} color="#4F46E5" />,
         onPress: () => handleEditUser(user.id ? user.id : '')
-      },
-      ...(currentUser?.profil === 'admin' || 'superadmin' ? [{
-        label: 'QR Code',
-        icon: <QrCode size={16} color="#4F46E5" />,
-        onPress: () => handleShowQrCode(user)
-      }] : []),
-      {
+      });
+    }
+
+    // QR Code accessible à tous (admin, superadmin, manager)
+    actions.push({
+      label: 'QR Code',
+      icon: <QrCode size={16} color="#4F46E5" />,
+      onPress: () => handleShowQrCode(user)
+    });
+
+    // Seuls admin et superadmin peuvent supprimer
+    if (canModifyUsers) {
+      actions.push({
         label: 'Supprimer',
         icon: <Trash size={16} color="#ef4444" />,
         type: 'destructive',
         onPress: () => handleDeleteUser(user.id ? user.id : '')
-      }
-    ];
+      });
+    }
+
+    return actions;
   };
 
   const { width } = useWindowDimensions();
@@ -296,43 +330,45 @@ export default function TeamPage() {
               </TabsList>
             </ScrollView>
 
-            <View
-              style={{
-                width: 200,
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                backgroundColor: '#FBFBFB',
-                zIndex: 10,
-                shadowColor: '#000',
-                shadowOffset: { width: -4, height: 0 },
-                shadowOpacity: 0.05,
-                shadowRadius: 2,
-              }}
-            >
-              <Button
-                onPress={handleCreateUser}
-                className="w-[200px] h-[50px] flex items-center justify-center"
+            {/* Bouton "Créer un utilisateur" - caché pour les managers */}
+            {canModifyUsers && (
+              <View
                 style={{
-                  backgroundColor: canManageUsers ? '#2A2E33' : '#CCCCCC',
-                  borderRadius: 0,
-                  height: 50,
-                  width: 200
+                  width: 200,
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  backgroundColor: '#FBFBFB',
+                  zIndex: 10,
+                  shadowColor: '#000',
+                  shadowOffset: { width: -4, height: 0 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
                 }}
-                disabled={!canManageUsers}
               >
-                <Text style={{
-                  fontSize: 14,
-                  color: canManageUsers ? '#FBFBFB' : '#888888',
-                  fontWeight: '500',
-                  textAlign: 'center',
-                  textTransform: 'uppercase',
-                }}>
-                  Créer un utilisateur
-                </Text>
-              </Button>
-            </View>
+                <Button
+                  onPress={handleCreateUser}
+                  className="w-[200px] h-[50px] flex items-center justify-center"
+                  style={{
+                    backgroundColor: '#2A2E33',
+                    borderRadius: 0,
+                    height: 50,
+                    width: 200
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#FBFBFB',
+                    fontWeight: '500',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                  }}>
+                    Créer un utilisateur
+                  </Text>
+                </Button>
+              </View>
+            )}
           </View>
 
           <TabsContent style={{ flex: 1 }} value={activeTab}>
@@ -353,8 +389,8 @@ export default function TeamPage() {
               <ForkTable
                 data={filteredUsers}
                 columns={teamTableColumns}
-                onRowPress={handleEditUser}
-                onRowDelete={handleDeleteUser}
+                onRowPress={canModifyUsers ? handleEditUser : undefined}
+                onRowDelete={canModifyUsers ? handleDeleteUser : undefined}
                 useActionMenu={true}
                 getActions={getUserActions}
                 isLoading={loading}
@@ -366,62 +402,34 @@ export default function TeamPage() {
         </Tabs>
       </View>
 
-      <CustomModal
-        isVisible={isModalVisible}
-        onClose={handleCloseModal}
-        width={600}
-        height={675}
-        title={User ? "Modifier l'utilisateur" : "Créer un utilisateur"}
-      >
-        <TeamForm
-          user={User}
+      {/* Modal de modification - cachée pour les managers */}
+      {canModifyUsers && (
+        <AdminFormView
+          visible={teamFormView.isVisible}
+          mode={teamFormView.mode}
+          title={teamFormView.mode === 'create' ? "Création d'un utilisateur" : `Modification de "${User?.firstName} ${User?.lastName}"`}
+          onClose={teamFormView.close}
+          onCancel={teamFormView.close}
           onSave={handleSaveUser}
-          onCancel={handleCloseModal}
-          activeTab={activeTab}
-        />
-      </CustomModal>
+        >
+          <TeamForm
+            user={User}
+            activeTab={activeTab}
+          />
+        </AdminFormView>
+      )}
 
-      <CustomModal
-        isVisible={isDeleteModalVisible}
-        onClose={() => {
-          setIsDeleteModalVisible(false);
-          setUserToDelete(null);
-        }}
-        width={600}
-        height={320}
-        title="Confirmation de suppression"
-        titleColor="#FF4444"
-      >
-        <View style={styles.deleteModalContent}>
-          <View style={{ paddingTop: 20 }}>
-            <Text style={styles.deleteMessage}>
-              Êtes-vous sûr de vouloir supprimer le profil {userToDelete?.firstName} {userToDelete?.lastName} ?
-            </Text>
-            <Text style={styles.deleteWarning}>
-              {'(Cette action est irréversible.)'}
-            </Text>
-          </View>
-          <View style={styles.deleteButtonContainer}>
-            <Button
-              onPress={confirmDelete}
-              style={styles.deleteButton}
-              variant="destructive"
-            >
-              <Text style={styles.deleteButtonText}>Supprimer</Text>
-            </Button>
-            <Button
-              onPress={() => {
-                setIsDeleteModalVisible(false);
-                setUserToDelete(null);
-              }}
-              style={styles.cancelButton}
-              variant="ghost"
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          </View>
-        </View>
-      </CustomModal>
+      {/* Modal de suppression - cachée pour les managers */}
+      {canModifyUsers && (
+        <DeleteConfirmationModal
+          isVisible={isDeleteModalVisible}
+          onClose={handleCloseDeleteModal}
+          onConfirm={confirmDelete}
+          entityName={userToDelete ? `${userToDelete.firstName} ${userToDelete.lastName}` : ''}
+          entityType="le profil"
+          isLoading={isDeleting}
+        />
+      )}
 
       <CustomModal
         isVisible={qrModalVisible}
@@ -484,55 +492,6 @@ export default function TeamPage() {
 }
 
 const styles = StyleSheet.create({
-  deleteModalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  deleteMessage: {
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-    color: '#2A2E33',
-  },
-  deleteWarning: {
-    fontSize: 14,
-    color: '#FF4444',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  deleteButtonContainer: {
-    width: '100%',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  cancelButton: {
-    width: '100%',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginBottom: 7,
-  },
-  cancelButtonText: {
-    color: '#2A2E33',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  deleteButton: {
-    width: '100%',
-    backgroundColor: '#FF4444',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   qrModalContent: {
     flex: 1,
     paddingHorizontal: 20,

@@ -1,4 +1,4 @@
-import { Animated, Platform, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
@@ -15,13 +15,55 @@ const SWIPE_THRESHOLD = -80;
 const ACTIVATION_DISTANCE = 15;
 
 const getOrderType = (order: Order): string => {
-  const statuses = order.orderItems.map(item => item.status);
+  // Obtenir tous les items (nouvelle structure + fallback ancienne)
+  let allItems = [];
+
+  // Nouvelle structure
+  if (order.individualItems) {
+    allItems.push(...order.individualItems);
+  }
+  if (order.menus) {
+    order.menus.forEach(menu => {
+      if (menu.orderItems) {
+        allItems.push(...menu.orderItems);
+      }
+    });
+  }
+
+  // Fallback sur l'ancienne structure si nouvelle structure est vide
+  if (allItems.length === 0 && order.orderItems) {
+    allItems = order.orderItems;
+  }
+
+  if (allItems.length === 0) return '';
+
+  const statuses = allItems.map(item => item.status);
   const mostImportantStatus = getMostImportantStatus(statuses);
-  return order.orderItems.find(item => item.status === mostImportantStatus)?.item.itemType.name || '';
+  return allItems.find(item => item.status === mostImportantStatus)?.item?.itemType?.name || '';
 };
 
 export default function OrderCard({ order, onDelete }: OrderCardProps) {
-  const mostImportantStatus = getMostImportantStatus(order.orderItems.map(item => item.status));
+  // Obtenir tous les items (nouvelle structure + fallback ancienne)
+  let allItems = [];
+
+  // Nouvelle structure
+  if (order.individualItems) {
+    allItems.push(...order.individualItems);
+  }
+  if (order.menus) {
+    order.menus.forEach(menu => {
+      if (menu.orderItems) {
+        allItems.push(...menu.orderItems);
+      }
+    });
+  }
+
+  // Fallback sur l'ancienne structure si nouvelle structure est vide
+  if (allItems.length === 0 && order.orderItems) {
+    allItems = order.orderItems;
+  }
+
+  const mostImportantStatus = getMostImportantStatus(allItems.map(item => item.status));
   const statusColor = getStatusColor(mostImportantStatus);
   const statusText = getStatusText(mostImportantStatus);
   const orderType = getOrderType(order);

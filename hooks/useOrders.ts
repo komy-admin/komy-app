@@ -156,13 +156,72 @@ export const useOrders = () => {
     return orders.filter(order => order.table?.roomId === roomId);
   }, [orders]);
 
+  // Nouvelles méthodes pour la structure avec menus
+  const getOrderIndividualItems = useCallback((orderId: string) => {
+    const order = getOrderById(orderId);
+    if (order?.individualItems) {
+      return order.individualItems;
+    }
+    // Fallback: filtrer les items sans menuGroupId
+    return order?.orderItems?.filter(item => !item.menuGroupId) || [];
+  }, [getOrderById]);
+
+  const getOrderMenus = useCallback((orderId: string) => {
+    const order = getOrderById(orderId);
+    return order?.menus || [];
+  }, [getOrderById]);
+
+  const getOrderAllItems = useCallback((orderId: string) => {
+    const order = getOrderById(orderId);
+    if (!order) return [];
+    
+    const allItems = [];
+    
+    // Ajouter les items individuels
+    if (order.individualItems) {
+      allItems.push(...order.individualItems);
+    }
+    
+    // Ajouter les items des menus
+    if (order.menus) {
+      order.menus.forEach(menu => {
+        if (menu.orderItems) {
+          allItems.push(...menu.orderItems);
+        }
+      });
+    }
+    
+    // Fallback sur l'ancienne structure si la nouvelle est vide
+    if (allItems.length === 0 && order.orderItems) {
+      allItems.push(...order.orderItems);
+    }
+    
+    return allItems;
+  }, [getOrderById]);
+
+  const hasOrderMenus = useCallback((orderId: string) => {
+    const order = getOrderById(orderId);
+    return Boolean(order?.menus && order.menus.length > 0);
+  }, [getOrderById]);
+
+  const hasOrderIndividualItems = useCallback((orderId: string) => {
+    const order = getOrderById(orderId);
+    return Boolean(order?.individualItems && order.individualItems.length > 0);
+  }, [getOrderById]);
+
   // Actions pour les orderItems
-  const createOrderItem = useCallback(async (orderId: string, itemId: string, status: Status = Status.DRAFT) => {
+  const createOrderItem = useCallback(async (
+    orderId: string, 
+    itemId: string, 
+    status: Status = Status.DRAFT,
+    menuGroupId?: string | null
+  ) => {
     try {
       const newOrderItem = await orderItemApiService.create({
         orderId,
         itemId,
-        status
+        status,
+        menuGroupId
       });
 
       // Mettre à jour le store Redux
@@ -218,6 +277,45 @@ export const useOrders = () => {
     }
   }, [dispatch]);
 
+  // Nouvelle méthode pour créer des orderItems de menu
+  const createMenuOrderItems = useCallback(async (
+    orderId: string,
+    menuGroupId: string,
+    items: Array<{ itemId: string; status?: Status }>
+  ) => {
+    try {
+      const orderItems = await Promise.all(
+        items.map(({ itemId, status = Status.DRAFT }) =>
+          orderItemApiService.create({
+            orderId,
+            itemId,
+            status,
+            menuGroupId
+          })
+        )
+      );
+
+      // Mettre à jour le store Redux pour chaque item
+      orderItems.forEach(orderItem => {
+        dispatch(restaurantActions.updateOrderItem({ orderItem }));
+      });
+
+      return orderItems;
+    } catch (error) {
+      console.error('Erreur lors de la création des orderItems de menu:', error);
+      throw error;
+    }
+  }, [dispatch]);
+
+  // Méthode pour créer un item individuel (à la carte)
+  const createIndividualOrderItem = useCallback(async (
+    orderId: string,
+    itemId: string,
+    status: Status = Status.DRAFT
+  ) => {
+    return createOrderItem(orderId, itemId, status, null);
+  }, [createOrderItem]);
+
   return {
     // Données
     orders,
@@ -239,15 +337,24 @@ export const useOrders = () => {
     
     // Actions CRUD pour les orderItems
     createOrderItem,
+    createMenuOrderItems,
+    createIndividualOrderItem,
     deleteOrderItem,
     deleteManyOrderItems,
     updateOrderItemStatus,
     
-    // Utilitaires
+    // Utilitaires (anciens)
     getOrderById,
     getOrderByTableId,
     getOrderItems,
     getOrderItemsByType,
     getOrdersByRoom,
+    
+    // Nouveaux utilitaires pour structure avec menus
+    getOrderIndividualItems,
+    getOrderMenus,
+    getOrderAllItems,
+    hasOrderMenus,
+    hasOrderIndividualItems,
   };
 };

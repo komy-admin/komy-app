@@ -1,27 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, Text, Platform } from 'react-native';
-import { Button, TextInput, NumberInput } from '~/components/ui';
+import { TextInput, NumberInput } from '~/components/ui';
 import { Room } from '~/types/room.types';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
+import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
 
 interface RoomFormProps {
   room: Room | null;
-  onSave: (room: Room) => void;
-  onCancel: () => void;
+  onSave?: (room: Room) => void; // Optionnel car maintenant géré par AdminFormView
 }
 
-export const RoomForm: React.FC<RoomFormProps> = ({ 
-  room, 
-  onSave, 
-  onCancel 
-}) => {
+export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
+  room,
+  onSave
+}, ref) => {
   const [formData, setFormData] = useState({
     name: '',
     width: 15,
     height: 15
   });
-  
+
   const { showToast } = useToast();
 
   const validationRules: ValidationRules = {
@@ -57,158 +56,201 @@ export const RoomForm: React.FC<RoomFormProps> = ({
     }
   }, [room]);
 
-  const handleSubmit = () => {
-    const errors = validateForm(formData, validationRules);
-    
-    if (errors.length > 0) {
-      showToast(errors[0].message, 'error');
-      return;
+  // Expose l'interface AdminFormRef
+  useImperativeHandle(ref, () => ({
+    getFormData: (): AdminFormData<Room> => {
+      const errors = validateForm(formData, validationRules);
+      const formErrors: Record<string, string> = {};
+
+      if (errors.length > 0) {
+        errors.forEach(error => {
+          formErrors[error.field || 'general'] = error.message;
+        });
+      }
+
+      const isValid = Object.keys(formErrors).length === 0;
+      let roomData: Room | null = null;
+
+      if (isValid) {
+        roomData = {
+          id: room?.id || '', // Utiliser l'id existant ou string vide pour nouvelle salle
+          name: formData.name,
+          width: formData.width,
+          height: formData.height,
+          tables: room?.tables || [],
+          account: room?.account || '',
+          createdAt: room?.createdAt || '',
+          updatedAt: room?.updatedAt || ''
+        };
+      }
+
+      return {
+        data: roomData!,
+        isValid,
+        errors: formErrors
+      };
+    },
+
+    resetForm: () => {
+      setFormData({
+        name: '',
+        width: 15,
+        height: 15
+      });
+    },
+
+    validateForm: () => {
+      const result = (ref as any).current?.getFormData();
+      if (!result.isValid && Object.keys(result.errors).length > 0) {
+        showToast(Object.values(result.errors)[0] as string, 'error');
+      }
+      return result.isValid;
     }
-
-    const updatedRoom: Room = {
-      ...(room?.id && { id: room.id }),
-      name: formData.name,
-      width: formData.width,
-      height: formData.height,
-      tables: room?.tables || [],
-      account: '',
-      createdAt: '',
-      updatedAt: ''
-    };
-
-    onSave(updatedRoom);
-  };
+  }), [formData, validationRules, room, showToast]);
 
   return (
     <View style={styles.container}>
-      <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Nom de la salle *</Text>
-          <TextInput
-            value={formData.name}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-            placeholder="Entrez le nom de la salle"
-            placeholderTextColor="#A0A0A0"
-            style={[styles.input, { height: 48 }]}
-          />
-        </View>
+      {/* Formulaire en grille compacte */}
+      <View style={styles.formGrid}>
+        {/* Section principale - Informations de base */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>1. Informations de la salle</Text>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Largeur *</Text>
-          <NumberInput
-            value={formData.width}
-            onChangeText={(value) => setFormData(prev => ({ ...prev, width: value || 15 }))}
-            placeholder="Largeur"
-            decimalPlaces={0}
-            min={5}
-            max={50}
-            style={[styles.input, { height: 48, width: '100%' }]}
-          />
-        </View>
+          {/* Ligne 1: Nom */}
+          <View style={styles.row}>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Nom de la salle *</Text>
+              <TextInput
+                value={formData.name}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+                placeholder="Entrez le nom de la salle"
+                placeholderTextColor="#A0A0A0"
+                style={styles.input}
+                autoComplete="off"
+              />
+            </View>
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Hauteur *</Text>
-          <NumberInput
-            value={formData.height}
-            onChangeText={(value) => setFormData(prev => ({ ...prev, height: value || 15 }))}
-            placeholder="Hauteur"
-            decimalPlaces={0}
-            min={5}
-            max={50}
-            style={[styles.input, { height: 48, width: '100%' }]}
-          />
+          {/* Ligne 2: Dimensions */}
+          <View style={[styles.row, { marginBottom: 0 }]}>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Largeur *</Text>
+              <NumberInput
+                value={formData.width}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, width: value || 15 }))}
+                placeholder="Largeur (5-50)"
+                decimalPlaces={0}
+                min={5}
+                max={50}
+                style={styles.input}
+              />
+            </View>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Hauteur *</Text>
+              <NumberInput
+                value={formData.height}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, height: value || 15 }))}
+                placeholder="Hauteur (5-50)"
+                decimalPlaces={0}
+                min={5}
+                max={50}
+                style={styles.input}
+              />
+            </View>
+          </View>
         </View>
-      </View>
-
-      <View style={styles.buttons}>
-        <Button
-          onPress={handleSubmit}
-          variant="default"
-          size={null}
-          style={styles.submitButton}
-        >
-          <Text style={styles.submitButtonText}>
-            {room ? 'Enregistrer les modifications' : 'Créer la salle'}
-          </Text>
-        </Button>
-        
-        <Button
-          onPress={onCancel}
-          variant="ghost"
-          size={null}
-          style={styles.cancelButton}
-        >
-          <Text style={styles.cancelButtonText}>
-            Annuler
-          </Text>
-        </Button>
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 24,
-    paddingBottom: 18,
-    paddingLeft: 24,
-    paddingRight: 24,
   },
-  form: {
+
+  // Structure en grille
+  formGrid: {
     flex: 1,
-    gap: 24,
   },
-  inputGroup: {
-    gap: 8,
+
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 26,
+    paddingVertical: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2A2E33',
+    marginBottom: 24,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#F3F4F6',
+    letterSpacing: 0.5,
+  },
+
+  // Système de lignes et colonnes
+  row: {
+    flexDirection: 'row',
+    marginBottom: 24,
+    ...(Platform.OS === 'web' ? {} : { gap: 16 })
+  },
+
+  field: {
+    ...(Platform.OS === 'web' && { marginRight: 16 })
+  },
+
+  fieldLarge: {
+    flex: 2,
+    ...(Platform.OS === 'web' && { marginRight: 16 })
+  },
+
+  // Éléments de form
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#2A2E33',
-    marginBottom: 4,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    })
   },
+
   input: {
     borderWidth: 1,
-    borderColor: '#D7D7D7',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
     color: '#2A2E33',
-    padding: 16,
-    fontSize: 16,
-    ...(Platform.OS === 'web' && {
-      cursor: 'text'
-    })
-  },
-  buttons: {
-    gap: 12,
-    marginTop: 34,
-  },
-  submitButton: {
-    backgroundColor: '#2A2E33',
-    borderRadius: 8,
-    height: 48,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer'
-    })
-  },
-  submitButtonText: {
-    color: '#FBFBFB',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  cancelButton: {
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-    height: 48,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer'
-    })
-  },
-  cancelButtonText: {
-    color: '#2A2E33',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
     fontWeight: '500',
-    fontSize: 16,
-    textDecorationLine: 'underline',
+    minHeight: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    ...(Platform.OS === 'web' && {
+      cursor: 'text',
+      transition: 'all 0.2s ease',
+      ':focus': {
+        borderColor: '#2A2E33',
+        shadowOpacity: 0.1,
+      }
+    }),
   },
 });

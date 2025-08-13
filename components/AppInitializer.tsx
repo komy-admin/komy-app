@@ -184,7 +184,8 @@ function getStepLabel(key: string): string {
     rooms: 'Salles',
     tables: 'Tables', 
     itemTypes: 'Types d\'articles',
-    items: 'Menu',
+    items: 'Articles',
+    menus: 'Menus',
     orders: 'Commandes'
   };
   return labels[key] || key;

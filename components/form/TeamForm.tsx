@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { View, StyleSheet, Platform, Pressable } from 'react-native';
 import { Text, Button, TextInput } from '~/components/ui';
-import { Select } from '~/components/ui/select';
 import { User, UserProfile } from '~/types/user.types';
-import { getEnumValue } from '~/lib/utils';
+import { getEnumValue, getUserProfileText } from '~/lib/utils';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
+import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
 
 interface TeamFormProps {
   user: User | null;
-  onSave: (user: User) => void;
-  onCancel: () => void;
+  onSave?: (user: User) => void; // Optionnel car maintenant géré par AdminFormView
+  onCancel?: () => void;
   activeTab: UserProfile | 'all';
 }
 
@@ -23,14 +23,10 @@ const initialFormData = {
   password: '',
 };
 
-const defaultOption = {
-  value: '',
-  label: 'Choisissez un rôle',
-};
 
-export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
+export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, onSave, onCancel, activeTab }, ref) => {
   const [formData, setFormData] = useState(initialFormData);
-  const [selectedOption, setSelectedOption] = useState(defaultOption);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [isPasswordModified, setIsPasswordModified] = useState(false);
   const { showToast } = useToast();
 
@@ -90,68 +86,79 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
       });
       setIsPasswordModified(false);
 
-      const userTypeKey = Object.keys(UserProfile).find(
-        key => UserProfile[key as keyof typeof UserProfile] === user.profil
-      );
-      
-      if (userTypeKey) {
-        setSelectedOption({
-          value: userTypeKey,
-          label: user.profil,
-        });
-      }
+      setSelectedProfileId(user.profil);
     } else {
       setFormData(initialFormData);
       setIsPasswordModified(false);
-      
+
       if (activeTab !== 'all') {
-        const profileKey = Object.keys(UserProfile).find(
-          key => UserProfile[key as keyof typeof UserProfile] === activeTab
-        );
-        if (profileKey) {
-          setSelectedOption({
-            value: profileKey,
-            label: activeTab,
-          });
-        } else {
-          setSelectedOption(defaultOption);
-        }
+        setSelectedProfileId(activeTab);
       } else {
-        setSelectedOption(defaultOption);
+        setSelectedProfileId('');
       }
     }
   }, [user, activeTab]);
 
-  const handleSubmit = () => {
-    const dataToValidate = {
-      ...formData,
-      profil: selectedOption.value
-    };
+  // Gestion des profils de type callback
+  const handleProfileSelect = React.useCallback((profileId: string) => {
+    setSelectedProfileId(profileId);
+  }, []);
 
-    const errors = validateForm(dataToValidate, validationRules);
-    
-    if (errors.length > 0) {
-      showToast(errors[0].message, 'error');
-      return;
+  // Expose l'interface AdminFormRef
+  useImperativeHandle(ref, () => ({
+    getFormData: (): AdminFormData<User> => {
+      const dataToValidate = {
+        ...formData,
+        profil: selectedProfileId
+      };
+
+      const errors = validateForm(dataToValidate, validationRules);
+      const formErrors: Record<string, string> = {};
+
+      if (errors.length > 0) {
+        errors.forEach(error => {
+          formErrors[error.field || 'general'] = error.message;
+        });
+      }
+
+      if (!selectedProfileId) {
+        formErrors.profil = 'Le rôle est obligatoire';
+      }
+
+      const isValid = Object.keys(formErrors).length === 0;
+      let userData: User | null = null;
+
+      if (isValid) {
+        userData = {
+          id: user?.id || '',
+          accountId: user?.accountId || '',
+          profil: selectedProfileId as UserProfile,
+          ...formData,
+          password: user && !isPasswordModified ? '' : formData.password,
+        };
+      }
+
+      return {
+        data: userData!,
+        isValid,
+        errors: formErrors
+      };
+    },
+
+    resetForm: () => {
+      setFormData(initialFormData);
+      setIsPasswordModified(false);
+      setSelectedProfileId(activeTab !== 'all' ? activeTab : '');
+    },
+
+    validateForm: () => {
+      const result = (ref as any).current?.getFormData();
+      if (!result.isValid && Object.keys(result.errors).length > 0) {
+        showToast(Object.values(result.errors)[0] as string, 'error');
+      }
+      return result.isValid;
     }
-
-    if (!selectedOption.value) {
-      showToast('Veuillez sélectionner un rôle', 'error');
-      return;
-    }
-
-    const selectedValue = getEnumValue(UserProfile, selectedOption.value as keyof typeof UserProfile);
-    const submittedUser: User = {
-      id: user?.id || '',
-      accountId: user?.accountId || '',
-      profil: selectedValue as UserProfile,
-      ...formData,
-      password: user && !isPasswordModified ? '' : formData.password,
-    };
-    
-    
-    onSave(submittedUser);
-  };
+  }), [formData, selectedProfileId, validationRules, user, isPasswordModified, activeTab, showToast]);
 
   const handlePasswordChange = (text: string) => {
     setIsPasswordModified(true);
@@ -160,54 +167,103 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.formSection}>
-        <View style={[styles.inputGroup, { zIndex: 1000 }]}>
-          <Text style={styles.label}>Rôle *</Text>
-          <Select
-            choices={Object.entries(UserProfile)
-              .filter(([_, value]) => !['superadmin', 'admin'].includes(value))
-              .map(([key, label]) => ({
-                value: key,
-                label,
-              }))}
-            selectedValue={selectedOption}
-            onValueChange={(value) => {
-              if (value) setSelectedOption(value);
-            }}
-          />
-        </View>
+      {/* Formulaire en grille compacte */}
+      <View style={styles.formGrid}>
+        {/* Section principale - Informations de base */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>1. Informations de base</Text>
 
-        <View style={styles.inputRows}>
+          {/* Ligne 1: Rôle */}
+          <View style={[styles.row, { marginBottom: 16 }]}>
+            <View style={styles.profileSection}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Rôle *</Text>
+              <View style={styles.profileButtons}>
+                {Object.values(UserProfile)
+                  .filter(profile => !['superadmin', 'admin'].includes(profile))
+                  .map((profile) => (
+                    Platform.OS === 'web' ? (
+                      <div
+                        key={profile}
+                        style={{
+                          ...styles.profileButton,
+                          ...(selectedProfileId === profile && {
+                            backgroundColor: '#2A2E33',
+                            borderColor: '#2A2E33',
+                            opacity: 1
+                          }),
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onClick={() => handleProfileSelect(profile)}
+                      >
+                        <span style={{
+                          ...styles.profileButtonText,
+                          ...(selectedProfileId === profile && {
+                            color: '#FFFFFF'
+                          })
+                        }}>
+                          {getUserProfileText(profile)}
+                        </span>
+                      </div>
+                    ) : (
+                      <Pressable
+                        key={profile}
+                        style={[
+                          styles.profileButton,
+                          selectedProfileId === profile && styles.profileButtonActive
+                        ]}
+                        onPress={() => handleProfileSelect(profile)}
+                      >
+                        <Text style={[
+                          styles.profileButtonText,
+                          selectedProfileId === profile && styles.profileButtonTextActive
+                        ]}>
+                          {getUserProfileText(profile)}
+                        </Text>
+                      </Pressable>
+                    )
+                  ))}
+              </View>
+            </View>
+          </View>
+
+          {/* Ligne 2: Prénom + Nom */}
           <View style={styles.row}>
-            <View style={styles.column}>
-              <Text style={styles.label}>Prénom *</Text>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Prénom *</Text>
               <TextInput
                 value={formData.firstName}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
                 placeholder="Prénom"
+                placeholderTextColor="#A0A0A0"
                 style={styles.input}
                 autoComplete="off"
               />
             </View>
-            <View style={styles.column}>
-              <Text style={styles.label}>Nom *</Text>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Nom *</Text>
               <TextInput
                 value={formData.lastName}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
                 placeholder="Nom"
+                placeholderTextColor="#A0A0A0"
                 style={styles.input}
                 autoComplete="off"
               />
             </View>
           </View>
 
+          {/* Ligne 3: Email + Téléphone */}
           <View style={styles.row}>
-            <View style={styles.column}>
-              <Text style={styles.label}>Email *</Text>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Email *</Text>
               <TextInput
                 value={formData.email}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, email: text }))}
                 placeholder="Email"
+                placeholderTextColor="#A0A0A0"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 style={styles.input}
@@ -218,12 +274,13 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
                 } : {})}
               />
             </View>
-            <View style={styles.column}>
-              <Text style={styles.label}>Téléphone</Text>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Téléphone</Text>
               <TextInput
                 value={formData.phone}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, phone: text }))}
                 placeholder="Téléphone (optionnel)"
+                placeholderTextColor="#A0A0A0"
                 keyboardType="phone-pad"
                 style={styles.input}
                 autoComplete="off"
@@ -231,13 +288,15 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
             </View>
           </View>
 
-          <View style={styles.row}>
-            <View style={styles.column}>
-              <Text style={styles.label}>Identifiant *</Text>
+          {/* Ligne 4: Identifiant + Mot de passe */}
+          <View style={[styles.row, { marginBottom: 0 }]}>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Identifiant *</Text>
               <TextInput
                 value={formData.loginId}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, loginId: text }))}
                 placeholder="Identifiant"
+                placeholderTextColor="#A0A0A0"
                 autoCapitalize="none"
                 style={styles.input}
                 autoComplete="off"
@@ -247,12 +306,13 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
                 } : {})}
               />
             </View>
-            <View style={styles.column}>
-              <Text style={styles.label}>Mot de passe {!user && '*'}</Text>
+            <View style={[styles.field, styles.fieldLarge]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Mot de passe {!user && '*'}</Text>
               <TextInput
                 value={formData.password}
                 onChangeText={handlePasswordChange}
                 placeholder={user ? "Modifier le mot de passe" : "Mot de passe"}
+                placeholderTextColor="#A0A0A0"
                 secureTextEntry
                 style={styles.input}
                 autoComplete="new-password"
@@ -265,113 +325,161 @@ export function TeamForm({ user, onSave, onCancel, activeTab }: TeamFormProps) {
           </View>
         </View>
       </View>
-
-      <View style={styles.buttonSection}>
-        <Button
-          onPress={handleSubmit}
-          variant="default"
-          size={null}
-          style={styles.submitButton}
-        >
-          <Text style={styles.submitButtonText}>
-            {user ? 'Enregistrer les modifications' : 'Confirmer la création'}
-          </Text>
-        </Button>
-        
-        <Button 
-          onPress={onCancel}
-          variant="ghost"
-          size={null}
-          style={styles.cancelButton}
-        >
-          <Text style={styles.cancelButtonText}>
-            Annuler
-          </Text>
-        </Button>
-      </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
-    borderBottomRightRadius: 20,
-    borderBottomLeftRadius: 20,
   },
-  formSection: {
+
+  // Structure en grille
+  formGrid: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 18,
-    gap: 24,
   },
-  inputGroup: {
-    gap: 8,
+
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 26,
+    paddingVertical: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  inputRows: {
-    gap: 24,
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2A2E33',
+    marginBottom: 24,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#F3F4F6',
+    letterSpacing: 0.5,
   },
+
+  // Système de lignes et colonnes
   row: {
     flexDirection: 'row',
-    gap: 24,
+    marginBottom: 24,
+    ...(Platform.OS === 'web' ? {} : { gap: 16 })
   },
-  column: {
-    flex: 1,
+
+  field: {
+    ...(Platform.OS === 'web' && { marginRight: 16 })
   },
+
+  fieldLarge: {
+    flex: 2,
+    ...(Platform.OS === 'web' && { marginRight: 16 })
+  },
+
+  // Éléments de form
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#2A2E33',
     marginBottom: 8,
+    letterSpacing: 0.5,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    })
   },
+
   input: {
-    minHeight: 48,
     borderWidth: 1,
-    borderColor: '#D7D7D7',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
     color: '#2A2E33',
-    padding: 16,
-    fontSize: 16,
-    ...(Platform.OS === 'web' && {
-      cursor: 'text'
-    })
-  },
-  buttonSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 18,
-    paddingTop: 24,
-    gap: 12,
-  },
-  submitButton: {
-    backgroundColor: '#2A2E33',
-    borderRadius: 8,
-    height: 48,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer'
-    })
-  },
-  submitButtonText: {
-    color: '#FBFBFB',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  cancelButton: {
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-    height: 48,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer'
-    })
-  },
-  cancelButtonText: {
-    color: '#2A2E33',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
     fontWeight: '500',
-    fontSize: 16,
-    textDecorationLine: 'underline',
+    minHeight: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    ...(Platform.OS === 'web' && {
+      cursor: 'text',
+      transition: 'all 0.2s ease',
+      ':focus': {
+        borderColor: '#2A2E33',
+        shadowOpacity: 0.1,
+      }
+    }),
+  },
+
+  // Section profils (comme catégories dans MenuForm)
+  profileSection: {
+    flex: 1,
+    width: '100%',
+  },
+
+  profileButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    width: '100%',
+  },
+
+  profileButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 90,
+    minHeight: 44,
+    flexShrink: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
+    elevation: 1,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        borderColor: '#D1D5DB',
+        shadowOpacity: 0.08,
+        transform: 'translateY(-1px)',
+      }
+    }),
+  },
+
+  profileButtonActive: {
+    backgroundColor: '#2A2E33',
+    borderColor: '#2A2E33',
+    shadowColor: '#2A2E33',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  profileButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+
+  profileButtonTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

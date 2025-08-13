@@ -68,9 +68,21 @@ const ordersSlice = createSlice({
         if (order.table?.roomId === roomId) {
           state.orders[order.id] = order;
           
-          // Normaliser aussi les orderItems
+          // Normaliser les orderItems (ancienne structure + rétrocompatibilité)
           order.orderItems?.forEach(orderItem => {
             state.orderItems[orderItem.id] = orderItem;
+          });
+          
+          // Normaliser les individualItems (nouvelle structure)
+          order.individualItems?.forEach(orderItem => {
+            state.orderItems[orderItem.id] = orderItem;
+          });
+          
+          // Normaliser les orderItems des menus (nouvelle structure)
+          order.menus?.forEach(menu => {
+            menu.orderItems?.forEach(orderItem => {
+              state.orderItems[orderItem.id] = orderItem;
+            });
           });
         }
       });
@@ -84,9 +96,21 @@ const ordersSlice = createSlice({
       const { order } = action.payload;
       state.orders[order.id] = order;
       
-      // Ajouter les orderItems si présents
+      // Ajouter les orderItems (ancienne structure + rétrocompatibilité)
       order.orderItems?.forEach(orderItem => {
         state.orderItems[orderItem.id] = orderItem;
+      });
+      
+      // Ajouter les individualItems (nouvelle structure)
+      order.individualItems?.forEach(orderItem => {
+        state.orderItems[orderItem.id] = orderItem;
+      });
+      
+      // Ajouter les orderItems des menus (nouvelle structure)
+      order.menus?.forEach(menu => {
+        menu.orderItems?.forEach(orderItem => {
+          state.orderItems[orderItem.id] = orderItem;
+        });
       });
     },
 
@@ -94,9 +118,21 @@ const ordersSlice = createSlice({
       const { order } = action.payload;
       state.orders[order.id] = order;
       
-      // Mettre à jour les orderItems
+      // Mettre à jour les orderItems (ancienne structure + rétrocompatibilité)
       order.orderItems?.forEach(orderItem => {
         state.orderItems[orderItem.id] = orderItem;
+      });
+      
+      // Mettre à jour les individualItems (nouvelle structure)
+      order.individualItems?.forEach(orderItem => {
+        state.orderItems[orderItem.id] = orderItem;
+      });
+      
+      // Mettre à jour les orderItems des menus (nouvelle structure)
+      order.menus?.forEach(menu => {
+        menu.orderItems?.forEach(orderItem => {
+          state.orderItems[orderItem.id] = orderItem;
+        });
       });
     },
     
@@ -104,10 +140,22 @@ const ordersSlice = createSlice({
       const { orderId } = action.payload;
       const order = state.orders[orderId];
       
-      // Supprimer les orderItems associés
-      if (order?.orderItems) {
-        order.orderItems.forEach(orderItem => {
+      if (order) {
+        // Supprimer les orderItems associés (ancienne structure)
+        order.orderItems?.forEach(orderItem => {
           delete state.orderItems[orderItem.id];
+        });
+        
+        // Supprimer les individualItems (nouvelle structure)
+        order.individualItems?.forEach(orderItem => {
+          delete state.orderItems[orderItem.id];
+        });
+        
+        // Supprimer les orderItems des menus (nouvelle structure)
+        order.menus?.forEach(menu => {
+          menu.orderItems?.forEach(orderItem => {
+            delete state.orderItems[orderItem.id];
+          });
         });
       }
       
@@ -341,6 +389,57 @@ export const selectOrdersLoading = createSelector(
 export const selectOrdersError = createSelector(
   [selectOrdersState],
   (ordersState) => ordersState?.error || null
+);
+
+// Nouveaux sélecteurs pour la structure avec menus
+export const selectOrderIndividualItems = (orderId: string) => createSelector(
+  [selectOrderById(orderId)],
+  (order) => order?.individualItems || []
+);
+
+export const selectOrderMenus = (orderId: string) => createSelector(
+  [selectOrderById(orderId)],
+  (order) => order?.menus || []
+);
+
+export const selectOrderAllItems = (orderId: string) => createSelector(
+  [selectOrderById(orderId)],
+  (order) => {
+    if (!order) return [];
+    
+    const allItems = [];
+    
+    // Ajouter les items individuels
+    if (order.individualItems) {
+      allItems.push(...order.individualItems);
+    }
+    
+    // Ajouter les items des menus
+    if (order.menus) {
+      order.menus.forEach(menu => {
+        if (menu.orderItems) {
+          allItems.push(...menu.orderItems);
+        }
+      });
+    }
+    
+    // Fallback sur l'ancienne structure si la nouvelle est vide
+    if (allItems.length === 0 && order.orderItems) {
+      allItems.push(...order.orderItems);
+    }
+    
+    return allItems;
+  }
+);
+
+export const selectOrderHasMenus = (orderId: string) => createSelector(
+  [selectOrderById(orderId)],
+  (order) => Boolean(order?.menus && order.menus.length > 0)
+);
+
+export const selectOrderHasIndividualItems = (orderId: string) => createSelector(
+  [selectOrderById(orderId)],
+  (order) => Boolean(order?.individualItems && order.individualItems.length > 0)
 );
 
 // Actions exportées
