@@ -496,7 +496,7 @@ export default function MenuPage() {
                     key={type.id}
                     value={type.id!}
                     className="flex-row h-full"
-                    style={{ width: 100, minWidth: 100 }}
+                    style={{ minWidth: 100, paddingHorizontal: 10 }}
                   >
                     <Text
                       style={{ color: activeTab === type.id ? '#2A2E33' : '#A0A0A0' }}

@@ -48,6 +48,16 @@ export interface AdminFormViewProps {
   children: React.ReactNode;
   backgroundColor?: string;
   scrollViewRef?: React.RefObject<ScrollView | null>;
+  hideHeaderAndActions?: boolean; // Masque le header et les actions pour des interfaces personnalisées
+  disableGlobalScroll?: boolean; // Désactive le ScrollView global pour permettre du contenu statique
+  // Props pour la configuration de menu (quand hideHeaderAndActions=true)
+  configurationActions?: {
+    onCancel: () => void;
+    onConfirm: () => void;
+    cancelLabel?: string;
+    confirmLabel?: string;
+    confirmButtonColor?: string; // Couleur personnalisée pour le bouton de confirmation
+  };
 }
 
 export function AdminFormView({
@@ -60,7 +70,10 @@ export function AdminFormView({
   isLoading = false,
   children,
   backgroundColor = '#FFFFFF',
-  scrollViewRef
+  scrollViewRef,
+  hideHeaderAndActions = false,
+  disableGlobalScroll = false,
+  configurationActions
 }: AdminFormViewProps) {
   // ✅ Return conditionnel AVANT tous les hooks
   if (!visible) {
@@ -118,79 +131,156 @@ export function AdminFormView({
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Header moderne et professionnel */}
-      <View style={styles.header}>
-        {/* Section Bouton retour */}
-        <Pressable
-          onPress={onCancel || onClose}
-          style={styles.backButton}
-        >
-          <ArrowLeftToLine size={20} color="#2A2E33" />
-        </Pressable>
+      {/* Header moderne et professionnel - Masqué si hideHeaderAndActions */}
+      {!hideHeaderAndActions && (
+        <View style={styles.header}>
+          {/* Section Bouton retour */}
+          <Pressable
+            onPress={onCancel || onClose}
+            style={styles.backButton}
+          >
+            <ArrowLeftToLine size={20} color="#2A2E33" />
+          </Pressable>
 
-        {/* Section Titre */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>
-            {title}
-          </Text>
-        </View>
-      </View>
-
-      {/* Contenu du formulaire */}
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        overScrollMode="never"
-        scrollEventThrottle={16}
-      >
-        {childWithRef}
-      </ScrollView>
-      
-      {/* Actions sticky en bas - Intégrées dans AdminFormView */}
-      {onSave && (
-        <View style={styles.stickyActions}>
-          <View style={styles.actionsContainer}>
-            <Button
-              onPress={handleSave}
-              disabled={isLoading || isSaving}
-              style={[
-                styles.submitButton,
-                // pour le web obligé de mettre dans le dom
-                { backgroundColor: '#2A2E33', borderRadius: 12, height: 52,}
-              ]}
-            >
-              <Text style={[
-                styles.submitButtonText,
-                // pour le web obligé de mettre dans le dom
-                { color: '#FFFFFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5,}
-              ]}>
-                {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
-              </Text>
-            </Button>
-            
-            <Button 
-              onPress={onCancel || onClose}
-              disabled={isLoading || isSaving}
-              style={[
-                styles.cancelButton, 
-                // pour le web obligé de mettre dans le dom
-                { backgroundColor: '#FFFFFF', borderRadius: 12, height: 52}
-              ]}
-            >
-              <Text style={[
-                styles.cancelButtonText,
-                // pour le web obligé de mettre dans le dom
-                { color: '#6B7280', fontWeight: '600', fontSize: 16, letterSpacing: 0.3,}
-              ]}>
-                Annuler
-              </Text>
-            </Button>
+          {/* Section Titre */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.titleText}>
+              {title}
+            </Text>
           </View>
         </View>
       )}
+
+      {/* Contenu du formulaire - ScrollView conditionnel */}
+      {disableGlobalScroll ? (
+        <View style={[styles.scrollView, { paddingBottom: 115 }]}>
+          {childWithRef}
+        </View>
+      ) : (
+        <ScrollView 
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
+          scrollEventThrottle={16}
+        >
+          {childWithRef}
+        </ScrollView>
+      )}
+      
+      {/* Actions sticky en bas - Intégrées dans AdminFormView */}
+      {(onSave && !hideHeaderAndActions) || (hideHeaderAndActions && configurationActions) ? (
+        <View style={styles.stickyActions}>
+          <View style={styles.actionsContainer}>
+            {hideHeaderAndActions && configurationActions ? (
+              // Boutons de configuration menu
+              <>
+                <Button 
+                  onPress={() => {
+                    configurationActions.onCancel();
+                  }}
+                  style={[
+                    styles.cancelButton,
+                    { backgroundColor: '#FFFFFF', borderRadius: 12, height: 52, flex: 1 }
+                  ]}
+                >
+                  {Platform.OS === 'web' ? (
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#6B7280',
+                      fontFamily: 'system-ui, -apple-system, sans-serif'
+                    }}>
+                      {configurationActions.cancelLabel || 'Annuler'}
+                    </span>
+                  ) : (
+                    <Text style={[
+                      styles.cancelButtonText,
+                      { color: '#6B7280', fontWeight: '600', fontSize: 14 }
+                    ]}>
+                      {configurationActions.cancelLabel || 'Annuler'}
+                    </Text>
+                  )}
+                </Button>
+
+                <Button
+                  onPress={() => {
+                    configurationActions.onConfirm();
+                  }}
+                  style={[
+                    styles.submitButton,
+                    { 
+                      backgroundColor: configurationActions.confirmButtonColor || '#059669', 
+                      borderRadius: 12, 
+                      height: 52, 
+                      flex: 2 
+                    }
+                  ]}
+                >
+                  {Platform.OS === 'web' ? (
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      color: '#FFFFFF',
+                      fontFamily: 'system-ui, -apple-system, sans-serif'
+                    }}>
+                      {configurationActions.confirmLabel || 'Confirmer'}
+                    </span>
+                  ) : (
+                    <Text style={[
+                      styles.submitButtonText,
+                      { color: '#FFFFFF', fontWeight: '700', fontSize: 14 }
+                    ]}>
+                      {configurationActions.confirmLabel || 'Confirmer'}
+                    </Text>
+                  )}
+                </Button>
+              </>
+            ) : (
+              // Boutons AdminFormView normaux
+              <>
+                <Button
+                  onPress={handleSave}
+                  disabled={isLoading || isSaving}
+                  style={[
+                    styles.submitButton,
+                    // pour le web obligé de mettre dans le dom
+                    { backgroundColor: '#2A2E33', borderRadius: 12, height: 52,}
+                  ]}
+                >
+                  <Text style={[
+                    styles.submitButtonText,
+                    // pour le web obligé de mettre dans le dom
+                    { color: '#FFFFFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5,}
+                  ]}>
+                    {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
+                  </Text>
+                </Button>
+                
+                <Button 
+                  onPress={onCancel || onClose}
+                  disabled={isLoading || isSaving}
+                  style={[
+                    styles.cancelButton, 
+                    // pour le web obligé de mettre dans le dom
+                    { backgroundColor: '#FFFFFF', borderRadius: 12, height: 52}
+                  ]}
+                >
+                  <Text style={[
+                    styles.cancelButtonText,
+                    // pour le web obligé de mettre dans le dom
+                    { color: '#6B7280', fontWeight: '600', fontSize: 16, letterSpacing: 0.3,}
+                  ]}>
+                    Annuler
+                  </Text>
+                </Button>
+              </>
+            )}
+          </View>
+        </View>
+      ) : null}
 
       {/* Modal de confirmation intégrée utilisant DeleteConfirmationModal */}
       {confirmationModal && (

@@ -95,6 +95,7 @@ const AdminOrderItem = ({
   };
 
   const panGesture = Gesture.Pan()
+    // .enabled(!isGroupMenuOpen && Platform.OS !== 'web') // Désactiver les gestes sur web et si le menu du groupe est ouvert
     .enabled(!isGroupMenuOpen) // Désactiver si le menu du groupe est ouvert
     .activeOffsetX([-10, 10]) // Seuil d'activation horizontal
     .failOffsetY([-15, 15]) // Échouer si mouvement vertical trop important
@@ -298,6 +299,7 @@ const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onTogg
   };
 
   const groupPanGesture = Gesture.Pan()
+    // .enabled(Platform.OS !== 'web') // Désactiver les gestes sur web
     .activeOffsetX([-10, 10]) // Seuil d'activation horizontal
     .failOffsetY([-15, 15]) // Échouer si mouvement vertical trop important
     .onStart((event) => {
@@ -662,8 +664,10 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
 
   const groupedItems = createGroupedItems();
 
+  const RootComponent = Platform.OS === 'web' ? View : GestureHandlerRootView;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <RootComponent style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1, padding: 16 }}
         showsVerticalScrollIndicator={true}
@@ -713,6 +717,6 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
       ))}
         <View style={{ height: 20 }} />
       </ScrollView>
-    </GestureHandlerRootView>
+    </RootComponent>
   );
 }
