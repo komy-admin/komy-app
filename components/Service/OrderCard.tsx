@@ -1,4 +1,4 @@
-import { Animated, Platform, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';

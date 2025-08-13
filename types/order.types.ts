@@ -7,12 +7,8 @@ export type Order = {
   id: string;
   tableId: string;
   table: Table;
-  
-  // Nouvelle structure pour le système de menus
-  individualItems?: OrderItem[];  // Items commandés à la carte
-  menus?: MenuGroup[];           // Menus groupés avec prix calculés
-  
-  // Structure existante (conservée pour rétrocompatibilité)
+  individualItems?: OrderItem[];
+  menus?: MenuGroup[];
   orderItems: OrderItem[];
   status: Status;
   account: string;

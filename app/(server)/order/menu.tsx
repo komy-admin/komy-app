@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
-import { Status } from '~/types/status.enum';
 import { orderItemApiService } from '~/api/order-item.api';
 import { useToast } from '~/components/ToastProvider';
 import { ArrowLeft, Plus, Minus, UtensilsCrossed } from 'lucide-react-native';
@@ -80,10 +79,6 @@ export default function OrderMenuPage() {
         if (!orderItem) return;
         await orderItemApiService.delete(orderItem.id);
       }
-
-      // Le store Redux se met à jour automatiquement via WebSockets
-      // Plus besoin de setOrder manuel
-
       showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la quantité:', error);

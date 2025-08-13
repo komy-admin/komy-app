@@ -1,18 +1,16 @@
-import { useWindowDimensions, View, ScrollView, Text, StyleSheet } from "react-native";
+import { useWindowDimensions, View, ScrollView, Text } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useState, useMemo, useRef } from "react";
 import { Item } from "~/types/item.types";
 import { Menu } from "~/types/menu.types";
-import { CustomModal } from "~/components/CustomModal";
 import { MenuForm } from "~/components/form/MenuForm";
 import { useToast } from '~/components/ToastProvider';
 import { useMenu, useRestaurant } from '~/hooks/useRestaurant';
 import { useMenus } from '~/hooks/useMenus';
-import { MenuCategoryItem } from '~/types/menu.types';
 import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
-import { CreditCard as Edit2, Trash, Power, UtensilsCrossed } from 'lucide-react-native';
+import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
 import { MenuEditor } from '~/components/admin/MenuEditor';
 import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
@@ -82,8 +80,6 @@ export default function MenuPage() {
     setFilters(createEmptyMenuFilters());
     setActiveTab('items');
   };
-
-  // Plus besoin de charger manuellement - useAppInit gère l'initialisation automatique
 
   // Gestion des items
   const handleCreateItem = () => {

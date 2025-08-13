@@ -101,7 +101,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
   const loadCategoryItemsFromStore = useCallback((categoryId: string, categoryIndex: number) => {
     // Récupérer directement depuis le store - Single Source of Truth
     const existingItems = onLoadMenuCategoryItems(categoryId);
-    
+
     const localItems = existingItems.map((item, itemIndex) => ({
       tempId: `existing-${categoryId}-${itemIndex}`,
       originalId: item.id,
@@ -112,7 +112,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
       isModified: false,
       isDeleted: false
     }));
-    
+
     setLocalCategoryItems(prev => ({
       ...prev,
       [categoryIndex]: localItems
@@ -171,13 +171,13 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
       if (!category.itemTypeId) {
         newErrors[`category_${index}_type`] = 'Type d\'item requis';
       }
-      
+
       // Validation pour maxSelections
       const maxSelections = parseInt(category.maxSelections);
       if (!category.maxSelections.trim() || isNaN(maxSelections) || maxSelections < 1) {
         newErrors[`category_${index}_max`] = 'Au moins 1 sélection requise';
       }
-      
+
       const priceModifier = parseFloat(category.priceModifier);
       if (isNaN(priceModifier) || priceModifier < 0) {
         newErrors[`category_${index}_price`] = 'Le modificateur de prix doit être un nombre positif ou zéro';
@@ -193,14 +193,14 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
     getFormData: (): AdminFormData<Menu> => {
       const newErrors = validateForm();
       const isValid = Object.keys(newErrors).length === 0;
-      
+
       // Afficher un toast d'erreur générique pour informer l'utilisateur
       if (!isValid) {
         showToast('Veuillez corriger les erreurs dans le formulaire', 'error');
       }
-      
+
       let menuData: Menu | null = null;
-      
+
       if (isValid) {
         menuData = {
           id: menu?.id,
@@ -228,7 +228,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
         errors: newErrors
       };
     },
-    
+
     resetForm: () => {
       setFormData({
         name: '',
@@ -241,7 +241,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
       setErrors({});
       setCategorySelections({});
     },
-    
+
     validateForm: () => {
       const newErrors = validateForm();
       if (Object.keys(newErrors).length > 0) {
@@ -250,20 +250,6 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
       return Object.keys(newErrors).length === 0;
     }
   }), [formData, localCategoryItems, itemTypes, menu?.id, showToast]);
-
-  // Fonction de sauvegarde héritée (pour compatibilité si nécessaire)
-  const handleSave = async () => {
-    const formDataResult = (ref as any).current?.getFormData();
-    if (formDataResult && formDataResult.isValid && onSave) {
-      try {
-        await onSave(formDataResult.data);
-        showToast(menu ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
-      } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
-        showToast('Erreur lors de la sauvegarde du menu', 'error');
-      }
-    }
-  };
 
   const addCategory = () => {
     const newCategory: MenuCategoryFormData = {
@@ -279,7 +265,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
     }));
 
     showToast('Nouvelle catégorie ajoutée', 'success');
-    
+
     // Scroll automatique vers le bas après un petit délai pour que la nouvelle catégorie soit rendue
     setTimeout(() => {
       scrollViewRef?.current?.scrollToEnd({ animated: true });
@@ -290,7 +276,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
     const categoryToRemove = formData.categories[index];
     const itemType = itemTypes.find(type => type.id === categoryToRemove.itemTypeId);
     const categoryName = itemType?.name || `Catégorie ${index + 1}`;
-    
+
     if (!confirmationContext) {
       // Fallback si pas de contexte de confirmation
       console.warn('Contexte de confirmation non disponible');
@@ -318,12 +304,12 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
             }
           });
           setCategorySelections(newSelections);
-          
+
           // Supprimer les items locaux de cette catégorie
           setLocalCategoryItems(prev => {
             const newItems = { ...prev };
             delete newItems[index];
-            
+
             // Réindexer les items locaux
             const reindexedItems: Record<number, LocalMenuCategoryItem[]> = {};
             Object.entries(newItems).forEach(([key, value]) => {
@@ -334,10 +320,10 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                 reindexedItems[idx - 1] = value;
               }
             });
-            
+
             return reindexedItems;
           });
-          
+
           showToast('Catégorie supprimée avec succès', 'success');
         } catch (error) {
           console.error('Erreur lors de la suppression de la catégorie:', error);
@@ -364,14 +350,14 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
     // Récupérer l'ancien type pour voir s'il y a un changement
     const oldItemTypeId = formData.categories[index]?.itemTypeId;
     const newItemTypeId = selectedOption.id;
-    
+
     setCategorySelections(prev => ({
       ...prev,
       [index]: selectedOption
     }));
 
     updateCategory(index, 'itemTypeId', selectedOption.id);
-    
+
     // Si le type d'item a changé et qu'il y avait des articles assignés, les marquer comme supprimés
     if (oldItemTypeId && oldItemTypeId !== newItemTypeId && localCategoryItems[index]?.length > 0) {
       setLocalCategoryItems(prev => ({
@@ -381,7 +367,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
           isDeleted: true // Marquer tous les articles comme supprimés pour la sauvegarde
         }))
       }));
-      
+
       showToast('Articles supprimés suite au changement de type', 'info');
     }
   };
@@ -442,12 +428,12 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
     setLocalCategoryItems(prev => ({
       ...prev,
       [categoryIndex]: prev[categoryIndex]?.map(item =>
-        item.tempId === localItem.tempId 
-          ? { 
-              ...item, 
-              isAvailable: !item.isAvailable,
-              isModified: true // Marquer comme modifié
-            } 
+        item.tempId === localItem.tempId
+          ? {
+            ...item,
+            isAvailable: !item.isAvailable,
+            isModified: true // Marquer comme modifié
+          }
           : item
       ) || []
     }));
@@ -472,7 +458,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
             setLocalCategoryItems(prev => ({
               ...prev,
               [categoryIndex]: prev[categoryIndex]?.map(item =>
-                item.tempId === localItem.tempId 
+                item.tempId === localItem.tempId
                   ? { ...item, isDeleted: true }
                   : item
               ) || []
@@ -512,17 +498,17 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
     if (!editingItem) return;
 
     const { categoryIndex, tempId } = editingItem;
-    
+
     setLocalCategoryItems(prev => ({
       ...prev,
       [categoryIndex]: prev[categoryIndex]?.map(item =>
-        item.tempId === tempId 
-          ? { 
-              ...item, 
-              supplement: parseFloat(editItemData.supplement) || 0,
-              isAvailable: editItemData.isAvailable,
-              isModified: true
-            } 
+        item.tempId === tempId
+          ? {
+            ...item,
+            supplement: parseFloat(editItemData.supplement) || 0,
+            isAvailable: editItemData.isAvailable,
+            isModified: true
+          }
           : item
       ) || []
     }));
@@ -554,11 +540,11 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
               </Text>
             </View>
           </View>
-          
+
           {/* Ligne 1: Nom + Prix + Statut */}
           <View style={styles.row}>
             <View style={[styles.field, styles.fieldLarge]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Nom du menu *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Nom du menu *</Text>
               <TextInput
                 value={formData.name}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
@@ -570,9 +556,9 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                 <Text style={styles.errorText}>{errors.name}</Text>
               )}
             </View>
-            
+
             <View style={[styles.field, styles.fieldSmall]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Prix de base (€) *</Text>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Prix de base (€) *</Text>
               <TextInput
                 value={formData.basePrice}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, basePrice: text }))}
@@ -585,9 +571,9 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                 <Text style={styles.errorText}>{errors.basePrice}</Text>
               )}
             </View>
-            
-            <View style={[styles.field, styles.fieldSmall, {marginLeft: 12}]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280', marginBottom: 8}]}>Statut</Text>
+
+            <View style={[styles.field, styles.fieldSmall, { marginLeft: 12 }]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280', marginBottom: 8 }]}>Statut</Text>
               <Pressable
                 style={[styles.statusToggleV2, formData.isActive && styles.statusToggleV2Active]}
                 onPress={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
@@ -607,11 +593,11 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
               </Pressable>
             </View>
           </View>
-          
+
           {/* Ligne 2: Description seule */}
-          <View style={[styles.row, {marginBottom: 0}]}>
-            <View style={[styles.field, {flex: 1}]}>
-              <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Description</Text>
+          <View style={[styles.row, { marginBottom: 0 }]}>
+            <View style={[styles.field, { flex: 1 }]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Description</Text>
               <TextInput
                 value={formData.description}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
@@ -625,7 +611,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
 
         </View>
       </View>
-      
+
       {/* Section Catégories - Redesignée */}
       <View style={styles.categoriesSection}>
         <View style={styles.categoriesSectionHeader}>
@@ -730,7 +716,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                     </View>
 
                     <View style={{ marginBottom: 12 }}>
-                      <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Type d'item *</Text>
+                      <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Type d'item *</Text>
                       <View style={styles.categoryButtons}>
                         {itemTypes.map((itemType) => (
                           <Pressable
@@ -759,9 +745,9 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                       )}
                     </View>
 
-                    <View style={[styles.row, {marginBottom: 12}]}>
+                    <View style={[styles.row, { marginBottom: 12 }]}>
                       <View style={[styles.field, styles.fieldSmall]}>
-                        <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>
+                        <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>
                           Sélections max *
                         </Text>
                         <TextInput
@@ -778,7 +764,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                       </View>
 
                       <View style={[styles.field, styles.fieldSmall]}>
-                        <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>
+                        <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>
                           Modificateur prix (€)
                         </Text>
                         <TextInput
@@ -795,9 +781,9 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                           </Text>
                         )}
                       </View>
-                      
-                      <View style={[styles.field, styles.fieldSmall, {marginLeft: 12}]}>
-                        <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Options</Text>
+
+                      <View style={[styles.field, styles.fieldSmall, { marginLeft: 12 }]}>
+                        <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Options</Text>
                         <Pressable
                           style={[styles.requiredToggle, category.isRequired && styles.requiredToggleActive]}
                           onPress={() => updateCategory(index, 'isRequired', !category.isRequired)}
@@ -856,7 +842,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                           <View style={styles.addItemFormContent}>
                             <View style={styles.addItemFormRow}>
                               <View style={[styles.field, styles.fieldLarge]}>
-                                <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Article *</Text>
+                                <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Article *</Text>
                                 <Select
                                   choices={availableItems.map(item => ({
                                     label: item.name,
@@ -881,9 +867,9 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                                   }}
                                 />
                               </View>
-                              
+
                               <View style={[styles.field, styles.fieldSmall]}>
-                                <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Supplément (€)</Text>
+                                <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Supplément (€)</Text>
                                 <TextInput
                                   value={currentFormData.supplement}
                                   onChangeText={(value) => setItemFormData(prev => ({
@@ -897,7 +883,7 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                                 />
                               </View>
                             </View>
-                            
+
                             <View style={styles.addItemFormActions}>
                               <Pressable
                                 onPress={() => handleAddItem(index)}
@@ -932,127 +918,127 @@ export const MenuEditor = forwardRef<AdminFormRef<Menu>, MenuEditorProps>(({
                           {categoryItemsList
                             .filter((localItem: LocalMenuCategoryItem) => !localItem.isDeleted) // Masquer les items supprimés
                             .map((localItem: LocalMenuCategoryItem) => (
-                            <View key={localItem.tempId} style={styles.assignedItemNew}>
-                              {editingItem && editingItem.categoryIndex === index && editingItem.tempId === localItem.tempId ? (
-                                // Mode édition - Formulaire inline
-                                <View style={styles.editItemForm}>
-                                  <View style={styles.editItemFormHeader}>
-                                    <Text style={styles.editItemFormTitle}>
-                                      Modifier "{localItem.item?.name}"
-                                    </Text>
-                                  </View>
-                                  
-                                  <View style={styles.editItemFormContent}>
-                                    <View style={styles.editItemFormRow}>
-                                      <View style={[styles.field, styles.fieldLarge]}>
-                                        <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Supplément (€)</Text>
-                                        <TextInput
-                                          value={editItemData.supplement}
-                                          onChangeText={(value) => setEditItemData(prev => ({ ...prev, supplement: value }))}
-                                          keyboardType="decimal-pad"
-                                          placeholder="0.00"
-                                          placeholderTextColor="#A0A0A0"
-                                          style={styles.input}
-                                        />
+                              <View key={localItem.tempId} style={styles.assignedItemNew}>
+                                {editingItem && editingItem.categoryIndex === index && editingItem.tempId === localItem.tempId ? (
+                                  // Mode édition - Formulaire inline
+                                  <View style={styles.editItemForm}>
+                                    <View style={styles.editItemFormHeader}>
+                                      <Text style={styles.editItemFormTitle}>
+                                        Modifier "{localItem.item?.name}"
+                                      </Text>
+                                    </View>
+
+                                    <View style={styles.editItemFormContent}>
+                                      <View style={styles.editItemFormRow}>
+                                        <View style={[styles.field, styles.fieldLarge]}>
+                                          <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Supplément (€)</Text>
+                                          <TextInput
+                                            value={editItemData.supplement}
+                                            onChangeText={(value) => setEditItemData(prev => ({ ...prev, supplement: value }))}
+                                            keyboardType="decimal-pad"
+                                            placeholder="0.00"
+                                            placeholderTextColor="#A0A0A0"
+                                            style={styles.input}
+                                          />
+                                        </View>
+
+                                        <View style={[styles.field, styles.fieldSmall, { marginLeft: 12 }]}>
+                                          <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Disponibilité</Text>
+                                          <Pressable
+                                            style={[styles.editAvailabilityToggle, editItemData.isAvailable && styles.editAvailabilityToggleActive]}
+                                            onPress={() => setEditItemData(prev => ({ ...prev, isAvailable: !prev.isAvailable }))}
+                                          >
+                                            <View style={[styles.editAvailabilityIndicator, editItemData.isAvailable && styles.editAvailabilityIndicatorActive]} />
+                                            <Text style={[styles.editAvailabilityText, editItemData.isAvailable && styles.editAvailabilityTextActive]}>
+                                              {editItemData.isAvailable ? 'Disponible' : 'Indisponible'}
+                                            </Text>
+                                          </Pressable>
+                                        </View>
                                       </View>
-                                      
-                                      <View style={[styles.field, styles.fieldSmall, {marginLeft: 12}]}>
-                                        <Text style={[styles.label, {fontSize: 13, color: '#6B7280'}]}>Disponibilité</Text>
+
+                                      <View style={styles.editItemFormActions}>
                                         <Pressable
-                                          style={[styles.editAvailabilityToggle, editItemData.isAvailable && styles.editAvailabilityToggleActive]}
-                                          onPress={() => setEditItemData(prev => ({ ...prev, isAvailable: !prev.isAvailable }))}
+                                          onPress={handleSaveEditItem}
+                                          style={styles.addItemFormButtonPrimary}
                                         >
-                                          <View style={[styles.editAvailabilityIndicator, editItemData.isAvailable && styles.editAvailabilityIndicatorActive]} />
-                                          <Text style={[styles.editAvailabilityText, editItemData.isAvailable && styles.editAvailabilityTextActive]}>
-                                            {editItemData.isAvailable ? 'Disponible' : 'Indisponible'}
-                                          </Text>
+                                          <Text style={styles.addItemFormButtonTextPrimary}>Confirmer</Text>
+                                        </Pressable>
+                                        <Pressable
+                                          onPress={handleCancelEditItem}
+                                          style={styles.addItemFormButtonSecondary}
+                                        >
+                                          <Text style={styles.addItemFormButtonTextSecondary}>Annuler</Text>
                                         </Pressable>
                                       </View>
                                     </View>
-                                    
-                                    <View style={styles.editItemFormActions}>
-                                      <Pressable
-                                        onPress={handleSaveEditItem}
-                                        style={styles.addItemFormButtonPrimary}
-                                      >
-                                        <Text style={styles.addItemFormButtonTextPrimary}>Confirmer</Text>
-                                      </Pressable>
-                                      <Pressable
-                                        onPress={handleCancelEditItem}
-                                        style={styles.addItemFormButtonSecondary}
-                                      >
-                                        <Text style={styles.addItemFormButtonTextSecondary}>Annuler</Text>
-                                      </Pressable>
-                                    </View>
                                   </View>
-                                </View>
-                              ) : (
-                                // Mode affichage normal
-                                <View style={styles.assignedItemMainContent}>
-                                  <View style={styles.assignedItemInfoNew}>
-                                    <Text style={styles.assignedItemNameNew}>
-                                      {localItem.item?.name}
-                                    </Text>
-                                    <View style={styles.assignedItemMetrics}>
-                                      {localItem.supplement > 0 && (
-                                        <View style={styles.assignedItemSupplement}>
-                                          <Text style={styles.assignedItemSupplementText}>
-                                            +{localItem.supplement}€
+                                ) : (
+                                  // Mode affichage normal
+                                  <View style={styles.assignedItemMainContent}>
+                                    <View style={styles.assignedItemInfoNew}>
+                                      <Text style={styles.assignedItemNameNew}>
+                                        {localItem.item?.name}
+                                      </Text>
+                                      <View style={styles.assignedItemMetrics}>
+                                        {localItem.supplement > 0 && (
+                                          <View style={styles.assignedItemSupplement}>
+                                            <Text style={styles.assignedItemSupplementText}>
+                                              +{localItem.supplement}€
+                                            </Text>
+                                          </View>
+                                        )}
+                                        <View style={[
+                                          styles.assignedItemStatus,
+                                          localItem.isAvailable ? styles.assignedItemStatusActive : styles.assignedItemStatusInactive
+                                        ]}>
+                                          <View style={[
+                                            styles.assignedItemStatusDot,
+                                            localItem.isAvailable ? styles.assignedItemStatusDotActive : styles.assignedItemStatusDotInactive
+                                          ]} />
+                                          <Text style={[
+                                            styles.assignedItemStatusText,
+                                            localItem.isAvailable ? styles.assignedItemStatusTextActive : styles.assignedItemStatusTextInactive
+                                          ]}>
+                                            {localItem.isAvailable ? 'Disponible' : 'Indisponible'}
                                           </Text>
                                         </View>
-                                      )}
-                                      <View style={[
-                                        styles.assignedItemStatus,
-                                        localItem.isAvailable ? styles.assignedItemStatusActive : styles.assignedItemStatusInactive
-                                      ]}>
-                                        <View style={[
-                                          styles.assignedItemStatusDot,
-                                          localItem.isAvailable ? styles.assignedItemStatusDotActive : styles.assignedItemStatusDotInactive
-                                        ]} />
-                                        <Text style={[
-                                          styles.assignedItemStatusText,
-                                          localItem.isAvailable ? styles.assignedItemStatusTextActive : styles.assignedItemStatusTextInactive
-                                        ]}>
-                                          {localItem.isAvailable ? 'Disponible' : 'Indisponible'}
-                                        </Text>
                                       </View>
                                     </View>
+
+                                    <View style={styles.assignedItemActionsNew}>
+                                      <Pressable
+                                        onPress={() => handleUpdateItem(index, localItem)}
+                                        style={[
+                                          styles.assignedItemActionButtonNew,
+                                          styles.assignedItemToggleButtonNew,
+                                          localItem.isAvailable && styles.assignedItemToggleButtonActiveNew
+                                        ]}
+                                      >
+                                        {localItem.isAvailable ? (
+                                          <Eye size={20} color="#059669" />
+                                        ) : (
+                                          <EyeOff size={20} color="#9CA3AF" />
+                                        )}
+                                      </Pressable>
+
+                                      <Pressable
+                                        onPress={() => handleEditItem(index, localItem)}
+                                        style={[styles.assignedItemActionButtonNew, styles.assignedItemEditButtonNew]}
+                                      >
+                                        <PencilLine size={18} color="#0EA5E9" />
+                                      </Pressable>
+
+                                      <Pressable
+                                        onPress={() => handleDeleteItem(index, localItem)}
+                                        style={[styles.assignedItemActionButtonNew, styles.assignedItemDeleteButtonNew]}
+                                      >
+                                        <Trash2 size={20} color="white" />
+                                      </Pressable>
+                                    </View>
                                   </View>
-                                  
-                                  <View style={styles.assignedItemActionsNew}>
-                                    <Pressable
-                                      onPress={() => handleUpdateItem(index, localItem)}
-                                      style={[
-                                        styles.assignedItemActionButtonNew,
-                                        styles.assignedItemToggleButtonNew,
-                                        localItem.isAvailable && styles.assignedItemToggleButtonActiveNew
-                                      ]}
-                                    >
-                                      {localItem.isAvailable ? (
-                                        <Eye size={20} color="#059669" />
-                                      ) : (
-                                        <EyeOff size={20} color="#9CA3AF" />
-                                      )}
-                                    </Pressable>
-                                    
-                                    <Pressable
-                                      onPress={() => handleEditItem(index, localItem)}
-                                      style={[styles.assignedItemActionButtonNew, styles.assignedItemEditButtonNew]}
-                                    >
-                                      <PencilLine size={18} color="#0EA5E9" />
-                                    </Pressable>
-                                    
-                                    <Pressable
-                                      onPress={() => handleDeleteItem(index, localItem)}
-                                      style={[styles.assignedItemActionButtonNew, styles.assignedItemDeleteButtonNew]}
-                                    >
-                                      <Trash2 size={20} color="white" />
-                                    </Pressable>
-                                  </View>
-                                </View>
-                              )}
-                            </View>
-                          ))}
+                                )}
+                              </View>
+                            ))}
                         </View>
                       )}
                     </View>
@@ -1156,7 +1142,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  
+
   descriptionInput: {
     minHeight: 44, // Même hauteur qu'un input normal au départ
     maxHeight: 120, // Limite maximale pour éviter qu'elle devienne trop grande
@@ -1320,7 +1306,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  
+
   // Toggle spécifique pour Obligatoire/Optionnel
   requiredToggle: {
     flexDirection: 'row',
@@ -1346,7 +1332,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   requiredToggleActive: {
     backgroundColor: '#FEF3E2',
     borderColor: '#F59E0B',
@@ -1355,7 +1341,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  
+
   requiredIndicator: {
     width: 8,
     height: 8,
@@ -1363,22 +1349,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
     marginRight: 10,
   },
-  
+
   requiredIndicatorActive: {
     backgroundColor: '#F59E0B',
   },
-  
+
   requiredText: {
     fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
   },
-  
+
   requiredTextActive: {
     color: '#92400E',
     fontWeight: '700',
   },
-  
+
   // Articles assignés - Header
   assignedItemsHeader: {
     flexDirection: 'row',
@@ -1386,14 +1372,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  
+
   assignedItemsTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#2A2E33',
     letterSpacing: 0.3,
   },
-  
+
   addItemButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1416,14 +1402,14 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   addItemButtonText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
   },
-  
+
   // Formulaire d'ajout
   addItemForm: {
     backgroundColor: '#FFFFFF',
@@ -1438,11 +1424,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   addItemFormContent: {
     gap: 16,
   },
-  
+
   addItemFormRow: {
     flexDirection: 'row',
     ...(Platform.OS === 'web' ? {
@@ -1451,7 +1437,7 @@ const styles = StyleSheet.create({
       zIndex: 1,
     } : { gap: 16 })
   },
-  
+
   addItemSelect: {
     backgroundColor: 'white',
     borderWidth: 1,
@@ -1462,13 +1448,13 @@ const styles = StyleSheet.create({
       position: 'relative',
     }),
   },
-  
+
   addItemFormActions: {
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'flex-end',
   },
-  
+
   addItemFormButtonPrimary: {
     backgroundColor: '#2A2E33',
     paddingHorizontal: 20,
@@ -1483,13 +1469,13 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   addItemFormButtonTextPrimary: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
   },
-  
+
   addItemFormButtonSecondary: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -1507,18 +1493,18 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   addItemFormButtonTextSecondary: {
     color: '#6B7280',
     fontSize: 13,
     fontWeight: '600',
   },
-  
+
   // Liste des articles assignés
   assignedItemsList: {
     gap: 8,
   },
-  
+
   assignedItem: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
@@ -1531,35 +1517,35 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  
+
   assignedItemContent: {
     flexDirection: 'row',
     alignItems: 'stretch',
   },
-  
+
   assignedItemInfo: {
     flex: 1,
     padding: 16,
     justifyContent: 'center',
   },
-  
+
   assignedItemName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#2A2E33',
     marginBottom: 4,
   },
-  
+
   assignedItemDetails: {
     fontSize: 12,
     color: '#6B7280',
     lineHeight: 16,
   },
-  
+
   assignedItemActions: {
     flexDirection: 'row',
   },
-  
+
   assignedItemActionButton: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -1571,7 +1557,7 @@ const styles = StyleSheet.create({
       transition: 'all 0.2s ease',
     })
   },
-  
+
   assignedItemToggleButton: {
     backgroundColor: '#F9FAFB',
     ...(Platform.OS === 'web' && {
@@ -1580,7 +1566,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   assignedItemToggleButtonActive: {
     backgroundColor: '#ECFDF5',
     ...(Platform.OS === 'web' && {
@@ -1589,7 +1575,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   assignedItemDeleteButton: {
     backgroundColor: '#EF4444',
     ...(Platform.OS === 'web' && {
@@ -1598,16 +1584,16 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   // Styles de texte supprimés car remplacés par des icônes
-  
+
   // === NOUVEAUX STYLES REDESIGNÉS ===
-  
+
   // Section Catégories - Header redesigné
   categoriesSection: {
     marginBottom: 32,
   },
-  
+
   categoriesSectionHeader: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -1624,13 +1610,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  
+
   sectionHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  
+
   sectionIconContainer: {
     width: 44,
     height: 44,
@@ -1640,11 +1626,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 16,
   },
-  
+
   sectionHeaderText: {
     flex: 1,
   },
-  
+
   sectionHeaderTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -1652,13 +1638,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 4,
   },
-  
+
   sectionHeaderSubtitle: {
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
   },
-  
+
   primaryActionButton: {
     backgroundColor: '#2A2E33',
     paddingHorizontal: 20,
@@ -1681,14 +1667,14 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   primaryActionButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  
+
   // État vide amélioré
   emptyState: {
     backgroundColor: '#FAFBFC',
@@ -1700,11 +1686,11 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     marginHorizontal: 8,
   },
-  
+
   emptyStateIcon: {
     marginBottom: 20,
   },
-  
+
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -1713,7 +1699,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-  
+
   emptyStateDescription: {
     fontSize: 15,
     color: '#6B7280',
@@ -1722,7 +1708,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     maxWidth: 320,
   },
-  
+
   emptyStateButton: {
     backgroundColor: '#2A2E33',
     paddingHorizontal: 28,
@@ -1745,21 +1731,21 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   emptyStateButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.4,
   },
-  
+
   // Header de catégorie amélioré
   categoryHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  
+
   categoryNumberBadge: {
     width: 32,
     height: 32,
@@ -1769,17 +1755,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 16,
   },
-  
+
   categoryNumberText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
-  
+
   categoryHeaderInfo: {
     flex: 1,
   },
-  
+
   categoryHeaderTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -1787,13 +1773,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     letterSpacing: 0.3,
   },
-  
+
   categoryHeaderSubtitle: {
     fontSize: 13,
     color: '#6B7280',
     fontWeight: '500',
   },
-  
+
   // Articles assignés - Header redesigné
   assignedItemsHeaderNew: {
     flexDirection: 'row',
@@ -1804,13 +1790,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
-  
+
   assignedItemsHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  
+
   assignedItemsIcon: {
     width: 36,
     height: 36,
@@ -1820,11 +1806,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  
+
   assignedItemsInfo: {
     flex: 1,
   },
-  
+
   assignedItemsTitleNew: {
     fontSize: 15,
     fontWeight: '700',
@@ -1832,13 +1818,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginBottom: 2,
   },
-  
+
   assignedItemsCount: {
     fontSize: 13,
     color: '#6B7280',
     fontWeight: '500',
   },
-  
+
   addItemButtonNew: {
     backgroundColor: '#2A2E33',
     paddingHorizontal: 16,
@@ -1862,14 +1848,14 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   addItemButtonTextNew: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
-  
+
   // Style pour les cards de catégorie
   categoryCardNew: {
     backgroundColor: '#FFFFFF',
@@ -1892,7 +1878,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   // Header inline pour la section informations générales
   sectionHeaderInline: {
     flexDirection: 'row',
@@ -1902,7 +1888,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#F3F4F6',
   },
-  
+
   // Section Articles optimisée
   articlesSection: {
     backgroundColor: '#F8FAFC',
@@ -1912,7 +1898,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  
+
   articlesSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1921,7 +1907,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
-  
+
   articlesSectionBadge: {
     width: 36,
     height: 36,
@@ -1936,11 +1922,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  
+
   articlesSectionContent: {
     flex: 1,
   },
-  
+
   articlesSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -1948,18 +1934,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginBottom: 4,
   },
-  
+
   articlesSectionSubtitle: {
     fontSize: 13,
     color: '#64748B',
     fontWeight: '500',
   },
-  
+
   articlesSectionAvailable: {
     color: '#059669',
     fontWeight: '600',
   },
-  
+
   addItemButtonOptimized: {
     backgroundColor: '#3B82F6',
     paddingHorizontal: 14,
@@ -1982,20 +1968,20 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   addItemButtonOptimizedText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
-  
+
   // === NOUVEAU STYLE POUR LES ARTICLES ASSIGNÉS ===
-  
+
   assignedItemsListNew: {
     gap: 12,
   },
-  
+
   assignedItemNew: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -2017,20 +2003,20 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   assignedItemMainContent: {
     flexDirection: 'row',
     alignItems: 'stretch',
     justifyContent: 'space-between',
     minHeight: 44,
   },
-  
+
   assignedItemInfoNew: {
     flex: 1,
     marginRight: 16,
     justifyContent: 'center',
   },
-  
+
   assignedItemNameNew: {
     fontSize: 15,
     fontWeight: '700',
@@ -2038,39 +2024,39 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginBottom: 6,
   },
-  
+
   assignedItemMetrics: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  
+
   assignedItemPrice: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  
+
   assignedItemPriceText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#475569',
   },
-  
+
   assignedItemSupplement: {
     backgroundColor: '#FEF3C7',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  
+
   assignedItemSupplementText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#92400E',
   },
-  
+
   assignedItemStatus: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2079,49 +2065,49 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 4,
   },
-  
+
   assignedItemStatusActive: {
     backgroundColor: '#ECFDF5',
   },
-  
+
   assignedItemStatusInactive: {
     backgroundColor: '#FEF2F2',
   },
-  
+
   assignedItemStatusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
   },
-  
+
   assignedItemStatusDotActive: {
     backgroundColor: '#059669',
   },
-  
+
   assignedItemStatusDotInactive: {
     backgroundColor: '#DC2626',
   },
-  
+
   assignedItemStatusText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  
+
   assignedItemStatusTextActive: {
     color: '#047857',
   },
-  
+
   assignedItemStatusTextInactive: {
     color: '#B91C1C',
   },
-  
+
   assignedItemActionsNew: {
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
     alignSelf: 'center',
   },
-  
+
   // Nouvelle ligne pour titre + tags
   assignedItemTopRow: {
     flexDirection: 'row',
@@ -2129,7 +2115,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
-  
+
   assignedItemActionButtonNew: {
     width: 48,
     height: 48,
@@ -2146,7 +2132,7 @@ const styles = StyleSheet.create({
       transition: 'all 0.2s ease',
     })
   },
-  
+
   assignedItemToggleButtonNew: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
@@ -2159,7 +2145,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   assignedItemToggleButtonActiveNew: {
     backgroundColor: '#ECFDF5',
     borderColor: '#34D399',
@@ -2171,7 +2157,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   assignedItemEditButtonNew: {
     backgroundColor: '#F0F9FF',
     borderWidth: 1.5,
@@ -2206,7 +2192,7 @@ const styles = StyleSheet.create({
   },
 
   // === STYLES POUR LE FORMULAIRE D'ÉDITION ===
-  
+
   editItemForm: {
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
@@ -2219,37 +2205,37 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  
+
   editItemFormHeader: {
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
-  
+
   editItemFormTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1E293B',
     letterSpacing: 0.2,
   },
-  
+
   editItemFormContent: {
     gap: 16,
   },
-  
+
   editItemFormRow: {
     flexDirection: 'row',
     ...(Platform.OS === 'web' ? {} : { gap: 16 })
   },
-  
+
   editItemFormActions: {
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'flex-end',
     paddingTop: 12,
   },
-  
+
   // Toggle pour la disponibilité dans le formulaire d'édition
   editAvailabilityToggle: {
     flexDirection: 'row',
@@ -2275,7 +2261,7 @@ const styles = StyleSheet.create({
       }
     })
   },
-  
+
   editAvailabilityToggleActive: {
     backgroundColor: '#ECFDF5',
     borderColor: '#34D399',
@@ -2284,7 +2270,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  
+
   editAvailabilityIndicator: {
     width: 8,
     height: 8,
@@ -2292,17 +2278,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
     marginRight: 10,
   },
-  
+
   editAvailabilityIndicatorActive: {
     backgroundColor: '#10B981',
   },
-  
+
   editAvailabilityText: {
     fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
   },
-  
+
   editAvailabilityTextActive: {
     color: '#047857',
     fontWeight: '700',

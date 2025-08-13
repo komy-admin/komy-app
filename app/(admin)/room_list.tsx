@@ -1,13 +1,12 @@
-import { View, StyleSheet, Text, useWindowDimensions, TextInput } from 'react-native';
+import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Button, ForkTable } from '~/components/ui';
 import { CreditCard as Edit2, UtensilsCrossed, Trash } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
-import { CustomModal } from '~/components/CustomModal';
 import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
-import { ActionMenu, ActionItem } from '~/components/ActionMenu';
+import { ActionItem } from '~/components/ActionMenu';
 import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
 import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
@@ -75,7 +74,7 @@ export default function RoomListPage() {
       return true;
     } catch (err: any) {
       console.error('Error saving room:', err);
-      
+
       // Afficher le message d'erreur spécifique si disponible
       const errorMessage = err?.message || 'Erreur lors de la sauvegarde de la salle';
       showToast(errorMessage, 'error');

@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react';
 import { menuApiService } from '~/api/menu.api';
 import { 
-  Menu, 
-  MenuCategory, 
+  Menu,
   MenuCategoryItem, 
   MenuPriceCalculationRequest, 
   MenuPriceCalculationResponse 

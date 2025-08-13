@@ -8,9 +8,6 @@ import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
 import { restaurantActions } from '~/store/restaurant';
 import { setAccountConfig } from '@/store/account-config.slice';
-import { Room } from '@/types/room.types';
-import { ItemType } from '@/types/item-type.types';
-import { User } from '@/types/user.types';
 import { accountConfigApiService } from '~/api/account-config.api';
 
 interface InitializationState {
