@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, Platform } from 'react-native';
 import { Text, Button } from '~/components/ui';
 import { Plus, Minus, Menu as MenuIcon } from 'lucide-react-native';
@@ -55,8 +55,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   const menuBeingConfiguredRef = useRef<Menu | null>(null); // Référence stable
   const [tempMenuSelections, setTempMenuSelections] = useState<Record<string, string[]>>({});
   const tempMenuSelectionsRef = useRef<Record<string, string[]>>({});
-  const [activeConfigCategory, setActiveConfigCategory] = useState<string>('');
-  const [lastNotifiedConfigState, setLastNotifiedConfigState] = useState<boolean>(false);
+  // Dead code supprimé : activeConfigCategory n'est jamais utilisé
 
   const { showToast } = useToast();
   const { activeMenus } = useMenus();
@@ -66,25 +65,14 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   const [draftMenus, setDraftMenus] = useState<DraftMenuOrderItem[]>([]);
   const [menuCategoryItems, setMenuCategoryItems] = useState<Record<string, any[]>>({});
 
+  // Initialisation des itemTypes (une seule fois)
   useEffect(() => {
-    // Démarrer sur le premier type d'article si disponible
-    if (itemTypes.length > 0) {
+    if (itemTypes.length > 0 && !activeItemType) {
       setActiveItemType(itemTypes[0].id);
     }
-  }, [itemTypes]);
+  }, [itemTypes]); // Retirer activeItemType de la dépendance pour éviter la boucle
 
-  // Notifier le parent du changement d'état de configuration (seulement comme fallback)
-  // La notification principale se fait directement dans les fonctions start/cancel
-  useEffect(() => {
-    if (onConfigurationModeChange && lastNotifiedConfigState !== isConfiguringMenu) {
-      // Ce useEffect sert de fallback au cas où l'état changerait d'une autre manière
-      onConfigurationModeChange(isConfiguringMenu);
-      setLastNotifiedConfigState(isConfiguringMenu);
-    }
-  }, [isConfiguringMenu, onConfigurationModeChange, lastNotifiedConfigState]);
-
-
-  // Initialiser le brouillon avec les items existants de la commande
+  // Initialisation des draftItems (séparée)
   useEffect(() => {
     const initialDraft: DraftOrderItem[] = [];
 
@@ -104,10 +92,43 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     setDraftItems(initialDraft);
   }, [order]);
 
-  const getItemQuantity = (itemId: string) => {
-    const draftItem = draftItems.find(draft => draft.itemId === itemId);
-    return draftItem ? draftItem.quantity : 0;
-  };
+  // ✅ Index mémorisés pour performances O(1) au lieu de O(n)
+  const quantitiesIndex = useMemo(() => {
+    const index: Record<string, number> = {};
+    draftItems.forEach(draft => {
+      index[draft.itemId] = draft.quantity;
+    });
+    return index;
+  }, [draftItems]);
+
+  const menuQuantitiesIndex = useMemo(() => {
+    const index: Record<string, number> = {};
+    draftMenus.forEach(draft => {
+      index[draft.menuId] = draft.quantity;
+    });
+    return index;
+  }, [draftMenus]);
+
+  const itemsIndex = useMemo(() => {
+    const index: Record<string, Item> = {};
+    items.forEach(item => {
+      index[item.id] = item;
+    });
+    return index;
+  }, [items]);
+
+  const menusIndex = useMemo(() => {
+    const index: Record<string, Menu> = {};
+    activeMenus.forEach(menu => {
+      index[menu.id] = menu;
+    });
+    return index;
+  }, [activeMenus]);
+
+  // ✅ Fonctions optimisées avec accès O(1)
+  const getItemQuantity = useCallback((itemId: string) => {
+    return quantitiesIndex[itemId] || 0;
+  }, [quantitiesIndex]);
 
   const onUpdateQuantity = (itemId: string, action: 'remove' | 'add') => {
     setDraftItems(prevDraft => {
@@ -261,22 +282,22 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     }
   };
 
-  // Fonction utilitaire pour obtenir l'état initial des drafts
-  const getInitialDraftItems = () => {
-    const initialDraft: DraftOrderItem[] = [];
+  // Fonction utilitaire pour obtenir l'état initial des drafts - Version optimisée
+  const getInitialDraftItems = React.useCallback(() => {
+    // Utiliser Map pour de meilleures performances sur les grandes listes
+    const itemQuantities = new Map<string, number>();
+    
     order.orderItems.forEach((orderItem: OrderItem) => {
-      const existingDraft = initialDraft.find(draft => draft.itemId === orderItem.item.id);
-      if (existingDraft) {
-        existingDraft.quantity += 1;
-      } else {
-        initialDraft.push({
-          itemId: orderItem.item.id,
-          quantity: 1
-        });
-      }
+      const itemId = orderItem.item.id;
+      itemQuantities.set(itemId, (itemQuantities.get(itemId) || 0) + 1);
     });
-    return initialDraft;
-  };
+    
+    // Convertir Map en array de DraftOrderItem
+    return Array.from(itemQuantities.entries()).map(([itemId, quantity]) => ({
+      itemId,
+      quantity
+    }));
+  }, [order.orderItems]);
 
   // Implémenter l'interface AdminFormRef pour AdminFormView
   React.useImperativeHandle(ref, () => ({
@@ -342,14 +363,15 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     return calculateMenuPriceWithSupplements(menuBeingConfigured, tempMenuSelections);
   };
 
-  const getTotalPrice = () => {
+  // ✅ Calcul mémorisé du prix total avec index optimisés
+  const totalPrice = useMemo(() => {
     const itemsTotal = draftItems.reduce((total, draft) => {
-      const item = items.find(i => i.id === draft.itemId);
+      const item = itemsIndex[draft.itemId];
       return total + (item ? item.price * draft.quantity : 0);
     }, 0);
     
     const menusTotal = draftMenus.reduce((total, draft) => {
-      const menu = activeMenus.find(m => m.id === draft.menuId);
+      const menu = menusIndex[draft.menuId];
       if (!menu) return total;
       
       // Calculer le prix du menu avec ses suppléments
@@ -358,13 +380,12 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     }, 0);
     
     return itemsTotal + menusTotal;
-  };
+  }, [draftItems, draftMenus, itemsIndex, menusIndex]);
 
-  // Fonctions pour gérer les menus
-  const getMenuQuantity = (menuId: string) => {
-    const draftMenu = draftMenus.find(draft => draft.menuId === menuId);
-    return draftMenu ? draftMenu.quantity : 0;
-  };
+  // ✅ Fonction optimisée pour les menus avec accès O(1)
+  const getMenuQuantity = useCallback((menuId: string) => {
+    return menuQuantitiesIndex[menuId] || 0;
+  }, [menuQuantitiesIndex]);
 
   const onUpdateMenuQuantity = (menuId: string, action: 'remove' | 'add') => {
     if (action === 'add') {
@@ -393,38 +414,35 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     }
   };
 
-  // Fonction pour démarrer la configuration d'un menu
+  // Fonction pour démarrer la configuration d'un menu (optimisée pour les performances mobiles)
   const startMenuConfiguration = async (menu: Menu) => {
-    // D'abord, configurer tout l'état local
-    setMenuBeingConfigured(menu);
+    // Utiliser React.startTransition pour batching optimal des re-renders
+    React.startTransition(() => {
+      // 1. Notifier le parent EN PREMIER pour déclencher immédiatement le changement d'interface
+      if (onConfigurationModeChange) {
+        onConfigurationModeChange(true);
+      }
+      
+      if (onConfigurationActionsChange) {
+        onConfigurationActionsChange({
+          onCancel: () => cancelMenuConfiguration(),
+          onConfirm: () => confirmMenuConfiguration()
+        });
+      }
+      
+      // 2. Configurer l'état local APRÈS pour éviter les re-renders intermédiaires
+      setIsConfiguringMenu(true);
+      setMenuBeingConfigured(menu);
+      setTempMenuSelections({});
+      // activeConfigCategory supprimé car inutilisé
+    });
+    
+    // 3. Préparer les données de référence (synchrone, n'affecte pas les re-renders)
     menuBeingConfiguredRef.current = menu;
-    setTempMenuSelections({});
     tempMenuSelectionsRef.current = {};
-    setActiveConfigCategory(menu.categories[0]?.id || '');
     
     // Préparer les items des catégories depuis la structure du menu
     prepareMenuItemsFromCategories(menu);
-    
-    // Ensuite, notifier le parent et configurer les actions (après avoir tout préparé)
-    setIsConfiguringMenu(true);
-    
-    // Notifier immédiatement le parent pour éviter la latence
-    if (onConfigurationModeChange && !lastNotifiedConfigState) {
-      onConfigurationModeChange(true);
-      setLastNotifiedConfigState(true);
-    }
-    
-    // Exposer les actions de configuration au parent
-    if (onConfigurationActionsChange) {
-      onConfigurationActionsChange({
-        onCancel: () => {
-          cancelMenuConfiguration();
-        },
-        onConfirm: () => {
-          confirmMenuConfiguration();
-        }
-      });
-    }
   };
 
   // Préparer les items depuis les catégories du menu
@@ -496,31 +514,30 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     });
   };
 
-  // Annuler la configuration
+  // Annuler la configuration (optimisée pour les performances mobiles)
   const cancelMenuConfiguration = () => {
-    // D'abord désactiver le mode de configuration pour éviter les interactions
-    setIsConfiguringMenu(false);
-    
-    // Attendre un cycle pour permettre aux composants de se désactiver
-    requestAnimationFrame(() => {
-      // Notifier le parent
-      if (onConfigurationModeChange && lastNotifiedConfigState) {
-        onConfigurationModeChange(false);
-        setLastNotifiedConfigState(false);
-      }
-      // Nettoyer les actions de configuration
+    // Utiliser React.startTransition pour batching optimal des updates
+    React.startTransition(() => {
+      // 1. Notifier le parent AVANT les changements d'état locaux pour transition fluide
       if (onConfigurationActionsChange) {
         onConfigurationActionsChange(null);
       }
       
-      // Nettoyer l'état
+      if (onConfigurationModeChange) {
+        onConfigurationModeChange(false);
+      }
+      
+      // 2. Nettoyer l'état local EN DERNIER pour éviter les re-renders intermédiaires
+      setIsConfiguringMenu(false);
       setMenuBeingConfigured(null);
-      menuBeingConfiguredRef.current = null;
       setTempMenuSelections({});
-      tempMenuSelectionsRef.current = {};
       setMenuCategoryItems({});
-      setActiveConfigCategory('');
+      // activeConfigCategory supprimé car inutilisé
     });
+    
+    // 3. Nettoyer les refs (synchrone, n'affecte pas les re-renders)
+    menuBeingConfiguredRef.current = null;
+    tempMenuSelectionsRef.current = {};
   };
 
   // Confirmer et ajouter le menu
@@ -566,10 +583,8 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
 
     showToast(`Menu "${currentMenu.name}" ajouté avec succès`, 'success');
     
-    // Attendre la prochaine frame pour éviter les conflits avec gesture handler
-    requestAnimationFrame(() => {
-      cancelMenuConfiguration();
-    });
+    // Fermer immédiatement sans délai pour éviter la latence
+    cancelMenuConfiguration();
   };
 
 
@@ -1284,7 +1299,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                     textAlign: 'center',
                     fontFamily: 'system-ui, -apple-system, sans-serif'
                   }}>
-                    {getTotalPrice().toFixed(2)}€
+                    {totalPrice.toFixed(2)}€
                   </span>
                   <span style={{
                     fontSize: '10px',
@@ -1301,7 +1316,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                 </>
               ) : (
                 <>
-                  <Text style={styles.bottomSummaryPrice}>{getTotalPrice().toFixed(2)}€</Text>
+                  <Text style={styles.bottomSummaryPrice}>{totalPrice.toFixed(2)}€</Text>
                   <Text style={styles.bottomSummaryLabel}>total</Text>
                 </>
               )}

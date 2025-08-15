@@ -2,6 +2,227 @@ import React from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
 import { ArrowLeftToLine } from 'lucide-react-native';
 import { Button } from '~/components/ui';
+
+// ✅ Composants extraits avec styles originaux préservés
+const PrimaryActionButton = ({ children, disabled, style, ...props }: any) => (
+  <Button
+    disabled={disabled}
+    style={[
+      {
+        flex: 2,
+        backgroundColor: disabled ? '#6B7280' : '#2A2E33',
+        borderRadius: 12,
+        height: 52,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#2A2E33',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 4,
+        ...(Platform.OS === 'web' && {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          ':hover': {
+            backgroundColor: disabled ? '#6B7280' : '#1A1E23',
+            transform: 'translateY(-2px)',
+            shadowOpacity: 0.3,
+          }
+        })
+      },
+      style
+    ]}
+    {...props}
+  >
+    <Text style={{
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 16,
+      letterSpacing: 0.5,
+    }}>
+      {children}
+    </Text>
+  </Button>
+);
+
+const SecondaryActionButton = ({ children, disabled, style, ...props }: any) => (
+  <Button
+    disabled={disabled}
+    style={[
+      {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        height: 52,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+        ...(Platform.OS === 'web' && {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          ':hover': {
+            borderColor: '#D1D5DB',
+            backgroundColor: '#F9FAFB',
+            transform: 'translateY(-1px)',
+          }
+        })
+      },
+      style
+    ]}
+    {...props}
+  >
+    <Text style={{
+      color: '#6B7280',
+      fontWeight: '600',
+      fontSize: 16,
+      letterSpacing: 0.3,
+    }}>
+      {children}
+    </Text>
+  </Button>
+);
+
+const ConfigActionButton = ({ children, disabled, style, backgroundColor = '#059669', textStyle, ...props }: any) => (
+  <Button
+    disabled={disabled}
+    style={[
+      {
+        borderRadius: 12,
+        height: 52,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor,
+        shadowColor: backgroundColor,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 4,
+        ...(Platform.OS === 'web' && {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          ':hover': {
+            transform: 'translateY(-2px)',
+            shadowOpacity: 0.3,
+          }
+        })
+      },
+      style
+    ]}
+    {...props}
+  >
+    <Text style={[
+      {
+        color: '#FFFFFF',
+        fontWeight: '700',
+        fontSize: 14,
+        letterSpacing: 0.5,
+      },
+      textStyle
+    ]}>
+      {children}
+    </Text>
+  </Button>
+);
+
+const ConfigCancelButton = ({ children, disabled, style, ...props }: any) => (
+  <Button
+    disabled={disabled}
+    style={[
+      {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        height: 52,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+        ...(Platform.OS === 'web' && {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          ':hover': {
+            borderColor: '#D1D5DB',
+            backgroundColor: '#F9FAFB',
+            transform: 'translateY(-1px)',
+          }
+        })
+      },
+      style
+    ]}
+    {...props}
+  >
+    <Text style={{
+      color: '#6B7280',
+      fontWeight: '600',
+      fontSize: 14,
+      letterSpacing: 0.3,
+    }}>
+      {children}
+    </Text>
+  </Button>
+);
+
+// ✅ Constantes de style consolidées
+const COMMON_STYLES = {
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  borderRadius: {
+    small: 8,
+    medium: 12,
+    large: 16,
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
+  },
+  colors: {
+    primary: '#2A2E33',
+    primaryHover: '#1A1E23',
+    secondary: '#6B7280',
+    background: '#FFFFFF',
+    backgroundSecondary: '#F9FAFB',
+    border: '#F3F4F6',
+    borderSecondary: '#E5E7EB',
+  },
+  typography: {
+    title: {
+      fontSize: 18,
+      fontWeight: '800' as const,
+      color: '#2A2E33',
+      letterSpacing: 0.5,
+    },
+    buttonPrimary: {
+      fontSize: 16,
+      fontWeight: '700' as const,
+      color: '#FFFFFF',
+      letterSpacing: 0.5,
+    },
+    buttonSecondary: {
+      fontSize: 16,
+      fontWeight: '600' as const,
+      color: '#6B7280',
+      letterSpacing: 0.3,
+    },
+  },
+};
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 export type AdminFormViewMode = 'create' | 'edit';
@@ -131,29 +352,35 @@ export function AdminFormView({
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Header moderne et professionnel - Masqué si hideHeaderAndActions */}
-      {!hideHeaderAndActions && (
-        <View style={styles.header}>
-          {/* Section Bouton retour */}
-          <Pressable
-            onPress={onCancel || onClose}
-            style={styles.backButton}
-          >
-            <ArrowLeftToLine size={20} color="#2A2E33" />
-          </Pressable>
+      {/* Header moderne et professionnel - Toujours dans le DOM, masqué par display */}
+      <View style={[
+        styles.header,
+        {
+          display: hideHeaderAndActions ? 'none' : 'flex'
+        }
+      ]}>
+        {/* Section Bouton retour */}
+        <Pressable
+          onPress={onCancel || onClose}
+          style={styles.backButton}
+        >
+          <ArrowLeftToLine size={20} color={COMMON_STYLES.colors.primary} />
+        </Pressable>
 
-          {/* Section Titre */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.titleText}>
-              {title}
-            </Text>
-          </View>
+        {/* Section Titre */}
+        <View style={styles.titleContainer}>
+          <Text style={[styles.titleText, COMMON_STYLES.typography.title]}>
+            {title}
+          </Text>
         </View>
-      )}
+      </View>
 
       {/* Contenu du formulaire - ScrollView conditionnel */}
       {disableGlobalScroll ? (
-        <View style={[styles.scrollView, { paddingBottom: 115 }]}>
+        <View style={[
+          styles.scrollView, 
+          { paddingBottom: 115 }
+        ]}>
           {childWithRef}
         </View>
       ) : (
@@ -170,117 +397,48 @@ export function AdminFormView({
         </ScrollView>
       )}
       
-      {/* Actions sticky en bas - Intégrées dans AdminFormView */}
-      {(onSave && !hideHeaderAndActions) || (hideHeaderAndActions && configurationActions) ? (
+      {/* Boutons de configuration - Rendus séparément pour éviter les conflits de state */}
+      {hideHeaderAndActions && configurationActions && (
         <View style={styles.stickyActions}>
           <View style={styles.actionsContainer}>
-            {hideHeaderAndActions && configurationActions ? (
-              // Boutons de configuration menu
-              <>
-                <Button 
-                  onPress={() => {
-                    configurationActions.onCancel();
-                  }}
-                  style={[
-                    styles.cancelButton,
-                    { backgroundColor: '#FFFFFF', borderRadius: 12, height: 52, flex: 1 }
-                  ]}
-                >
-                  {Platform.OS === 'web' ? (
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#6B7280',
-                      fontFamily: 'system-ui, -apple-system, sans-serif'
-                    }}>
-                      {configurationActions.cancelLabel || 'Annuler'}
-                    </span>
-                  ) : (
-                    <Text style={[
-                      styles.cancelButtonText,
-                      { color: '#6B7280', fontWeight: '600', fontSize: 14 }
-                    ]}>
-                      {configurationActions.cancelLabel || 'Annuler'}
-                    </Text>
-                  )}
-                </Button>
+            <ConfigCancelButton
+              onPress={configurationActions.onCancel}
+              style={{ flex: 1 }}
+            >
+              {configurationActions.cancelLabel || 'Annuler'}
+            </ConfigCancelButton>
 
-                <Button
-                  onPress={() => {
-                    configurationActions.onConfirm();
-                  }}
-                  style={[
-                    styles.submitButton,
-                    { 
-                      backgroundColor: configurationActions.confirmButtonColor || '#059669', 
-                      borderRadius: 12, 
-                      height: 52, 
-                      flex: 2 
-                    }
-                  ]}
-                >
-                  {Platform.OS === 'web' ? (
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      color: '#FFFFFF',
-                      fontFamily: 'system-ui, -apple-system, sans-serif'
-                    }}>
-                      {configurationActions.confirmLabel || 'Confirmer'}
-                    </span>
-                  ) : (
-                    <Text style={[
-                      styles.submitButtonText,
-                      { color: '#FFFFFF', fontWeight: '700', fontSize: 14 }
-                    ]}>
-                      {configurationActions.confirmLabel || 'Confirmer'}
-                    </Text>
-                  )}
-                </Button>
-              </>
-            ) : (
-              // Boutons AdminFormView normaux
-              <>
-                <Button
-                  onPress={handleSave}
-                  disabled={isLoading || isSaving}
-                  style={[
-                    styles.submitButton,
-                    // pour le web obligé de mettre dans le dom
-                    { backgroundColor: '#2A2E33', borderRadius: 12, height: 52,}
-                  ]}
-                >
-                  <Text style={[
-                    styles.submitButtonText,
-                    // pour le web obligé de mettre dans le dom
-                    { color: '#FFFFFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5,}
-                  ]}>
-                    {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
-                  </Text>
-                </Button>
-                
-                <Button 
-                  onPress={onCancel || onClose}
-                  disabled={isLoading || isSaving}
-                  style={[
-                    styles.cancelButton, 
-                    // pour le web obligé de mettre dans le dom
-                    { backgroundColor: '#FFFFFF', borderRadius: 12, height: 52}
-                  ]}
-                >
-                  <Text style={[
-                    styles.cancelButtonText,
-                    // pour le web obligé de mettre dans le dom
-                    { color: '#6B7280', fontWeight: '600', fontSize: 16, letterSpacing: 0.3,}
-                  ]}>
-                    Annuler
-                  </Text>
-                </Button>
-              </>
-            )}
+            <ConfigActionButton
+              onPress={configurationActions.onConfirm}
+              backgroundColor={configurationActions.confirmButtonColor || '#059669'}
+              style={{ flex: 2 }}
+            >
+              {configurationActions.confirmLabel || 'Confirmer'}
+            </ConfigActionButton>
           </View>
         </View>
-      ) : null}
+      )}
+
+      {/* Boutons AdminFormView normaux - Rendus séparément */}
+      {onSave && !hideHeaderAndActions && (
+        <View style={styles.stickyActions}>
+          <View style={styles.actionsContainer}>
+            <PrimaryActionButton
+              onPress={handleSave}
+              disabled={isLoading || isSaving}
+            >
+              {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
+            </PrimaryActionButton>
+            
+            <SecondaryActionButton 
+              onPress={onCancel || onClose}
+              disabled={isLoading || isSaving}
+            >
+              Annuler
+            </SecondaryActionButton>
+          </View>
+        </View>
+      )}
 
       {/* Modal de confirmation intégrée utilisant DeleteConfirmationModal */}
       {confirmationModal && (
@@ -337,6 +495,7 @@ export function useAdminFormView() {
   };
 }
 
+// ✅ Styles simplifiés avec consolidation des constantes
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -349,18 +508,14 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COMMON_STYLES.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: COMMON_STYLES.colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     height: 60,
-    paddingHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: COMMON_STYLES.spacing.xs,
+    ...COMMON_STYLES.shadow,
     ...(Platform.OS === 'web' && {
       backdropFilter: 'blur(8px)',
     })
@@ -369,16 +524,16 @@ const styles = StyleSheet.create({
   backButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: COMMON_STYLES.spacing.lg,
+    paddingVertical: COMMON_STYLES.spacing.md,
     borderRightWidth: 1,
-    borderRightColor: '#F3F4F6',
+    borderRightColor: COMMON_STYLES.colors.border,
     height: '100%',
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
       ':hover': {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
       }
     })
   },
@@ -386,16 +541,12 @@ const styles = StyleSheet.create({
   titleContainer: {
     flex: 1,
     justifyContent: 'center',
-    paddingLeft: 24,
-    paddingRight: 24,
+    paddingLeft: COMMON_STYLES.spacing.lg,
+    paddingRight: COMMON_STYLES.spacing.lg,
   },
 
   titleText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#2A2E33',
     textAlign: 'left',
-    letterSpacing: 0.5,
     ...(Platform.OS === 'web' && {
       fontFamily: 'system-ui, -apple-system, sans-serif',
     })
@@ -403,14 +554,14 @@ const styles = StyleSheet.create({
 
   scrollView: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
   },
 
   scrollContent: {
     flexGrow: 1,
-    padding: 32,
-    paddingTop: 24,
-    paddingBottom: 140, // Espace pour les boutons sticky (116px + marge)
+    padding: COMMON_STYLES.spacing.xl,
+    paddingTop: COMMON_STYLES.spacing.lg,
+    paddingBottom: 140, // Espace pour les boutons sticky
   },
   
   stickyActions: {
@@ -419,7 +570,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -438,73 +589,11 @@ const styles = StyleSheet.create({
 
   actionsContainer: {
     flexDirection: 'row',
-    gap: 16,
-    paddingTop: 32,
-    paddingHorizontal: 32,
-    paddingBottom: 32,
+    gap: COMMON_STYLES.spacing.md,
+    paddingTop: COMMON_STYLES.spacing.xl,
+    paddingHorizontal: COMMON_STYLES.spacing.xl,
+    paddingBottom: COMMON_STYLES.spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-
-  submitButton: {
-    flex: 2,
-    backgroundColor: '#2A2E33',
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#2A2E33',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        backgroundColor: '#1A1E23',
-        transform: 'translateY(-2px)',
-        shadowOpacity: 0.3,
-      }
-    })
-  },
-
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        borderColor: '#D1D5DB',
-        backgroundColor: '#F9FAFB',
-        transform: 'translateY(-1px)',
-      }
-    })
-  },
-
-  cancelButtonText: {
-    color: '#6B7280',
-    fontWeight: '600',
-    fontSize: 16,
-    letterSpacing: 0.3,
+    borderTopColor: COMMON_STYLES.colors.border,
   },
 });

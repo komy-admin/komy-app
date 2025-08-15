@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, ConfirmDialog, ForkModal, Text, TextInput } from "~/components/ui";
+import { Badge, Button, ConfirmDialog, ForkModal, Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
 import { Minus, Plus, Grid3X3Icon, ListFilter } from "lucide-react-native";
@@ -58,14 +58,50 @@ export default function ServicePage() {
   // État global
   const { isLoading } = useRestaurant();
 
-  // État local de l'interface seulement
-  const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
-  const [isReassigning, setIsReassigning] = useState<boolean>(false);
-  const [showDeleteOrderDialog, setShowDeleteOrderDialog] = useState<boolean>(false);
-  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
-  const [showOrderDetailModal, setShowOrderDetailModal] = useState<boolean>(false);
-  const [cameFromOrderDetailModal, setCameFromOrderDetailModal] = useState<boolean>(false);
-  const [modalTitle, setModalTitle] = useState<string>("");
+  // ✅ Hook personnalisé pour centraliser la gestion des modals
+  const useOrderModals = () => {
+    const [modals, setModals] = useState({
+      showReassignModal: false,
+      isReassigning: false,
+      showDeleteOrderDialog: false,
+      showPaymentModal: false,
+      showOrderDetailModal: false,
+      cameFromOrderDetailModal: false,
+      modalTitle: ""
+    });
+
+    const updateModal = useCallback((updates: Partial<typeof modals>) => {
+      setModals(prev => ({ ...prev, ...updates }));
+    }, []);
+
+    const modalActions = useMemo(() => ({
+      openReassign: () => updateModal({ showReassignModal: true }),
+      closeReassign: () => updateModal({ showReassignModal: false }),
+      setReassigning: (isReassigning: boolean) => updateModal({ isReassigning }),
+      
+      openDeleteDialog: () => updateModal({ showDeleteOrderDialog: true }),
+      closeDeleteDialog: () => updateModal({ showDeleteOrderDialog: false }),
+      
+      openPayment: () => updateModal({ showPaymentModal: true }),
+      closePayment: () => updateModal({ showPaymentModal: false }),
+      
+      openOrderDetail: (order?: Order) => {
+        if (order?.tableId) setSelectedTable(order.tableId);
+        updateModal({ showOrderDetailModal: true });
+      },
+      closeOrderDetail: () => {
+        updateModal({ showOrderDetailModal: false });
+        setSelectedTable(null);
+      },
+      
+      setCameFromOrderDetail: (came: boolean) => updateModal({ cameFromOrderDetailModal: came }),
+      setModalTitle: (title: string) => updateModal({ modalTitle: title })
+    }), [updateModal]);
+
+    return { modals, modalActions };
+  };
+
+  const { modals, modalActions } = useOrderModals();
 
 
   const { showToast } = useToast();
@@ -108,8 +144,7 @@ export default function ServicePage() {
     if (remainingOrderItems.length === 0) {
       try {
         // FERMER LA MODAL EN PREMIER pour éviter l'effet de "vidage"
-        setShowOrderDetailModal(false);
-        setSelectedTable(null);
+        modalActions.closeOrderDetail();
 
         // PUIS supprimer la commande vide
         await deleteOrder(selectedTableOrder.id);
@@ -163,8 +198,8 @@ export default function ServicePage() {
 
       await createOrder(selectedTableId);
       setOrderCreatedFromStart(true); // Marquer que la commande a été créée depuis "Start"
-      setCameFromOrderDetailModal(false); // Ne vient PAS de la modal détails
-      setModalTitle(`Créer la commande - ${selectedTable?.name}`); // Titre stable pour nouvelle commande
+      modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
+      modalActions.setModalTitle(`Créer la commande - ${selectedTable?.name}`); // Titre stable pour nouvelle commande
       // selectedTableOrder sera mis à jour par Redux, on l'utilisera dans un useEffect
       orderFormView.openCreate(); // Ouvrir la AdminFormView
       showToast('Commande créée avec succès.', 'success');
@@ -177,74 +212,75 @@ export default function ServicePage() {
 
   const handleOpenOrderModal = () => {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
-    setCameFromOrderDetailModal(true); // Marquer qu'on vient de la modal détails
-    setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table.name}` : "Modifier la commande"); // Titre stable pour modification
+    modalActions.setCameFromOrderDetail(true); // Marquer qu'on vient de la modal détails
+    modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table.name}` : "Modifier la commande"); // Titre stable pour modification
     // La commande courante est déjà disponible via selectedTableOrder
     orderFormView.openEdit(); // Ouvrir en mode édition
   };
 
-  const handleOpenOrderDetailModal = (order?: Order) => {
-    if (order && order.tableId) {
-      setSelectedTable(order.tableId);
-    }
-    setShowOrderDetailModal(true);
-  };
-
-  const handleCloseOrderDetailModal = () => {
-    setShowOrderDetailModal(false);
-    setSelectedTable(null); // Désélectionner la table à la fermeture
-  };
+  const handleOpenOrderDetailModal = modalActions.openOrderDetail;
+  const handleCloseOrderDetailModal = modalActions.closeOrderDetail;
 
 
   // Ref pour tracker les sauvegardes en cours (persiste entre les renders)
   const isSavingOrderRef = useRef(false);
 
-  // Handler intelligent qui s'adapte selon le contexte
-  const handleSmartCloseOrderModal = () => {    
-    if (isSavingOrderRef.current) {
-      // Si on est en train de sauvegarder, c'est AdminFormView qui ferme après succès
-      orderFormView.close();
-      isSavingOrderRef.current = false;
-    } else {
-      // Sinon, c'est une fermeture manuelle/annulation
-      
-      // Fermer immédiatement la modal
-      orderFormView.close();
+  // ✅ Hook personnalisé pour la logique de fermeture intelligente
+  const useSmartOrderClose = () => {
+    return useCallback(() => {
+      if (isSavingOrderRef.current) {
+        // Sauvegarde en cours : fermeture automatique
+        orderFormView.close();
+        isSavingOrderRef.current = false;
+        return;
+      }
 
-      // Reset tous les flags AVANT la logique de nettoyage pour éviter les conflits
+      // Fermeture manuelle : logique de nettoyage
+      orderFormView.close();
+      
       const wasOrderCreatedFromStart = orderCreatedFromStart;
       setOrderCreatedFromStart(false);
 
-      // Exécuter la logique de nettoyage SEULEMENT lors d'une fermeture manuelle
+      // Nettoyage conditionnel de commande vide
       if (selectedTableOrder && wasOrderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
         deleteOrder(selectedTableOrder.id)
-          .then(() => {
-            showToast('Commande annulée car aucun article n\'a été ajouté.', 'info');
-          })
-          .catch((error) => {
-            console.error('Erreur lors de la suppression:', error);
-          });
+          .then(() => showToast('Commande annulée car aucun article n\'a été ajouté.', 'info'))
+          .catch((error) => console.error('Erreur lors de la suppression:', error));
       }
 
-      // Si on vient de la modal de détails ET qu'il y a une commande avec des items, la rouvrir
-      if (cameFromOrderDetailModal && selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
-        setShowOrderDetailModal(true);
+      // Réouverture conditionnelle de la modal détails
+      if (modals.cameFromOrderDetailModal && selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
+        modalActions.openOrderDetail();
       }
 
-      setCameFromOrderDetailModal(false);
-    }
+      modalActions.setCameFromOrderDetail(false);
+    }, [
+      orderFormView, 
+      orderCreatedFromStart, 
+      selectedTableOrder, 
+      modals.cameFromOrderDetailModal, 
+      modalActions, 
+      deleteOrder, 
+      showToast
+    ]);
   };
 
+  const handleSmartCloseOrderModal = useSmartOrderClose();
+
+  // Optimisation des callbacks pour performances mobiles - batching des re-renders
   const handleConfigurationModeChange = useCallback((configuring: boolean) => {
-    setIsConfiguringMenu(configuring);
-    // Si on sort du mode configuration, nettoyer immédiatement les actions pour éviter la latence
-    if (!configuring) {
-      setMenuConfigActions(null);
-    }
+    React.startTransition(() => {
+      setIsConfiguringMenu(configuring);
+      if (!configuring) {
+        setMenuConfigActions(null);
+      }
+    });
   }, []);
 
   const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void } | null) => {
-    setMenuConfigActions(actions);
+    React.startTransition(() => {
+      setMenuConfigActions(actions);
+    });
   }, []);
 
   const handleSaveOrder = async (getFormData: () => any) => {
@@ -264,12 +300,12 @@ export default function ServicePage() {
         
         // Désactiver les flags avant que AdminFormView appelle onClose automatiquement
         setOrderCreatedFromStart(false);
-        setCameFromOrderDetailModal(false);
+        modalActions.setCameFromOrderDetail(false);
 
         // Planifier la réouverture de la modal détails après la fermeture automatique
         requestAnimationFrame(() => {
           if (updatedOrder && updatedOrder.orderItems && updatedOrder.orderItems.length > 0) {
-            setShowOrderDetailModal(true);
+            modalActions.openOrderDetail();
           }
         });
 
@@ -278,7 +314,7 @@ export default function ServicePage() {
       } else {
         // Pas de modifications, AdminFormView va fermer automatiquement
         setOrderCreatedFromStart(false);
-        setCameFromOrderDetailModal(false);
+        modalActions.setCameFromOrderDetail(false);
         return true;
       }
     } catch (error) {
@@ -324,8 +360,8 @@ export default function ServicePage() {
       // Ici, vous pouvez ajouter la logique pour traiter le paiement
       // Par exemple, appeler une API pour enregistrer le paiement
 
-      setShowPaymentModal(false);
-      setShowOrderDetailModal(true); // Rouvrir la modal de détails
+      modalActions.closePayment();
+      modalActions.openOrderDetail(); // Rouvrir la modal de détails
       showToast('Paiement traité avec succès.', 'success');
 
       // Optionnel : fermer la commande ou changer son statut
@@ -455,7 +491,7 @@ export default function ServicePage() {
 
       {/* Modal pour les détails et actions de la commande */}
       <CustomModal
-        isVisible={showOrderDetailModal}
+        isVisible={modals.showOrderDetailModal}
         onClose={handleCloseOrderDetailModal}
         width={900}
         height={700}
@@ -500,27 +536,21 @@ export default function ServicePage() {
                 <Button
                   variant="outline"
                   style={{ flex: 1 }}
-                  onPress={() => {
-                    setShowReassignModal(true);
-                  }}
+                  onPress={modalActions.openReassign}
                 >
                   <Text>Assigner une autre table</Text>
                 </Button>
                 <Button
                   variant="outline"
                   style={{ flex: 1 }}
-                  onPress={() => {
-                    setShowPaymentModal(true);
-                  }}
+                  onPress={modalActions.openPayment}
                 >
                   <Text>Régler la note</Text>
                 </Button>
                 <Button
                   variant="destructive"
                   style={{ flex: 1 }}
-                  onPress={() => {
-                    setShowDeleteOrderDialog(true);
-                  }}
+                  onPress={modalActions.openDeleteDialog}
                 >
                   <Text>Supprimer</Text>
                 </Button>
@@ -554,7 +584,7 @@ export default function ServicePage() {
       <AdminFormView
         visible={orderFormView.isVisible}
         mode={orderFormView.mode}
-        title={modalTitle}
+        title={modals.modalTitle}
         onClose={handleSmartCloseOrderModal}
         onCancel={handleSmartCloseOrderModal}
         onSave={handleSaveOrder}
@@ -579,21 +609,22 @@ export default function ServicePage() {
         )}
       </AdminFormView>
 
-      {selectedTableOrder && showDeleteOrderDialog && (
+      {selectedTableOrder && modals.showDeleteOrderDialog && (
         <ConfirmDialog
-          open={showDeleteOrderDialog}
+          open={modals.showDeleteOrderDialog}
           onOpenChange={(value) => {
-            setShowDeleteOrderDialog(value)
+            if (value) modalActions.openDeleteDialog();
+            else modalActions.closeDeleteDialog();
           }}
           title="Supprimer la commande"
           content="Êtes-vous sûr de vouloir supprimer cette commande ?"
           onCancel={() => {
-            setShowDeleteOrderDialog(false);
-            setShowOrderDetailModal(true); // Rouvrir la modal de détails si annulation
+            modalActions.closeDeleteDialog();
+            modalActions.openOrderDetail(); // Rouvrir la modal de détails si annulation
           }}
           onConfirm={() => {
-            setShowDeleteOrderDialog(false);
-            setShowOrderDetailModal(false);
+            modalActions.closeDeleteDialog();
+            modalActions.closeOrderDetail();
             deleteOrder(selectedTableOrder.id);
             setSelectedTable(null);
           }}
@@ -602,14 +633,14 @@ export default function ServicePage() {
         />
       )}
       <CustomModal
-        isVisible={showReassignModal}
+        isVisible={modals.showReassignModal}
         onClose={() => {
-          setShowReassignModal(false);
-          setShowOrderDetailModal(true); // Rouvrir la modal de détails si fermeture
+          modalActions.closeReassign();
+          modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
         }}
         width={800}
         height={600}
-        title={isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
+        title={modals.isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
       >
         <View style={{ flex: 1, padding: 20 }}>
           <View style={{
@@ -624,41 +655,41 @@ export default function ServicePage() {
               width={currentRoom?.width}
               height={currentRoom?.height}
               editionMode={false}
-              isLoading={isLoading || isReassigning}
+              isLoading={isLoading || modals.isReassigning}
               containerDimensions={{ width: 760, height: 560 }} // 800-40 et 600-40 pour les paddings
               onTablePress={async (pressedTable: Table | null) => {
-                if (pressedTable && selectedTableOrder && !isReassigning) {
-                  setIsReassigning(true); // Bloquer les autres clics
+                if (pressedTable && selectedTableOrder && !modals.isReassigning) {
+                  modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
                     await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
-                    setShowReassignModal(false);
-                    setShowOrderDetailModal(true);
+                    modalActions.closeReassign();
+                    modalActions.openOrderDetail();
                     showToast('Table réassignée avec succès.', 'success');
                   } catch (error) {
                     console.error('Erreur lors de la réassignation:', error);
                     showToast('Erreur lors de la réassignation.', 'error');
                   } finally {
-                    setIsReassigning(false); // Débloquer
+                    modalActions.setReassigning(false); // Débloquer
                   }
                 }
               }}
               onTableLongPress={async (pressedTable: Table | null) => {
-                if (pressedTable && selectedTableOrder && !isReassigning) {
-                  setIsReassigning(true); // Bloquer les autres clics
+                if (pressedTable && selectedTableOrder && !modals.isReassigning) {
+                  modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
                     await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
-                    setShowReassignModal(false);
-                    setShowOrderDetailModal(true);
+                    modalActions.closeReassign();
+                    modalActions.openOrderDetail();
                     showToast('Table réassignée avec succès.', 'success');
                   } catch (error) {
                     console.error('Erreur lors de la réassignation:', error);
                     showToast('Erreur lors de la réassignation.', 'error');
                   } finally {
-                    setIsReassigning(false); // Débloquer
+                    modalActions.setReassigning(false); // Débloquer
                   }
                 }
               }}
@@ -670,10 +701,10 @@ export default function ServicePage() {
 
       {/* Modal de paiement */}
       <ForkModal
-        visible={showPaymentModal}
+        visible={modals.showPaymentModal}
         onClose={() => {
-          setShowPaymentModal(false);
-          setShowOrderDetailModal(true); // Rouvrir la modal de détails si fermeture
+          modalActions.closePayment();
+          modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
         }}
         maxWidth={1200}
         title="Régler l'addition"
@@ -682,8 +713,8 @@ export default function ServicePage() {
           <PaymentView
             order={selectedTableOrder}
             onClose={() => {
-              setShowPaymentModal(false);
-              setShowOrderDetailModal(true); // Rouvrir la modal de détails
+              modalActions.closePayment();
+              modalActions.openOrderDetail(); // Rouvrir la modal de détails
             }}
             onPaymentComplete={handlePaymentComplete}
           />
