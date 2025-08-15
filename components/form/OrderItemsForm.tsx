@@ -9,7 +9,7 @@ import { OrderItem } from '~/types/order-item.types';
 import { Status } from '~/types/status.enum';
 import { orderItemApiService } from '~/api/order-item.api';
 import { useToast } from '~/components/ToastProvider';
-import { Menu } from '~/types/menu.types';
+import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { useMenus } from '~/hooks/useMenus';
 import { AdminFormData, AdminFormRef } from '~/components/admin/AdminFormView';
 
@@ -58,7 +58,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   // Dead code supprimé : activeConfigCategory n'est jamais utilisé
 
   const { showToast } = useToast();
-  const { activeMenus } = useMenus();
+  const { activeMenus, getMenuCategoryItems } = useMenus();
   
   // État local pour les modifications (brouillon)
   const [draftItems, setDraftItems] = useState<DraftOrderItem[]>([]);
@@ -387,12 +387,97 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     return menuQuantitiesIndex[menuId] || 0;
   }, [menuQuantitiesIndex]);
 
+  // ✅ Vérifier si un menu peut être ajouté directement (toutes catégories requises = 1 article ou 0 article)
+  const canAddMenuDirectly = useCallback((menu: Menu): boolean => {
+    if (!menu || !menu.categories || menu.categories.length === 0) {
+      return false;
+    }
+
+    // Vérifier chaque catégorie
+    for (const category of menu.categories) {
+      // ✅ Si la catégorie est optionnelle, on ne peut pas ajouter directement
+      if (!category.isRequired) {
+        return false;
+      }
+
+      const menuCategoryItems = getMenuCategoryItems(category.id);
+      const availableItems = menuCategoryItems.filter((menuCategoryItem: MenuCategoryItem) => {
+        const fullItem = items.find(item => item.id === menuCategoryItem.itemId);
+        return menuCategoryItem.isAvailable && fullItem && fullItem.isActive;
+      });
+
+      // ✅ Catégorie requise doit avoir exactement 1 article OU 0 article (cas rare mais possible)
+      if (availableItems.length !== 1 && availableItems.length !== 0) {
+        return false;
+      }
+    }
+
+    return true;
+  }, [getMenuCategoryItems, items]);
+
+  // ✅ Ajouter un menu directement sans configuration
+  const addMenuDirectly = useCallback((menu: Menu) => {
+    if (!menu || !menu.categories) return;
+
+    // Construire automatiquement les sélections (1 article par catégorie ou vide si 0 article)
+    const autoSelections: Record<string, string[]> = {};
+    let selectedItemsCount = 0;
+    
+    menu.categories.forEach((category) => {
+      const menuCategoryItems = getMenuCategoryItems(category.id);
+      const availableItems = menuCategoryItems.filter((menuCategoryItem: MenuCategoryItem) => {
+        const fullItem = items.find(item => item.id === menuCategoryItem.itemId);
+        return menuCategoryItem.isAvailable && fullItem && fullItem.isActive;
+      });
+
+      if (availableItems.length === 1) {
+        // Catégorie avec 1 article : sélectionner automatiquement
+        autoSelections[category.id] = [availableItems[0].itemId];
+        selectedItemsCount++;
+      } else if (availableItems.length === 0) {
+        // ✅ Catégorie vide : tableau vide (considérée comme auto-select)
+        autoSelections[category.id] = [];
+      }
+    });
+
+    // Ajouter le menu aux brouillons
+    const newDraftMenu: DraftMenuOrderItem = {
+      menuId: menu.id,
+      quantity: 1,
+      selectedItems: autoSelections
+    };
+
+    setDraftMenus(prevDraft => {
+      const existingDraft = prevDraft.find(draft => draft.menuId === menu.id);
+      if (existingDraft) {
+        return prevDraft.map(draft =>
+          draft.menuId === menu.id
+            ? { ...draft, quantity: draft.quantity + 1 }
+            : draft
+        );
+      } else {
+        return [...prevDraft, newDraftMenu];
+      }
+    });
+
+    const message = selectedItemsCount > 0 
+      ? `Menu "${menu.name}" ajouté automatiquement (${selectedItemsCount} article${selectedItemsCount > 1 ? 's' : ''} sélectionné${selectedItemsCount > 1 ? 's' : ''})`
+      : `Menu "${menu.name}" ajouté automatiquement`;
+    
+    showToast(message, 'success');
+  }, [getMenuCategoryItems, items, showToast]);
+
   const onUpdateMenuQuantity = (menuId: string, action: 'remove' | 'add') => {
     if (action === 'add') {
-      // Au lieu d'ajouter directement, on démarre la configuration
       const menu = activeMenus.find(m => m.id === menuId);
       if (menu) {
-        startMenuConfiguration(menu);
+        // ✅ Optimisation : Vérifier si on peut ajouter directement sans configuration
+        if (canAddMenuDirectly(menu)) {
+          addMenuDirectly(menu);
+        } else {
+          // Sinon, démarrer la configuration normale
+          startMenuConfiguration(menu);
+        }
       }
     } else if (action === 'remove') {
       // Pour remove, on agit normalement
@@ -433,7 +518,8 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
       // 2. Configurer l'état local APRÈS pour éviter les re-renders intermédiaires
       setIsConfiguringMenu(true);
       setMenuBeingConfigured(menu);
-      setTempMenuSelections({});
+      // ✅ tempMenuSelections sera initialisé après l'analyse des catégories
+      
       // activeConfigCategory supprimé car inutilisé
     });
     
@@ -443,6 +529,9 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     
     // Préparer les items des catégories depuis la structure du menu
     prepareMenuItemsFromCategories(menu);
+    
+    // ✅ 4. Optimisation : Sélection automatique des articles uniques par catégorie
+    autoSelectUniqueItemsInCategories(menu);
   };
 
   // Préparer les items depuis les catégories du menu
@@ -454,20 +543,73 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     const itemsData: Record<string, any[]> = {};
     
     menu.categories.forEach((category) => {
-      // Les items sont déjà dans category.items, on les enrichit avec les infos complètes
-      const categoryItems = category.items?.map((menuCategoryItem) => {
+      // ✅ Utiliser le store Redux au lieu de category.items pour avoir les données à jour
+      const menuCategoryItems = getMenuCategoryItems(category.id);
+      
+      const categoryItems = menuCategoryItems.map((menuCategoryItem: MenuCategoryItem) => {
         // Trouver l'item complet dans le store
         const fullItem = items.find(item => item.id === menuCategoryItem.itemId);
         return {
           ...menuCategoryItem,
           item: fullItem
         };
-      }).filter(item => item.isAvailable && item.item) || [];
+      }).filter((item: any) => item.isAvailable && item.item) || [];
       
       itemsData[category.id] = categoryItems;
     });
     
     setMenuCategoryItems(itemsData);
+  };
+
+  // ✅ Optimisation : Sélection automatique des articles uniques par catégorie
+  const autoSelectUniqueItemsInCategories = (menu: Menu) => {
+    if (!menu || !menu.categories) {
+      return;
+    }
+
+    const autoSelections: Record<string, string[]> = {};
+    let hasAutoSelections = false;
+
+    menu.categories.forEach((category) => {
+      // ✅ Filtrer les items disponibles depuis le store Redux
+      const menuCategoryItems = getMenuCategoryItems(category.id);
+      const availableItems = menuCategoryItems.filter((menuCategoryItem: MenuCategoryItem) => {
+        const fullItem = items.find(item => item.id === menuCategoryItem.itemId);
+        return menuCategoryItem.isAvailable && fullItem && fullItem.isActive;
+      });
+
+      // ✅ Si la catégorie est requise ET n'a qu'un seul article, le sélectionner automatiquement
+      if (category.isRequired && availableItems.length === 1) {
+        autoSelections[category.id] = [availableItems[0].itemId];
+        hasAutoSelections = true;
+      } else if (category.isRequired && availableItems.length === 0) {
+        // ✅ Catégorie requise vide : considérée comme auto-sélectée
+        autoSelections[category.id] = [];
+        hasAutoSelections = true;
+      } else {
+        // ✅ Catégorie optionnelle ou avec choix multiples : laisser vide (non sélectionnée)
+        autoSelections[category.id] = [];
+      }
+    });
+
+    // Appliquer les sélections automatiques si il y en a
+    if (hasAutoSelections) {
+      React.startTransition(() => {
+        setTempMenuSelections(autoSelections);
+        tempMenuSelectionsRef.current = autoSelections;
+      });
+      
+      const autoSelectedCount = Object.keys(autoSelections).filter(categoryId => autoSelections[categoryId].length > 0).length;
+      
+      // Feedback utilisateur discret
+      showToast(`${autoSelectedCount} article${autoSelectedCount > 1 ? 's' : ''} sélectionné${autoSelectedCount > 1 ? 's' : ''} automatiquement`, 'info');
+    } else {
+      // Pas de sélections automatiques, initialiser vide
+      React.startTransition(() => {
+        setTempMenuSelections({});
+        tempMenuSelectionsRef.current = {};
+      });
+    }
   };
 
   // Fonction pour obtenir le nom de la catégorie depuis l'itemTypeId
