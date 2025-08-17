@@ -459,13 +459,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
         return [...prevDraft, newDraftMenu];
       }
     });
-
-    const message = selectedItemsCount > 0 
-      ? `Menu "${menu.name}" ajouté automatiquement (${selectedItemsCount} article${selectedItemsCount > 1 ? 's' : ''} sélectionné${selectedItemsCount > 1 ? 's' : ''})`
-      : `Menu "${menu.name}" ajouté automatiquement`;
-    
-    showToast(message, 'success');
-  }, [getMenuCategoryItems, items, showToast]);
+  }, [getMenuCategoryItems, items]);
 
   const onUpdateMenuQuantity = (menuId: string, action: 'remove' | 'add') => {
     if (action === 'add') {
@@ -598,11 +592,6 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
         setTempMenuSelections(autoSelections);
         tempMenuSelectionsRef.current = autoSelections;
       });
-      
-      const autoSelectedCount = Object.keys(autoSelections).filter(categoryId => autoSelections[categoryId].length > 0).length;
-      
-      // Feedback utilisateur discret
-      showToast(`${autoSelectedCount} article${autoSelectedCount > 1 ? 's' : ''} sélectionné${autoSelectedCount > 1 ? 's' : ''} automatiquement`, 'info');
     } else {
       // Pas de sélections automatiques, initialiser vide
       React.startTransition(() => {
