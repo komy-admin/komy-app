@@ -46,7 +46,7 @@ export default function MenuPage() {
 
   // Utilisation des hooks Redux
   const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
-  const { allMenus, loading: menusLoading, error: menusError, createMenu, updateMenu, deleteMenu, createMenuCategoryItem, updateMenuCategoryItem, deleteMenuCategoryItem, loadMenuCategoryItems } = useMenus();
+  const { allMenus, loading: menusLoading, error: menusError, createMenuBulk, updateMenuBulk, deleteMenu, createMenuCategoryItem, updateMenuCategoryItem, deleteMenuCategoryItem, loadMenuCategoryItems } = useMenus();
 
   // Filtrer les articles avec les filtres appliqués et trier par statut
   const filteredItems = useMemo(() => {
@@ -182,103 +182,76 @@ export default function MenuPage() {
     setCurrentMenu(null);
   };
 
-  // Nouvelle fonction de sauvegarde complexe pour les menus avec catégories et articles locaux
-  const handleComplexMenuSave = async (menuData: any) => {
+  // ✅ Nouvelle fonction de sauvegarde bulk pour les menus (1 seule requête API)
+  const handleBulkMenuSave = async (menuData: any) => {
     try {
-      // Préparer les données : convertir les localItems en vraies catégories avec leurs items
-      const processedCategories = menuData.categories?.map((category: any) => {
-        // Créer la catégorie de base
-        const categoryBase = {
-          id: category.id,
-          itemTypeId: category.itemTypeId,
-          isRequired: category.isRequired,
-          maxSelections: category.maxSelections,
-          priceModifier: category.priceModifier,
-          itemType: category.itemType
+      const isUpdate = Boolean(menuData.id);
+      
+      if (isUpdate) {
+        // ✅ Utiliser l'API bulk pour les mises à jour
+        const bulkUpdateData = {
+          menu: {
+            name: menuData.name,
+            description: menuData.description || '',
+            basePrice: Number(menuData.basePrice),
+            isActive: Boolean(menuData.isActive)
+          },
+          categories: menuData.categories?.map((category: any) => ({
+            id: category.id, // Présent = update, absent = create
+            itemTypeId: category.itemTypeId,
+            isRequired: Boolean(category.isRequired),
+            maxSelections: Number(category.maxSelections),
+            priceModifier: Number(category.priceModifier),
+            // ✅ Seulement les items actifs (pas isDeleted) - suppression automatique par absence
+            items: category.localItems?.filter((localItem: any) => !localItem.isDeleted)
+              .map((localItem: any) => ({
+                id: localItem.originalId || undefined, // originalId = update, undefined = create
+                itemId: localItem.itemId,
+                supplement: Number(localItem.supplement) || 0,
+                isAvailable: Boolean(localItem.isAvailable)
+              })) || []
+          })) || []
         };
 
-        return categoryBase;
-      }) || [];
-
-      const processedMenuData = {
-        ...menuData,
-        categories: processedCategories
-      };
-
-      let savedMenu: Menu;
-      const isUpdate = Boolean(menuData.id);
-
-      // 1. Sauvegarder le menu avec ses catégories (le hook gère déjà cela)
-      if (isUpdate) {
-        savedMenu = await updateMenu(menuData.id, processedMenuData);
+        console.log('🚀 Sauvegarde bulk menu update:', bulkUpdateData);
+        await updateMenuBulk(menuData.id, bulkUpdateData);
       } else {
-        savedMenu = await createMenu(processedMenuData);
-      }
+        // ✅ Utiliser l'API bulk pour la création aussi
+        const bulkCreateData = {
+          menu: {
+            name: menuData.name,
+            description: menuData.description || '',
+            basePrice: Number(menuData.basePrice),
+            isActive: Boolean(menuData.isActive)
+          },
+          categories: menuData.categories?.map((category: any) => ({
+            // Pas d'id pour la création (toutes nouvelles catégories)
+            itemTypeId: category.itemTypeId,
+            isRequired: Boolean(category.isRequired),
+            maxSelections: Number(category.maxSelections),
+            priceModifier: Number(category.priceModifier),
+            // ✅ Seulement les items actifs (pas isDeleted)
+            items: category.localItems?.filter((localItem: any) => !localItem.isDeleted)
+              .map((localItem: any) => ({
+                // Pas d'id pour la création (tous nouveaux items)
+                itemId: localItem.itemId,
+                supplement: Number(localItem.supplement) || 0,
+                isAvailable: Boolean(localItem.isAvailable)
+              })) || []
+          })) || []
+        };
 
-      // 2. Traiter SEULEMENT les nouveaux articles ajoutés localement
-      if (menuData.categories && savedMenu.categories) {
-
-        for (let i = 0; i < menuData.categories.length; i++) {
-          const originalCategory = menuData.categories[i];
-          const savedCategory = savedMenu.categories[i];
-
-          if (originalCategory.localItems && originalCategory.localItems.length > 0) {
-            // Séparer les différents types d'opérations
-            const newLocalItems = originalCategory.localItems.filter((localItem: any) =>
-              localItem.tempId.startsWith('local-')
-            );
-
-            const modifiedItems = originalCategory.localItems.filter((localItem: any) =>
-              localItem.originalId && localItem.isModified && !localItem.isDeleted
-            );
-
-            const deletedItems = originalCategory.localItems.filter((localItem: any) =>
-              localItem.originalId && localItem.isDeleted
-            );
-
-            // 1. Créer les nouveaux items
-            for (const localItem of newLocalItems) {
-              if (localItem.itemId && savedCategory.id) {
-                const menuCategoryItemData = {
-                  menuCategoryId: savedCategory.id,
-                  itemId: localItem.itemId,
-                  supplement: Number(localItem.supplement) || 0,
-                  isAvailable: Boolean(localItem.isAvailable)
-                };
-
-                await createMenuCategoryItem(menuCategoryItemData);
-              }
-            }
-
-            // 2. Mettre à jour les items modifiés
-            for (const localItem of modifiedItems) {
-              if (localItem.originalId) {
-                const updateData = {
-                  supplement: Number(localItem.supplement) || 0,
-                  isAvailable: Boolean(localItem.isAvailable)
-                };
-
-                await updateMenuCategoryItem(localItem.originalId, updateData);
-              }
-            }
-
-            // 3. Supprimer les items marqués comme supprimés
-            for (const localItem of deletedItems) {
-              if (localItem.originalId) {
-                await deleteMenuCategoryItem(localItem.originalId);
-              }
-            }
-          }
-        }
+        console.log('🚀 Sauvegarde bulk menu create:', bulkCreateData);
+        await createMenuBulk(bulkCreateData);
       }
 
       showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
       handleCloseMenuModal();
 
     } catch (err) {
-      console.error('Error saving complex menu:', err);
+      console.error('Error saving bulk menu:', err);
       showToast('Erreur lors de la sauvegarde du menu', 'error');
-      throw err; // Re-throw pour que AdminFormView sache que ça a échoué
+      throw err;
     }
   };
 
@@ -645,7 +618,7 @@ export default function MenuPage() {
           if (!formData.isValid) return false;
 
           try {
-            await handleComplexMenuSave(formData.data);
+            await handleBulkMenuSave(formData.data);
             return true;
           } catch (error) {
             console.error('Erreur lors de la sauvegarde du menu:', error);

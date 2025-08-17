@@ -10,7 +10,7 @@ import {
 import { menuApiService } from '~/api/menu.api';
 import { menuCategoryApiService } from '~/api/menu-category.api';
 import { menuCategoryItemApiService } from '~/api/menu-category-item.api';
-import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
+import { Menu, MenuCategory, MenuCategoryItem, MenuBulkUpdateRequest, MenuBulkCreateRequest } from '~/types/menu.types';
 
 /**
  * Hook spécialisé pour la gestion des menus
@@ -238,6 +238,70 @@ export const useMenus = () => {
     }
   }, [dispatch]);
 
+  // ✅ Nouvelle méthode pour création bulk (menu + catégories + items en 1 requête)
+  const createMenuBulk = useCallback(async (menuData: MenuBulkCreateRequest) => {
+    try {
+      console.log('🚀 Début création bulk menu:', menuData);
+      
+      const createdMenu = await menuApiService.createBulk(menuData);
+      console.log('✅ Menu créé via API bulk:', createdMenu);
+      
+      // Ajouter au store Redux avec le menu complet
+      dispatch(restaurantActions.createMenu({ menu: createdMenu }));
+      
+      // Extraire et stocker les MenuCategoryItems créés
+      if (createdMenu.categories && createdMenu.categories.length > 0) {
+        for (const category of createdMenu.categories) {
+          if (category.id && category.items && Array.isArray(category.items)) {
+            dispatch(restaurantActions.setMenuCategoryItems({ 
+              menuCategoryId: category.id, 
+              items: category.items 
+            }));
+            console.log(`✅ ${category.items.length} items créés pour catégorie ${category.id}`);
+          }
+        }
+      }
+      
+      console.log('✅ Menu et catégories créés dans le store Redux via bulk API');
+      return createdMenu;
+    } catch (error) {
+      console.error('❌ Erreur lors de la création bulk du menu:', error);
+      throw error;
+    }
+  }, [dispatch]);
+
+  // ✅ Nouvelle méthode pour mise à jour bulk (menu + catégories + items en 1 requête)
+  const updateMenuBulk = useCallback(async (menuId: string, menuData: MenuBulkUpdateRequest) => {
+    try {
+      console.log('🚀 Début mise à jour bulk menu:', menuId, menuData);
+      
+      const updatedMenu = await menuApiService.updateBulk(menuId, menuData);
+      console.log('✅ Menu mis à jour via API bulk:', updatedMenu);
+      
+      // Mettre à jour le store Redux avec le menu complet
+      dispatch(restaurantActions.updateMenu({ menu: updatedMenu }));
+      
+      // Extraire et stocker les MenuCategoryItems mis à jour
+      if (updatedMenu.categories && updatedMenu.categories.length > 0) {
+        for (const category of updatedMenu.categories) {
+          if (category.id && category.items && Array.isArray(category.items)) {
+            dispatch(restaurantActions.setMenuCategoryItems({ 
+              menuCategoryId: category.id, 
+              items: category.items 
+            }));
+            console.log(`✅ ${category.items.length} items mis à jour pour catégorie ${category.id}`);
+          }
+        }
+      }
+      
+      console.log('✅ Menu et catégories mis à jour dans le store Redux via bulk API');
+      return updatedMenu;
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour bulk du menu:', error);
+      throw error;
+    }
+  }, [dispatch]);
+
   // Actions CRUD pour les menuCategoryItems
   const createMenuCategoryItem = useCallback(async (itemData: Partial<MenuCategoryItem>) => {
     try {
@@ -293,7 +357,7 @@ export const useMenus = () => {
 
   const getAvailableMenuCategoryItems = useCallback((menuCategoryId: string) => {
     const items = allMenuCategoryItems[menuCategoryId] || [];
-    return items.filter(item => item.isAvailable);
+    return items.filter((item: MenuCategoryItem) => item.isAvailable);
   }, [allMenuCategoryItems]);
 
   const isMenuAvailable = useCallback((menuId: string) => {
@@ -333,7 +397,9 @@ export const useMenus = () => {
     
     // Actions CRUD pour les menus
     createMenu,
+    createMenuBulk,
     updateMenu,
+    updateMenuBulk,
     deleteMenu,
     
     // Actions CRUD pour les menuCategoryItems

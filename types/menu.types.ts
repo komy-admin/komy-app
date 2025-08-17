@@ -68,3 +68,29 @@ export type MenuPriceCalculationResponse = {
     }>;
   };
 };
+
+// ✅ Type pour la nouvelle API bulk
+export type MenuBulkUpdateRequest = {
+  menu: {
+    name: string;
+    description?: string;
+    basePrice: number;
+    isActive: boolean;
+  };
+  categories: Array<{
+    id?: string; // Si présent = update, si absent = create
+    itemTypeId: string;
+    isRequired: boolean;
+    maxSelections: number;
+    priceModifier: number;
+    items: Array<{
+      id?: string; // Si présent = update MenuCategoryItem existant, si absent = create nouveau
+      itemId: string;
+      supplement: number;
+      isAvailable: boolean;
+    }>;
+  }>;
+};
+
+// ✅ Type pour la création bulk (même structure que update)
+export type MenuBulkCreateRequest = MenuBulkUpdateRequest;

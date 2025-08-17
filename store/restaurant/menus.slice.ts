@@ -74,12 +74,20 @@ const menusSlice = createSlice({
     // Actions WebSocket CRUD pour les menus
     createMenu: (state, action: PayloadAction<{ menu: Menu }>) => {
       const { menu } = action.payload;
-      state.menus[menu.id] = menu;
+      // ✅ S'assurer que categories est initialisé
+      state.menus[menu.id] = {
+        ...menu,
+        categories: menu.categories || []
+      };
     },
     
     updateMenu: (state, action: PayloadAction<{ menu: Menu }>) => {
       const { menu } = action.payload;
-      state.menus[menu.id] = menu;
+      // ✅ S'assurer que categories est initialisé
+      state.menus[menu.id] = {
+        ...menu,
+        categories: menu.categories || []
+      };
     },
     
     deleteMenu: (state, action: PayloadAction<{ menuId: string }>) => {
@@ -103,6 +111,11 @@ const menusSlice = createSlice({
       const menuId = menuCategory.menuId;
       
       if (state.menus[menuId]) {
+        // ✅ Initialiser categories si undefined
+        if (!state.menus[menuId].categories) {
+          state.menus[menuId].categories = [];
+        }
+        
         // Vérifier si la catégorie existe déjà
         const existingIndex = state.menus[menuId].categories.findIndex(
           cat => cat.id === menuCategory.id
