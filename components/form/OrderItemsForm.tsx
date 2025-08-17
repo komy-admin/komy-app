@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, ScrollView, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Text, Button } from '~/components/ui';
 import { Plus, Minus, Menu as MenuIcon } from 'lucide-react-native';
 import { Order } from '~/types/order.types';
@@ -45,6 +45,18 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   onConfigurationModeChange,
   onConfigurationActionsChange
 }: OrderItemsFormProps, ref) {
+  // ✅ Détection taille écran pour optimiser tactile tablette
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768; // iPad et tablettes
+  
+  // ✅ Styles dynamiques pour boutons optimisés tablette
+  const dynamicButtonSize = isTablet ? 38 : 32; // +6px sur tablette
+  const dynamicButtonStyles = {
+    ...styles.compactQuantityButton,
+    width: dynamicButtonSize,
+    height: dynamicButtonSize,
+  };
+  
   const [activeMainTab, setActiveMainTab] = useState<string>('ITEMS');
   const [activeItemType, setActiveItemType] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1184,9 +1196,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                         <Pressable
                           onPress={() => onUpdateMenuQuantity(menu.id, 'remove')}
                           style={[
-                            styles.compactQuantityButton, 
+                            dynamicButtonStyles, 
                             (quantity === 0 || isLoading) && styles.compactQuantityButtonDisabled
                           ]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           disabled={quantity === 0 || isLoading}
                         >
                           <Minus size={14} color={quantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
@@ -1199,9 +1212,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                         <Pressable
                           onPress={() => onUpdateMenuQuantity(menu.id, 'add')}
                           style={[
-                            styles.compactQuantityButton, 
+                            dynamicButtonStyles, 
                             isLoading && styles.compactQuantityButtonDisabled
                           ]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           disabled={isLoading}
                         >
                           <Plus size={14} color={isLoading ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
@@ -1274,9 +1288,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                         <Pressable
                           onPress={() => onUpdateQuantity(item.id, 'remove')}
                           style={[
-                            styles.compactQuantityButton, 
+                            dynamicButtonStyles, 
                             (quantity === 0 || isLoading) && styles.compactQuantityButtonDisabled
                           ]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           disabled={quantity === 0 || isLoading}
                         >
                           <Minus size={14} color={quantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
@@ -1289,9 +1304,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                         <Pressable
                           onPress={() => onUpdateQuantity(item.id, 'add')}
                           style={[
-                            styles.compactQuantityButton, 
+                            dynamicButtonStyles, 
                             isLoading && styles.compactQuantityButtonDisabled
                           ]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           disabled={isLoading}
                         >
                           <Plus size={14} color={isLoading ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
