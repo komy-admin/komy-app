@@ -186,6 +186,7 @@ function getStepLabel(key: string): string {
     itemTypes: 'Types d\'articles',
     items: 'Articles',
     menus: 'Menus',
+    menuOrderGroups: 'Groupes de menus',
     orders: 'Commandes'
   };
   return labels[key] || key;

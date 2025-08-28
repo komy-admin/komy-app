@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, ConfirmDialog, ForkModal, Text } from "~/components/ui";
+import { Badge, Button, ForkModal, Text } from "~/components/ui";
+import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useFocusEffect } from '@react-navigation/native';
@@ -47,7 +48,6 @@ export default function ServicePage() {
     createOrder,
     updateOrder,
     deleteOrder,
-    createOrderItem,
     deleteOrderItem,
     deleteManyOrderItems,
     updateOrderItemStatus
@@ -223,36 +223,41 @@ export default function ServicePage() {
 
 
   // Ref pour tracker les sauvegardes en cours (persiste entre les renders)
-  const isSavingOrderRef = useRef(false);
+  const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
 
   // ✅ Hook personnalisé pour la logique de fermeture intelligente
   const useSmartOrderClose = () => {
     return useCallback(() => {
-      if (isSavingOrderRef.current) {
-        // Sauvegarde en cours : fermeture automatique
-        orderFormView.close();
-        isSavingOrderRef.current = false;
-        return;
-      }
-
-      // Fermeture manuelle : logique de nettoyage
-      orderFormView.close();
-      
+      const wasSaving = !!isSavingOrderRef.current;
       const wasOrderCreatedFromStart = orderCreatedFromStart;
+      
+      // Fermer le formulaire
+      orderFormView.close();
       setOrderCreatedFromStart(false);
 
-      // Nettoyage conditionnel de commande vide
-      if (selectedTableOrder && wasOrderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
+
+      // Nettoyage conditionnel de commande vide (seulement si pas de sauvegarde)
+      if (!wasSaving && selectedTableOrder && wasOrderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
+        console.log('🔄 Suppression commande vide car créée depuis Start');
         deleteOrder(selectedTableOrder.id)
           .then(() => showToast('Commande annulée car aucun article n\'a été ajouté.', 'info'))
           .catch((error) => console.error('Erreur lors de la suppression:', error));
       }
 
       // Réouverture conditionnelle de la modal détails
-      if (modals.cameFromOrderDetailModal && selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
+      // Cas 1: On vient de la modal détails (modification) OU
+      // Cas 2: On a créé la commande depuis Start ET elle a des items après sauvegarde
+      if (wasSaving && wasOrderCreatedFromStart) {
+        // Pour le cas du start, ouvrir immédiatement puisqu'on sait qu'il y a eu sauvegarde
         modalActions.openOrderDetail();
+      } else if (selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
+        if (modals.cameFromOrderDetailModal || wasOrderCreatedFromStart) {
+          modalActions.openOrderDetail();
+        }
       }
 
+      // Réinitialiser le ref à la fin
+      isSavingOrderRef.current = false;
       modalActions.setCameFromOrderDetail(false);
     }, [
       orderFormView, 
@@ -266,6 +271,15 @@ export default function ServicePage() {
   };
 
   const handleSmartCloseOrderModal = useSmartOrderClose();
+
+  // Fermeture automatique de la modale si l'ordre est supprimé (WebSocket)
+  useEffect(() => {
+    // Si la modale de détails est ouverte mais que selectedTableOrder devient null
+    // (ex: ordre supprimé via WebSocket après suppression d'un menu), fermer la modale
+    if (modals.showOrderDetailModal && !selectedTableOrder) {
+      modalActions.closeOrderDetail();
+    }
+  }, [selectedTableOrder, modals.showOrderDetailModal, modalActions]);
 
   // Optimisation des callbacks pour performances mobiles - batching des re-renders
   const handleConfigurationModeChange = useCallback((configuring: boolean) => {
@@ -298,23 +312,18 @@ export default function ServicePage() {
       if (formResult.data.processComplexSave && formResult.hasChanges) {
         const updatedOrder = await formResult.data.processComplexSave();
         
-        // Désactiver les flags avant que AdminFormView appelle onClose automatiquement
+        // Stocker le résultat pour useSmartOrderClose
+        isSavingOrderRef.current = { savedOrder: updatedOrder };
+        
+        // Désactiver le flag orderCreatedFromStart seulement
+        // Ne pas toucher à cameFromOrderDetailModal - laisser useSmartOrderClose gérer la réouverture
         setOrderCreatedFromStart(false);
-        modalActions.setCameFromOrderDetail(false);
-
-        // Planifier la réouverture de la modal détails après la fermeture automatique
-        requestAnimationFrame(() => {
-          if (updatedOrder && updatedOrder.orderItems && updatedOrder.orderItems.length > 0) {
-            modalActions.openOrderDetail();
-          }
-        });
 
         showToast('Commande mise à jour avec succès.', 'success');
         return true;
       } else {
         // Pas de modifications, AdminFormView va fermer automatiquement
         setOrderCreatedFromStart(false);
-        modalActions.setCameFromOrderDetail(false);
         return true;
       }
     } catch (error) {
@@ -610,15 +619,9 @@ export default function ServicePage() {
       </AdminFormView>
 
       {selectedTableOrder && modals.showDeleteOrderDialog && (
-        <ConfirmDialog
-          open={modals.showDeleteOrderDialog}
-          onOpenChange={(value) => {
-            if (value) modalActions.openDeleteDialog();
-            else modalActions.closeDeleteDialog();
-          }}
-          title="Supprimer la commande"
-          content="Êtes-vous sûr de vouloir supprimer cette commande ?"
-          onCancel={() => {
+        <DeleteConfirmationModal
+          isVisible={modals.showDeleteOrderDialog}
+          onClose={() => {
             modalActions.closeDeleteDialog();
             modalActions.openOrderDetail(); // Rouvrir la modal de détails si annulation
           }}
@@ -628,8 +631,8 @@ export default function ServicePage() {
             deleteOrder(selectedTableOrder.id);
             setSelectedTable(null);
           }}
-          confirmText="Supprimer"
-          variant="destructive"
+          entityName={`de la table ${selectedTableOrder.table?.name || selectedTableOrder.table?.id || 'N/A'}`}
+          entityType="la commande"
         />
       )}
       <CustomModal

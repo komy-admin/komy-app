@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, Platform, useWindowDimensions } from 'react-native';
-import { Text, Button } from '~/components/ui';
+import { Text } from '~/components/ui';
 import { Plus, Minus, Menu as MenuIcon } from 'lucide-react-native';
 import { Order } from '~/types/order.types';
 import { Item } from '~/types/item.types';
@@ -8,17 +8,17 @@ import { ItemType } from '~/types/item-type.types';
 import { OrderItem } from '~/types/order-item.types';
 import { Status } from '~/types/status.enum';
 import { orderItemApiService } from '~/api/order-item.api';
+import { menuOrderGroupApiService } from '~/api/menu-order-group.api';
 import { useToast } from '~/components/ToastProvider';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { useMenus } from '~/hooks/useMenus';
+import { useMenuOrderGroups } from '~/hooks/useMenuOrderGroups';
 import { AdminFormData, AdminFormRef } from '~/components/admin/AdminFormView';
 
 interface OrderItemsFormProps {
   order: Order;
   items: Item[];
   itemTypes: ItemType[];
-  onSave?: (order: Order) => void;
-  onCancel?: () => void;
   onConfigurationModeChange?: (isConfiguring: boolean) => void;
   onConfigurationActionsChange?: (actions: { onCancel: () => void; onConfirm: () => void } | null) => void;
 }
@@ -34,14 +34,13 @@ interface DraftMenuOrderItem {
   menuId: string;
   quantity: number;
   selectedItems: Record<string, string[]>; // categoryId -> itemIds[]
+  menuOrderGroupId?: string; // Référence optionnelle au MenuOrderGroup existant
 }
 
 const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps>(function OrderItemsForm({
   order,
   items,
   itemTypes,
-  onSave,
-  onCancel,
   onConfigurationModeChange,
   onConfigurationActionsChange
 }: OrderItemsFormProps, ref) {
@@ -59,7 +58,6 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   
   const [activeMainTab, setActiveMainTab] = useState<string>('ITEMS');
   const [activeItemType, setActiveItemType] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
   
   // États pour la configuration de menu
   const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
@@ -71,11 +69,17 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
 
   const { showToast } = useToast();
   const { activeMenus, getMenuCategoryItems } = useMenus();
+  const { getMenuOrderGroupsByOrderId } = useMenuOrderGroups();
   
   // État local pour les modifications (brouillon)
   const [draftItems, setDraftItems] = useState<DraftOrderItem[]>([]);
   const [draftMenus, setDraftMenus] = useState<DraftMenuOrderItem[]>([]);
   const [menuCategoryItems, setMenuCategoryItems] = useState<Record<string, any[]>>({});
+  const isSavingRef = useRef(false);
+  
+  // Snapshot des quantités totales au moment de la sauvegarde pour éviter la disparition/réapparition
+  const savingQuantitySnapshotRef = useRef<Record<string, number>>({});
+  const savingMenuQuantitySnapshotRef = useRef<Record<string, number>>({});
 
   // Initialisation des itemTypes (une seule fois)
   useEffect(() => {
@@ -84,25 +88,6 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     }
   }, [itemTypes]); // Retirer activeItemType de la dépendance pour éviter la boucle
 
-  // Initialisation des draftItems (séparée)
-  useEffect(() => {
-    const initialDraft: DraftOrderItem[] = [];
-
-    // Compter les quantités des items existants
-    order.orderItems.forEach((orderItem: OrderItem) => {
-      const existingDraft = initialDraft.find(draft => draft.itemId === orderItem.item.id);
-      if (existingDraft) {
-        existingDraft.quantity += 1;
-      } else {
-        initialDraft.push({
-          itemId: orderItem.item.id,
-          quantity: 1
-        });
-      }
-    });
-
-    setDraftItems(initialDraft);
-  }, [order]);
 
   // ✅ Index mémorisés pour performances O(1) au lieu de O(n)
   const quantitiesIndex = useMemo(() => {
@@ -138,193 +123,261 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   }, [activeMenus]);
 
   // ✅ Fonctions optimisées avec accès O(1)
-  const getItemQuantity = useCallback((itemId: string) => {
+  // 🔧 NOUVELLE LOGIQUE : Obtenir les quantités existantes dans la commande sauvegardée
+  const getExistingItemQuantity = useCallback((itemId: string) => {
+    let count = 0;
+    order.orderItems.forEach((orderItem: OrderItem) => {
+      // Ignorer les items qui font partie d'un menu (menuGroupId non null)
+      if (!orderItem.menuGroupId && orderItem.item.id === itemId) {
+        count++;
+      }
+    });
+    return count;
+  }, [order.orderItems]);
+
+  // Obtenir la quantité draft (ajoutée localement dans cette session)
+  const getDraftItemQuantity = useCallback((itemId: string) => {
     return quantitiesIndex[itemId] || 0;
   }, [quantitiesIndex]);
+
+  // Obtenir la quantité totale affichée avec gestion stable pendant la sauvegarde
+  const getTotalItemQuantity = useCallback((itemId: string) => {
+    // Pendant la sauvegarde, utiliser le snapshot pour éviter les scintillements
+    if (isSavingRef.current && savingQuantitySnapshotRef.current[itemId] !== undefined) {
+      return savingQuantitySnapshotRef.current[itemId];
+    }
+    
+    // Fonctionnement normal
+    return getExistingItemQuantity(itemId) + getDraftItemQuantity(itemId);
+  }, [getExistingItemQuantity, getDraftItemQuantity]);
+
+  // 🔧 NOUVELLE LOGIQUE : Mêmes fonctions pour les menus
+  const getExistingMenuQuantity = useCallback((menuId: string) => {
+    const menuGroups = getMenuOrderGroupsByOrderId(order.id);
+    return menuGroups.filter(group => group.menuId === menuId).length;
+  }, [order.id, getMenuOrderGroupsByOrderId]);
+
+  const getDraftMenuQuantity = useCallback((menuId: string) => {
+    return menuQuantitiesIndex[menuId] || 0;
+  }, [menuQuantitiesIndex]);
+
+  const getTotalMenuQuantity = useCallback((menuId: string) => {
+    // Pendant la sauvegarde, utiliser le snapshot pour éviter les scintillements
+    if (isSavingRef.current && savingMenuQuantitySnapshotRef.current[menuId] !== undefined) {
+      return savingMenuQuantitySnapshotRef.current[menuId];
+    }
+    
+    // Fonctionnement normal
+    return getExistingMenuQuantity(menuId) + getDraftMenuQuantity(menuId);
+  }, [getExistingMenuQuantity, getDraftMenuQuantity]);
+
+  // 🔧 NOUVELLES FONCTIONS : Calcul des totaux pour le recap avec gestion des snapshots
+  const getTotalItemsCount = useCallback(() => {
+    // Pendant la sauvegarde, utiliser snapshots pour les items avec drafts + existants pour les autres
+    if (isSavingRef.current) {
+      const allOrderItems = order.orderItems.filter(orderItem => !orderItem.menuGroupId);
+      const itemsWithoutDrafts = allOrderItems.filter(oi => !savingQuantitySnapshotRef.current[oi.item.id]);
+      const itemsWithoutDraftsCount = itemsWithoutDrafts.length;
+      const snapshotItemsCount = Object.values(savingQuantitySnapshotRef.current).reduce((total, quantity) => total + quantity, 0);
+      
+      return itemsWithoutDraftsCount + snapshotItemsCount;
+    }
+    
+    // Fonctionnement normal
+    const existingItemsCount = order.orderItems
+      .filter(orderItem => !orderItem.menuGroupId)
+      .length;
+    
+    const draftItemsCount = draftItems.reduce((total, draft) => total + draft.quantity, 0);
+    
+    return existingItemsCount + draftItemsCount;
+  }, [order.orderItems, draftItems]);
+
+  const getTotalMenusCount = useCallback(() => {
+    // Pendant la sauvegarde, utiliser snapshots pour les menus avec drafts + existants pour les autres
+    if (isSavingRef.current) {
+      const allMenuGroups = getMenuOrderGroupsByOrderId(order.id);
+      const menusWithoutDrafts = allMenuGroups.filter(mg => !savingMenuQuantitySnapshotRef.current[mg.menuId]);
+      const menusWithoutDraftsCount = menusWithoutDrafts.length;
+      const snapshotMenusCount = Object.values(savingMenuQuantitySnapshotRef.current).reduce((total, quantity) => total + quantity, 0);
+      
+      return menusWithoutDraftsCount + snapshotMenusCount;
+    }
+    
+    // Fonctionnement normal
+    const existingMenusCount = getMenuOrderGroupsByOrderId(order.id).length;
+    const draftMenusCount = draftMenus.reduce((total, draft) => total + draft.quantity, 0);
+    
+    return existingMenusCount + draftMenusCount;
+  }, [getMenuOrderGroupsByOrderId, order.id, draftMenus]);
 
   const onUpdateQuantity = (itemId: string, action: 'remove' | 'add') => {
     setDraftItems(prevDraft => {
       const existingDraft = prevDraft.find(draft => draft.itemId === itemId);
+      let newDraft = prevDraft;
 
       if (action === 'add') {
         if (existingDraft) {
-          return prevDraft.map(draft =>
+          newDraft = prevDraft.map(draft =>
             draft.itemId === itemId
               ? { ...draft, quantity: draft.quantity + 1 }
               : draft
           );
         } else {
-          return [...prevDraft, { itemId, quantity: 1 }];
+          newDraft = [...prevDraft, { itemId, quantity: 1 }];
         }
       } else if (action === 'remove') {
-        if (existingDraft) {
+        // 🔧 NOUVELLE SÉCURITÉ : Ne permettre la décrémentation que des items ajoutés localement
+        if (existingDraft && existingDraft.quantity > 0) {
           if (existingDraft.quantity <= 1) {
-            return prevDraft.filter(draft => draft.itemId !== itemId);
+            newDraft = prevDraft.filter(draft => draft.itemId !== itemId);
           } else {
-            return prevDraft.map(draft =>
+            newDraft = prevDraft.map(draft =>
               draft.itemId === itemId
                 ? { ...draft, quantity: draft.quantity - 1 }
                 : draft
             );
           }
+        } else {
+          // Pas d'items draft à supprimer - utiliser AdminOrderDetailView pour supprimer des items sauvegardés
+          newDraft = prevDraft;
         }
       }
 
-      return prevDraft;
+
+      return newDraft;
     });
   };
 
-  // Fonction de sauvegarde complexe qui sera exposée via AdminFormRef
+  // Fonction de sauvegarde simplifiée - NOUVELLE LOGIQUE 100% AJOUT
   const processOrderSave = async () => {
+    isSavingRef.current = true; // Empêcher les réinitialisations pendant la sauvegarde
     
-    // 0. Convertir les draftMenus en draftItems équivalents
-    const menuItemsToAdd: { itemId: string; quantity: number }[] = [];
+    // 🔧 NOUVEAU : Créer des snapshots des quantités actuelles pour éviter les scintillements
+    const itemQuantitySnapshot: Record<string, number> = {};
+    const menuQuantitySnapshot: Record<string, number> = {};
+    
+    // Snapshot optimisé - seulement les items avec des drafts (car les existants seuls n'ont pas de problème de double comptage)
+    draftItems.forEach(draft => {
+      itemQuantitySnapshot[draft.itemId] = getExistingItemQuantity(draft.itemId) + draft.quantity;
+    });
+    
+    // Snapshot optimisé - seulement les menus avec des drafts
+    draftMenus.forEach(draft => {
+      menuQuantitySnapshot[draft.menuId] = getExistingMenuQuantity(draft.menuId) + draft.quantity;
+    });
+    
+    savingQuantitySnapshotRef.current = itemQuantitySnapshot;
+    savingMenuQuantitySnapshotRef.current = menuQuantitySnapshot;
+    
+    // 🔧 NOUVELLE LOGIQUE : Seulement ajouter les drafts (pas de comparaison complexe)
+    const itemsToAdd: { itemId: string; quantity: number }[] = [];
+    
+    // 1. Ajouter tous les items des drafts (ils représentent seulement les nouveaux ajouts)
+    draftItems.forEach(draft => {
+      if (draft.quantity > 0) {
+        itemsToAdd.push({ itemId: draft.itemId, quantity: draft.quantity });
+      }
+    });
+
+    // 2. Ajouter tous les menus des drafts (ils représentent seulement les nouveaux ajouts)
+    const menusToAdd: { menuId: string; selectedItems: Record<string, string[]>; quantity: number }[] = [];
+    
     draftMenus.forEach(draftMenu => {
-      // Pour chaque menu configuré, on ajoute tous les articles sélectionnés
-      const menu = activeMenus.find(m => m.id === draftMenu.menuId);
-      if (menu) {
-        menu.categories.forEach(category => {
-          const selectedItemIds = draftMenu.selectedItems[category.id] || [];
-          selectedItemIds.forEach(itemId => {
-            // Ajouter chaque article sélectionné avec la quantité du menu
-            menuItemsToAdd.push({ itemId, quantity: draftMenu.quantity });
-          });
+      if (draftMenu.quantity > 0) {
+        menusToAdd.push({
+          menuId: draftMenu.menuId,
+          selectedItems: draftMenu.selectedItems,
+          quantity: draftMenu.quantity
         });
       }
     });
-    
-    // Fusionner les menuItemsToAdd avec les draftItems existants
-    const combinedItems = new Map<string, number>();
-    
-    // Ajouter les draftItems normaux
-    draftItems.forEach(draft => {
-      combinedItems.set(draft.itemId, draft.quantity);
-    });
-    
-    // Ajouter les items des menus configurés
-    menuItemsToAdd.forEach(({ itemId, quantity }) => {
-      const existing = combinedItems.get(itemId) || 0;
-      combinedItems.set(itemId, existing + quantity);
-    });
-    
-    // 1. Analyser les changements par rapport à l'état actuel
-    const currentItemCounts = new Map<string, number>();
-    order.orderItems.forEach((orderItem: OrderItem) => {
-      const itemId = orderItem.item.id;
-      currentItemCounts.set(itemId, (currentItemCounts.get(itemId) || 0) + 1);
+
+    // 3. Préparer les données pour l'API bulk unifiée
+    const bulkItems: Array<{
+      itemId?: string;
+      quantity?: number;
+      status?: Status;
+      menuId?: string;
+      selectedItems?: Record<string, string[]>;
+    }> = [];
+
+    // Ajouter les items individuels
+    itemsToAdd.forEach(({ itemId, quantity }) => {
+      bulkItems.push({
+        itemId,
+        quantity,
+        status: Status.DRAFT
+      });
     });
 
-    const newItemCounts = combinedItems;
-
-    // 2. Identifier les items à supprimer et à ajouter
-    const itemsToRemove: string[] = [];
-    const itemsToAdd: { itemId: string; quantity: number }[] = [];
-
-    // Vérifier les items existants
-    for (const [itemId, currentCount] of currentItemCounts) {
-      const newCount = newItemCounts.get(itemId) || 0;
-      const difference = newCount - currentCount;
-
-      if (difference < 0) {
-        // Il faut supprimer des items (on supprime les plus récents)
-        const orderItemsToRemove = order.orderItems
-          .filter((oi: OrderItem) => oi.item.id === itemId)
-          .sort((a: OrderItem, b: OrderItem) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, Math.abs(difference));
-
-        itemsToRemove.push(...orderItemsToRemove.map((oi: OrderItem) => oi.id));
-      } else if (difference > 0) {
-        // Il faut ajouter des items
-        itemsToAdd.push({ itemId, quantity: difference });
+    // Ajouter les menus à créer (calculés dans l'analyse précédente)
+    menusToAdd.forEach(menuToAdd => {
+      for (let i = 0; i < menuToAdd.quantity; i++) {
+        bulkItems.push({
+          menuId: menuToAdd.menuId,
+          selectedItems: menuToAdd.selectedItems,
+          status: Status.DRAFT
+        });
       }
-    }
+    });
 
-    // Vérifier les nouveaux items
-    for (const [itemId, newCount] of newItemCounts) {
-      if (!currentItemCounts.has(itemId) && newCount > 0) {
-        itemsToAdd.push({ itemId, quantity: newCount });
-      }
-    }
-
-    // 3. Supprimer les orderItems en trop
-    if (itemsToRemove.length > 0) {
-      const deletePromises = itemsToRemove.map(orderItemId =>
-        orderItemApiService.delete(orderItemId)
-      );
-      await Promise.all(deletePromises);
-    }
-
-    // 4. Ajouter les nouveaux orderItems en lot (SEULEMENT avec le statut DRAFT)
-    if (itemsToAdd.length > 0) {
+    // 4. Envoyer tout en une seule requête bulk
+    if (bulkItems.length > 0) {
       const bulkData = {
         orderId: order.id,
-        items: itemsToAdd.map(({ itemId, quantity }) => ({
-          itemId,
-          quantity,
-          status: Status.DRAFT // SEULEMENT les nouveaux items sont en DRAFT
-        }))
+        items: bulkItems
       };
       
       await orderItemApiService.createBulk(bulkData);
+      
+      // 5. 🔧 CORRECTION : Vider les drafts après la sauvegarde
+      setDraftItems([]);
+      setDraftMenus([]);
+      
+      // 6. Nettoyer les snapshots et réactiver les réinitialisations
+      savingQuantitySnapshotRef.current = {};
+      savingMenuQuantitySnapshotRef.current = {};
+      isSavingRef.current = false;
     }
 
-    // 5. Retourner l'ordre actuel - les mises à jour seront gérées par le store Redux/WebSocket
-    // Pas besoin d'appels API supplémentaires, la sauvegarde en lot suffit
+    // 7. Retourner l'ordre actuel - les mises à jour seront gérées par le store Redux/WebSocket
+    // Si aucun ajout n'a été fait, nettoyer les snapshots et réactiver immédiatement
+    if (bulkItems.length === 0) {
+      savingQuantitySnapshotRef.current = {};
+      savingMenuQuantitySnapshotRef.current = {};
+      isSavingRef.current = false;
+    }
     return order;
   };
 
-  const handleSave = async () => {
-    if (!onSave) return;
-    
-    setIsLoading(true);
-    try {
-      const updatedOrder = await processOrderSave();
-      onSave(updatedOrder);
-    } catch (error) {
-      showToast('Erreur lors de l\'enregistrement de la commande');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleCancel = () => {
-    // Simplement fermer sans sauvegarder les modifications locales
-    if (onCancel) {
-      onCancel();
-    }
-  };
 
-  // Fonction utilitaire pour obtenir l'état initial des drafts - Version optimisée
-  const getInitialDraftItems = React.useCallback(() => {
-    // Utiliser Map pour de meilleures performances sur les grandes listes
-    const itemQuantities = new Map<string, number>();
+  // Initialisation des draftItems et draftMenus (après définition des fonctions)
+  // Utiliser une ref pour suivre l'ID de l'order et ne réinitialiser que lors d'un vrai changement d'order
+  const currentOrderIdRef = useRef(order.id);
+  useEffect(() => {
+    // Ne pas réinitialiser pendant la sauvegarde pour éviter les scintillements
+    if (isSavingRef.current) return;
     
-    order.orderItems.forEach((orderItem: OrderItem) => {
-      const itemId = orderItem.item.id;
-      itemQuantities.set(itemId, (itemQuantities.get(itemId) || 0) + 1);
-    });
-    
-    // Convertir Map en array de DraftOrderItem
-    return Array.from(itemQuantities.entries()).map(([itemId, quantity]) => ({
-      itemId,
-      quantity
-    }));
-  }, [order.orderItems]);
+    // Ne réinitialiser que si l'order ID a vraiment changé (pas juste une mise à jour WebSocket)
+    if (currentOrderIdRef.current !== order.id) {
+      currentOrderIdRef.current = order.id;
+      setDraftItems([]);
+      setDraftMenus([]);
+    }
+  }, [order]);
 
   // Implémenter l'interface AdminFormRef pour AdminFormView
   React.useImperativeHandle(ref, () => ({
     getFormData: (): AdminFormData<Order> => {
-      const initialItems = getInitialDraftItems();
-      const hasItemChanges = JSON.stringify(draftItems) !== JSON.stringify(initialItems);
-      const hasMenuChanges = draftMenus.length > 0; // Si des menus sont configurés, il y a des changements
-      const hasChanges = hasItemChanges || hasMenuChanges;
+      const hasChanges = draftItems.length > 0 || draftMenus.length > 0;
       
       return {
         data: {
           ...order,
           draftItems,
-          draftMenus, // Inclure les menus configurés
-          // Fournir la fonction de sauvegarde directement
+          draftMenus,
           processComplexSave: processOrderSave
         } as any,
         isValid: true,
@@ -334,8 +387,8 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     },
     validateForm: () => true,
     resetForm: () => {
-      setDraftItems(getInitialDraftItems());
-      setDraftMenus([]); // Nettoyer aussi les menus configurés
+      setDraftItems([]);
+      setDraftMenus([]);
     }
   }), [order, draftItems, draftMenus, processOrderSave]);
 
@@ -375,29 +428,77 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     return calculateMenuPriceWithSupplements(menuBeingConfigured, tempMenuSelections);
   };
 
-  // ✅ Calcul mémorisé du prix total avec index optimisés
+  // ✅ Calcul mémorisé du prix total avec gestion des snapshots pendant la sauvegarde
   const totalPrice = useMemo(() => {
-    const itemsTotal = draftItems.reduce((total, draft) => {
+    // Pendant la sauvegarde, éviter le double comptage en excluant les items/menus qui ont des drafts
+    if (isSavingRef.current) {
+      // 1. Prix des articles existants qui n'ont PAS de drafts
+      const existingItemsWithoutDrafts = order.orderItems
+        .filter(orderItem => !orderItem.menuGroupId && !savingQuantitySnapshotRef.current[orderItem.item.id]);
+      const existingItemsTotal = existingItemsWithoutDrafts
+        .reduce((total, orderItem) => total + parseFloat(orderItem.item.price.toString()), 0);
+      
+      // 2. Prix des menus existants qui n'ont PAS de drafts
+      const menuGroups = getMenuOrderGroupsByOrderId(order.id);
+      const existingMenusWithoutDrafts = menuGroups.filter(mg => !savingMenuQuantitySnapshotRef.current[mg.menuId]);
+      const existingMenusTotal = existingMenusWithoutDrafts
+        .reduce((total, menuGroup) => total + parseFloat(menuGroup.totalPrice.toString()), 0);
+      
+      // 3. Prix des articles depuis les snapshots (existants + drafts)
+      const snapshotItemsTotal = draftItems.reduce((total, draft) => {
+        const item = itemsIndex[draft.itemId];
+        if (item && savingQuantitySnapshotRef.current[draft.itemId]) {
+          // Utiliser la quantité du snapshot (existant + draft) au prix unitaire
+          return total + (item.price * savingQuantitySnapshotRef.current[draft.itemId]);
+        }
+        return total;
+      }, 0);
+      
+      // 4. Prix des menus depuis les snapshots (existants + drafts)
+      const snapshotMenusTotal = draftMenus.reduce((total, draft) => {
+        const menu = menusIndex[draft.menuId];
+        if (menu && savingMenuQuantitySnapshotRef.current[draft.menuId]) {
+          const menuPriceWithSupplements = calculateMenuPriceWithSupplements(menu, draft.selectedItems);
+          // Utiliser la quantité du snapshot (existant + draft) au prix unitaire
+          return total + (menuPriceWithSupplements * savingMenuQuantitySnapshotRef.current[draft.menuId]);
+        }
+        return total;
+      }, 0);
+      
+      return existingItemsTotal + existingMenusTotal + snapshotItemsTotal + snapshotMenusTotal;
+    }
+    
+    // Fonctionnement normal
+    // 1. Prix des articles existants (sauvegardés)
+    const existingItemsTotal = order.orderItems
+      .filter(orderItem => !orderItem.menuGroupId)
+      .reduce((total, orderItem) => total + parseFloat(orderItem.item.price.toString()), 0);
+    
+    // 2. Prix des menus existants (sauvegardés)
+    const menuGroups = getMenuOrderGroupsByOrderId(order.id);
+    const existingMenusTotal = menuGroups.reduce((total, menuGroup) => {
+      return total + parseFloat(menuGroup.totalPrice.toString());
+    }, 0);
+    
+    // 3. Prix des articles ajoutés localement
+    const draftItemsTotal = draftItems.reduce((total, draft) => {
       const item = itemsIndex[draft.itemId];
       return total + (item ? item.price * draft.quantity : 0);
     }, 0);
     
-    const menusTotal = draftMenus.reduce((total, draft) => {
+    // 4. Prix des menus ajoutés localement
+    const draftMenusTotal = draftMenus.reduce((total, draft) => {
       const menu = menusIndex[draft.menuId];
-      if (!menu) return total;
-      
-      // Calculer le prix du menu avec ses suppléments
-      const menuPriceWithSupplements = calculateMenuPriceWithSupplements(menu, draft.selectedItems);
-      return total + (menuPriceWithSupplements * draft.quantity);
+      if (menu) {
+        const menuPriceWithSupplements = calculateMenuPriceWithSupplements(menu, draft.selectedItems);
+        return total + (menuPriceWithSupplements * draft.quantity);
+      }
+      return total;
     }, 0);
     
-    return itemsTotal + menusTotal;
-  }, [draftItems, draftMenus, itemsIndex, menusIndex]);
+    return existingItemsTotal + existingMenusTotal + draftItemsTotal + draftMenusTotal;
+  }, [order.orderItems, getMenuOrderGroupsByOrderId, order.id, draftItems, draftMenus, itemsIndex, menusIndex]);
 
-  // ✅ Fonction optimisée pour les menus avec accès O(1)
-  const getMenuQuantity = useCallback((menuId: string) => {
-    return menuQuantitiesIndex[menuId] || 0;
-  }, [menuQuantitiesIndex]);
 
   // ✅ Vérifier si un menu peut être ajouté directement (toutes catégories requises = 1 article ou 0 article)
   const canAddMenuDirectly = useCallback((menu: Menu): boolean => {
@@ -477,19 +578,37 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     if (action === 'add') {
       const menu = activeMenus.find(m => m.id === menuId);
       if (menu) {
-        // ✅ Optimisation : Vérifier si on peut ajouter directement sans configuration
+        // D'abord, vérifier s'il y a déjà un menu existant avec la même configuration
+        const existingMenuDraft = draftMenus.find(draft => draft.menuId === menuId);
+        
+        // ✅ Vérifier d'abord si ce menu nécessite une configuration
         if (canAddMenuDirectly(menu)) {
-          addMenuDirectly(menu);
+          // Menu simple : peut être ajouté directement
+          if (existingMenuDraft) {
+            // Incrémenter le menu existant
+            setDraftMenus(prevDraft => {
+              const newDraft = prevDraft.map(draft =>
+                draft.menuId === menuId
+                  ? { ...draft, quantity: draft.quantity + 1 }
+                  : draft
+              );
+              return newDraft;
+            });
+          } else {
+            // Ajouter un nouveau menu simple
+            addMenuDirectly(menu);
+          }
         } else {
-          // Sinon, démarrer la configuration normale
+          // Menu avec configuration : toujours ouvrir la configuration
+          // même s'il y en a déjà un, pour permettre différentes sélections
           startMenuConfiguration(menu);
         }
       }
     } else if (action === 'remove') {
-      // Pour remove, on agit normalement
+      // 🔧 NOUVELLE SÉCURITÉ : Ne permettre la décrémentation que des menus ajoutés localement
       setDraftMenus(prevDraft => {
         const existingDraft = prevDraft.find(draft => draft.menuId === menuId);
-        if (existingDraft) {
+        if (existingDraft && existingDraft.quantity > 0) {
           if (existingDraft.quantity <= 1) {
             return prevDraft.filter(draft => draft.menuId !== menuId);
           } else {
@@ -499,8 +618,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                 : draft
             );
           }
+        } else {
+          // Pas de menus draft à supprimer - utiliser AdminOrderDetailView pour supprimer des menus sauvegardés
+          return prevDraft;
         }
-        return prevDraft;
       });
     }
   };
@@ -1150,7 +1271,8 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
             ) : (
               // Liste simple des menus comme des articles
               activeMenus.map((menu) => {
-                const quantity = getMenuQuantity(menu.id);
+                const totalQuantity = getTotalMenuQuantity(menu.id);
+                const draftQuantity = getDraftMenuQuantity(menu.id);
 
                 return (
                   <View key={menu.id} style={styles.compactItemCard}>
@@ -1197,28 +1319,25 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                           onPress={() => onUpdateMenuQuantity(menu.id, 'remove')}
                           style={[
                             dynamicButtonStyles, 
-                            (quantity === 0 || isLoading) && styles.compactQuantityButtonDisabled
+                            // 🔧 NOUVELLE LOGIQUE : Désactiver si pas de menus draft à supprimer
+                            draftQuantity === 0 && styles.compactQuantityButtonDisabled
                           ]}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={quantity === 0 || isLoading}
+                          disabled={draftQuantity === 0}
                         >
-                          <Minus size={14} color={quantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                          <Minus size={14} color={draftQuantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
                         </Pressable>
 
                         <Text style={styles.compactQuantityText}>
-                          {quantity}
+                          {totalQuantity}
                         </Text>
 
                         <Pressable
                           onPress={() => onUpdateMenuQuantity(menu.id, 'add')}
-                          style={[
-                            dynamicButtonStyles, 
-                            isLoading && styles.compactQuantityButtonDisabled
-                          ]}
+                          style={dynamicButtonStyles}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={isLoading}
-                        >
-                          <Plus size={14} color={isLoading ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                                                  >
+                          <Plus size={14} color="#2A2E33" strokeWidth={2} />
                         </Pressable>
                       </View>
                     </View>
@@ -1242,7 +1361,8 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
               }
               
               return filteredItems.map((item) => {
-                const quantity = getItemQuantity(item.id);
+                const totalQuantity = getTotalItemQuantity(item.id);
+                const draftQuantity = getDraftItemQuantity(item.id);
 
                 return (
                   <View key={item.id} style={styles.compactItemCard}>
@@ -1289,28 +1409,25 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                           onPress={() => onUpdateQuantity(item.id, 'remove')}
                           style={[
                             dynamicButtonStyles, 
-                            (quantity === 0 || isLoading) && styles.compactQuantityButtonDisabled
+                            // 🔧 NOUVELLE LOGIQUE : Désactiver si pas d'items draft à supprimer
+                            draftQuantity === 0 && styles.compactQuantityButtonDisabled
                           ]}
+                          disabled={draftQuantity === 0}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={quantity === 0 || isLoading}
                         >
-                          <Minus size={14} color={quantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                          <Minus size={14} color={draftQuantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
                         </Pressable>
 
                         <Text style={styles.compactQuantityText}>
-                          {quantity}
+                          {totalQuantity}
                         </Text>
 
                         <Pressable
                           onPress={() => onUpdateQuantity(item.id, 'add')}
-                          style={[
-                            dynamicButtonStyles, 
-                            isLoading && styles.compactQuantityButtonDisabled
-                          ]}
+                          style={dynamicButtonStyles}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={isLoading}
-                        >
-                          <Plus size={14} color={isLoading ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                                                  >
+                          <Plus size={14} color="#2A2E33" strokeWidth={2} />
                         </Pressable>
                       </View>
                     </View>
@@ -1322,33 +1439,6 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
         </ScrollView>
       </View>
 
-      {/* Boutons conditionnels si utilisés sans AdminFormView */}
-      {(onSave || onCancel) && (
-        <View style={styles.buttonContainer}>
-          {onCancel && (
-            <Button
-              onPress={handleCancel}
-              variant="ghost"
-              style={styles.cancelButton}
-              disabled={isLoading}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          )}
-
-          {onSave && (
-            <Button
-              onPress={handleSave}
-              style={styles.saveButton}
-              disabled={isLoading}
-            >
-              <Text style={styles.saveButtonText}>
-                {isLoading ? 'Enregistrement...' : 'Valider la commande'}
-              </Text>
-            </Button>
-          )}
-        </View>
-      )}
 
 
       {/* Résumé en bas - Masqué pendant la configuration - Repositionné au niveau du container principal */}
@@ -1366,7 +1456,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                     textAlign: 'center',
                     fontFamily: 'system-ui, -apple-system, sans-serif'
                   }}>
-                    {draftItems.reduce((total, draft) => total + draft.quantity, 0)}
+                    {getTotalItemsCount()}
                   </span>
                   <span style={{
                     fontSize: '10px',
@@ -1384,7 +1474,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
               ) : (
                 <>
                   <Text style={styles.bottomSummaryValue}>
-                    {draftItems.reduce((total, draft) => total + draft.quantity, 0)}
+                    {getTotalItemsCount()}
                   </Text>
                   <Text style={styles.bottomSummaryLabel}>articles</Text>
                 </>
@@ -1392,10 +1482,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
             </View>
             
             {/* Séparateur */}
-            {draftMenus.length > 0 && <View style={styles.bottomSummaryDivider} />}
+            {getTotalMenusCount() > 0 && <View style={styles.bottomSummaryDivider} />}
             
             {/* Menus - Affiché seulement s'il y en a */}
-            {draftMenus.length > 0 && (
+            {getTotalMenusCount() > 0 && (
               <View style={styles.bottomSummaryItem}>
                 {Platform.OS === 'web' ? (
                   <>
@@ -1406,7 +1496,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                       textAlign: 'center',
                       fontFamily: 'system-ui, -apple-system, sans-serif'
                     }}>
-                      {draftMenus.reduce((total, draft) => total + draft.quantity, 0)}
+                      {getTotalMenusCount()}
                     </span>
                     <span style={{
                       fontSize: '10px',
@@ -1424,7 +1514,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                 ) : (
                   <>
                     <Text style={[styles.bottomSummaryValue, { color: '#7C3AED' }]}>
-                      {draftMenus.reduce((total, draft) => total + draft.quantity, 0)}
+                      {getTotalMenusCount()}
                     </Text>
                     <Text style={styles.bottomSummaryLabel}>menus</Text>
                   </>
@@ -1993,20 +2083,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
-  },
-  saveButton: {
-    flex: 2,
-    backgroundColor: '#2A2E33',
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
     textAlign: 'center',
   },
   subTabTrigger: {

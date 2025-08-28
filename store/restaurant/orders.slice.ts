@@ -259,6 +259,32 @@ const ordersSlice = createSlice({
       });
     },
     
+    // Action optimisée pour la suppression de MenuOrderGroup
+    deleteOrderItemsBatch: (state, action: PayloadAction<{ orderItemIds: string[] }>) => {
+      const { orderItemIds } = action.payload;
+      
+      // Supprimer tous les orderItems normalisés
+      orderItemIds.forEach(itemId => {
+        delete state.orderItems[itemId];
+      });
+      
+      // Mettre à jour chaque order concerné
+      Object.values(state.orders).forEach(order => {
+        if (order.orderItems) {
+          const initialLength = order.orderItems.length;
+          
+          // Supprimer tous les items concernés
+          order.orderItems = order.orderItems.filter(item => !orderItemIds.includes(item.id));
+          
+          // Si des items ont été supprimés, recalculer le statut
+          if (order.orderItems.length !== initialLength) {
+            const statuses = order.orderItems.map(item => item.status);
+            order.status = getMostImportantStatus(statuses);
+          }
+        }
+      });
+    },
+    
     // WebSocket: Mise à jour du statut des order items
     orderItemsStatusUpdated: (state, action: PayloadAction<OrderItemsStatusUpdatedPayload>) => {
       const { orderItemIds, status, updatedAt } = action.payload;

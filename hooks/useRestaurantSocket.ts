@@ -35,7 +35,15 @@ export const useRestaurantSocket = () => {
       // Événements Orders
       order_created: (event: WebSocketEvent) => {
         console.log('🆕 Nouvelle commande reçue:', event.data.id);
-        dispatch(restaurantActions.createOrder({ order: event.data }));
+        console.log('📊 Données de la commande:', event.data);
+        console.log('📦 Action à dispatcher:', { order: event.data });
+        
+        try {
+          dispatch(restaurantActions.createOrder({ order: event.data }));
+          console.log('✅ Action createOrder dispatchée avec succès');
+        } catch (error) {
+          console.error('❌ Erreur lors du dispatch de createOrder:', error);
+        }
       },
       
       order_updated: (event: WebSocketEvent) => {
@@ -45,6 +53,12 @@ export const useRestaurantSocket = () => {
       
       order_deleted: (event: WebSocketEvent) => {
         console.log('🗑️ Commande supprimée:', event.data.id);
+        
+        // Si c'est une suppression automatique suite à un ordre vide
+        if (event.data.reason === 'empty_after_menu_deletion') {
+          console.log('⚠️ Ordre supprimé automatiquement (devenu vide après suppression de menu)');
+        }
+        
         dispatch(restaurantActions.deleteOrder({ orderId: event.data.id }));
       },
 
@@ -57,10 +71,21 @@ export const useRestaurantSocket = () => {
 
       // Événement optimisé pour la création en lot
       orderitem_batch_created: (event: WebSocketEvent) => {
+        console.log('🔥 HANDLER WEBSOCKET APPELÉ - orderitem_batch_created');
         console.log('📦 Création batch d\'articles:', event.data.createdCount, 'items');
+        console.log('📊 Données batch complètes:', event.data);
+        
         dispatch(restaurantActions.createOrderItemsBatch({
           orderItems: event.data.createdItems
         }));
+        
+        // Note: MenuOrderGroups devraient être gérés par des événements WebSocket séparés
+        if (event.data.menuOrderGroups && event.data.menuOrderGroups.length > 0) {
+          console.log('🍽️ MenuOrderGroups reçus via batch:', event.data.menuOrderGroups.length);
+          event.data.menuOrderGroups.forEach((menuOrderGroup: any) => {
+            dispatch(restaurantActions.addMenuOrderGroup(menuOrderGroup));
+          });
+        }
       },
       
       orderitem_updated: (event: WebSocketEvent) => {
@@ -79,8 +104,24 @@ export const useRestaurantSocket = () => {
       },
       
       orderitem_deleted: (event: WebSocketEvent) => {
-        console.log('🗑️ Article de commande supprimé:', event.data.id);
-        dispatch(restaurantActions.deleteOrderItem({ orderItemId: event.data.id }));
+        // Gestion des suppressions d'OrderItems individuels ET des MenuOrderGroups
+        if (event.data.type === 'menu_order_group') {
+          console.log('🗑️ Menu complet supprimé:', event.data.id);
+          
+          // Supprimer tous les OrderItems du MenuOrderGroup en lot (performance optimisée)
+          const orderItemIds = event.data.deletedOrderItemIds.map((id: number) => id.toString());
+          dispatch(restaurantActions.deleteOrderItemsBatch({ orderItemIds }));
+          
+          // Supprimer le MenuOrderGroup du store
+          dispatch(restaurantActions.deleteMenuOrderGroup({ 
+            menuOrderGroupId: event.data.id.toString() 
+          }));
+          
+        } else {
+          // Suppression d'un OrderItem individuel (comportement existant)
+          console.log('🗑️ Article de commande supprimé:', event.data.id);
+          dispatch(restaurantActions.deleteOrderItem({ orderItemId: event.data.id }));
+        }
       },
 
       // Événements Tables
@@ -177,6 +218,27 @@ export const useRestaurantSocket = () => {
       menucategoryitem_deleted: (event: WebSocketEvent) => {
         console.log('🗑️ Article de catégorie supprimé:', event.data.id);
         dispatch(restaurantActions.deleteMenuCategoryItem({ menuCategoryItemId: event.data.id }));
+      },
+
+      // Événements MenuOrderGroups - NOUVEAUX !
+      menuordergroup_created: (event: WebSocketEvent) => {
+        console.log('🆕 Nouveau groupe de menu créé via WebSocket:', event.data.id);
+        console.log('📊 Données MenuOrderGroup WebSocket:', event.data);
+        dispatch(restaurantActions.addMenuOrderGroup(event.data));
+      },
+      
+      menuordergroup_updated: (event: WebSocketEvent) => {
+        console.log('📝 Groupe de menu mis à jour:', event.data.id);
+        // Note: Pas d'action update pour MenuOrderGroup pour l'instant
+        // Si nécessaire, ajoutez updateMenuOrderGroup dans le slice
+        console.warn('⚠️ Mise à jour de MenuOrderGroup non implémentée');
+      },
+      
+      menuordergroup_deleted: (event: WebSocketEvent) => {
+        console.log('🗑️ Groupe de menu supprimé:', event.data.id);
+        dispatch(restaurantActions.deleteMenuOrderGroup({ 
+          menuOrderGroupId: event.data.id 
+        }));
       },
 
       // Événements Users

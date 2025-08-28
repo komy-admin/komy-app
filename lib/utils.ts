@@ -45,6 +45,12 @@ export const hasDraftWithOtherStatus = (statuses: Status[]): boolean => {
   return uniqueStatuses.includes(Status.DRAFT) && uniqueStatuses.length > 1;
 }
 
+// Fonction pour détecter si un menu a des items avec des statuts différents
+export const hasMenuMixedStatuses = (statuses: Status[]): boolean => {
+  const uniqueStatuses = [...new Set(statuses)];
+  return uniqueStatuses.length > 1;
+}
+
 export const shouldTableHaveDottedBorder = (table: Table): boolean => {
   const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
   return hasDraftWithOtherStatus(statuses);
@@ -59,6 +65,20 @@ export const getStatusColor = (status: Status) => {
     [Status.ERROR]: '#F7BFB5',
     [Status.TERMINATED]: '#EBEBEB',
     [Status.DRAFT]: '#EBEBEB', // Gris par défaut pour les tables sans commande
+  };
+  return colors[status] || colors[Status.ERROR];
+}
+
+// Version spécifique pour les tags de statut dans les OrderItems (avec DRAFT plus visible)
+export const getStatusTagColor = (status: Status) => {
+  const colors = {
+    [Status.READY]: '#D7E3FC',
+    [Status.PENDING]: '#F9F1C8',
+    [Status.INPROGRESS]: '#FFD1AD',
+    [Status.SERVED]: '#B7E1CC',
+    [Status.ERROR]: '#F7BFB5',
+    [Status.TERMINATED]: '#EBEBEB',
+    [Status.DRAFT]: '#D1D5DB', // Gris plus foncé pour une meilleure visibilité des tags
   };
   return colors[status] || colors[Status.ERROR];
 }
@@ -85,6 +105,25 @@ export const getStatusBorderStyle = (status: Status, table?: Table) => {
   return {
     borderStyle: 'solid' as const,
     borderColor: '#AAAAAA',
+    borderWidth: 2,
+  };
+}
+
+// Style de bordure spécialisé pour les menus
+export const getMenuBorderStyle = (statuses: Status[], baseColor: string) => {
+  const hasMixed = hasMenuMixedStatuses(statuses);
+  
+  if (hasMixed) {
+    return {
+      borderStyle: 'solid' as const,
+      borderColor: '#2A2E33', // Noir pour les bordures épaisses
+      borderWidth: 2, // Bordure normale pour les statuts mixtes
+    };
+  }
+  
+  return {
+    borderStyle: 'solid' as const,
+    borderColor: baseColor,
     borderWidth: 2,
   };
 }
