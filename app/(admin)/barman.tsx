@@ -4,7 +4,7 @@ import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { OrderItem } from '~/types/order-item.types';
-import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
+import { useOrders } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAllOrderItems } from '~/store/restaurant';
 import { useToast } from '~/components/ToastProvider';
@@ -60,28 +60,25 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrder
   return groupedOrders;
 }
 
-export default function CookKitchenPage() {
+export default function BarmanPage() {
   // Utilisation des hooks Redux uniquement
   const { orders, loading, error, updateOrderItemStatus } = useOrders();
   const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
   const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
-
-  // Filtrer les commandes et items selon les statuts disponibles en cuisine
-  const kitchenOrders = useMemo(() => {
+  // Filtrer les commandes et items selon les statuts disponibles au bar
+  const barmanOrders = useMemo(() => {
     return orders.filter(order =>
       order.orderItems.some(item => AVAILABLE_STATUSES.includes(item.status))
     );
   }, [orders]);
 
-  const kitchenOrderItems = useMemo(() => {
+  const barmanOrderItems = useMemo(() => {
     return orderItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
   }, [orderItems]);
 
-  const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems, overdueOrderIds || [], overdueOrderItemIds || []);
+  const groupedOrders = useOrderGrouping(barmanOrders, barmanOrderItems, overdueOrderIds, overdueOrderItemIds);
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
@@ -103,7 +100,7 @@ export default function CookKitchenPage() {
     }
   };
 
-  if (loading || error || globalLoading) {
+  if (loading || error) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>
@@ -116,9 +113,10 @@ export default function CookKitchenPage() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Cuisine</Text>
-        <Text style={styles.headerSubtitle}>Gestion des commandes en temps réel</Text>
+        <Text style={styles.headerTitle}>Bar</Text>
+        <Text style={styles.headerSubtitle}>Gestion des boissons en temps réel</Text>
       </View>
+
       <View style={styles.columnsContainer}>
         {AVAILABLE_STATUSES.map((status, index) => (
           <OrderColumn
@@ -154,7 +152,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
     shadowColor: '#000',

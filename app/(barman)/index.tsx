@@ -60,7 +60,7 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrder
   return groupedOrders;
 }
 
-export default function CookKitchenPage() {
+export default function BarmanKitchenPage() {
   // Utilisation des hooks Redux uniquement
   const { orders, loading, error, updateOrderItemStatus } = useOrders();
   const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
@@ -116,8 +116,8 @@ export default function CookKitchenPage() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Cuisine</Text>
-        <Text style={styles.headerSubtitle}>Gestion des commandes en temps réel</Text>
+        <Text style={styles.headerTitle}>Bar</Text>
+        <Text style={styles.headerSubtitle}>Gestion des boissons en temps réel</Text>
       </View>
       <View style={styles.columnsContainer}>
         {AVAILABLE_STATUSES.map((status, index) => (

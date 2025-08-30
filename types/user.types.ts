@@ -3,7 +3,8 @@ export enum UserProfile {
   ADMIN = 'admin',
   MANAGER = 'manager',
   SERVER = 'server',
-  CHEF = 'chef'
+  CHEF = 'chef',
+  BARMAN = 'barman'
 }
 
 export type User = {

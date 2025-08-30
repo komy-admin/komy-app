@@ -2,7 +2,7 @@
 import { Href, Link } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { View, Pressable } from 'react-native';
-import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText, List} from 'lucide-react-native';
+import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText, List, GlassWater} from 'lucide-react-native';
 import { Text } from '../ui';
 
 const NAV_ITEMS = [
@@ -10,7 +10,8 @@ const NAV_ITEMS = [
   { href: '/room_list', icon: LayoutDashboard, label: 'Salles' },
   { href: '/menu', icon: NotebookText, label: 'Menu' },
   { href: '/team', icon: Users, label: 'Équipe' },
-  { href: '/kitchen', icon: ChefHat, label: 'Cuisine' }
+  { href: '/kitchen', icon: ChefHat, label: 'Cuisine' },
+  { href: '/barman', icon: GlassWater, label: 'Bar' }
 ];
 
 export function AdminSidebar() {
