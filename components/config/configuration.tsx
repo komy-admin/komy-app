@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Platform, TextInput, ScrollView, TouchableOpacity } from 'react-native';
-import { Plus, PencilLine, Trash2, Check, X, Utensils, Save } from 'lucide-react-native';
+import { Plus, PencilLine, Trash2, Check, X, Utensils, Save, ChefHat, Wine } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useToast } from '~/components/ToastProvider';
 import { ItemType } from '~/types/item-type.types';
@@ -26,6 +26,49 @@ const getItemTypeInitials = (itemTypeName: string) => {
   return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
 };
 
+// Composant réutilisable pour les boutons de sélection de département
+const DepartmentButtons: React.FC<{
+  selectedDepartment: 'kitchen' | 'bar';
+  onDepartmentChange: (department: 'kitchen' | 'bar') => void;
+  styles: any;
+}> = ({ selectedDepartment, onDepartmentChange, styles }) => (
+  <View style={styles.editDepartmentRow}>
+    <TouchableOpacity
+      style={[
+        styles.fullWidthDepartmentButton,
+        styles.kitchenButton,
+        selectedDepartment === 'kitchen' && styles.kitchenButtonActive
+      ]}
+      onPress={() => onDepartmentChange('kitchen')}
+    >
+      <ChefHat size={16} color={selectedDepartment === 'kitchen' ? '#FFFFFF' : '#10B981'} strokeWidth={2} />
+      <Text style={[
+        styles.fullWidthDepartmentText,
+        selectedDepartment === 'kitchen' && styles.fullWidthDepartmentTextActive
+      ]}>
+        Cuisine
+      </Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity
+      style={[
+        styles.fullWidthDepartmentButton,
+        styles.barButton,
+        selectedDepartment === 'bar' && styles.barButtonActive
+      ]}
+      onPress={() => onDepartmentChange('bar')}
+    >
+      <Wine size={16} color={selectedDepartment === 'bar' ? '#FFFFFF' : '#A855F7'} strokeWidth={2} />
+      <Text style={[
+        styles.fullWidthDepartmentText,
+        selectedDepartment === 'bar' && styles.fullWidthDepartmentTextActive
+      ]}>
+        Bar
+      </Text>
+    </TouchableOpacity>
+  </View>
+);
+
 const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
   itemType,
   isEditing,
@@ -35,6 +78,7 @@ const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
   onDelete
 }) => {
   const [editedName, setEditedName] = useState(itemType.name);
+  const [selectedDepartment, setSelectedDepartment] = useState<'kitchen' | 'bar'>('kitchen'); // État temporaire pour le design
 
   React.useEffect(() => {
     setEditedName(itemType.name);
@@ -64,14 +108,16 @@ const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
         
         {isEditing ? (
           <>
-            <View style={styles.editInputContainer}>
-              <TextInput
-                style={styles.editInput}
-                value={editedName}
-                onChangeText={setEditedName}
-                placeholder="Nom du type"
-                autoFocus
-              />
+            <View style={styles.editContentContainer}>
+              <View style={styles.editInputContainer}>
+                <TextInput
+                  style={styles.editInput}
+                  value={editedName}
+                  onChangeText={setEditedName}
+                  placeholder="Nom du type"
+                  autoFocus
+                />
+              </View>
             </View>
             
             <View style={styles.cardActions}>
@@ -94,6 +140,23 @@ const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
           <>
             <View style={styles.itemTypeInfo}>
               <Text style={styles.itemTypeName}>{itemType.name}</Text>
+              
+              {/* Affichage du département sélectionné */}
+              <View style={styles.departmentDisplay}>
+                <View style={[
+                  styles.departmentBadge, 
+                  selectedDepartment === 'kitchen' ? styles.kitchenBadge : styles.barBadge
+                ]}>
+                  {selectedDepartment === 'kitchen' ? (
+                    <ChefHat size={12} color="#FFFFFF" strokeWidth={2} />
+                  ) : (
+                    <Wine size={12} color="#FFFFFF" strokeWidth={2} />
+                  )}
+                  <Text style={styles.departmentBadgeText}>
+                    {selectedDepartment === 'kitchen' ? 'Cuisine' : 'Bar'}
+                  </Text>
+                </View>
+              </View>
             </View>
             
             <View style={styles.cardActions}>
@@ -114,6 +177,15 @@ const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
           </>
         )}
       </View>
+      
+      {/* Boutons département en mode édition - en dessous de tout le contenu de la carte */}
+      {isEditing && (
+        <DepartmentButtons
+          selectedDepartment={selectedDepartment}
+          onDepartmentChange={setSelectedDepartment}
+          styles={styles}
+        />
+      )}
     </View>
   );
 };
@@ -133,6 +205,7 @@ export default function ConfigurationRestoPage() {
   
   const [isCreating, setIsCreating] = useState(false);
   const [newItemName, setNewItemName] = useState('');
+  const [newItemDepartment, setNewItemDepartment] = useState<'kitchen' | 'bar'>('kitchen');
   const [localItemTypes, setLocalItemTypes] = useState<ItemType[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [localEditingItemId, setLocalEditingItemId] = useState<string | null>(null);
@@ -176,6 +249,7 @@ export default function ConfigurationRestoPage() {
       return newList;
     });
     setNewItemName('');
+    setNewItemDepartment('kitchen');
     setIsCreating(false);
     setHasChanges(true);
     console.log('✅ HasChanges défini à true');
@@ -331,14 +405,16 @@ export default function ConfigurationRestoPage() {
                                       </Text>
                                     </View>
                                     
-                                    <View style={styles.editInputContainer}>
-                                      <TextInput
-                                        style={styles.editInput}
-                                        value={newItemName}
-                                        onChangeText={setNewItemName}
-                                        placeholder="Nom du nouveau type..."
-                                        autoFocus
-                                      />
+                                    <View style={styles.editContentContainer}>
+                                      <View style={styles.editInputContainer}>
+                                        <TextInput
+                                          style={styles.editInput}
+                                          value={newItemName}
+                                          onChangeText={setNewItemName}
+                                          placeholder="Nom du nouveau type..."
+                                          autoFocus
+                                        />
+                                      </View>
                                     </View>
                                     
                                     <View style={styles.cardActions}>
@@ -354,12 +430,20 @@ export default function ConfigurationRestoPage() {
                                         onPress={() => {
                                           setIsCreating(false);
                                           setNewItemName('');
+                                          setNewItemDepartment('kitchen');
                                         }}
                                       >
                                         <X size={16} color="#EF4444" strokeWidth={2} />
                                       </TouchableOpacity>
                                     </View>
                                   </View>
+                                  
+                                  {/* Boutons département en pleine largeur sous les boutons de base */}
+                                  <DepartmentButtons
+                                    selectedDepartment={newItemDepartment}
+                                    onDepartmentChange={setNewItemDepartment}
+                                    styles={styles}
+                                  />
                                 </View>
                               </View>
                             ) : (
@@ -384,14 +468,16 @@ export default function ConfigurationRestoPage() {
                                   </Text>
                                 </View>
                                 
-                                <View style={styles.editInputContainer}>
-                                  <TextInput
-                                    style={styles.editInput}
-                                    value={newItemName}
-                                    onChangeText={setNewItemName}
-                                    placeholder="Nom du nouveau type..."
-                                    autoFocus
-                                  />
+                                <View style={styles.editContentContainer}>
+                                  <View style={styles.editInputContainer}>
+                                    <TextInput
+                                      style={styles.editInput}
+                                      value={newItemName}
+                                      onChangeText={setNewItemName}
+                                      placeholder="Nom du nouveau type..."
+                                      autoFocus
+                                    />
+                                  </View>
                                 </View>
                                 
                                 <View style={styles.cardActions}>
@@ -413,6 +499,13 @@ export default function ConfigurationRestoPage() {
                                   </TouchableOpacity>
                                 </View>
                               </View>
+                              
+                              {/* Boutons département en pleine largeur sous les boutons de base */}
+                              <DepartmentButtons
+                                selectedDepartment={newItemDepartment}
+                                onDepartmentChange={setNewItemDepartment}
+                                styles={styles}
+                              />
                             </View>
                           </View>
                           <View style={styles.itemTypeEmptyColumn} />
@@ -612,9 +705,13 @@ const styles = StyleSheet.create({
     borderColor: '#FCA5A5',
     backgroundColor: '#FEF2F2',
   },
-  editInputContainer: {
+  editContentContainer: {
     flex: 1,
     marginRight: 12,
+    justifyContent: 'center',
+  },
+  editInputContainer: {
+    // Suppression du marginBottom pour centrer l'input
   },
   editInput: {
     height: 40,
@@ -625,6 +722,88 @@ const styles = StyleSheet.create({
     borderColor: '#6366F1',
     fontSize: 14,
     color: '#1F2937',
+  },
+  departmentDisplay: {
+    marginTop: 3,
+  },
+  departmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    gap: 4,
+  },
+  kitchenBadge: {
+    backgroundColor: '#10B981',
+  },
+  barBadge: {
+    backgroundColor: '#A855F7',
+  },
+  departmentBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  departmentToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  departmentLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748B',
+    width: 70,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 6,
+    padding: 2,
+    flex: 1,
+  },
+  toggleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    gap: 4,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  toggleOptionLeft: {
+    // Style spécifique pour l'option de gauche si nécessaire
+  },
+  toggleOptionRight: {
+    // Style spécifique pour l'option de droite si nécessaire
+  },
+  kitchenToggleActive: {
+    backgroundColor: '#F97316',
+    shadowColor: '#F97316',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  barToggleActive: {
+    backgroundColor: '#8B5CF6',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   loadingContainer: {
     padding: 20,
@@ -691,5 +870,104 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  departmentSelector: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    padding: 2,
+  },
+  departmentOption: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  kitchenOptionActive: {
+    backgroundColor: '#F97316',
+  },
+  barOptionActive: {
+    backgroundColor: '#8B5CF6',
+  },
+  departmentOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  departmentOptionTextActive: {
+    color: '#FFFFFF',
+  },
+  editTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  editInputInline: {
+    flex: 1,
+    height: 36,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2A2E33',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  inlineActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  editDepartmentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  fullWidthDepartmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+    borderWidth: 1,
+  },
+  kitchenButton: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
+  },
+  kitchenButtonActive: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  barButton: {
+    backgroundColor: '#F8F4FF',
+    borderColor: '#A855F7',
+  },
+  barButtonActive: {
+    backgroundColor: '#A855F7',
+    borderColor: '#A855F7',
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  fullWidthDepartmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  fullWidthDepartmentTextActive: {
+    color: '#FFFFFF',
   },
 });
