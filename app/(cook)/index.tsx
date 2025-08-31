@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
+import { OrderLine, OrderLineType } from "~/types/order-line.types";
 import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
-import { OrderItem } from '~/types/order-item.types';
-import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
+import { useOrderLines, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
-import { selectAllOrderItems } from '~/store/restaurant';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
+import { getMostImportantStatus } from '~/lib/utils';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -16,35 +16,62 @@ const AVAILABLE_STATUSES = [
   Status.READY,
 ];
 
-function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrderIds: string[], overdueOrderItemIds: string[]) {
+function useOrderGrouping(orders: Order[], overdueOrderIds: string[], overdueOrderItemIds: string[]) {
   const groupedOrders = useMemo(() => {
     const orderMap = new Map();
 
-    orderItems.forEach(item => {
-      const order = orders.find(o => o.id === item.orderId);
-      if (!order) return;
+    orders.forEach(order => {
+      if (!order.lines || order.lines.length === 0) return;
 
-      const key = `${order.id}-${item.status}`;
+      // Collecter tous les statuts des OrderLines
+      const allStatuses: Status[] = [];
+      order.lines.forEach(line => {
+        if (line.type === OrderLineType.ITEM && line.status) {
+          allStatuses.push(line.status);
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          line.items.forEach(item => allStatuses.push(item.status));
+        }
+      });
 
-      if (!orderMap.has(key)) {
-        // Vérifier si au moins un orderItem de ce groupe est en retard
-        const hasOverdueItems = orderItems
-          .filter((oi: OrderItem) => oi.orderId === order.id && oi.status === item.status)
-          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
+      // Grouper par statut principal
+      const statusGroups = new Map<Status, OrderLine[]>();
+      order.lines.forEach(line => {
+        let lineStatus: Status | null = null;
+        if (line.type === OrderLineType.ITEM && line.status) {
+          lineStatus = line.status;
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          lineStatus = getMostImportantStatus(line.items.map(item => item.status));
+        }
+        
+        if (lineStatus && AVAILABLE_STATUSES.includes(lineStatus)) {
+          if (!statusGroups.has(lineStatus)) {
+            statusGroups.set(lineStatus, []);
+          }
+          statusGroups.get(lineStatus)!.push(line);
+        }
+      });
+
+      // Créer des commandes groupées par statut
+      statusGroups.forEach((lines, status) => {
+        const key = `${order.id}-${status}`;
+        
+        // Vérifier si des lignes sont en retard
+        const hasOverdueItems = lines.some(line => {
+          if (line.type === OrderLineType.ITEM) {
+            return overdueOrderItemIds.includes(line.id);
+          } else if (line.type === OrderLineType.MENU && line.items) {
+            return line.items.some(item => overdueOrderItemIds.includes(item.id));
+          }
+          return false;
+        });
 
         orderMap.set(key, {
           ...order,
-          status: item.status,
-          orderItems: [item],
+          status,
+          lines,
           isOverdue: hasOverdueItems
         });
-      } else {
-        orderMap.get(key).orderItems.push(item);
-        // Recalculer si le groupe a des items en retard
-        const hasOverdueItems = orderMap.get(key).orderItems
-          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
-        orderMap.get(key).isOverdue = hasOverdueItems;
-      }
+      });
     });
 
     // Trier pour mettre les commandes en retard en premier
@@ -55,7 +82,7 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrder
     });
 
     return new Map(sortedEntries);
-  }, [orders, orderItems, overdueOrderIds, overdueOrderItemIds]);
+  }, [orders, overdueOrderIds, overdueOrderItemIds]);
 
   return groupedOrders;
 }

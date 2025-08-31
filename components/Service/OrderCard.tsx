@@ -1,6 +1,7 @@
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
+import { OrderLine, OrderLineType } from "~/types/order-line.types";
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import React, { useCallback, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react-native';
@@ -15,55 +16,50 @@ const SWIPE_THRESHOLD = -80;
 const ACTIVATION_DISTANCE = 15;
 
 const getOrderType = (order: Order): string => {
-  // Obtenir tous les items (nouvelle structure + fallback ancienne)
-  let allItems = [];
+  if (!order.lines || order.lines.length === 0) return '';
 
-  // Nouvelle structure
-  if (order.individualItems) {
-    allItems.push(...order.individualItems);
-  }
-  if (order.menus) {
-    order.menus.forEach(menu => {
-      if (menu.orderItems) {
-        allItems.push(...menu.orderItems);
+  // Collecter tous les statuts des OrderLines
+  let allStatuses = [];
+  let itemTypeName = '';
+
+  for (const line of order.lines) {
+    if (line.type === OrderLineType.ITEM && line.status) {
+      allStatuses.push(line.status);
+      // Prendre le nom du premier item type trouvé
+      if (!itemTypeName && line.item) {
+        itemTypeName = (line.item as any).itemType?.name || 'Article';
       }
-    });
+    } else if (line.type === OrderLineType.MENU && line.items) {
+      line.items.forEach(menuItem => {
+        allStatuses.push(menuItem.status);
+        // Prendre le nom du premier item type trouvé
+        if (!itemTypeName && menuItem.item) {
+          itemTypeName = (menuItem.item as any).itemType?.name || 'Article';
+        }
+      });
+    }
   }
 
-  // Fallback sur l'ancienne structure si nouvelle structure est vide
-  if (allItems.length === 0 && order.orderItems) {
-    allItems = order.orderItems;
-  }
-
-  if (allItems.length === 0) return '';
-
-  const statuses = allItems.map(item => item.status);
-  const mostImportantStatus = getMostImportantStatus(statuses);
-  return allItems.find(item => item.status === mostImportantStatus)?.item?.itemType?.name || '';
+  return itemTypeName;
 };
 
 export default function OrderCard({ order, onDelete }: OrderCardProps) {
-  // Obtenir tous les items (nouvelle structure + fallback ancienne)
-  let allItems = [];
-
-  // Nouvelle structure
-  if (order.individualItems) {
-    allItems.push(...order.individualItems);
-  }
-  if (order.menus) {
-    order.menus.forEach(menu => {
-      if (menu.orderItems) {
-        allItems.push(...menu.orderItems);
+  // Collecter tous les statuts des OrderLines
+  let allStatuses = [];
+  
+  if (order.lines) {
+    for (const line of order.lines) {
+      if (line.type === OrderLineType.ITEM && line.status) {
+        allStatuses.push(line.status);
+      } else if (line.type === OrderLineType.MENU && line.items) {
+        line.items.forEach(menuItem => {
+          allStatuses.push(menuItem.status);
+        });
       }
-    });
+    }
   }
 
-  // Fallback sur l'ancienne structure si nouvelle structure est vide
-  if (allItems.length === 0 && order.orderItems) {
-    allItems = order.orderItems;
-  }
-
-  const mostImportantStatus = getMostImportantStatus(allItems.map(item => item.status));
+  const mostImportantStatus = getMostImportantStatus(allStatuses);
   const statusColor = getStatusColor(mostImportantStatus);
   const statusText = getStatusText(mostImportantStatus);
   const orderType = getOrderType(order);

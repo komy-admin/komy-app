@@ -3,15 +3,16 @@ import { TouchableOpacity, View, StyleSheet } from "react-native";
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import { Button, Text } from "../ui";
-import { DateFormat, formatDate, getStatusColor, getStatusText } from "~/lib/utils";
+import { DateFormat, formatDate, getStatusColor, getStatusText, getMostImportantStatus } from "~/lib/utils";
 import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight } from "lucide-react-native";
 import React from "react";
-import { OrderItem } from "~/types/order-item.types";
+import { OrderLine, OrderLineType, OrderLineItem } from "~/types/order-line.types";
 
-type GroupedOrderItems = {
+type GroupedOrderLines = {
   [key: string]: {
     name: string;
-    items: OrderItem[];
+    lines: OrderLine[];
+    items: OrderLineItem[];
     status: Status;
   };
 };
@@ -25,29 +26,71 @@ export default function OrderCard({ order, status, onStatusChange, overdueOrderI
     const [isExpanded, setIsExpanded] = useState(false);
     
     // Vérifier si cette commande a des items en alerte
-    const hasOverdueItems = order.orderItems?.some(item => 
-      overdueOrderItemIds.includes(item.id)
-    ) ?? false;
+    const hasOverdueItems = order.lines?.some(line => {
+      if (line.type === OrderLineType.ITEM) {
+        return overdueOrderItemIds.includes(line.id);
+      } else if (line.type === OrderLineType.MENU && line.items) {
+        return line.items.some(menuItem => overdueOrderItemIds.includes(menuItem.id));
+      }
+      return false;
+    }) ?? false;
 
-    const groupedItems: GroupedOrderItems = React.useMemo(() => {
-      return order?.orderItems?.reduce((acc, item) => {
-        const type = item.item.itemType.id;
-        if (!acc[type]) {
-          acc[type] = {
-            name: item.item.itemType.name,
-            items: [],
-            status: status
-          };
+    const groupedItems: GroupedOrderLines = React.useMemo(() => {
+      if (!order?.lines) return {};
+      
+      return order.lines.reduce((acc, line) => {
+        if (line.type === OrderLineType.ITEM && line.item) {
+          const itemTypeId = (line.item as any).itemTypeId;
+          const itemTypeName = (line.item as any).itemType?.name || 'Article';
+          
+          if (!acc[itemTypeId]) {
+            acc[itemTypeId] = {
+              name: itemTypeName,
+              lines: [],
+              items: [],
+              status: line.status || Status.PENDING
+            };
+          }
+          acc[itemTypeId].lines.push(line);
+          
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          // Pour les menus, grouper par type d'item des items du menu
+          line.items.forEach(menuItem => {
+            const itemTypeId = (menuItem.item as any).itemTypeId;
+            const itemTypeName = (menuItem.item as any).itemType?.name || 'Article';
+            
+            if (!acc[itemTypeId]) {
+              acc[itemTypeId] = {
+                name: itemTypeName,
+                lines: [],
+                items: [],
+                status: menuItem.status
+              };
+            }
+            acc[itemTypeId].items.push(menuItem);
+            // Recalculer le statut pour ce groupe
+            const allStatuses = acc[itemTypeId].items.map(item => item.status)
+              .concat(acc[itemTypeId].lines.map(l => l.status).filter(Boolean));
+            acc[itemTypeId].status = getMostImportantStatus(allStatuses as Status[]);
+          });
         }
-        acc[type].items.push(item);
         return acc;
-      }, {} as GroupedOrderItems);
-    }, [order?.orderItems, status]);
+      }, {} as GroupedOrderLines);
+    }, [order?.lines, status]);
 
     const handleStatusChange = (itemTypeId: string, newStatus: Status) => {
+      const filteredLines = order.lines.filter(line => {
+        if (line.type === OrderLineType.ITEM && line.item) {
+          return (line.item as any).itemTypeId === itemTypeId;
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          return line.items.some(menuItem => (menuItem.item as any).itemTypeId === itemTypeId);
+        }
+        return false;
+      });
+      
       const filteredOrder = {
         ...order,
-        orderItems: order.orderItems.filter(item => item.item.itemType.id === itemTypeId)
+        lines: filteredLines
       };
       onStatusChange(filteredOrder, newStatus);
     };
@@ -102,7 +145,7 @@ export default function OrderCard({ order, status, onStatusChange, overdueOrderI
           <View style={styles.orderInfo}>
             <Text style={styles.orderId}>#{order.id}</Text>
             <Text style={styles.itemCount}>
-              {order?.orderItems?.length || 0} ARTICLE{order?.orderItems?.length > 1 ? 'S' : ''}
+              {order?.lines?.length || 0} LIGNE{order?.lines?.length > 1 ? 'S' : ''}
             </Text>
           </View>
           <View style={styles.expandButton}>
@@ -138,10 +181,11 @@ export default function OrderCard({ order, status, onStatusChange, overdueOrderI
                 </View>
                 
                 <View style={styles.itemsList}>
-                  {group.items.map((orderItem, index) => {
-                    const isItemOverdue = overdueOrderItemIds.includes(orderItem.id);
+                  {/* Afficher les lignes d'items individuels */}
+                  {group.lines.map((orderLine, index) => {
+                    const isItemOverdue = overdueOrderItemIds.includes(orderLine.id);
                     return (
-                      <View key={index} style={styles.orderItem}>
+                      <View key={`line-${index}`} style={styles.orderItem}>
                         <View style={[
                           styles.itemBullet,
                           isItemOverdue && { backgroundColor: '#DC2626', width: 8, height: 8, borderRadius: 4 }
@@ -151,16 +195,37 @@ export default function OrderCard({ order, status, onStatusChange, overdueOrderI
                             styles.itemName,
                             isItemOverdue && { color: '#DC2626', fontWeight: '700' }
                           ]}>
-                            {orderItem.item.name}
+                            {orderLine.item?.name} (x{orderLine.quantity})
                           </Text>
-                          {orderItem.note && (
+                          {orderLine.note && (
                             <Text style={[
                               styles.itemNote,
                               isItemOverdue && { color: '#DC2626', fontWeight: '600' }
                             ]}>
-                              {orderItem.note}
+                              {orderLine.note}
                             </Text>
                           )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                  
+                  {/* Afficher les items des menus */}
+                  {group.items.map((menuItem, index) => {
+                    const isItemOverdue = overdueOrderItemIds.includes(menuItem.id);
+                    return (
+                      <View key={`menu-item-${index}`} style={styles.orderItem}>
+                        <View style={[
+                          styles.itemBullet,
+                          isItemOverdue && { backgroundColor: '#DC2626', width: 8, height: 8, borderRadius: 4 }
+                        ]} />
+                        <View style={styles.itemDetails}>
+                          <Text style={[
+                            styles.itemName,
+                            isItemOverdue && { color: '#DC2626', fontWeight: '700' }
+                          ]}>
+                            {menuItem.item.name} (Menu)
+                          </Text>
                         </View>
                       </View>
                     );

@@ -5,6 +5,7 @@ import { useMemo, useRef, useCallback, useState, useEffect, JSX } from 'react';
 import { Table } from '~/types/table.types';
 import { Room } from '~/types/room.types';
 import { Order } from '~/types/order.types';
+import { OrderLineType } from '~/types/order-line.types';
 import { Card, CardContent, Text, Badge, Button } from '~/components/ui';
 import { StatusPill } from '~/components/ui/StatusPill';
 import { getStatusColor, getStatusText, getMostImportantStatus, getNextStatus } from '~/lib/utils';
@@ -49,7 +50,7 @@ export default function ServerHome() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     // Supprimer les commandes vides si on change de table
-    if (selectedTable && selectedTableOrder && selectedTableOrder.orderItems.length === 0) {
+    if (selectedTable && selectedTableOrder && (selectedTableOrder.lines || []).length === 0) {
       try {
         deleteOrder(selectedTableOrder.id);
       } catch (error) {
@@ -72,30 +73,28 @@ export default function ServerHome() {
     }
   };
 
-  const handleCreateOrder = async () => {
-    try {
-      if (!selectedTable) {
-        showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
-        return;
-      }
-      const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTable.id);
-      if (existingOrder) {
-        showToast('Une commande existe déjà pour cette table.', 'warning');
-        return;
-      }
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      const order = await createOrder(selectedTable.id);
-      router.push({
-        pathname: '/(server)/order/menu',
-        params: { orderId: order.id }
-      });
-    } catch (error) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
-      console.error(error);
+  const handleStartOrder = () => {
+    if (!selectedTable) {
+      showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
+      return;
     }
+    const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTable.id);
+    if (existingOrder) {
+      showToast('Une commande existe déjà pour cette table.', 'warning');
+      return;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // NOUVEAU FLUX : Naviguer directement vers la sélection SANS créer de commande
+    // La commande sera créée à la fin avec toutes les OrderLines sélectionnées
+    router.push({
+      pathname: '/(server)/order/menu',
+      params: { 
+        tableId: selectedTable.id,  // Passer tableId au lieu d'orderId
+        newOrder: 'true'            // Flag pour indiquer que c'est une nouvelle commande
+      }
+    });
   };
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -132,7 +131,7 @@ export default function ServerHome() {
       await updateOrderStatus(order.id, newStatus, itemTypeId);
 
       const itemTypeName = itemTypeId ?
-        order.orderItems.find(oi => oi.item.itemType.id === itemTypeId)?.item.itemType.name || 'articles' :
+        (order.lines || []).find(line => line.type === OrderLineType.ITEM && (line.item as any)?.itemType?.id === itemTypeId)?.item?.itemType?.name || 'articles' :
         'commande';
 
       const statusMessages: Record<Status, string> = {
@@ -198,10 +197,17 @@ export default function ServerHome() {
 
                   const actions: ActionItem[] = [];
 
-                  // Grouper les orderItems par type
-                  const itemsByType = order.orderItems.reduce((acc, orderItem) => {
-                    const typeId = orderItem.item.itemType.id;
-                    const typeName = orderItem.item.itemType.name;
+                  // Grouper les lines par type
+                  const itemsByType = (order.lines || []).reduce((acc, line) => {
+                    if (line.type !== OrderLineType.ITEM || !line.item) return acc;
+                    const orderItem = { item: line.item, status: line.status }; // Adapter pour compatibilité
+                    
+                    // Vérifier si itemType existe, sinon utiliser un fallback
+                    const itemType = (orderItem.item as any)?.itemType;
+                    if (!itemType) return acc; // Skip si pas d'itemType
+                    
+                    const typeId = itemType.id;
+                    const typeName = itemType.name;
 
                     if (!acc[typeId]) {
                       acc[typeId] = {
@@ -271,7 +277,7 @@ export default function ServerHome() {
                           <Text className="text-sm text-muted-foreground">{table.seats} places</Text>
                           {tableOrder && (
                             <Text className="text-xs text-muted-foreground mt-1">
-                              {tableOrder.orderItems.length} article{tableOrder.orderItems.length > 1 ? 's' : ''}
+                              {(tableOrder.lines || []).length} article{(tableOrder.lines || []).length > 1 ? 's' : ''}
                             </Text>
                           )}
                         </View>
@@ -312,10 +318,10 @@ export default function ServerHome() {
                 <Text className="text-muted-foreground mb-2 text-center">Table {selectedTable?.name}</Text>
                 <Text className="text-muted-foreground mb-6 text-center">{selectedTable?.seats} places disponibles</Text>
                 <Button
-                  onPress={handleCreateOrder}
+                  onPress={handleStartOrder}
                   className="w-full bg-primary"
                 >
-                  <Text className="text-primary-foreground font-medium">Créer une commande</Text>
+                  <Text className="text-primary-foreground font-medium">Prendre la commande</Text>
                 </Button>
               </View>
             </View>

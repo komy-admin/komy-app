@@ -21,15 +21,8 @@ import ordersReducer, {
   selectOrdersByRoomId,
   selectOrderById,
   selectOrderByTableId,
-  selectAllOrderItems,
-  selectOrderItemById,
   selectOrdersLoading,
   selectOrdersError,
-  selectOrderIndividualItems,
-  selectOrderMenus,
-  selectOrderAllItems,
-  selectOrderHasMenus,
-  selectOrderHasIndividualItems,
 } from './orders.slice';
 import menuReducer, { 
   menuActions,
@@ -174,12 +167,12 @@ export const restaurantActions = {
   createOrder: ordersActions.createOrder,
   updateOrder: ordersActions.updateOrder,
   deleteOrder: ordersActions.deleteOrder,
-  updateOrderItem: ordersActions.updateOrderItem,
-  deleteOrderItem: ordersActions.deleteOrderItem,
-  deleteOrderItemsBatch: ordersActions.deleteOrderItemsBatch,
-  updateOrderStatus: ordersActions.updateOrderStatus,
-  orderItemsStatusUpdated: ordersActions.orderItemsStatusUpdated,
-  createOrderItemsBatch: ordersActions.createOrderItemsBatch,
+
+  createOrderLinesBatch: ordersActions.createOrderLinesBatch,
+  updateOrderLine: ordersActions.updateOrderLine,
+  deleteOrderLine: ordersActions.deleteOrderLine,
+  orderLinesStatusUpdated: ordersActions.orderLinesStatusUpdated,
+  orderLineItemsStatusUpdated: ordersActions.orderLineItemsStatusUpdated,
   
   setItems: menuActions.setItems,
   setItemTypes: menuActions.setItemTypes,
@@ -369,24 +362,6 @@ export const selectOptimizedMenuOrderGroupById = createSelector(
   }
 );
 
-// NOUVEAU : Sélecteur pour récupérer les MenuOrderGroups avec leurs OrderItems associés
-export const selectMenuOrderGroupsWithItems = createSelector(
-  [
-    (state: { restaurant: RestaurantState }) => state.restaurant.menuOrderGroups.menuOrderGroups,
-    (state: { restaurant: RestaurantState }) => selectAllOrderItems({ orders: state.restaurant.orders })
-  ],
-  (menuOrderGroups, allOrderItems) => {
-    return (orderId: string) => {
-      const groupsForOrder = menuOrderGroups.filter(group => group.orderId === orderId);
-      
-      return groupsForOrder.map(group => ({
-        ...group,
-        orderItems: allOrderItems.filter(item => item.menuGroupId === group.id)
-      }));
-    };
-  }
-);
-
 export const selectRoomsLoading = (state: { restaurant: RestaurantState }) => 
   state.restaurant.rooms.loading;
 
@@ -410,15 +385,8 @@ export {
   selectOrdersByRoomId,
   selectOrderById,
   selectOrderByTableId,
-  selectAllOrderItems,
-  selectOrderItemById,
   selectOrdersLoading,
   selectOrdersError,
-  selectOrderIndividualItems,
-  selectOrderMenus,
-  selectOrderAllItems,
-  selectOrderHasMenus,
-  selectOrderHasIndividualItems,
   
   // Menu
   selectAllItems,

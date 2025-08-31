@@ -59,7 +59,7 @@ export const useOrders = () => {
     try {
       const newOrder = await orderApiService.create({
         tableId,
-        orderItems: [],
+        lines: [],
         status: Status.DRAFT
       });
 

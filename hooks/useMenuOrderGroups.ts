@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { restaurantActions, selectOptimizedMenuOrderGroupsByOrderId, selectOptimizedMenuOrderGroupById, selectMenuOrderGroupsWithItems } from '~/store/restaurant';
+import { restaurantActions, selectOptimizedMenuOrderGroupsByOrderId, selectOptimizedMenuOrderGroupById } from '~/store/restaurant';
 import { menuOrderGroupApiService } from '~/api/menu-order-group.api';
 import { MenuOrderGroup } from '~/types/menu-order-group.types';
 
@@ -30,7 +30,6 @@ export const useMenuOrderGroups = () => {
   // ✅ OPTIMISÉ : Utilise les sélecteurs memoizés avec index pré-calculé
   const getMenuOrderGroupsByOrderId = useSelector(selectOptimizedMenuOrderGroupsByOrderId);
   const getMenuOrderGroupById = useSelector(selectOptimizedMenuOrderGroupById);
-  const getMenuOrderGroupsWithItems = useSelector(selectMenuOrderGroupsWithItems);
 
   return {
     menuOrderGroups,
@@ -40,6 +39,5 @@ export const useMenuOrderGroups = () => {
     addMenuOrderGroup,
     getMenuOrderGroupsByOrderId,
     getMenuOrderGroupById,
-    getMenuOrderGroupsWithItems,
   };
 };

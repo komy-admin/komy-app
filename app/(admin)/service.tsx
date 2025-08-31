@@ -184,36 +184,31 @@ export default function ServicePage() {
     }
   };
 
-  const handleCreateOrder = async () => {
-    try {
-      if (!selectedTableId) {
-        showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
-        return;
-      }
-      const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTableId);
-      if (existingOrder) {
-        showToast('Une commande existe déjà pour cette table.', 'warning');
-        return;
-      }
-
-      await createOrder(selectedTableId);
-      setOrderCreatedFromStart(true); // Marquer que la commande a été créée depuis "Start"
-      modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
-      modalActions.setModalTitle(`Créer la commande - ${selectedTable?.name}`); // Titre stable pour nouvelle commande
-      // selectedTableOrder sera mis à jour par Redux, on l'utilisera dans un useEffect
-      orderFormView.openCreate(); // Ouvrir la AdminFormView
-      showToast('Commande créée avec succès.', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
-      console.error(error);
+  const handleCreateOrder = () => {
+    if (!selectedTableId) {
+      showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
+      return;
     }
+    const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTableId);
+    if (existingOrder) {
+      showToast('Une commande existe déjà pour cette table.', 'warning');
+      return;
+    }
+
+    // NOUVEAU FLUX : Ouvrir directement le formulaire SANS créer de commande
+    // La commande sera créée à la fin quand le serveur validera avec les OrderLines
+    setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
+    modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
+    modalActions.setModalTitle(`Prendre la commande - ${selectedTable?.name}`); // Titre pour nouvelle commande
+    orderFormView.openCreate(); // Ouvrir la AdminFormView
+    showToast('Commande en cours de préparation.', 'info');
   };
 
 
   const handleOpenOrderModal = () => {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
     modalActions.setCameFromOrderDetail(true); // Marquer qu'on vient de la modal détails
-    modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table.name}` : "Modifier la commande"); // Titre stable pour modification
+    modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Modifier la commande"); // Titre stable pour modification
     // La commande courante est déjà disponible via selectedTableOrder
     orderFormView.openEdit(); // Ouvrir en mode édition
   };
@@ -504,7 +499,7 @@ export default function ServicePage() {
         onClose={handleCloseOrderDetailModal}
         width={900}
         height={700}
-        title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table.name}` : "Détails de la commande"}
+        title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Détails de la commande"}
       >
         {selectedTableOrder && (
           <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -607,9 +602,21 @@ export default function ServicePage() {
           confirmButtonColor: '#059669' // Vert pour différencier de l'enregistrement normal
         } : undefined}
       >
-        {selectedTableOrder && (
+        {(selectedTableOrder || orderCreatedFromStart) && (
           <OrderItemsForm
-            order={selectedTableOrder}
+            order={selectedTableOrder || {
+              id: 'new-order-' + selectedTableId,
+              tableId: selectedTableId!,
+              table: selectedTable!,
+              lines: [],
+              orderItems: [], // Compatibilité legacy
+              individualItems: [], // Compatibilité legacy
+              menus: [], // Compatibilité legacy
+              status: Status.DRAFT,
+              account: '',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }}
             items={allItems.filter(item => item.isActive)}
             itemTypes={allItemTypes}
             onConfigurationModeChange={handleConfigurationModeChange}
