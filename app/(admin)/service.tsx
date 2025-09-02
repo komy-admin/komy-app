@@ -115,7 +115,7 @@ export default function ServicePage() {
     handleFiltersChange,
     handleClearFilters,
     isLoaded: filtersLoaded,
-  } = useOrderFilters(currentRoomOrders.filter(order => order.orderItems && order.orderItems.length > 0));
+  } = useOrderFilters(currentRoomOrders.filter(order => order.lines && order.lines.length > 0));
 
 
   // Désélectionner la table lors de la navigation
@@ -135,13 +135,13 @@ export default function ServicePage() {
       return false;
     }
 
-    // Calculer les orderItems restants SANS attendre Redux
-    const remainingOrderItems = selectedTableOrder.orderItems.filter(
-      item => !deletedItemIds.includes(item.id)
+    // Calculer les orderLines restantes SANS attendre Redux
+    const remainingOrderLines = selectedTableOrder.lines.filter(
+      line => !deletedItemIds.includes(line.id)
     );
 
 
-    if (remainingOrderItems.length === 0) {
+    if (remainingOrderLines.length === 0) {
       try {
         // FERMER LA MODAL EN PREMIER pour éviter l'effet de "vidage"
         modalActions.closeOrderDetail();
@@ -167,7 +167,7 @@ export default function ServicePage() {
     if (!table) return;
 
     // Supprimer les commandes vides si on change de table
-    if (selectedTableId && selectedTableOrder && (!selectedTableOrder.orderItems || selectedTableOrder.orderItems.length === 0)) {
+    if (selectedTableId && selectedTableOrder && (!selectedTableOrder.lines || selectedTableOrder.lines.length === 0)) {
       try {
         deleteOrder(selectedTableOrder.id);
       } catch (error) {
@@ -232,7 +232,7 @@ export default function ServicePage() {
 
 
       // Nettoyage conditionnel de commande vide (seulement si pas de sauvegarde)
-      if (!wasSaving && selectedTableOrder && wasOrderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
+      if (!wasSaving && selectedTableOrder && wasOrderCreatedFromStart && selectedTableOrder.lines.length === 0) {
         console.log('🔄 Suppression commande vide car créée depuis Start');
         deleteOrder(selectedTableOrder.id)
           .then(() => showToast('Commande annulée car aucun article n\'a été ajouté.', 'info'))
@@ -245,7 +245,7 @@ export default function ServicePage() {
       if (wasSaving && wasOrderCreatedFromStart) {
         // Pour le cas du start, ouvrir immédiatement puisqu'on sait qu'il y a eu sauvegarde
         modalActions.openOrderDetail();
-      } else if (selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
+      } else if (selectedTableOrder && selectedTableOrder.lines.length > 0) {
         if (modals.cameFromOrderDetailModal || wasOrderCreatedFromStart) {
           modalActions.openOrderDetail();
         }

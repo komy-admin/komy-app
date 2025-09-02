@@ -3,10 +3,11 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
-import { OrderItem } from '~/types/order-item.types';
-import { useOrders } from '~/hooks/useRestaurant';
+import { OrderLine, OrderLineType } from '~/types/order-line.types';
+import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
+import { useOrderLines } from '~/hooks/useOrderLines';
 import { useSelector } from 'react-redux';
-import { selectAllOrderItems } from '~/store/restaurant';
+import { selectAllKitchenItems } from '~/store/restaurant';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 
@@ -16,33 +17,33 @@ const AVAILABLE_STATUSES = [
   Status.READY,
 ];
 
-function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrderIds: string[], overdueOrderItemIds: string[]) {
+function useOrderGrouping(orders: Order[], kitchenItems: any[], overdueOrderIds: string[], overdueOrderItemIds: string[]) {
   const groupedOrders = useMemo(() => {
     const orderMap = new Map();
 
-    orderItems.forEach(item => {
+    kitchenItems.forEach(item => {
       const order = orders.find(o => o.id === item.orderId);
       if (!order) return;
 
       const key = `${order.id}-${item.status}`;
 
       if (!orderMap.has(key)) {
-        // Vérifier si au moins un orderItem de ce groupe est en retard
-        const hasOverdueItems = orderItems
-          .filter((oi: OrderItem) => oi.orderId === order.id && oi.status === item.status)
-          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
+        // Vérifier si au moins un item de ce groupe est en retard
+        const hasOverdueItems = kitchenItems
+          .filter((ki: any) => ki.orderId === order.id && ki.status === item.status)
+          .some((ki: any) => overdueOrderItemIds.includes(ki.id));
 
         orderMap.set(key, {
           ...order,
           status: item.status,
-          orderItems: [item],
+          kitchenItems: [item],
           isOverdue: hasOverdueItems
         });
       } else {
-        orderMap.get(key).orderItems.push(item);
+        orderMap.get(key).kitchenItems.push(item);
         // Recalculer si le groupe a des items en retard
-        const hasOverdueItems = orderMap.get(key).orderItems
-          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
+        const hasOverdueItems = orderMap.get(key).kitchenItems
+          .some((ki: any) => overdueOrderItemIds.includes(ki.id));
         orderMap.get(key).isOverdue = hasOverdueItems;
       }
     });
@@ -55,34 +56,72 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrder
     });
 
     return new Map(sortedEntries);
-  }, [orders, orderItems, overdueOrderIds, overdueOrderItemIds]);
+  }, [orders, kitchenItems, overdueOrderIds, overdueOrderItemIds]);
 
   return groupedOrders;
 }
 
 export default function KitchenPage() {
-  // Utilisation des hooks Redux uniquement
+  // Utilisation des hooks Redux + initialisation WebSocket
   const { orders, loading, error, updateOrderItemStatus } = useOrders();
-  const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
+  const { updateOrderLineItemStatus } = useOrderLines();
+
+  // IMPORTANT: Initialiser la connexion WebSocket
+  const { isLoading: globalLoading } = useRestaurant();
+  const kitchenItems = useSelector(selectAllKitchenItems);
   const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
   const { showToast } = useToast();
 
-  // Filtrer les commandes et items selon les statuts disponibles en cuisine
+  // Filtrer les items selon les statuts disponibles en cuisine
+  const filteredKitchenItems = useMemo(() => {
+
+    const filtered = kitchenItems.filter(item => {
+      const shouldInclude = AVAILABLE_STATUSES.includes(item.status);
+      return shouldInclude;
+    });
+
+    return filtered;
+  }, [kitchenItems]);
+
+  // Récupérer les commandes qui ont des items en cuisine
   const kitchenOrders = useMemo(() => {
-    return orders.filter(order =>
-      order.orderItems.some(item => AVAILABLE_STATUSES.includes(item.status))
-    );
-  }, [orders]);
+    const orderIds = [...new Set(filteredKitchenItems.map(item => item.orderId))];
+    const filteredOrders = orders.filter(order => orderIds.includes(order.id));
 
-  const kitchenOrderItems = useMemo(() => {
-    return orderItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
-  }, [orderItems]);
+    return filteredOrders;
+  }, [orders, filteredKitchenItems]);
 
-  const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems, overdueOrderIds, overdueOrderItemIds);
+  const groupedOrders = useOrderGrouping(kitchenOrders, filteredKitchenItems, overdueOrderIds, overdueOrderItemIds);
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
-      await updateOrderItemStatus(order.orderItems.map(oi => oi.id), newStatus);
+      // Récupérer les items spécifiques de cette commande avec ce statut à mettre à jour
+      const itemsToUpdate = (order as any).kitchenItems || [];
+
+      // Séparer OrderLines (articles individuels) et OrderLineItems (items de menu)
+      const orderLineIds: string[] = [];
+      const orderLineItemIds: string[] = [];
+
+      itemsToUpdate.forEach((item: any) => {
+        if (item.type === 'ITEM') {
+          orderLineIds.push(item.id);
+        } else if (item.type === 'MENU_ITEM') {
+          orderLineItemIds.push(item.id);
+        }
+      });
+
+      // Mettre à jour les OrderLines (articles individuels)
+      if (orderLineIds.length > 0) {
+        await updateOrderItemStatus(orderLineIds, newStatus);
+      }
+
+      // Mettre à jour les OrderLineItems (items de menu)
+      if (orderLineItemIds.length > 0) {
+        for (const itemId of orderLineItemIds) {
+          await updateOrderLineItemStatus(itemId, newStatus);
+        }
+      }
+
       // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
     } catch (error: any) {
       console.error('Error updating status:', error);

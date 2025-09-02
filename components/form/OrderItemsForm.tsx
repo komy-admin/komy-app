@@ -10,7 +10,6 @@ import { Status } from '~/types/status.enum';
 import { useToast } from '~/components/ToastProvider';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { useMenus } from '~/hooks/useMenus';
-import { useMenuOrderGroups } from '~/hooks/useMenuOrderGroups';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { AdminFormData, AdminFormRef } from '~/components/admin/AdminFormView';
 
@@ -70,7 +69,6 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
 
   const { showToast } = useToast();
   const { activeMenus, getMenuCategoryItems } = useMenus();
-  const { getMenuOrderGroupsByOrderId } = useMenuOrderGroups();
   const { 
     createOrderLines,
     createOrderWithLines,
@@ -558,10 +556,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
         .reduce((total, line) => total + line.totalPrice, 0);
       
       // 2. Prix des menus existants qui n'ont PAS de drafts
-      const menuGroups = getMenuOrderGroupsByOrderId(order.id) || [];
-      const existingMenusWithoutDrafts = menuGroups.filter(mg => !savingMenuQuantitySnapshotRef.current[mg.menuId]);
-      const existingMenusTotal = existingMenusWithoutDrafts
-        .reduce((total, menuGroup) => total + parseFloat(menuGroup.totalPrice.toString()), 0);
+      const menuLines = (order.lines || [])
+        .filter(line => line.type === OrderLineType.MENU && line.menu && !savingMenuQuantitySnapshotRef.current[line.menu.id]);
+      const existingMenusTotal = menuLines
+        .reduce((total, line) => total + line.totalPrice, 0);
       
       // 3. Prix des articles depuis les snapshots (existants + drafts)
       const snapshotItemsTotal = draftItems.reduce((total, draft) => {
@@ -594,9 +592,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
       .reduce((total, line) => total + line.totalPrice, 0);
     
     // 2. Prix des menus existants (sauvegardés)
-    const menuGroups = getMenuOrderGroupsByOrderId(order.id);
-    const existingMenusTotal = menuGroups.reduce((total, menuGroup) => {
-      return total + parseFloat(menuGroup.totalPrice.toString());
+    const menuLines = (order.lines || [])
+      .filter(line => line.type === OrderLineType.MENU);
+    const existingMenusTotal = menuLines.reduce((total, line) => {
+      return total + line.totalPrice;
     }, 0);
     
     // 3. Prix des articles ajoutés localement
@@ -616,7 +615,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     }, 0);
     
     return existingItemsTotal + existingMenusTotal + draftItemsTotal + draftMenusTotal;
-  }, [order.lines, getMenuOrderGroupsByOrderId, order.id, draftItems, draftMenus, itemsIndex, menusIndex]);
+  }, [order.lines, order.id, draftItems, draftMenus, itemsIndex, menusIndex]);
 
 
   // ✅ Vérifier si un menu peut être ajouté directement (toutes catégories requises = 1 article ou 0 article)

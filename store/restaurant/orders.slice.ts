@@ -1,8 +1,9 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import { Order } from '~/types/order.types';
-import { OrderLine, OrderLineItem } from '~/types/order-line.types';
+import { OrderLine, OrderLineItem, OrderLineType } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { getMostImportantStatus } from '~/lib/utils';
+import { RestaurantState } from '.';
 
 // Types pour le state des orders
 export interface OrdersState {
@@ -89,13 +90,8 @@ const ordersSlice = createSlice({
           state.orders[order.id] = order;
           
           // Normaliser les OrderLines
-          order.lines.forEach(orderLine => {
+          order.lines?.forEach(orderLine => {
             state.orderLines[orderLine.id] = orderLine;
-            
-            // Normaliser les OrderLineItems des menus
-            orderLine.items?.forEach(orderLineItem => {
-              state.orderLineItems[orderLineItem.id] = orderLineItem;
-            });
           });
         }
       });
@@ -204,7 +200,7 @@ const ordersSlice = createSlice({
 
     // WebSocket: Mise à jour du statut des OrderLines (items individuels)
     orderLinesStatusUpdated: (state, action: PayloadAction<OrderLinesStatusUpdatedPayload>) => {
-      const { orderLineIds, status } = action.payload;
+      const { orderLineIds, status, updatedAt } = action.payload;
       
       orderLineIds.forEach(orderLineId => {
         const orderLine = state.orderLines[orderLineId];
@@ -217,7 +213,7 @@ const ordersSlice = createSlice({
 
     // WebSocket: Mise à jour du statut des OrderLineItems (items dans les menus)
     orderLineItemsStatusUpdated: (state, action: PayloadAction<OrderLineItemsStatusUpdatedPayload>) => {
-      const { orderLineItemIds, status } = action.payload;
+      const { orderLineItemIds, status, updatedAt } = action.payload;
       
       orderLineItemIds.forEach(orderLineItemId => {
         const orderLineItem = state.orderLineItems[orderLineItemId];
@@ -277,7 +273,36 @@ export const selectOrdersError = createSelector(
 
 export const selectAllOrderLines = createSelector(
   [selectOrdersState],
-  (ordersState) => ordersState ? Object.values(ordersState.orderLines) : []
+  (ordersState) => {
+    const result = ordersState ? Object.values(ordersState.orderLines) : [];
+    return result;
+  }
+);
+
+// Sélecteur enrichi avec orderId pour les OrderLines
+export const selectAllOrderLinesWithOrderId = createSelector(
+  [
+    (state: { restaurant: RestaurantState }) => selectOrders({ orders: state.restaurant.orders }),
+    (state: { restaurant: RestaurantState }) => selectAllOrderLines({ orders: state.restaurant.orders })
+  ],
+  (orders, orderLines) => {
+    
+    const result = orderLines.map(orderLine => {
+      // Trouver l'order qui contient cette OrderLine
+      const order = orders.find(order => 
+        order.lines && order.lines.some(line => line.id === orderLine.id)
+      );
+      
+      const enriched = {
+        ...orderLine,
+        orderId: order?.id || ''
+      };
+      
+      return enriched;
+    });
+    
+    return result;
+  }
 );
 
 export const selectOrderLineById = (orderLineId: string) => createSelector(
@@ -287,7 +312,115 @@ export const selectOrderLineById = (orderLineId: string) => createSelector(
 
 export const selectAllOrderLineItems = createSelector(
   [selectOrdersState],
-  (ordersState) => ordersState ? Object.values(ordersState.orderLineItems) : []
+  (ordersState) => {
+    const result = ordersState ? Object.values(ordersState.orderLineItems) : [];
+    return result;
+  }
+);
+
+// Sélecteur enrichi pour les OrderLineItems avec contexte (orderId, menuName, etc.)
+export const selectAllOrderLineItemsWithContext = createSelector(
+  [
+    (state: { restaurant: RestaurantState }) => selectOrders({ orders: state.restaurant.orders }),
+    (state: { restaurant: RestaurantState }) => selectAllOrderLines({ orders: state.restaurant.orders }),
+    (state: { restaurant: RestaurantState }) => selectAllOrderLineItems({ orders: state.restaurant.orders })
+  ],
+  (orders, orderLines, orderLineItems) => {
+    
+    const result = orderLineItems.map(orderLineItem => {
+      // Trouver l'OrderLine parente (le menu)
+      const parentOrderLine = orderLines.find(line => 
+        line.items && line.items.some(item => item.id === orderLineItem.id)
+      );
+      
+      // Trouver l'order qui contient cette OrderLine
+      const order = orders.find(order => 
+        order.lines && order.lines.some(line => line.id === parentOrderLine?.id)
+      );
+      
+      const enriched = {
+        ...orderLineItem,
+        orderId: order?.id || '',
+        menuId: parentOrderLine?.menu?.id || '',
+        menuName: parentOrderLine?.menu?.name || 'Menu',
+        orderLineId: parentOrderLine?.id || ''
+      };
+      
+      return enriched;
+    });
+    
+    return result;
+  }
+);
+
+// Sélecteur combiné pour la cuisine : OrderLines individuelles + OrderLineItems des menus
+export const selectAllKitchenItems = createSelector(
+  [
+      (state: { restaurant: RestaurantState }) => selectOrders({ orders: state.restaurant.orders })
+  ],
+  (orders) => {
+    
+    const kitchenItems: Array<{
+      id: string;
+      orderId: string;
+      status: Status;
+      type: 'ITEM' | 'MENU_ITEM';
+      itemName: string;
+      itemType?: string;
+      menuName?: string;
+      menuId?: string;
+      orderLineId?: string;
+    }> = [];
+
+    console.log('Orders:', orders)
+    
+    orders.forEach(order => {
+      if (!order.lines) {
+        return;
+      }
+
+      order.lines.forEach(line => {
+        // Ajouter les OrderLines individuelles (type ITEM)
+        if (line.type === OrderLineType.ITEM) {
+          
+          if (line.status) {
+            const item = {
+              id: line.id,
+              orderId: order.id,
+              status: line.status,
+              type: 'ITEM' as const,
+              itemName: line.item?.name || 'Article',
+              itemType: line.item?.itemType?.name
+            };
+            kitchenItems.push(item);
+          }
+        }
+        
+        // Ajouter les OrderLineItems des menus (type MENU)
+        if (line.type === OrderLineType.MENU && line.items) {
+
+          line.items.forEach(orderLineItem => {
+            const menuItem = {
+              id: orderLineItem.id,
+              orderId: order.id,
+              status: orderLineItem.status,
+              type: 'MENU_ITEM' as const,
+              itemName: orderLineItem.item?.name || 'Article de menu',
+              itemType: orderLineItem.item?.itemType?.name,
+              menuName: line.menu?.name || 'Menu',
+              menuId: line.menu?.id || '',
+              orderLineId: line.id
+            };
+            kitchenItems.push(menuItem);
+          });
+        }
+      });
+    });
+
+    console.log('Kitchen items:', kitchenItems)
+    
+    return kitchenItems;
+  }
 );
 
 export const selectOrderLineItemById = (orderLineItemId: string) => createSelector(
@@ -308,7 +441,10 @@ export const selectOrderHasLines = (orderId: string) => createSelector(
 
 // Calcul du statut global d'une commande basé sur les OrderLines
 export const selectOrderStatusFromLines = (orderId: string) => createSelector(
-  [selectOrderLinesByOrderId(orderId), selectOrdersState],
+  [
+    selectOrderLinesByOrderId(orderId),
+    (state: { restaurant: RestaurantState }) => state.restaurant.orders
+  ],
   (orderLines, ordersState) => {
     if (!orderLines.length) return null;
     
@@ -335,7 +471,10 @@ export const selectOrderStatusFromLines = (orderId: string) => createSelector(
 
 // Progression des menus dans une commande
 export const selectOrderMenuProgress = (orderId: string) => createSelector(
-  [selectOrderLinesByOrderId(orderId), selectOrdersState],
+  [
+    selectOrderLinesByOrderId(orderId),
+    (state: { restaurant: RestaurantState }) => state.restaurant.orders
+  ],
   (orderLines, ordersState) => {
     const menuProgress: Record<string, { completed: number; total: number; percentage: number; hasErrors: boolean }> = {};
     

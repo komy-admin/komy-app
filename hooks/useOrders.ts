@@ -12,7 +12,7 @@ import {
   selectOrdersError,
 } from '~/store/restaurant';
 import { orderApiService } from '~/api/order.api';
-import { orderItemApiService } from '~/api/order-item.api';
+import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
 import { FilterQueryBuilder } from './useFilter/query-builder';
@@ -22,6 +22,11 @@ import { FilterQueryBuilder } from './useFilter/query-builder';
  */
 export const useOrders = () => {
   const dispatch = useDispatch();
+  const { 
+    deleteOrderLine, 
+    deleteOrderLines, 
+    updateManyOrderLinesStatus 
+  } = useOrderLines();
 
   // Sélecteurs
   const orders = useSelector((state: any) => selectOrders({ orders: state.restaurant.orders }));
@@ -103,31 +108,26 @@ export const useOrders = () => {
         throw new Error('Commande non trouvée');
       }
 
-      let orderItemsToUpdate;
+      // Récupérer les OrderLines à mettre à jour
+      let orderLinesToUpdate = order.lines || [];
+      
       if (itemTypeId) {
-        orderItemsToUpdate = order.orderItems.filter(
-          orderItem => orderItem.item.itemType.id === itemTypeId
-        );
-      } else {
-        orderItemsToUpdate = order.orderItems;
+        // Filtrer par itemType si spécifié (pour l'instant on met à jour toutes les lignes)
+        orderLinesToUpdate = orderLinesToUpdate.filter(line => line.type === 'ITEM');
       }
 
-      const orderItemsIds = orderItemsToUpdate.map(orderItem => orderItem.id);
+      const orderLineIds = orderLinesToUpdate.map(line => line.id);
 
-      await orderItemApiService.updateManyStatus(orderItemsIds, status);
-
-      dispatch(restaurantActions.updateOrderStatus({
-        orderId,
-        status,
-        itemTypeId,
-      }));
+      if (orderLineIds.length > 0) {
+        await updateManyOrderLinesStatus(orderLineIds, status);
+      }
 
       return { orderId, status, itemTypeId };
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
       throw error;
     }
-  }, [orders, dispatch]);
+  }, [orders, updateManyOrderLinesStatus]);
 
   // Utilitaires
   const getOrderById = useCallback((orderId: string) => {
@@ -140,181 +140,89 @@ export const useOrders = () => {
 
   const getOrderItems = useCallback((orderId: string) => {
     const order = getOrderById(orderId);
-    return order?.orderItems || [];
+    return order?.lines || [];
   }, [getOrderById]);
 
   const getOrderItemsByType = useCallback((orderId: string, itemTypeId: string) => {
     const order = getOrderById(orderId);
     if (!order) return [];
     
-    return order.orderItems.filter(
-      orderItem => orderItem.item.itemType.id === itemTypeId
-    );
+    // Filtrer les OrderLines de type ITEM (pour l'instant on retourne toutes les lignes ITEM)
+    return (order.lines || []).filter(line => line.type === 'ITEM');
   }, [getOrderById]);
 
   const getOrdersByRoom = useCallback((roomId: string) => {
     return orders.filter(order => order.table?.roomId === roomId);
   }, [orders]);
 
-  // Nouvelles méthodes pour la structure avec menus
+  // Nouvelles méthodes pour la structure OrderLine
   const getOrderIndividualItems = useCallback((orderId: string) => {
     const order = getOrderById(orderId);
-    if (order?.individualItems) {
-      return order.individualItems;
-    }
-    // Fallback: filtrer les items sans menuGroupId
-    return order?.orderItems?.filter(item => !item.menuGroupId) || [];
+    if (!order) return [];
+    // Retourner les OrderLines de type ITEM
+    return (order.lines || []).filter(line => line.type === 'ITEM');
   }, [getOrderById]);
 
   const getOrderMenus = useCallback((orderId: string) => {
     const order = getOrderById(orderId);
-    return order?.menus || [];
+    if (!order) return [];
+    // Retourner les OrderLines de type MENU
+    return (order.lines || []).filter(line => line.type === 'MENU');
   }, [getOrderById]);
 
   const getOrderAllItems = useCallback((orderId: string) => {
     const order = getOrderById(orderId);
     if (!order) return [];
     
-    const allItems = [];
-    
-    // Ajouter les items individuels
-    if (order.individualItems) {
-      allItems.push(...order.individualItems);
-    }
-    
-    // Ajouter les items des menus
-    if (order.menus) {
-      order.menus.forEach(menu => {
-        if (menu.orderItems) {
-          allItems.push(...menu.orderItems);
-        }
-      });
-    }
-    
-    // Fallback sur l'ancienne structure si la nouvelle est vide
-    if (allItems.length === 0 && order.orderItems) {
-      allItems.push(...order.orderItems);
-    }
-    
-    return allItems;
+    // Retourner toutes les OrderLines
+    return order.lines || [];
   }, [getOrderById]);
 
   const hasOrderMenus = useCallback((orderId: string) => {
     const order = getOrderById(orderId);
-    return Boolean(order?.menus && order.menus.length > 0);
+    return Boolean(order?.lines && order.lines.some(line => line.type === 'MENU'));
   }, [getOrderById]);
 
   const hasOrderIndividualItems = useCallback((orderId: string) => {
     const order = getOrderById(orderId);
-    return Boolean(order?.individualItems && order.individualItems.length > 0);
+    return Boolean(order?.lines && order.lines.some(line => line.type === 'ITEM'));
   }, [getOrderById]);
 
-  // Actions pour les orderItems
-  const createOrderItem = useCallback(async (
-    orderId: string, 
-    itemId: string, 
-    status: Status = Status.DRAFT,
-    menuGroupId?: string | null
-  ) => {
+  // Actions pour les orderItems - MIGRÉES vers OrderLine
+  const deleteOrderItem = useCallback(async (orderLineId: string) => {
     try {
-      const newOrderItem = await orderItemApiService.create({
-        orderId,
-        itemId,
-        status,
-        menuGroupId
-      });
-
-      // Mettre à jour le store Redux
-      dispatch(restaurantActions.updateOrderItem({ orderItem: newOrderItem }));
-      return newOrderItem;
+      await deleteOrderLine(orderLineId);
     } catch (error) {
-      console.error('Erreur lors de la création de l\'orderItem:', error);
+      console.error('Erreur lors de la suppression de l\'orderLine:', error);
       throw error;
     }
-  }, [dispatch]);
+  }, [deleteOrderLine]);
 
-  const deleteOrderItem = useCallback(async (orderItemId: string) => {
+  const deleteManyOrderItems = useCallback(async (orderLineIds: string[]) => {
     try {
-      await orderItemApiService.delete(orderItemId);
+      await deleteOrderLines(orderLineIds);
       
-      // Mettre à jour le store Redux
-      dispatch(restaurantActions.deleteOrderItem({ orderItemId }));
+      return {
+        deletedCount: orderLineIds.length,
+        deletedIds: orderLineIds
+      };
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'orderItem:', error);
+      console.error('Erreur lors de la suppression multiple d\'orderLines:', error);
       throw error;
     }
-  }, [dispatch]);
+  }, [deleteOrderLines]);
 
-  const deleteManyOrderItems = useCallback(async (orderItemIds: string[]) => {
+  const updateOrderItemStatus = useCallback(async (orderLineIds: string[], status: Status) => {
     try {
-      const result = await orderItemApiService.deleteManyOrderItems(orderItemIds);
-      
-      // Mettre à jour le store Redux pour chaque item supprimé
-      result.deletedIds.forEach(orderItemId => {
-        dispatch(restaurantActions.deleteOrderItem({ orderItemId }));
-      });
-      
-      return result;
+      await updateManyOrderLinesStatus(orderLineIds, status);
     } catch (error) {
-      console.error('Erreur lors de la suppression multiple d\'orderItems:', error);
+      console.error('Erreur lors de la mise à jour du statut des orderLines:', error);
       throw error;
     }
-  }, [dispatch]);
+  }, [updateManyOrderLinesStatus]);
 
-  const updateOrderItemStatus = useCallback(async (orderItemIds: string[], status: Status) => {
-    try {
-      const result = await orderItemApiService.updateManyStatus(orderItemIds, status);
-      
-      dispatch(restaurantActions.orderItemsStatusUpdated({
-        orderItemIds,
-        status,
-        updatedAt: result.updatedAt || new Date().toISOString()
-      }));
-
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut des orderItems:', error);
-      throw error;
-    }
-  }, [dispatch]);
-
-  // Nouvelle méthode pour créer des orderItems de menu
-  const createMenuOrderItems = useCallback(async (
-    orderId: string,
-    menuGroupId: string,
-    items: Array<{ itemId: string; status?: Status }>
-  ) => {
-    try {
-      const orderItems = await Promise.all(
-        items.map(({ itemId, status = Status.DRAFT }) =>
-          orderItemApiService.create({
-            orderId,
-            itemId,
-            status,
-            menuGroupId
-          })
-        )
-      );
-
-      // Mettre à jour le store Redux pour chaque item
-      orderItems.forEach(orderItem => {
-        dispatch(restaurantActions.updateOrderItem({ orderItem }));
-      });
-
-      return orderItems;
-    } catch (error) {
-      console.error('Erreur lors de la création des orderItems de menu:', error);
-      throw error;
-    }
-  }, [dispatch]);
-
-  // Méthode pour créer un item individuel (à la carte)
-  const createIndividualOrderItem = useCallback(async (
-    orderId: string,
-    itemId: string,
-    status: Status = Status.DRAFT
-  ) => {
-    return createOrderItem(orderId, itemId, status, null);
-  }, [createOrderItem]);
+  // NOTE: Les méthodes de création d'orderItems sont maintenant gérées 
+  // par OrderItemsForm via useOrderLines.createOrderLines() et createOrderWithLines()
 
   return {
     // Données
@@ -335,10 +243,7 @@ export const useOrders = () => {
     deleteOrder,
     updateOrderStatus,
     
-    // Actions CRUD pour les orderItems
-    createOrderItem,
-    createMenuOrderItems,
-    createIndividualOrderItem,
+    // Actions CRUD pour les orderItems (migrées vers OrderLine)
     deleteOrderItem,
     deleteManyOrderItems,
     updateOrderItemStatus,

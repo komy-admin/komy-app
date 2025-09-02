@@ -23,6 +23,8 @@ import ordersReducer, {
   selectOrderByTableId,
   selectOrdersLoading,
   selectOrdersError,
+  selectAllOrderLinesWithOrderId,
+  selectAllKitchenItems,
 } from './orders.slice';
 import menuReducer, { 
   menuActions,
@@ -387,6 +389,8 @@ export {
   selectOrderByTableId,
   selectOrdersLoading,
   selectOrdersError,
+  selectAllOrderLinesWithOrderId,
+  selectAllKitchenItems,
   
   // Menu
   selectAllItems,

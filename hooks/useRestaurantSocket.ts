@@ -112,65 +112,7 @@ export const useRestaurantSocket = () => {
         }));
       },
 
-      // 📜 Événements OrderItems (legacy - à supprimer progressivement)
-      orderitem_created: (event: WebSocketEvent) => {
-        console.log('⚠️ LEGACY: Nouvel article de commande:', event.data.id);
-        // Ajouter le nouvel item
-        dispatch(restaurantActions.updateOrderItem({ orderItem: event.data }));
-      },
-
-      // Événement optimisé pour la création en lot
-      orderitem_batch_created: (event: WebSocketEvent) => {
-        console.log('⚠️ LEGACY: Création batch d\'articles:', event.data.createdCount, 'items');
-        
-        dispatch(restaurantActions.createOrderItemsBatch({
-          orderItems: event.data.createdItems
-        }));
-        
-        // Note: MenuOrderGroups devraient être gérés par des événements WebSocket séparés
-        if (event.data.menuOrderGroups && event.data.menuOrderGroups.length > 0) {
-          console.log('🍽️ MenuOrderGroups reçus via batch:', event.data.menuOrderGroups.length);
-          event.data.menuOrderGroups.forEach((menuOrderGroup: any) => {
-            dispatch(restaurantActions.addMenuOrderGroup(menuOrderGroup));
-          });
-        }
-      },
-      
-      orderitem_updated: (event: WebSocketEvent) => {
-        // Format legacy : pour les mises à jour individuelles (si nécessaires)
-        console.log('⚠️ LEGACY: Article de commande mis à jour:', event.data.id);
-        dispatch(restaurantActions.updateOrderItem({ orderItem: event.data }));
-      },
-
-      // Événement optimisé pour les mises à jour en lot
-      orderitem_batch_updated: (event: WebSocketEvent) => {
-        console.log('⚠️ LEGACY: Mise à jour batch d\'articles:', event.data.updatedCount, 'items');
-        dispatch(restaurantActions.orderItemsStatusUpdated({
-          orderItemIds: event.data.orderItemIds,
-          status: event.data.status
-        }));
-      },
-      
-      orderitem_deleted: (event: WebSocketEvent) => {
-        // Gestion des suppressions d'OrderItems individuels ET des MenuOrderGroups
-        if (event.data.type === 'menu_order_group') {
-          console.log('⚠️ LEGACY: Menu complet supprimé:', event.data.id);
-          
-          // Supprimer tous les OrderItems du MenuOrderGroup en lot (performance optimisée)
-          const orderItemIds = event.data.deletedOrderItemIds.map((id: number) => id.toString());
-          dispatch(restaurantActions.deleteOrderItemsBatch({ orderItemIds }));
-          
-          // Supprimer le MenuOrderGroup du store
-          dispatch(restaurantActions.deleteMenuOrderGroup({ 
-            menuOrderGroupId: event.data.id.toString() 
-          }));
-          
-        } else {
-          // Suppression d'un OrderItem individuel (comportement existant)
-          console.log('⚠️ LEGACY: Article de commande supprimé:', event.data.id);
-          dispatch(restaurantActions.deleteOrderItem({ orderItemId: event.data.id }));
-        }
-      },
+      // 📜 Événements OrderItems (SUPPRIMÉS - remplacés par OrderLines)
 
       // Événements Tables
       table_created: (event: WebSocketEvent) => {
@@ -268,26 +210,7 @@ export const useRestaurantSocket = () => {
         dispatch(restaurantActions.deleteMenuCategoryItem({ menuCategoryItemId: event.data.id }));
       },
 
-      // 📜 Événements MenuOrderGroups (LEGACY - remplacés par OrderLines de type MENU)
-      menuordergroup_created: (event: WebSocketEvent) => {
-        console.log('⚠️ LEGACY: Nouveau groupe de menu créé via WebSocket:', event.data.id);
-        console.log('📊 Données MenuOrderGroup WebSocket:', event.data);
-        dispatch(restaurantActions.addMenuOrderGroup(event.data));
-      },
-      
-      menuordergroup_updated: (event: WebSocketEvent) => {
-        console.log('⚠️ LEGACY: Groupe de menu mis à jour:', event.data.id);
-        // Note: Pas d'action update pour MenuOrderGroup pour l'instant
-        // Si nécessaire, ajoutez updateMenuOrderGroup dans le slice
-        console.warn('⚠️ Mise à jour de MenuOrderGroup non implémentée');
-      },
-      
-      menuordergroup_deleted: (event: WebSocketEvent) => {
-        console.log('⚠️ LEGACY: Groupe de menu supprimé:', event.data.id);
-        dispatch(restaurantActions.deleteMenuOrderGroup({ 
-          menuOrderGroupId: event.data.id 
-        }));
-      },
+      // 📜 Événements MenuOrderGroups (SUPPRIMÉS - remplacés par OrderLines de type MENU)
 
       // Événements Users
       user_created: (event: WebSocketEvent) => {

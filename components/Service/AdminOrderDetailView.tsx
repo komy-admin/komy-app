@@ -233,17 +233,17 @@ const AdminMenuOrderGroup = ({
 }: {
   menuOrderGroup: any,
   menuInfo: any, // Info du menu depuis order.menus
-  orderItems: any[],
+  orderItems: any[], // OrderLineItems du menu
   isExpanded: boolean,
   onToggle: () => void,
   onDelete: () => void,
-  onDeleteOrderItem: (orderItemId: string) => void,
-  onUpdateOrderItemStatus?: (orderItems: any[], status: Status) => void,
+  onDeleteOrderItem: (orderLineId: string) => void,
+  onUpdateOrderItemStatus?: (orderLines: any[], status: Status) => void,
   groupId: string,
   isMenuOpen: boolean,
   onMenuOpenChange: (groupId: string | null) => void
 }) => {
-  const statuses = orderItems.map(orderItem => orderItem.status);
+  const statuses = orderItems.map((orderLineItem: any) => orderLineItem.status);
   const itemStatus = getMostImportantStatus(statuses); // Utilisation de la fonction générique
   const hasMixed = hasMenuMixedStatuses(statuses);
 
@@ -434,7 +434,7 @@ const AdminMenuOrderGroup = ({
                 }
                 acc[categoryName].push(orderItem);
                 return acc;
-              }, {} as Record<string, OrderItem[]>);
+              }, {} as Record<string, any[]>);
 
               return Object.entries(itemsByCategory).map(([categoryName, categoryItems]) => (
                 <View key={categoryName}>
@@ -454,12 +454,12 @@ const AdminMenuOrderGroup = ({
                   </View>
 
                   {/* Items de la catégorie */}
-                  {categoryItems.map((orderItem, index) => (
-                    <AdminOrderItem
-                      key={orderItem.id}
-                      orderItem={orderItem}
-                      onDelete={() => onDeleteOrderItem(orderItem.id)}
-                      onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderItem], newStatus) : undefined}
+                  {(categoryItems as any[]).map((orderLineItem: any, index: number) => (
+                    <AdminOrderLineItem
+                      key={orderLineItem.id}
+                      orderLineItem={orderLineItem}
+                      onDelete={() => onDeleteOrderItem(orderLineItem.id)}
+                      onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLineItem], newStatus) : undefined}
                       isGroupMenuOpen={isMenuOpen}
                       isFirstInCategory={index === 0}
                       isMenuItem={true}
@@ -500,8 +500,32 @@ const AdminMenuOrderGroup = ({
   );
 };
 
-const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, onDeleteOrderItem, onUpdateOrderItemStatus, onDeleteGroup, groupId, isMenuOpen, onMenuOpenChange }: any) => {
-  const itemStatus = getMostImportantStatus(orderItems.map((orderItem: any) => orderItem.status || Status.PENDING));
+const AdminOrderItemsGroup = ({ 
+  itemType, 
+  status, 
+  orderItems, 
+  isExpanded, 
+  onToggle, 
+  onDeleteOrderItem, 
+  onUpdateOrderItemStatus, 
+  onDeleteGroup, 
+  groupId, 
+  isMenuOpen, 
+  onMenuOpenChange 
+}: {
+  itemType: ItemType;
+  status: Status;
+  orderItems: OrderLine[];
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDeleteOrderItem: (orderLineId: string) => void;
+  onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
+  onDeleteGroup?: (orderLines: OrderLine[]) => void;
+  groupId: string;
+  isMenuOpen: boolean;
+  onMenuOpenChange: (groupId: string | null) => void;
+}) => {
+  const itemStatus = getMostImportantStatus(orderItems.map((orderLine: OrderLine) => orderLine.status || Status.PENDING));
   const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
   const [showGroupStatusSelector, setShowGroupStatusSelector] = useState(false);
 
@@ -662,14 +686,14 @@ const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onTogg
           <View style={{
             backgroundColor: '#FAFBFC',
           }}>
-            {orderItems.map((orderItem, index) => (
-              <View key={orderItem.id} style={{
+            {orderItems.map((orderLine: any, index: number) => (
+              <View key={orderLine.id} style={{
                 backgroundColor: index % 2 === 0 ? 'white' : '#F8F9FA'
               }}>
                 <AdminOrderLineItem
-                  orderLine={orderItem}
-                  onDelete={() => onDeleteOrderItem(orderItem.id)}
-                  onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderItem], newStatus) : undefined}
+                  orderLine={orderLine}
+                  onDelete={() => onDeleteOrderItem(orderLine.id)}
+                  onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLine], newStatus) : undefined}
                   isGroupMenuOpen={false}
                 />
               </View>
@@ -710,9 +734,9 @@ const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onTogg
 interface AdminOrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
-  onDeleteOrderItem: (orderItemId: string) => void;
-  onDeleteManyOrderItems?: (orderItemIds: string[]) => Promise<{ deletedCount: number; deletedIds: string[] }>;
-  onUpdateOrderItemStatus?: (orderItems: any[], status: Status) => void;
+  onDeleteOrderItem: (orderLineId: string) => void;
+  onDeleteManyOrderItems?: (orderLineIds: string[]) => Promise<{ deletedCount: number; deletedIds: string[] }>;
+  onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
 }
 
 export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderItem, onDeleteManyOrderItems, onUpdateOrderItemStatus }: AdminOrderDetailViewProps) {
@@ -743,7 +767,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
   // OPTIMISÉ : Memoization du groupement coûteux
   const groupedItems = useMemo(() => {
     // Récupérer toutes les OrderLines de type ITEM
-    const individualItems = (order.lines || []).filter(line => line.type === OrderLineType.ITEM);
+    const individualItems = (order.lines || []).filter((line: OrderLine) => line.type === OrderLineType.ITEM);
     
     if (individualItems.length === 0) return [];
 
@@ -813,7 +837,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
       >
         {(() => {
           // Vérifier s'il y a des menus dans les OrderLines
-          const menuLines = (order.lines || []).filter(line => line.type === OrderLineType.MENU);
+          const menuLines = (order.lines || []).filter((line: OrderLine) => line.type === OrderLineType.MENU);
           const hasMenus = menuLines.length > 0;
           const hasIndividualItems = groupedItems && groupedItems.length > 0;
 
@@ -835,7 +859,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                   </View>
 
                   {/* Affichage des menus */}
-                  {menuLines.map((menuLine) => (
+                  {menuLines.map((menuLine: OrderLine) => (
                     <View key={menuLine.id} style={{ marginBottom: 12 }}>
                       <View style={{
                         backgroundColor: '#f8f9fa',
@@ -881,7 +905,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                               }}>
                                 Articles du menu:
                               </Text>
-                              {menuLine.items.map((orderLineItem) => (
+                              {menuLine.items!.map((orderLineItem: any) => (
                                 <AdminOrderLineItem
                                   key={orderLineItem.id}
                                   orderLineItem={orderLineItem}
@@ -920,7 +944,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
               )}
 
               {/* Affichage des groupes d'items individuels */}
-              {groupedItems.map((group) => (
+              {groupedItems.map((group: { id: string; itemType: ItemType; status: Status; orderItems: OrderLine[] }) => (
                 <AdminOrderItemsGroup
                   key={group.id}
                   itemType={group.itemType}
@@ -934,15 +958,15 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                   }}
                   onDeleteOrderItem={onDeleteOrderItem}
                   onUpdateOrderItemStatus={onUpdateOrderItemStatus}
-                  onDeleteGroup={async (orderItems) => {
+                  onDeleteGroup={async (orderLines: OrderLine[]) => {
                     // Utiliser l'API de suppression en lot si disponible, sinon fallback vers les appels individuels
                     if (onDeleteManyOrderItems) {
-                      const orderItemIds = orderItems.map(orderItem => orderItem.id);
-                      await onDeleteManyOrderItems(orderItemIds);
+                      const orderLineIds = orderLines.map((orderLine: OrderLine) => orderLine.id);
+                      await onDeleteManyOrderItems(orderLineIds);
                     } else {
                       // Fallback: supprimer tous les éléments du groupe en parallèle
-                      const deletePromises = orderItems.map(orderItem =>
-                        Promise.resolve(onDeleteOrderItem(orderItem.id))
+                      const deletePromises = orderLines.map((orderLine: OrderLine) =>
+                        Promise.resolve(onDeleteOrderItem(orderLine.id))
                       );
                       await Promise.all(deletePromises);
                     }

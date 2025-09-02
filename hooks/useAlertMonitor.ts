@@ -64,18 +64,17 @@ export const useAlertMonitor = () => {
       
       let hasOverdueItems = false;
       
-      if (order.orderItems?.length) {
-        for (let j = 0; j < order.orderItems.length; j++) {
-          const orderItem = order.orderItems[j];
-          const itemUpdateTime = orderItem.updatedAt 
-            ? new Date(orderItem.updatedAt).getTime()
-            : new Date(order.createdAt).getTime();
+      if (order.lines?.length) {
+        for (let j = 0; j < order.lines.length; j++) {
+          const orderLine = order.lines[j];
+          // Pour les OrderLines, on utilise createdAt/updatedAt de la commande
+          const itemUpdateTime = new Date(order.updatedAt || order.createdAt).getTime();
           
           const timeDiff = currentTime - itemUpdateTime;
           
           // Vérifier si en retard (optimisé sans calcul inutile de minutes)
           if (timeDiff > alertTimeMs) {
-            overdueOrderItemIds.push(orderItem.id);
+            overdueOrderItemIds.push(orderLine.id);
             hasOverdueItems = true;
             
           }

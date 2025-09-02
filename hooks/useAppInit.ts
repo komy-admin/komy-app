@@ -6,7 +6,6 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
-import { useMenuOrderGroups } from './useMenuOrderGroups';
 import { restaurantActions } from '~/store/restaurant';
 import { setAccountConfig } from '@/store/account-config.slice';
 import { accountConfigApiService } from '~/api/account-config.api';
@@ -21,7 +20,6 @@ interface InitializationState {
     itemTypes: boolean;
     items: boolean;
     menus: boolean;
-    menuOrderGroups: boolean;
     orders: boolean;
     users: boolean;
     accountConfig: boolean;
@@ -43,7 +41,6 @@ export const useAppInit = () => {
   const { loadItemTypes, loadItems } = useMenu();
   const { loadAllMenus } = useMenus();
   const { loadUsers } = useUsers();
-  const { initializeMenuOrderGroups } = useMenuOrderGroups();
 
   // État d'initialisation
   const [state, setState] = useState<InitializationState>({
@@ -56,7 +53,6 @@ export const useAppInit = () => {
       itemTypes: false,
       items: false,
       menus: false,
-      menuOrderGroups: false,
       orders: false,
       users: false,
       accountConfig: false,
@@ -168,16 +164,6 @@ export const useAppInit = () => {
         })
       ]);
 
-      // Étape 4: Charger les MenuOrderGroups (après les menus)
-      console.log('🍽️ Chargement des MenuOrderGroups...');
-      await initializeMenuOrderGroups().then(() => {
-        updateProgress('menuOrderGroups', true);
-        console.log('✅ MenuOrderGroups chargés');
-      }).catch(error => {
-        console.error('⚠️ Erreur lors du chargement des MenuOrderGroups:', error);
-        updateProgress('menuOrderGroups', true); // Continuer même si erreur
-      });
-
       // Étape 5: Charger les commandes de la première salle
       if (rooms.length > 0) {
         console.log(`📝 Chargement des commandes pour la salle: ${rooms[0].name}`);
@@ -233,7 +219,6 @@ export const useAppInit = () => {
     loadItemTypes, 
     loadItems,
     loadAllMenus,
-    initializeMenuOrderGroups,
     loadOrdersForRoom,
     loadUsers,
     dispatch
@@ -255,7 +240,6 @@ export const useAppInit = () => {
           itemTypes: false,
           items: false,
           menus: false,
-          menuOrderGroups: false,
           orders: false,
           users: false,
           accountConfig: false,
