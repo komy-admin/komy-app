@@ -11,7 +11,7 @@ import {
   selectOrdersLoading,
   selectOrdersError,
 } from '~/store/restaurant';
-import { orderApiService } from '~/api/order.api';
+import { orderApiService, UpdateOrderPayload } from '~/api/order.api';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
@@ -76,13 +76,40 @@ export const useOrders = () => {
     }
   }, [dispatch]);
 
-  const updateOrder = useCallback(async (order: Order) => {
+  // const updateOrder = useCallback(async (order: Order) => {
+  //   try {
+  //     const updatedOrder = await orderApiService.update(order.id, order);
+  //     dispatch(restaurantActions.updateOrder({ order: updatedOrder }));
+  //     return updatedOrder;
+  //   } catch (error) {
+  //     console.error('Erreur lors de la mise à jour de la commande:', error);
+  //     throw error;
+  //   }
+  // }, [dispatch]);
+
+  // 🆕 Nouvelle fonction pour la mise à jour complète (bulk update)
+  const updateOrder = useCallback(async (payload: UpdateOrderPayload) => {
     try {
-      const updatedOrder = await orderApiService.update(order.id, order);
+      const orderId = payload.id;
+      console.log('🔄 [DEBUG] bulkUpdateOrder - Payload:', {
+        orderId,
+        tableId: payload.tableId,
+        linesCount: payload.lines?.length || 0,
+        lines: payload.lines?.map(line => ({
+          id: line.id,
+          type: line.type,
+          status: line.status,
+          itemName: line.item?.name || line.menu?.name,
+          itemsCount: line.items?.length || 0
+        }))
+      });
+
+      const updatedOrder = await orderApiService.update(orderId, payload);
+
       dispatch(restaurantActions.updateOrder({ order: updatedOrder }));
       return updatedOrder;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de la commande:', error);
+      console.error('Erreur lors de la mise à jour complète de la commande:', error);
       throw error;
     }
   }, [dispatch]);
