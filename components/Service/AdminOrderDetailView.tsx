@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { ItemType } from '~/types/item-type.types';
 import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, getMenuBorderStyle, hasMenuMixedStatuses } from '~/lib/utils';
+import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, getBorderStyle, hasMenuMixedStatuses } from '~/lib/utils';
 import { Order } from '~/types/order.types';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import StatusSelector from './StatusSelector';
@@ -263,7 +263,7 @@ const AdminMenuOrderGroup = ({
 
   const getGroupStyle = () => {
     const baseColor = getStatusColor(itemStatus);
-    const borderStyle = getMenuBorderStyle(statuses, baseColor);
+    const borderStyle = getBorderStyle(statuses, baseColor);
 
     return {
       backgroundColor: hasMixed
@@ -272,14 +272,6 @@ const AdminMenuOrderGroup = ({
       borderRadius: 16,
       overflow: 'hidden' as const,
       ...borderStyle, // Application du style de bordure (normale ou épaisse)
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: isExpanded ? 0.15 : 0.08,
-      shadowRadius: isExpanded ? 8 : 4,
-      elevation: isExpanded ? 6 : 3,
     };
   };
 
@@ -340,8 +332,6 @@ const AdminMenuOrderGroup = ({
                         borderRadius: 6,
                         paddingHorizontal: 8,
                         paddingVertical: 4,
-                        borderWidth: 1,
-                        borderColor: '#1A1A1A'
                       }}>
                         <Text style={{ fontSize: 10, color: '#1A1A1A', fontWeight: '600' }}>
                           STATUTS MIXTES
@@ -428,12 +418,12 @@ const AdminMenuOrderGroup = ({
             {/* Grouper les items par type d'item */}
             {(() => {
               // Grouper les orderItems par type d'item
-              const itemsByCategory = orderItems.reduce((acc, orderItem) => {
-                const categoryName = orderItem.item.itemType.name;
+              const itemsByCategory = orderItems.reduce((acc, orderLineItem) => {
+                const categoryName = orderLineItem.item.itemType.name;
                 if (!acc[categoryName]) {
                   acc[categoryName] = [];
                 }
-                acc[categoryName].push(orderItem);
+                acc[categoryName].push(orderLineItem);
                 return acc;
               }, {} as Record<string, any[]>);
 
@@ -544,20 +534,14 @@ const AdminOrderItemsGroup = ({
 
   const getGroupStyle = () => {
     const baseColor = getStatusColor(itemStatus);
+    const statuses = orderItems.map(orderItem => orderItem.status || Status.PENDING);
+    const borderStyle = getBorderStyle(statuses, baseColor);
+    
     return {
       backgroundColor: isExpanded ? 'white' : `${baseColor}80`,
       borderRadius: 16,
       overflow: 'hidden' as const,
-      borderWidth: 2,
-      borderColor: isExpanded ? baseColor : 'transparent',
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: isExpanded ? 0.15 : 0.08,
-      shadowRadius: isExpanded ? 8 : 4,
-      elevation: isExpanded ? 6 : 3,
+      ...borderStyle,
     };
   };
 
@@ -860,76 +844,39 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                     </Text>
                   </View>
 
-                  {/* Affichage des menus */}
+                  {/* Affichage des menus avec le style original */}
                   {menuLines.map((menuLine: OrderLine) => (
-                    <View key={menuLine.id} style={{ marginBottom: 12 }}>
-                      <View style={{
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: 16,
-                        overflow: 'hidden',
-                        borderWidth: 2,
-                        borderColor: '#e9ecef'
-                      }}>
-                        <View style={{ padding: 16 }}>
-                          <Text style={{
-                            fontSize: 18,
-                            fontWeight: '700',
-                            color: '#1A1A1A',
-                            marginBottom: 4
-                          }}>
-                            Menu : {menuLine.menu?.name || 'Menu'}
-                          </Text>
-                          <Text style={{
-                            fontSize: 14,
-                            color: '#666',
-                            marginBottom: 8
-                          }}>
-                            Quantité: {menuLine.quantity} • Prix: {menuLine.totalPrice}€
-                          </Text>
-                          {menuLine.note && (
-                            <Text style={{
-                              fontSize: 14,
-                              color: '#666',
-                              fontStyle: 'italic',
-                              marginBottom: 8
-                            }}>
-                              Note: {menuLine.note}
-                            </Text>
-                          )}
-
-                          {/* Affichage des items du menu */}
-                          {menuLine.items && menuLine.items.length > 0 && (
-                            <View style={{ marginTop: 12 }}>
-                              <Text style={{
-                                fontSize: 16,
-                                fontWeight: '600',
-                                marginBottom: 8
-                              }}>
-                                Articles du menu:
-                              </Text>
-                              {menuLine.items!.map((orderLineItem: any) => (
-                                <AdminOrderLineItem
-                                  key={orderLineItem.id}
-                                  orderLineItem={orderLineItem}
-                                  onUpdateStatus={onUpdateOrderItemStatus ? async (newStatus) => {
-                                    // Pour les items de menu, utiliser la nouvelle API spécialisée
-                                    console.log('🔄 [DEBUG] Update menu item status:', orderLineItem.id, newStatus);
-                                    try {
-                                      await updateOrderLineItemsStatus(order.id, [orderLineItem.id], newStatus);
-                                      showToast('Statut mis à jour avec succès.', 'success');
-                                    } catch (error) {
-                                      console.error('Erreur lors de la mise à jour du statut:', error);
-                                      showToast('Erreur lors de la mise à jour du statut.', 'error');
-                                    }
-                                  } : undefined}
-                                  isMenuItem={true}
-                                />
-                              ))}
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    </View>
+                    <AdminMenuOrderGroup
+                      key={menuLine.id}
+                      menuOrderGroup={menuLine}
+                      menuInfo={menuLine.menu}
+                      orderItems={menuLine.items || []}
+                      isExpanded={expandedGroups.includes(`menu-${menuLine.id}`)}
+                      onToggle={() => {
+                        // Fermer tout menu ouvert avant de toggle
+                        setOpenGroupMenuId(null);
+                        toggleExpanded(`menu-${menuLine.id}`);
+                      }}
+                      onDelete={async () => {
+                        // TODO: Implémenter la suppression du menu complet
+                        showToast('Suppression du menu non implémentée', 'info');
+                      }}
+                      onDeleteOrderItem={onDeleteOrderItem}
+                      onUpdateOrderItemStatus={onUpdateOrderItemStatus ? async (orderLines: any[], newStatus: Status) => {
+                        // Pour les items de menu, utiliser la nouvelle API spécialisée
+                        try {
+                          const orderLineIds = orderLines.map(ol => ol.id);
+                          await updateOrderLineItemsStatus(order.id, orderLineIds, newStatus);
+                          showToast('Statut mis à jour avec succès.', 'success');
+                        } catch (error) {
+                          console.error('Erreur lors de la mise à jour du statut:', error);
+                          showToast('Erreur lors de la mise à jour du statut.', 'error');
+                        }
+                      } : undefined}
+                      groupId={`menu-${menuLine.id}`}
+                      isMenuOpen={openGroupMenuId === `menu-${menuLine.id}`}
+                      onMenuOpenChange={setOpenGroupMenuId}
+                    />
                   ))}
                 </>
               )}

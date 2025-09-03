@@ -140,17 +140,9 @@ export const getStatusBorderStyle = (status: Status, table?: Table & { orders?: 
   };
 }
 
-// Style de bordure spécialisé pour les menus
-export const getMenuBorderStyle = (statuses: Status[], baseColor: string) => {
+// Style de bordure pour les groupes (menus et articles)
+export const getBorderStyle = (statuses: Status[], baseColor: string) => {
   const hasMixed = hasMenuMixedStatuses(statuses);
-  
-  if (hasMixed) {
-    return {
-      borderStyle: 'solid' as const,
-      borderColor: '#2A2E33', // Noir pour les bordures épaisses
-      borderWidth: 2, // Bordure normale pour les statuts mixtes
-    };
-  }
   
   return {
     borderStyle: 'solid' as const,
