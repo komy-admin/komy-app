@@ -5,13 +5,11 @@ import { Plus, Minus, Menu as MenuIcon } from 'lucide-react-native';
 import { Order } from '~/types/order.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
-import { OrderLine, OrderLineType, CreateOrderLineRequest } from '~/types/order-line.types';
-import { Status } from '~/types/status.enum';
+import { OrderLineType, CreateOrderLineRequest } from '~/types/order-line.types';
 import { useToast } from '~/components/ToastProvider';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { useMenus } from '~/hooks/useMenus';
 import { useOrderLines } from '~/hooks/useOrderLines';
-import { useOrders } from '~/hooks/useOrders';
 import { AdminFormData, AdminFormRef } from '~/components/admin/AdminFormView';
 
 interface OrderItemsFormProps {
@@ -72,12 +70,9 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   const { activeMenus, getMenuCategoryItems } = useMenus();
   const {
     createOrderLines,
-    createOrderWithLines,
-    getOrderLinesByOrderId,
-    calculateOrderStatus
+    createOrderWithLines
   } = useOrderLines();
 
-  const { updateOrder } = useOrders();
 
   // État local pour les modifications (brouillon) - nouvelle structure unifiée
   const [draftOrderLines, setDraftOrderLines] = useState<DraftOrderLine[]>([]);
@@ -384,113 +379,51 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
 
         return newOrder;
       } else {
-        // 🆕 COMMANDE EXISTANTE : Utiliser la nouvelle API bulk update
+        // 🆕 COMMANDE EXISTANTE : Ajouter seulement les nouvelles lignes
 
-        // 2. Construire les OrderLines complètes (existantes + nouvelles)
-        const allOrderLines: OrderLine[] = [...(order.lines || [])];
+        // 2. Créer les requêtes pour les nouvelles lignes seulement
+        const newLineRequests: CreateOrderLineRequest[] = [];
 
-        // 3. Ajouter les nouveaux items individuels des drafts
-        draftItems.forEach(draft => {
+        // 3. Ajouter les nouvelles lignes des drafts
+        draftOrderLines.forEach(draft => {
           if (draft.quantity > 0) {
-            const item = items.find(i => i.id === draft.itemId);
-            if (!item) return;
-
-            for (let i = 0; i < draft.quantity; i++) {
-              allOrderLines.push({
-                // Pas d'ID = création
+            if (draft.type === OrderLineType.ITEM && draft.itemId) {
+              newLineRequests.push({
                 type: OrderLineType.ITEM,
-                quantity: 1,
-                status: Status.DRAFT,
-                note: draft.note,
-                totalPrice: item.price,
-                item: {
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  description: item.description,
-                  allergens: item.allergens || [],
-                  snapshotAt: new Date().toISOString(),
-                  itemType: item.itemType
-                }
-              } as OrderLine);
-            }
-          }
-        });
-
-        // 4. Ajouter les nouveaux menus des drafts  
-        draftMenus.forEach(draftMenu => {
-          if (draftMenu.quantity > 0) {
-            const menu = activeMenus.find(m => m.id === draftMenu.menuId);
-            if (!menu) return;
-
-            // Convertir selectedItems de Record<string, string[]> vers Record<string, string>
-            const selectedItemsConverted: Record<string, string> = {};
-            Object.entries(draftMenu.selectedItems || {}).forEach(([categoryId, itemIds]) => {
-              selectedItemsConverted[categoryId] = Array.isArray(itemIds) ? itemIds[0] : itemIds;
-            });
-
-            // Créer les OrderLineItems pour chaque item sélectionné dans le menu
-            const orderLineItems: any[] = [];
-            Object.entries(selectedItemsConverted).forEach(([categoryName, itemId]) => {
-              const item = items.find(i => i.id === itemId);
-              const category = menu.categories.find(c => c.id === categoryName);
-              if (!item || !category) return;
-
-              orderLineItems.push({
-                // Pas d'ID = création
-                categoryName: category.name,
-                status: Status.DRAFT,
-                item: {
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  description: item.description,
-                  allergens: item.allergens || [],
-                  snapshotAt: new Date().toISOString(),
-                  itemType: item.itemType
-                }
+                quantity: draft.quantity,
+                itemId: draft.itemId,
+                note: draft.note
               });
-            });
+            } else if (draft.type === OrderLineType.MENU && draft.menuId) {
+              // Convertir selectedItems de Record<string, string[]> vers Record<string, string>
+              const selectedItemsConverted: Record<string, string> = {};
+              Object.entries(draft.selectedItems || {}).forEach(([categoryId, itemIds]) => {
+                selectedItemsConverted[categoryId] = Array.isArray(itemIds) ? itemIds[0] : itemIds;
+              });
 
-            for (let i = 0; i < draftMenu.quantity; i++) {
-              allOrderLines.push({
-                // Pas d'ID = création
+              newLineRequests.push({
                 type: OrderLineType.MENU,
-                quantity: 1,
-                status: Status.DRAFT,
-                note: draftMenu.note,
-                totalPrice: calculateMenuPriceWithSupplements(menu, draftMenu.selectedItems || {}),
-                menu: {
-                  id: menu.id,
-                  name: menu.name,
-                  description: menu.description,
-                  basePrice: menu.basePrice,
-                  snapshotAt: new Date().toISOString()
-                },
-                items: [...orderLineItems] // Clone des items pour chaque instance du menu
-              } as OrderLine);
+                quantity: draft.quantity,
+                menuId: draft.menuId,
+                selectedItems: selectedItemsConverted,
+                note: draft.note
+              });
             }
           }
         });
 
-        console.log('🔄 [DEBUG] Bulk update payload:', {
+        console.log('🔄 [DEBUG] Creating new lines for existing order:', {
           orderId: order.id,
-          totalLines: allOrderLines.length,
-          existingLines: order.lines?.length || 0,
-          newLines: allOrderLines.length - (order.lines?.length || 0)
+          newLinesCount: newLineRequests.length
         });
 
-        // 5. Envoyer le bulk update
-        if (allOrderLines.length > 0) {
-          const updatedOrder = await updateOrder({
-            id: order.id,
-            tableId: order.tableId,
-            lines: allOrderLines
-          });
+        // 5. Créer seulement les nouvelles lignes via POST /order/:orderId/lines
+        if (newLineRequests.length > 0) {
+          const createdLines = await createOrderLines(order.id, newLineRequests);
 
-          console.log('✅ [DEBUG] Bulk update success:', {
-            orderId: updatedOrder.id,
-            finalLinesCount: updatedOrder.lines?.length || 0
+          console.log('✅ [DEBUG] New lines created successfully:', {
+            orderId: order.id,
+            createdLinesCount: createdLines.length
           });
 
           // Nettoyer les drafts
@@ -498,7 +431,8 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
           setDraftMenus([]);
           isSavingRef.current = false;
 
-          return updatedOrder;
+          // Retourner l'order mis à jour (sera récupéré via Redux)
+          return order;
         }
       }
     } catch (error) {

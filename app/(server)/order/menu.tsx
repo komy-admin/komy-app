@@ -6,9 +6,11 @@ import { orderItemApiService } from '~/api/order-item.api';
 import { useToast } from '~/components/ToastProvider';
 import { ArrowLeft, Plus, Minus, UtensilsCrossed } from 'lucide-react-native';
 import { useOrders, useMenu, useRestaurant } from '~/hooks/useRestaurant';
+import { useOrderLines } from '~/hooks/useOrderLines';
 import { useMenus } from '~/hooks/useMenus';
 import MenuSelector from '~/components/Service/MenuSelector';
 import { Menu } from '~/types/menu.types';
+import { OrderLineType } from '~/types/order-line.types';
 
 export default function OrderMenuPage() {
   const { orderId } = useLocalSearchParams();
@@ -20,7 +22,8 @@ export default function OrderMenuPage() {
   const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
-  const { getOrderById, loading, error, createMenuOrderItems, createIndividualOrderItem } = useOrders();
+  const { getOrderById, loading, error } = useOrders();
+  const { createOrderLines } = useOrderLines();
   const { items, itemTypes } = useMenu();
   const { activeMenus } = useMenus();
 
@@ -37,8 +40,10 @@ export default function OrderMenuPage() {
   // Plus besoin de loadData, useFilter ou d'appels API - tout est géré par Redux
 
   const getItemQuantity = (itemId: string) => {
-    if (!order) return 0;
-    return order.orderItems.filter(orderItem => orderItem.item.id === itemId).length;
+    if (!order || !order.lines) return 0;
+    return order.lines.filter(line => 
+      line.type === OrderLineType.ITEM && line.item?.id === itemId
+    ).reduce((sum, line) => sum + line.quantity, 0);
   };
 
   const handleMenuSelect = async (
@@ -51,7 +56,26 @@ export default function OrderMenuPage() {
     }
 
     try {
-      await createMenuOrderItems(order.id, menu.id, selectedItems);
+      // Convertir selectedItems vers le format attendu par createOrderLines
+      const selectedItemsRecord: Record<string, string> = {};
+      selectedItems.forEach(item => {
+        // Trouver la catégorie correspondante pour cet item
+        const category = menu.categories.find(cat => 
+          cat.items?.some(catItem => catItem.itemId === item.itemId)
+        );
+        if (category) {
+          selectedItemsRecord[category.id] = item.itemId;
+        }
+      });
+
+      const orderLineData = {
+        type: OrderLineType.MENU as const,
+        quantity: 1,
+        menuId: menu.id,
+        selectedItems: selectedItemsRecord
+      };
+
+      await createOrderLines(order.id, [orderLineData]);
       showToast('Menu ajouté à la commande avec succès.', 'success');
     } catch (error) {
       console.error('Erreur lors de l\'ajout du menu:', error);
@@ -73,11 +97,17 @@ export default function OrderMenuPage() {
 
     try {
       if (action === 'add') {
-        await createIndividualOrderItem(order.id, item.id);
+        const orderLineData = {
+          type: OrderLineType.ITEM as const,
+          quantity: 1,
+          itemId: item.id
+        };
+        await createOrderLines(order.id, [orderLineData]);
       } else if (action === 'remove') {
-        const orderItem = order.orderItems.find(orderItem => orderItem.item.id === itemId);
-        if (!orderItem) return;
-        await orderItemApiService.delete(orderItem.id);
+        // Pour le remove, on devra utiliser deleteOrderLine
+        // TODO: Implémenter la suppression d'une OrderLine spécifique
+        showToast('Fonctionnalité de suppression à implémenter', 'warning');
+        return;
       }
       showToast(`Quantité ${action === 'add' ? 'ajoutée' : 'retirée'} avec succès.`, 'success');
     } catch (error) {
@@ -127,7 +157,7 @@ export default function OrderMenuPage() {
           </Pressable>
           <Text className="text-lg font-bold text-gray-900">Menu - Table {order?.table.name}</Text>
           <Text className="text-sm text-muted-foreground">
-            {order?.orderItems.length || 0} article{(order?.orderItems.length || 0) > 1 ? 's' : ''}
+            {order?.lines?.length || 0} article{(order?.lines?.length || 0) > 1 ? 's' : ''}
           </Text>
         </View>
 
@@ -213,7 +243,7 @@ export default function OrderMenuPage() {
           className="w-full bg-primary"
         >
           <Text className="text-primary-foreground font-medium">
-            Valider la commande ({order?.orderItems.length || 0} article{(order?.orderItems.length || 0) > 1 ? 's' : ''})
+            Valider la commande ({order?.lines?.length || 0} article{(order?.lines?.length || 0) > 1 ? 's' : ''})
           </Text>
         </Button>
       </View>

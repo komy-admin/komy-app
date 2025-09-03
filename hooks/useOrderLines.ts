@@ -128,14 +128,14 @@ export const useOrderLines = () => {
   /**
    * Créer plusieurs lignes de commande en une fois
    */
-  const createOrderLines = useCallback(async (orderId: string, linesData: CreateOrderLineRequest[]): Promise<OrderLine[]> => {
+  const createOrderLines = useCallback(async (orderId: string, linesData: CreateOrderLineRequest[]): Promise<Order> => {
     try {
-      const result = await orderLineApiService.createLines(orderId, linesData);
+      const orderWithNewLines = await orderLineApiService.createLines(orderId, linesData);
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.createOrderLinesBatch({ orderLines: result.lines }));
+      dispatch(ordersActions.updateOrder({ order: orderWithNewLines }));
       
-      return result.lines;
+      return orderWithNewLines;
     } catch (error) {
       console.error('Erreur lors de la création des lignes de commande:', error);
       throw error;

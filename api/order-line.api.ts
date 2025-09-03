@@ -1,8 +1,8 @@
+import { Order } from "@/types/order.types";
 import { BaseApiService } from "./base.api";
 import { 
   OrderLine, 
   CreateOrderLineRequest, 
-  CreateOrderLinesResponse, 
   UpdateOrderLineRequest,
   UpdateOrderLineItemRequest 
 } from "~/types/order-line.types";
@@ -40,9 +40,9 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
   /**
    * Créer plusieurs lignes de commande en une fois
    */
-  async createLines(orderId: string, linesData: CreateOrderLineRequest[]): Promise<CreateOrderLinesResponse> {
+  async createLines(orderId: string, linesData: CreateOrderLineRequest[]): Promise<Order> {
     try {
-      const response = await this.axiosInstance.post<CreateOrderLinesResponse>(`/order/${orderId}/lines/bulk`, {
+      const response = await this.axiosInstance.post<Order>(`/order/${orderId}/lines`, {
         lines: linesData
       });
       return response.data;
