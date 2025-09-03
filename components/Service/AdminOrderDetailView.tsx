@@ -10,6 +10,7 @@ import { Order } from '~/types/order.types';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import StatusSelector from './StatusSelector';
 import { useOrderLines } from '~/hooks/useOrderLines';
+import { useOrders } from '~/hooks/useOrders';
 import { useMenus } from '~/hooks/useMenus';
 import { restaurantActions } from '~/store/restaurant';
 import { useDispatch } from 'react-redux';
@@ -747,6 +748,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const { activeMenus, loadAllMenus } = useMenus();
+  const { updateOrderLineItemsStatus } = useOrders();
 
   // Si les menus ne sont pas chargés, les charger
   useEffect(() => {
@@ -909,10 +911,16 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                                 <AdminOrderLineItem
                                   key={orderLineItem.id}
                                   orderLineItem={orderLineItem}
-                                  onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => {
-                                    // Pour les items de menu, on utilise updateOrderLineItemStatus 
-                                    // plutôt que l'update de OrderLine
-                                    console.log('Update menu item status:', orderLineItem.id, newStatus);
+                                  onUpdateStatus={onUpdateOrderItemStatus ? async (newStatus) => {
+                                    // Pour les items de menu, utiliser la nouvelle API spécialisée
+                                    console.log('🔄 [DEBUG] Update menu item status:', orderLineItem.id, newStatus);
+                                    try {
+                                      await updateOrderLineItemsStatus(order.id, [orderLineItem.id], newStatus);
+                                      showToast('Statut mis à jour avec succès.', 'success');
+                                    } catch (error) {
+                                      console.error('Erreur lors de la mise à jour du statut:', error);
+                                      showToast('Erreur lors de la mise à jour du statut.', 'error');
+                                    }
                                   } : undefined}
                                   isMenuItem={true}
                                 />

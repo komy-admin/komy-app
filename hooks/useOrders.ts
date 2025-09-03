@@ -11,7 +11,7 @@ import {
   selectOrdersLoading,
   selectOrdersError,
 } from '~/store/restaurant';
-import { orderApiService, UpdateOrderPayload } from '~/api/order.api';
+import { orderApiService, UpdateOrderPayload, UpdateOrderStatusPayload } from '~/api/order.api';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
@@ -124,37 +124,56 @@ export const useOrders = () => {
     }
   }, [dispatch]);
 
-  const updateOrderStatus = useCallback(async (
-    orderId: string, 
-    status: Status, 
-    itemTypeId?: string
-  ) => {
+  // 🆕 Nouvelle fonction utilisant la route PATCH /order/:id/status
+  const updateOrderStatus = useCallback(async (payload: UpdateOrderStatusPayload & { orderId: string }) => {
     try {
-      const order = orders.find(o => o.id === orderId);
-      if (!order) {
-        throw new Error('Commande non trouvée');
-      }
-
-      // Récupérer les OrderLines à mettre à jour
-      let orderLinesToUpdate = order.lines || [];
+      const { orderId, ...statusPayload } = payload;
       
-      if (itemTypeId) {
-        // Filtrer par itemType si spécifié (pour l'instant on met à jour toutes les lignes)
-        orderLinesToUpdate = orderLinesToUpdate.filter(line => line.type === 'ITEM');
+      console.log('🔄 [DEBUG] updateOrderStatus - New API:', {
+        orderId,
+        status: statusPayload.status,
+        orderLineIds: statusPayload.orderLineIds?.length || 0,
+        orderLineItemIds: statusPayload.orderLineItemIds?.length || 0
+      });
+
+      // Validation : au moins un des deux arrays doit être fourni
+      if ((!statusPayload.orderLineIds || statusPayload.orderLineIds.length === 0) && 
+          (!statusPayload.orderLineItemIds || statusPayload.orderLineItemIds.length === 0)) {
+        throw new Error('Au moins un orderLineId ou orderLineItemId doit être fourni');
       }
 
-      const orderLineIds = orderLinesToUpdate.map(line => line.id);
+      const updatedOrder = await orderApiService.updateStatus(orderId, statusPayload);
+      
+      console.log('✅ [DEBUG] updateOrderStatus success:', {
+        orderId: updatedOrder.id,
+        updatedLinesCount: updatedOrder.lines?.length || 0
+      });
 
-      if (orderLineIds.length > 0) {
-        await updateManyOrderLinesStatus(orderLineIds, status);
-      }
-
-      return { orderId, status, itemTypeId };
+      dispatch(restaurantActions.updateOrder({ order: updatedOrder }));
+      return updatedOrder;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
       throw error;
     }
-  }, [orders, updateManyOrderLinesStatus]);
+  }, [dispatch]);
+
+  // 🆕 Fonction helper pour mettre à jour le statut d'OrderLines (items individuels)
+  const updateOrderLinesStatus = useCallback(async (orderId: string, orderLineIds: string[], status: Status) => {
+    return updateOrderStatus({
+      orderId,
+      status,
+      orderLineIds,
+    });
+  }, [updateOrderStatus]);
+
+  // 🆕 Fonction helper pour mettre à jour le statut d'OrderLineItems (items de menu)
+  const updateOrderLineItemsStatus = useCallback(async (orderId: string, orderLineItemIds: string[], status: Status) => {
+    return updateOrderStatus({
+      orderId,
+      status,
+      orderLineItemIds,
+    });
+  }, [updateOrderStatus]);
 
   // Utilitaires
   const getOrderById = useCallback((orderId: string) => {
@@ -269,6 +288,10 @@ export const useOrders = () => {
     updateOrder,
     deleteOrder,
     updateOrderStatus,
+    
+    // 🆕 Nouvelles fonctions de statut (API spécialisée)
+    updateOrderLinesStatus,
+    updateOrderLineItemsStatus,
     
     // Actions CRUD pour les orderItems (migrées vers OrderLine)
     deleteOrderItem,

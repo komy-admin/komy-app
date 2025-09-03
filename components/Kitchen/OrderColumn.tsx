@@ -1,15 +1,35 @@
 import { ScrollView, View, StyleSheet } from "react-native";
 import { getStatusColor, getStatusText } from "~/lib/utils";
-import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import { Text } from "../ui";
-import OrderCard from "./OrderCard";
+import KitchenItemCard from "./KitchenItemCard";
 
-export default function OrderColumn({ orders = [], status, onStatusChange, overdueOrderItemIds = [] }: {
-  orders: Order[]; 
+// 🆕 Interface pour les groupes d'items
+interface KitchenItemGroup {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  tableName: string;
   status: Status;
-  onStatusChange: (order: Order, newStatus: Status) => void;
-  overdueOrderItemIds?: string[];
+  items: Array<{
+    id: string;
+    type: 'ITEM' | 'MENU_ITEM';
+    itemName: string;
+    itemType?: string;
+    menuName?: string;
+    menuId?: string;
+    orderLineId?: string;
+    isOverdue: boolean;
+  }>;
+  isOverdue: boolean;
+  createdAt: string;
+}
+
+export default function OrderColumn({ itemGroups = [], status, onStatusChange, onIndividualItemStatusChange }: {
+  itemGroups: KitchenItemGroup[]; 
+  status: Status;
+  onStatusChange: (itemGroup: KitchenItemGroup, newStatus: Status) => void;
+  onIndividualItemStatusChange?: (item: any, newStatus: Status) => void;
 }) {
 
   return (
@@ -19,7 +39,7 @@ export default function OrderColumn({ orders = [], status, onStatusChange, overd
           {getStatusText(status)}
         </Text>
         <View style={styles.countBadge}>
-          <Text style={styles.countText}>{orders?.length || 0}</Text>
+          <Text style={styles.countText}>{itemGroups?.length || 0}</Text>
         </View>
       </View>
       
@@ -28,20 +48,19 @@ export default function OrderColumn({ orders = [], status, onStatusChange, overd
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {orders && orders.length > 0 ? (
-          orders.map((order) => (
-            <OrderCard 
-              key={order.id} 
-              order={order} 
-              status={status} 
+        {itemGroups && itemGroups.length > 0 ? (
+          itemGroups.map((itemGroup) => (
+            <KitchenItemCard 
+              key={itemGroup.id} 
+              itemGroup={itemGroup} 
               onStatusChange={onStatusChange}
-              overdueOrderItemIds={overdueOrderItemIds}
+              onIndividualItemStatusChange={onIndividualItemStatusChange}
             />
           ))
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Aucune commande</Text>
-            <Text style={styles.emptySubText}>à afficher</Text>
+            <Text style={styles.emptyText}>Aucun article</Text>
+            <Text style={styles.emptySubText}>à préparer</Text>
           </View>
         )}
       </ScrollView>

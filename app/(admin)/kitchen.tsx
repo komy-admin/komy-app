@@ -17,54 +17,100 @@ const AVAILABLE_STATUSES = [
   Status.READY,
 ];
 
-function useOrderGrouping(orders: Order[], kitchenItems: any[], overdueOrderIds: string[], overdueOrderItemIds: string[]) {
-  const groupedOrders = useMemo(() => {
-    const orderMap = new Map();
+// 🆕 Interface pour les groupes d'items par table/commande
+interface KitchenItemGroup {
+  id: string; // format: orderId-status
+  orderId: string;
+  orderNumber: string;
+  tableName: string;
+  status: Status;
+  items: Array<{
+    id: string;
+    type: 'ITEM' | 'MENU_ITEM';
+    itemName: string;
+    itemType?: string;
+    menuName?: string;
+    menuId?: string;
+    orderLineId?: string;
+    isOverdue: boolean;
+  }>;
+  isOverdue: boolean;
+  createdAt: string;
+}
+
+function useKitchenItemGrouping(orders: Order[], kitchenItems: any[], overdueOrderItemIds: string[]) {
+  const groupedItems = useMemo(() => {
+    const groupMap = new Map<string, KitchenItemGroup>();
 
     kitchenItems.forEach(item => {
       const order = orders.find(o => o.id === item.orderId);
       if (!order) return;
 
-      const key = `${order.id}-${item.status}`;
+      const groupKey = `${order.id}-${item.status}`;
 
-      if (!orderMap.has(key)) {
-        // Vérifier si au moins un item de ce groupe est en retard
-        const hasOverdueItems = kitchenItems
-          .filter((ki: any) => ki.orderId === order.id && ki.status === item.status)
-          .some((ki: any) => overdueOrderItemIds.includes(ki.id));
-
-        orderMap.set(key, {
-          ...order,
-          status: item.status,
-          kitchenItems: [item],
-          isOverdue: hasOverdueItems
+      if (!groupMap.has(groupKey)) {
+        groupMap.set(groupKey, {
+          id: groupKey,
+          orderId: order.id,
+          orderNumber: `#${order.id.slice(-4)}`,
+          tableName: order.table?.name || 'Table inconnue',
+          status: item.status, // ✅ Utiliser le vrai statut de l'item
+          items: [],
+          isOverdue: false,
+          createdAt: order.createdAt
         });
-      } else {
-        orderMap.get(key).kitchenItems.push(item);
-        // Recalculer si le groupe a des items en retard
-        const hasOverdueItems = orderMap.get(key).kitchenItems
-          .some((ki: any) => overdueOrderItemIds.includes(ki.id));
-        orderMap.get(key).isOverdue = hasOverdueItems;
+      }
+
+      const group = groupMap.get(groupKey)!;
+      const isItemOverdue = overdueOrderItemIds.includes(item.id);
+
+      group.items.push({
+        id: item.id,
+        type: item.type,
+        itemName: item.itemName,
+        itemType: item.itemType,
+        menuName: item.menuName,
+        menuId: item.menuId,
+        orderLineId: item.orderLineId,
+        isOverdue: isItemOverdue
+      });
+
+      // Marquer le groupe comme en retard si au moins un item l'est
+      if (isItemOverdue) {
+        group.isOverdue = true;
       }
     });
 
-    // Trier pour mettre les commandes en retard en premier
-    const sortedEntries = Array.from(orderMap.entries()).sort(([, a], [, b]) => {
+    // Convertir en array et trier (en retard en premier, puis par date)
+    const sortedGroups = Array.from(groupMap.values()).sort((a, b) => {
       if (a.isOverdue && !b.isOverdue) return -1;
       if (!a.isOverdue && b.isOverdue) return 1;
-      return 0;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
 
-    return new Map(sortedEntries);
-  }, [orders, kitchenItems, overdueOrderIds, overdueOrderItemIds]);
+    console.log('🔍 [DEBUG] Kitchen grouped items by status:', {
+      totalGroups: sortedGroups.length,
+      byStatus: sortedGroups.reduce((acc, group) => {
+        acc[group.status] = (acc[group.status] || 0) + 1;
+        return acc;
+      }, {} as Record<Status, number>),
+      sample: sortedGroups.slice(0, 2).map(g => ({
+        id: g.id,
+        status: g.status,
+        itemsCount: g.items.length,
+        isOverdue: g.isOverdue
+      }))
+    });
 
-  return groupedOrders;
+    return sortedGroups;
+  }, [orders, kitchenItems, overdueOrderItemIds]);
+
+  return groupedItems;
 }
 
 export default function KitchenPage() {
   // Utilisation des hooks Redux + initialisation WebSocket
-  const { orders, loading, error, updateOrderItemStatus } = useOrders();
-  const { updateOrderLineItemStatus } = useOrderLines();
+  const { orders, loading, error, updateOrderStatus } = useOrders();
 
   // IMPORTANT: Initialiser la connexion WebSocket
   const { isLoading: globalLoading } = useRestaurant();
@@ -91,18 +137,23 @@ export default function KitchenPage() {
     return filteredOrders;
   }, [orders, filteredKitchenItems]);
 
-  const groupedOrders = useOrderGrouping(kitchenOrders, filteredKitchenItems, overdueOrderIds, overdueOrderItemIds);
+  const groupedItems = useKitchenItemGrouping(kitchenOrders, filteredKitchenItems, overdueOrderItemIds);
 
-  const handleStatusChange = async (order: Order, newStatus: Status) => {
+  const handleStatusChange = async (itemGroup: KitchenItemGroup, newStatus: Status) => {
     try {
-      // Récupérer les items spécifiques de cette commande avec ce statut à mettre à jour
-      const itemsToUpdate = (order as any).kitchenItems || [];
+      console.log('🔄 [DEBUG] Kitchen handleStatusChange (new):', {
+        groupId: itemGroup.id,
+        orderId: itemGroup.orderId,
+        currentStatus: itemGroup.status,
+        newStatus,
+        itemsCount: itemGroup.items.length
+      });
 
       // Séparer OrderLines (articles individuels) et OrderLineItems (items de menu)
       const orderLineIds: string[] = [];
       const orderLineItemIds: string[] = [];
 
-      itemsToUpdate.forEach((item: any) => {
+      itemGroup.items.forEach(item => {
         if (item.type === 'ITEM') {
           orderLineIds.push(item.id);
         } else if (item.type === 'MENU_ITEM') {
@@ -110,21 +161,73 @@ export default function KitchenPage() {
         }
       });
 
-      // Mettre à jour les OrderLines (articles individuels)
-      if (orderLineIds.length > 0) {
-        await updateOrderItemStatus(orderLineIds, newStatus);
-      }
-
-      // Mettre à jour les OrderLineItems (items de menu)
-      if (orderLineItemIds.length > 0) {
-        for (const itemId of orderLineItemIds) {
-          await updateOrderLineItemStatus(itemId, newStatus);
-        }
+      if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
+        await updateOrderStatus({
+          orderId: itemGroup.orderId,
+          status: newStatus,
+          orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+          orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+        });
       }
 
       // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
     } catch (error: any) {
       console.error('Error updating status:', error);
+
+      // Gestion d'éerreur spécifique pour le 500
+      if (error.response?.status === 500) {
+        showToast('Erreur serveur temporaire, l\'API est en cours de correction', 'error');
+      } else if (error.response?.status === 404) {
+        showToast('Commande introuvable', 'error');
+      } else if (error.response?.status === 403) {
+        showToast('Vous n\'avez pas les droits pour cette action', 'error');
+      } else {
+        showToast('Impossible de mettre à jour le statut, veuillez réessayer', 'error');
+      }
+    }
+  };
+
+  // 🆕 Fonction pour mettre à jour un item individuel
+  const handleIndividualItemStatusChange = async (item: any, newStatus: Status) => {
+    try {
+      console.log('🔄 [DEBUG] Kitchen handleIndividualItemStatusChange:', {
+        itemId: item.id,
+        itemType: item.type,
+        itemName: item.itemName,
+        newStatus
+      });
+
+      // Déterminer le bon array selon le type d'item
+      let orderLineIds: string[] = [];
+      let orderLineItemIds: string[] = [];
+
+      if (item.type === 'ITEM') {
+        orderLineIds.push(item.id);
+      } else if (item.type === 'MENU_ITEM') {
+        orderLineItemIds.push(item.id);
+      }
+
+      // Trouver l'orderId de cet item
+      const parentGroup = groupedItems.find(group => 
+        group.items.some(groupItem => groupItem.id === item.id)
+      );
+
+      if (!parentGroup) {
+        console.error('Groupe parent non trouvé pour l\'item:', item.id);
+        return;
+      }
+
+      // Utiliser la nouvelle API PATCH pour un seul item
+      await updateOrderStatus({
+        orderId: parentGroup.orderId,
+        status: newStatus,
+        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+      });
+
+      // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
+    } catch (error: any) {
+      console.error('Error updating individual item status:', error);
 
       // Gestion d'éerreur spécifique pour le 500
       if (error.response?.status === 500) {
@@ -160,11 +263,10 @@ export default function KitchenPage() {
         {AVAILABLE_STATUSES.map((status, index) => (
           <OrderColumn
             key={status}
-            orders={Array.from(groupedOrders.values())
-              .filter(order => order.status === status)}
+            itemGroups={groupedItems.filter(group => group.status === status)}
             status={status}
             onStatusChange={handleStatusChange}
-            overdueOrderItemIds={overdueOrderItemIds}
+            onIndividualItemStatusChange={handleIndividualItemStatusChange}
           />
         ))}
       </View>

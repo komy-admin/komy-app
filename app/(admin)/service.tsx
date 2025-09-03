@@ -50,7 +50,8 @@ export default function ServicePage() {
     deleteOrder,
     deleteOrderItem,
     deleteManyOrderItems,
-    updateOrderItemStatus
+    updateOrderItemStatus,
+    updateOrderLinesStatus
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
 
@@ -337,8 +338,15 @@ export default function ServicePage() {
 
     try {
       const orderItemsIds = orderItems.map(orderItem => orderItem.id);
-      // Utiliser l'action Redux au lieu de l'appel API direct
-      await updateOrderItemStatus(orderItemsIds, status);
+      
+      console.log('🔄 [DEBUG] Service handleStatusUpdate:', {
+        orderId: selectedTableOrder.id,
+        status,
+        orderItemsIds: orderItemsIds.length
+      });
+
+      // 🆕 Utiliser la nouvelle API PATCH (supposant que orderItems = OrderLines de type ITEM)
+      await updateOrderLinesStatus(selectedTableOrder.id, orderItemsIds, status);
       showToast('Statut mis à jour avec succès.', 'success');
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);

@@ -18,7 +18,7 @@ export default function OrderDetailPage() {
   const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
-  const { getOrderById, deleteOrder, updateOrderItemStatus, loading, error } = useOrders();
+  const { getOrderById, deleteOrder, updateOrderLinesStatus, loading, error } = useOrders();
   const { itemTypes } = useMenu();
 
   // Récupération de la commande depuis le store
@@ -35,7 +35,15 @@ export default function OrderDetailPage() {
 
     try {
       const orderItemsIds = orderItems.map(orderItem => orderItem.id);
-      await updateOrderItemStatus(orderItemsIds, status);
+      
+      console.log('🔄 [DEBUG] Order detail handleStatusUpdate:', {
+        orderId: order.id,
+        status,
+        orderItemsIds: orderItemsIds.length
+      });
+
+      // 🆕 Utiliser la nouvelle API PATCH (supposant que orderItems = OrderLines de type ITEM)
+      await updateOrderLinesStatus(order.id, orderItemsIds, status);
 
       showToast('Statut mis à jour avec succès.', 'success');
     } catch (error) {

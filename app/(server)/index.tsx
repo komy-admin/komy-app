@@ -127,8 +127,46 @@ export default function ServerHome() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
 
-      // Utiliser la fonction centralisée updateOrderStatus
-      await updateOrderStatus(order.id, newStatus, itemTypeId);
+      // 🔄 Adapter l'ancienne signature vers la nouvelle API PATCH
+      console.log('🔄 [DEBUG] Server handleQuickStatusUpdate:', {
+        orderId: order.id,
+        newStatus,
+        itemTypeId
+      });
+
+      // Identifier les OrderLines à mettre à jour selon itemTypeId
+      let orderLineIds: string[] = [];
+      let orderLineItemIds: string[] = [];
+
+      if (itemTypeId) {
+        // Filtrer par itemType spécifique (items individuels seulement)
+        const targetLines = (order.lines || []).filter(line => 
+          line.type === OrderLineType.ITEM && 
+          (line.item as any)?.itemType?.id === itemTypeId
+        );
+        orderLineIds = targetLines.map(line => line.id);
+      } else {
+        // Toutes les lignes : items individuels + items de menu
+        (order.lines || []).forEach(line => {
+          if (line.type === OrderLineType.ITEM) {
+            orderLineIds.push(line.id);
+          } else if (line.type === OrderLineType.MENU && line.items) {
+            line.items.forEach(item => {
+              orderLineItemIds.push(item.id);
+            });
+          }
+        });
+      }
+
+      // Utiliser la nouvelle API PATCH
+      if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
+        await updateOrderStatus({
+          orderId: order.id,
+          status: newStatus,
+          orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+          orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+        });
+      }
 
       const itemTypeName = itemTypeId ?
         (order.lines || []).find(line => line.type === OrderLineType.ITEM && (line.item as any)?.itemType?.id === itemTypeId)?.item?.itemType?.name || 'articles' :
