@@ -491,18 +491,18 @@ const AdminMenuOrderGroup = ({
   );
 };
 
-const AdminOrderItemsGroup = ({ 
-  itemType, 
-  status, 
-  orderItems, 
-  isExpanded, 
-  onToggle, 
-  onDeleteOrderItem, 
-  onUpdateOrderItemStatus, 
-  onDeleteGroup, 
-  groupId, 
-  isMenuOpen, 
-  onMenuOpenChange 
+const AdminOrderItemsGroup = ({
+  itemType,
+  status,
+  orderItems,
+  isExpanded,
+  onToggle,
+  onDeleteOrderItem,
+  onUpdateOrderItemStatus,
+  onDeleteGroup,
+  groupId,
+  isMenuOpen,
+  onMenuOpenChange
 }: {
   itemType: ItemType;
   status: Status;
@@ -536,7 +536,7 @@ const AdminOrderItemsGroup = ({
     const baseColor = getStatusColor(itemStatus);
     const statuses = orderItems.map(orderItem => orderItem.status || Status.PENDING);
     const borderStyle = getBorderStyle(statuses, baseColor);
-    
+
     return {
       backgroundColor: isExpanded ? 'white' : `${baseColor}80`,
       borderRadius: 16,
@@ -754,7 +754,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
   const groupedItems = useMemo(() => {
     // Récupérer toutes les OrderLines de type ITEM
     const individualItems = (order.lines || []).filter((line: OrderLine) => line.type === OrderLineType.ITEM);
-    
+
     if (individualItems.length === 0) return [];
 
     const groups: Array<{
@@ -766,24 +766,22 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
 
     // Grouper d'abord par itemType, puis par statut
     const itemTypeGroups: Record<string, OrderLine[]> = {};
-    
+
     individualItems.forEach(line => {
-      // Gestion défensive : si pas d'itemType, grouper dans "unknown"
-      const itemTypeId = line.item?.itemType?.id || 'unknown';
-      if (!itemTypeGroups[itemTypeId]) {
-        itemTypeGroups[itemTypeId] = [];
+      const itemTypeId = line.item?.itemType.id;
+      if (itemTypeId) {
+        if (!itemTypeGroups[itemTypeId]) {
+          itemTypeGroups[itemTypeId] = [];
+        }
+        itemTypeGroups[itemTypeId].push(line);
       }
-      itemTypeGroups[itemTypeId].push(line);
     });
 
     // Pour chaque itemType, créer des groupes par statut
     Object.entries(itemTypeGroups).forEach(([itemTypeId, itemsOfType]) => {
       // Récupérer les infos du premier item pour l'itemType
-      const itemTypeInfo = itemsOfType[0]?.item?.itemType || { 
-        id: itemTypeId, 
-        name: itemTypeId === 'unknown' ? 'Articles individuels' : 'Type inconnu'
-      };
-      
+      const itemTypeInfo = itemsOfType[0]?.item?.itemType
+
       // Grouper par statut au sein de ce type
       const statusGroups = itemsOfType.reduce((acc, line) => {
         const status = line.status || Status.PENDING;
