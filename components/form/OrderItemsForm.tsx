@@ -30,7 +30,7 @@ interface DraftOrderLine {
 
   // Pour les menus
   menuId?: string;
-  selectedItems?: Record<string, string>; // categoryName -> itemId (un seul item par catégorie)
+  selectedItems?: Record<string, string | string[]>; // categoryName -> itemId (un seul item par catégorie)
 
   // Note optionnelle
   note?: string;
@@ -92,15 +92,27 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     [draftOrderLines]
   );
 
+  // Interfaces pour les types dans setDraftItems et setDraftMenus
+  interface DraftItemUpdate {
+    itemId: string;
+    quantity: number;
+  }
+
+  interface DraftMenuUpdate {
+    menuId: string;
+    quantity: number;
+    selectedItems: Record<string, string | string[]>;
+  }
+
   // Fonctions de mise à jour pour compatibilité
-  const setDraftItems = useCallback((updater: any) => {
-    setDraftOrderLines(prevLines => {
+  const setDraftItems = useCallback((updater: DraftItemUpdate[] | ((prev: DraftItemUpdate[]) => DraftItemUpdate[])) => {
+    setDraftOrderLines((prevLines: DraftOrderLine[]) => {
       const nonItemLines = prevLines.filter(line => line.type !== OrderLineType.ITEM);
       const currentItems = prevLines.filter(line => line.type === OrderLineType.ITEM && line.itemId)
         .map(line => ({ itemId: line.itemId!, quantity: line.quantity }));
 
       const newItems = typeof updater === 'function' ? updater(currentItems) : updater;
-      const newItemLines = newItems.map((item: any) => ({
+      const newItemLines = newItems.map((item: DraftItemUpdate) => ({
         type: OrderLineType.ITEM,
         quantity: item.quantity,
         itemId: item.itemId
@@ -110,14 +122,14 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     });
   }, []);
 
-  const setDraftMenus = useCallback((updater: any) => {
-    setDraftOrderLines(prevLines => {
+  const setDraftMenus = useCallback((updater: DraftMenuUpdate[] | ((prev: DraftMenuUpdate[]) => DraftMenuUpdate[])) => {
+    setDraftOrderLines((prevLines: DraftOrderLine[]) => {
       const nonMenuLines = prevLines.filter(line => line.type !== OrderLineType.MENU);
       const currentMenus = prevLines.filter(line => line.type === OrderLineType.MENU && line.menuId)
         .map(line => ({ menuId: line.menuId!, quantity: line.quantity, selectedItems: line.selectedItems || {} }));
 
       const newMenus = typeof updater === 'function' ? updater(currentMenus) : updater;
-      const newMenuLines = newMenus.map((menu: any) => ({
+      const newMenuLines = newMenus.map((menu: DraftMenuUpdate) => ({
         type: OrderLineType.MENU,
         quantity: menu.quantity,
         menuId: menu.menuId,
@@ -180,11 +192,12 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   // 🔧 NOUVELLE LOGIQUE : Obtenir les quantités existantes dans la commande sauvegardée
   const getExistingItemQuantity = useCallback((itemId: string) => {
     let count = 0;
-    if (order.lines) {
-      order.lines.forEach((line) => {
-        // Pour les items individuels
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    if (currentOrder.lines) {
+      currentOrder.lines.forEach((line) => {
+        // Pour les items individuels - chaque ligne = 1 quantité
         if (line.type === OrderLineType.ITEM && line.item && (line.item as any).id === itemId) {
-          count += line.quantity;
+          count += 1; // Chaque ligne représente une quantité de 1
         }
       });
     }
@@ -198,21 +211,19 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
 
   // Obtenir la quantité totale affichée avec gestion stable pendant la sauvegarde
   const getTotalItemQuantity = useCallback((itemId: string) => {
-    // Pendant la sauvegarde, utiliser le snapshot pour éviter les scintillements
-    // Snapshots supprimés - utilisation de la logique simple
-
-    // Fonctionnement normal
+    // Fonctionnement normal - toujours afficher existing + draft
     return getExistingItemQuantity(itemId) + getDraftItemQuantity(itemId);
   }, [getExistingItemQuantity, getDraftItemQuantity]);
 
   // 🔧 NOUVELLE LOGIQUE : Mêmes fonctions pour les menus
   const getExistingMenuQuantity = useCallback((menuId: string) => {
     let count = 0;
-    if (order.lines) {
-      order.lines.forEach((line) => {
-        // Pour les menus
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    if (currentOrder.lines) {
+      currentOrder.lines.forEach((line) => {
+        // Pour les menus - chaque ligne = 1 quantité
         if (line.type === OrderLineType.MENU && line.menu && line.menu.id === menuId) {
-          count += line.quantity;
+          count += 1; // Chaque ligne représente une quantité de 1
         }
       });
     }
@@ -224,32 +235,17 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   }, [menuQuantitiesIndex]);
 
   const getTotalMenuQuantity = useCallback((menuId: string) => {
-    // Pendant la sauvegarde, utiliser le snapshot pour éviter les scintillements
-    // Snapshots supprimés - utilisation de la logique simple
-
-    // Fonctionnement normal
+    // Fonctionnement normal - toujours afficher existing + draft
     return getExistingMenuQuantity(menuId) + getDraftMenuQuantity(menuId);
   }, [getExistingMenuQuantity, getDraftMenuQuantity]);
 
-  // 🔧 NOUVELLES FONCTIONS : Calcul des totaux pour le recap avec gestion des snapshots
+  // 🔧 NOUVELLES FONCTIONS : Calcul des totaux pour le recap
   const getTotalItemsCount = useCallback(() => {
-    // Pendant la sauvegarde, utiliser snapshots pour les items avec drafts + existants pour les autres
-    if (isSavingRef.current) {
-      const existingItemLines = order.lines?.filter(line =>
-        line.type === OrderLineType.ITEM &&
-        true // Snapshot supprimé
-      ) || [];
-
-      const itemsWithoutDraftsCount = existingItemLines.reduce((total, line) => total + line.quantity, 0);
-      const snapshotItemsCount = 0; // Snapshot supprimé
-
-      return itemsWithoutDraftsCount + snapshotItemsCount;
-    }
-
-    // Fonctionnement normal
-    const existingItemsCount = order.lines
+    // Utiliser frozenOrderRef pendant la sauvegarde pour éviter les WebSocket
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    const existingItemsCount = currentOrder.lines
       ?.filter(line => line.type === OrderLineType.ITEM)
-      .reduce((total, line) => total + line.quantity, 0) || 0;
+      .reduce((total, _) => total + 1, 0) || 0;
 
     const draftItemsCount = draftOrderLines
       .filter(draft => draft.type === OrderLineType.ITEM)
@@ -259,23 +255,11 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   }, [order.lines, draftOrderLines]);
 
   const getTotalMenusCount = useCallback(() => {
-    // Pendant la sauvegarde, utiliser snapshots pour les menus avec drafts + existants pour les autres
-    if (isSavingRef.current) {
-      const existingMenuLines = order.lines?.filter(line =>
-        line.type === OrderLineType.MENU &&
-        true // Snapshot supprimé
-      ) || [];
-
-      const menusWithoutDraftsCount = existingMenuLines.reduce((total, line) => total + line.quantity, 0);
-      const snapshotMenusCount = 0; // Snapshot supprimé
-
-      return menusWithoutDraftsCount + snapshotMenusCount;
-    }
-
-    // Fonctionnement normal
-    const existingMenusCount = order.lines
+    // Utiliser frozenOrderRef pendant la sauvegarde pour éviter les WebSocket
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    const existingMenusCount = currentOrder.lines
       ?.filter(line => line.type === OrderLineType.MENU)
-      .reduce((total, line) => total + line.quantity, 0) || 0;
+      .reduce((total, _) => total + 1, 0) || 0;
 
     const draftMenusCount = draftMenus.reduce((total, draft) => total + draft.quantity, 0);
 
@@ -344,8 +328,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
             createRequests.push({
               type: OrderLineType.ITEM,
               quantity: draft.quantity,
-              itemId: draft.itemId,
-              note: draft.note
+              itemId: draft.itemId
             });
           }
         });
@@ -363,8 +346,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
               type: OrderLineType.MENU,
               quantity: draftMenu.quantity,
               menuId: draftMenu.menuId,
-              selectedItems: selectedItemsConverted,
-              note: draftMenu.note
+              selectedItems: selectedItemsConverted
             });
           }
         });
@@ -423,7 +405,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
 
           console.log('✅ [DEBUG] New lines created successfully:', {
             orderId: order.id,
-            createdLinesCount: createdLines.length
+            updatedOrder: createdLines
           });
 
           // Nettoyer les drafts
@@ -452,9 +434,14 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   // Initialisation des draftItems et draftMenus (après définition des fonctions)
   // Utiliser une ref pour suivre l'ID de l'order et ne réinitialiser que lors d'un vrai changement d'order
   const currentOrderIdRef = useRef(order.id);
+  const frozenOrderRef = useRef(order); // Ordre gelé pendant la sauvegarde
+  
   useEffect(() => {
     // Ne pas réinitialiser pendant la sauvegarde pour éviter les scintillements
     if (isSavingRef.current) return;
+
+    // Mettre à jour l'ordre gelé en dehors de la sauvegarde
+    frozenOrderRef.current = order;
 
     // Ne réinitialiser que si l'order ID a vraiment changé (pas juste une mise à jour WebSocket)
     if (currentOrderIdRef.current !== order.id) {
@@ -525,52 +512,18 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     return calculateMenuPriceWithSupplements(menuBeingConfigured, tempMenuSelections);
   };
 
-  // ✅ Calcul mémorisé du prix total avec gestion des snapshots pendant la sauvegarde
+  // ✅ Calcul mémorisé du prix total - utiliser frozenOrderRef pendant la sauvegarde
   const totalPrice = useMemo(() => {
-    // Pendant la sauvegarde, éviter le double comptage en excluant les items/menus qui ont des drafts
-    if (isSavingRef.current) {
-      // 1. Prix des articles existants qui n'ont PAS de drafts
-      const existingItemsWithoutDrafts = (order.lines || [])
-        .filter(line => line.type === OrderLineType.ITEM && line.item); // Snapshot supprimé
-      const existingItemsTotal = existingItemsWithoutDrafts
-        .reduce((total, line) => total + line.totalPrice, 0);
-
-      // 2. Prix des menus existants qui n'ont PAS de drafts
-      const menuLines = (order.lines || [])
-        .filter(line => line.type === OrderLineType.MENU && line.menu); // Snapshot supprimé
-      const existingMenusTotal = menuLines
-        .reduce((total, line) => total + line.totalPrice, 0);
-
-      // 3. Prix des drafts items (nouveaux ajouts)
-      const snapshotItemsTotal = draftItems.reduce((total, draft) => {
-        const item = itemsIndex[draft.itemId];
-        if (item) {
-          return total + (item.price * draft.quantity);
-        }
-        return total;
-      }, 0);
-
-      // 4. Prix des drafts menus (nouveaux ajouts)
-      const snapshotMenusTotal = draftMenus.reduce((total, draft) => {
-        const menu = menusIndex[draft.menuId];
-        if (menu) {
-          const menuPriceWithSupplements = calculateMenuPriceWithSupplements(menu, draft.selectedItems || {});
-          return total + (menuPriceWithSupplements * draft.quantity);
-        }
-        return total;
-      }, 0);
-
-      return existingItemsTotal + existingMenusTotal + snapshotItemsTotal + snapshotMenusTotal;
-    }
-
-    // Fonctionnement normal
+    // Utiliser frozenOrderRef pendant la sauvegarde pour éviter les WebSocket
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    
     // 1. Prix des articles existants (sauvegardés)
-    const existingItemsTotal = (order.lines || [])
+    const existingItemsTotal = (currentOrder.lines || [])
       .filter(line => line.type === OrderLineType.ITEM)
       .reduce((total, line) => total + line.totalPrice, 0);
 
     // 2. Prix des menus existants (sauvegardés)
-    const menuLines = (order.lines || [])
+    const menuLines = (currentOrder.lines || [])
       .filter(line => line.type === OrderLineType.MENU);
     const existingMenusTotal = menuLines.reduce((total, line) => {
       return total + line.totalPrice;
