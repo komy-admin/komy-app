@@ -764,33 +764,59 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
       orderItems: OrderLine[];
     }> = [];
 
-    // Grouper par statut (sans filtrer par itemType pour l'instant)
-    const statusGroups = individualItems.reduce((acc, line) => {
-      const status = line.status || Status.PENDING;
-      if (!acc[status]) {
-        acc[status] = [];
+    // Grouper d'abord par itemType, puis par statut
+    const itemTypeGroups: Record<string, OrderLine[]> = {};
+    
+    individualItems.forEach(line => {
+      // Gestion défensive : si pas d'itemType, grouper dans "unknown"
+      const itemTypeId = line.item?.itemType?.id || 'unknown';
+      if (!itemTypeGroups[itemTypeId]) {
+        itemTypeGroups[itemTypeId] = [];
       }
-      acc[status].push(line);
-      return acc;
-    }, {} as Record<Status, OrderLine[]>);
+      itemTypeGroups[itemTypeId].push(line);
+    });
 
-    // Créer un groupe pour chaque statut avec un itemType générique
-    Object.entries(statusGroups).forEach(([status, orderLines]) => {
-      groups.push({
-        id: `items-${status}`,
-        itemType: { id: 'items', name: 'Articles individuels' } as ItemType,
-        status: status as Status,
-        orderItems: orderLines
+    // Pour chaque itemType, créer des groupes par statut
+    Object.entries(itemTypeGroups).forEach(([itemTypeId, itemsOfType]) => {
+      // Récupérer les infos du premier item pour l'itemType
+      const itemTypeInfo = itemsOfType[0]?.item?.itemType || { 
+        id: itemTypeId, 
+        name: itemTypeId === 'unknown' ? 'Articles individuels' : 'Type inconnu'
+      };
+      
+      // Grouper par statut au sein de ce type
+      const statusGroups = itemsOfType.reduce((acc, line) => {
+        const status = line.status || Status.PENDING;
+        if (!acc[status]) {
+          acc[status] = [];
+        }
+        acc[status].push(line);
+        return acc;
+      }, {} as Record<Status, OrderLine[]>);
+
+      // Créer un groupe pour chaque combinaison itemType + statut
+      Object.entries(statusGroups).forEach(([status, orderLines]) => {
+        groups.push({
+          id: `${itemTypeId}-${status}`,
+          itemType: itemTypeInfo as ItemType,
+          status: status as Status,
+          orderItems: orderLines
+        });
       });
     });
 
-    // Trier les groupes par priorité de statut
+    // Trier les groupes : d'abord par itemType, puis par priorité de statut
     const getStatusPriority = (status: Status): number => {
       const statusOrder = [Status.TERMINATED, Status.DRAFT, Status.INPROGRESS, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
       return statusOrder.indexOf(status);
     };
 
     return groups.sort((a, b) => {
+      // D'abord trier par nom de type d'item
+      const typeComparison = a.itemType.name.localeCompare(b.itemType.name);
+      if (typeComparison !== 0) return typeComparison;
+
+      // Puis par priorité de statut au sein du même type
       const aPriority = getStatusPriority(a.status);
       const bPriority = getStatusPriority(b.status);
       return aPriority - bPriority;

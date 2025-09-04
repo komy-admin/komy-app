@@ -1,6 +1,7 @@
 import { Item } from './item.types';
 import { Menu } from './menu.types';
 import { Status } from './status.enum';
+import { ItemType } from './item-type.types';
 
 // Type énuméré pour le type d'OrderLine
 export enum OrderLineType {
@@ -15,6 +16,7 @@ export type OrderLineItemSnapshot = {
   price: number;
   description?: string;
   allergens?: string[] | null;
+  itemType: ItemType; // Type d'item (Entrées, Plats, etc.)
   snapshotAt: string; // ISO timestamp du snapshot
 };
 
