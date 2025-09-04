@@ -11,10 +11,11 @@ import {
   selectOrdersLoading,
   selectOrdersError,
 } from '~/store/restaurant';
-import { orderApiService, UpdateOrderPayload, UpdateOrderStatusPayload } from '~/api/order.api';
+import { orderApiService, UpdateOrderStatusPayload } from '~/api/order.api';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
+import { OrderLine } from '~/types/order-line.types';
 import { FilterQueryBuilder } from './useFilter/query-builder';
 
 /**
@@ -88,22 +89,9 @@ export const useOrders = () => {
   // }, [dispatch]);
 
   // 🆕 Nouvelle fonction pour la mise à jour complète (bulk update)
-  const updateOrder = useCallback(async (payload: UpdateOrderPayload) => {
+  const updateOrder = useCallback(async (payload: Partial<Order> & { id: string }) => {
     try {
       const orderId = payload.id;
-      console.log('🔄 [DEBUG] bulkUpdateOrder - Payload:', {
-        orderId,
-        tableId: payload.tableId,
-        linesCount: payload.lines?.length || 0,
-        lines: payload.lines?.map(line => ({
-          id: line.id,
-          type: line.type,
-          status: line.status,
-          itemName: line.item?.name || line.menu?.name,
-          itemsCount: line.items?.length || 0
-        }))
-      });
-
       const updatedOrder = await orderApiService.update(orderId, payload);
 
       dispatch(restaurantActions.updateOrder({ order: updatedOrder }));
@@ -128,13 +116,6 @@ export const useOrders = () => {
   const updateOrderStatus = useCallback(async (payload: UpdateOrderStatusPayload & { orderId: string }) => {
     try {
       const { orderId, ...statusPayload } = payload;
-      
-      console.log('🔄 [DEBUG] updateOrderStatus - New API:', {
-        orderId,
-        status: statusPayload.status,
-        orderLineIds: statusPayload.orderLineIds?.length || 0,
-        orderLineItemIds: statusPayload.orderLineItemIds?.length || 0
-      });
 
       // Validation : au moins un des deux arrays doit être fourni
       if ((!statusPayload.orderLineIds || statusPayload.orderLineIds.length === 0) && 
@@ -184,13 +165,6 @@ export const useOrders = () => {
     return order?.lines || [];
   }, [getOrderById]);
 
-  const getOrderItemsByType = useCallback((orderId: string, itemTypeId: string) => {
-    const order = getOrderById(orderId);
-    if (!order) return [];
-    
-    // Filtrer les OrderLines de type ITEM (pour l'instant on retourne toutes les lignes ITEM)
-    return (order.lines || []).filter(line => line.type === 'ITEM');
-  }, [getOrderById]);
 
   const getOrdersByRoom = useCallback((roomId: string) => {
     return orders.filter(order => order.table?.roomId === roomId);
@@ -297,7 +271,6 @@ export const useOrders = () => {
     getOrderById,
     getOrderByTableId,
     getOrderItems,
-    getOrderItemsByType,
     getOrdersByRoom,
     
     // Nouveaux utilitaires pour structure avec menus
