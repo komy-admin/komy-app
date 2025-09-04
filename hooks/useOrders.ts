@@ -144,12 +144,7 @@ export const useOrders = () => {
 
       const updatedOrder = await orderApiService.updateStatus(orderId, statusPayload);
       
-      console.log('✅ [DEBUG] updateOrderStatus success:', {
-        orderId: updatedOrder.id,
-        updatedLinesCount: updatedOrder.lines?.length || 0
-      });
-
-      dispatch(restaurantActions.updateOrder({ order: updatedOrder }));
+      // Le WebSocket se charge de la synchronisation des données
       return updatedOrder;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);

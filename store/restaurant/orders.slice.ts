@@ -118,7 +118,15 @@ const ordersSlice = createSlice({
 
     updateOrder: (state, action: PayloadAction<{ order: Order }>) => {
       const { order } = action.payload;
-      state.orders[order.id] = order;
+      const existingOrder = state.orders[order.id];
+      
+      // Préserver les données table si elles ne sont pas fournies dans la mise à jour
+      const updatedOrder = {
+        ...order,
+        table: order.table || existingOrder?.table
+      };
+      
+      state.orders[order.id] = updatedOrder;
       
       // Mettre à jour les OrderLines
       order.lines.forEach(orderLine => {
