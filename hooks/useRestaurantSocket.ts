@@ -7,8 +7,9 @@ import { restaurantActions } from '~/store/restaurant';
 interface WebSocketEvent {
   model: string;
   action: 'created' | 'updated' | 'deleted';
-  data: any;
-  accountId: string;
+  data?: any; // Pour les événements avec données complexes
+  dataId?: string; // Pour les événements de suppression
+  accountId?: string;
   timestamp: string;
 }
 
@@ -89,8 +90,11 @@ export const useRestaurantSocket = () => {
       },
 
       orderline_deleted: (event: WebSocketEvent) => {
-        console.log('🗑️ Ligne de commande supprimée:', event.data.id);
-        dispatch(restaurantActions.deleteOrderLine({ orderLineId: event.data.id }));
+        const orderLineId = event.dataId || event.data?.id;
+        console.log('🗑️ Ligne de commande supprimée:', orderLineId);
+        if (orderLineId) {
+          dispatch(restaurantActions.deleteOrderLine({ orderLineId }));
+        }
       },
 
       orderline_batch_deleted: (event: WebSocketEvent) => {
@@ -209,8 +213,6 @@ export const useRestaurantSocket = () => {
         console.log('🗑️ Article de catégorie supprimé:', event.data.id);
         dispatch(restaurantActions.deleteMenuCategoryItem({ menuCategoryItemId: event.data.id }));
       },
-
-      // 📜 Événements MenuOrderGroups (SUPPRIMÉS - remplacés par OrderLines de type MENU)
 
       // Événements Users
       user_created: (event: WebSocketEvent) => {

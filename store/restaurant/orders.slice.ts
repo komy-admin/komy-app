@@ -201,7 +201,17 @@ const ordersSlice = createSlice({
           delete state.orderLineItems[orderLineItem.id];
         });
         
-        // Supprimer l'OrderLine
+        // Trouver l'Order qui contient cette OrderLine et la retirer de son array lines
+        Object.values(state.orders).forEach(order => {
+          if (order.lines) {
+            const lineIndex = order.lines.findIndex(line => line.id === orderLineId);
+            if (lineIndex !== -1) {
+              order.lines.splice(lineIndex, 1);
+            }
+          }
+        });
+        
+        // Supprimer l'OrderLine du store normalisé
         delete state.orderLines[orderLineId];
       }
     },

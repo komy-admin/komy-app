@@ -733,6 +733,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
   const { showToast } = useToast();
   const { activeMenus, loadAllMenus } = useMenus();
   const { updateOrderLineItemsStatus } = useOrders();
+  const { deleteOrderLine } = useOrderLines();
 
   // Si les menus ne sont pas chargés, les charger
   useEffect(() => {
@@ -882,8 +883,13 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                         toggleExpanded(`menu-${menuLine.id}`);
                       }}
                       onDelete={async () => {
-                        // TODO: Implémenter la suppression du menu complet
-                        showToast('Suppression du menu non implémentée', 'info');
+                        try {
+                          await deleteOrderLine(menuLine.id);
+                          showToast('Menu supprimé avec succès.', 'success');
+                        } catch (error) {
+                          console.error('Erreur lors de la suppression du menu:', error);
+                          showToast('Erreur lors de la suppression du menu.', 'error');
+                        }
                       }}
                       onDeleteOrderItem={onDeleteOrderItem}
                       onUpdateOrderItemStatus={onUpdateOrderItemStatus ? async (orderLines: any[], newStatus: Status) => {

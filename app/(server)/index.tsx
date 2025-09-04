@@ -28,7 +28,7 @@ export default function ServerHome() {
 
   // Initialiser la connexion WebSocket via useRestaurant
   const { isLoading: globalLoading } = useRestaurant();
-  
+
   const { rooms, currentRoom, error: roomsError, setCurrentRoom } = useRooms();
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const { currentRoomOrders, selectedTableOrder, createOrder, deleteOrder, updateOrderStatus, error: ordersError } = useOrders();
@@ -49,14 +49,6 @@ export default function ServerHome() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Supprimer les commandes vides si on change de table
-    if (selectedTable && selectedTableOrder && (selectedTableOrder.lines || []).length === 0) {
-      try {
-        deleteOrder(selectedTableOrder.id);
-      } catch (error) {
-        console.error('Failed to delete empty order:', error);
-      }
-    }
 
     setSelectedTable(table.id);
     const existingOrder = currentRoomOrders.find(order => order.tableId === table.id);
@@ -90,7 +82,7 @@ export default function ServerHome() {
     // La commande sera créée à la fin avec toutes les OrderLines sélectionnées
     router.push({
       pathname: '/(server)/order/menu',
-      params: { 
+      params: {
         tableId: selectedTable.id,  // Passer tableId au lieu d'orderId
         newOrder: 'true'            // Flag pour indiquer que c'est une nouvelle commande
       }
@@ -140,8 +132,8 @@ export default function ServerHome() {
 
       if (itemTypeId) {
         // Filtrer par itemType spécifique (items individuels seulement)
-        const targetLines = (order.lines || []).filter(line => 
-          line.type === OrderLineType.ITEM && 
+        const targetLines = (order.lines || []).filter(line =>
+          line.type === OrderLineType.ITEM &&
           (line.item as any)?.itemType?.id === itemTypeId
         );
         orderLineIds = targetLines.map(line => line.id);
@@ -239,11 +231,11 @@ export default function ServerHome() {
                   const itemsByType = (order.lines || []).reduce((acc, line) => {
                     if (line.type !== OrderLineType.ITEM || !line.item) return acc;
                     const orderItem = { item: line.item, status: line.status }; // Adapter pour compatibilité
-                    
+
                     // Vérifier si itemType existe, sinon utiliser un fallback
                     const itemType = (orderItem.item as any)?.itemType;
                     if (!itemType) return acc; // Skip si pas d'itemType
-                    
+
                     const typeId = itemType.id;
                     const typeName = itemType.name;
 

@@ -100,10 +100,10 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
   /**
    * Supprimer plusieurs lignes en une fois
    */
-  async deleteLines(lineIds: string[]): Promise<{ deletedCount: number; deletedIds: string[] }> {
+  async deleteLines(orderLineIds: string[]): Promise<{ deletedCount: number; deletedIds: string[] }> {
     try {
       const response = await this.axiosInstance.delete<{ deletedCount: number; deletedIds: string[] }>(`${this.endpoint}/bulk`, {
-        data: { lineIds }
+        data: { orderLineIds }
       });
       return response.data;
     } catch (error) {
