@@ -166,6 +166,7 @@ export const restaurantActions = {
   deleteTable: tablesActions.deleteTable,
   
   setOrders: ordersActions.setOrders,
+  setAllOrders: ordersActions.setAllOrders,
   createOrder: ordersActions.createOrder,
   updateOrder: ordersActions.updateOrder,
   deleteOrder: ordersActions.deleteOrder,

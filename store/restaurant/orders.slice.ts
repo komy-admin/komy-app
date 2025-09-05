@@ -99,6 +99,25 @@ const ordersSlice = createSlice({
       state.loading = false;
       state.error = null;
     },
+
+    setAllOrders: (state, action: PayloadAction<{ orders: Order[] }>) => {
+      const { orders } = action.payload;
+      
+      orders.forEach(order => {
+        state.orders[order.id] = order;
+        
+        order.lines?.forEach(orderLine => {
+          state.orderLines[orderLine.id] = orderLine;
+          
+          orderLine.items?.forEach(orderLineItem => {
+            state.orderLineItems[orderLineItem.id] = orderLineItem;
+          });
+        });
+      });
+      
+      state.loading = false;
+      state.error = null;
+    },
     
     // Actions WebSocket pour les orders
     createOrder: (state, action: PayloadAction<{ order: Order }>) => {

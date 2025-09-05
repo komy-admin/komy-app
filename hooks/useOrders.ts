@@ -60,6 +60,25 @@ export const useOrders = () => {
     }
   }, [dispatch]);
 
+  const loadAllOrders = useCallback(async () => {
+    try {
+      dispatch(restaurantActions.setLoadingOrders(true));
+      const queryString = FilterQueryBuilder.build({
+        filters: [],
+        sort: { field: 'updatedAt', direction: 'asc' },
+        perPage: 500
+      });
+      
+      const { data: orders } = await orderApiService.getAll(queryString);
+      dispatch(restaurantActions.setAllOrders({ orders }));
+      return orders;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement de toutes les commandes';
+      dispatch(restaurantActions.setErrorOrders(errorMessage));
+      throw error;
+    }
+  }, [dispatch]);
+
   // Actions pour gérer les commandes
   const createOrder = useCallback(async (tableId: string) => {
     try {
@@ -251,6 +270,7 @@ export const useOrders = () => {
     
     // Actions de chargement
     loadOrdersForRoom,
+    loadAllOrders,
     
     // Actions CRUD pour les orders
     createOrder,
