@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TouchableOpacity, View, StyleSheet } from "react-native";
 import { Status } from "~/types/status.enum";
-import { Button, Text } from "../ui";
+import { Text } from "../ui";
 import { DateFormat, formatDate, getStatusColor, getStatusText } from "~/lib/utils";
 import { ChevronDown, ChevronUp, ArrowLeft, ArrowRight } from "lucide-react-native";
 import React from "react";
@@ -21,6 +21,7 @@ interface KitchenItemGroup {
     menuName?: string;
     menuId?: string;
     orderLineId?: string;
+    status?: Status;
     isOverdue: boolean;
   }>;
   isOverdue: boolean;
@@ -55,167 +56,158 @@ export default function KitchenItemCard({ itemGroup, onStatusChange, onIndividua
   };
 
   return (
-    <View style={[
-      styles.card,
-      itemGroup.isOverdue && styles.overdueCard
-    ]}>
-      {/* En-tête de la carte */}
-      <View style={styles.header}>
+    <TouchableOpacity 
+      style={[
+        styles.card,
+        itemGroup.isOverdue && styles.overdueCard
+      ]}
+      onPress={() => setIsExpanded(!isExpanded)}
+      activeOpacity={0.95}
+    >
+      {/* En-tête de la carte - Style OrderCard */}
+      <View style={styles.cardHeader}>
         <View style={styles.orderInfo}>
-          <Text style={styles.orderNumber}>{itemGroup.orderNumber}</Text>
-          <Text style={styles.tableName}>{itemGroup.tableName}</Text>
+          <Text style={styles.orderId}>{itemGroup.orderNumber}</Text>
+          <Text style={styles.itemCount}>
+            {itemGroup.items.length} article{itemGroup.items.length > 1 ? 's' : ''}
+          </Text>
         </View>
+        <View style={styles.expandButton}>
+          {isExpanded ? (
+            <ChevronUp size={20} color="#6B7280" />
+          ) : (
+            <ChevronDown size={20} color="#6B7280" />
+          )}
+        </View>
+      </View>
 
-        <View style={styles.headerRight}>
-          <Text style={styles.timestamp}>
-            {formatDate(itemGroup.createdAt, DateFormat.TIME)}
+      {/* Corps de la carte - Style OrderCard */}
+      <View style={styles.cardBody}>
+        <View style={styles.tableInfo}>
+          <Text style={styles.tableName}>
+            Table {itemGroup.tableName}
+          </Text>
+          <Text style={styles.orderTime}>
+            Commande lancée à {formatDate(itemGroup.createdAt, DateFormat.TIME)}
           </Text>
           {itemGroup.isOverdue && (
             <View style={styles.overdueIndicator}>
-              <Text style={styles.overdueText}>!</Text>
+              <Text style={styles.overdueText}>RETARD</Text>
             </View>
           )}
         </View>
       </View>
 
-      {/* Liste des items */}
-      <View style={styles.itemsContainer}>
-        <TouchableOpacity
-          style={styles.itemsSummary}
-          onPress={() => setIsExpanded(!isExpanded)}
-        >
-          <Text style={styles.itemsCount}>
-            {itemGroup.items.length} article{itemGroup.items.length > 1 ? 's' : ''}
-          </Text>
-          {isExpanded ? (
-            <ChevronUp size={16} color="#6B7280" />
-          ) : (
-            <ChevronDown size={16} color="#6B7280" />
-          )}
-        </TouchableOpacity>
-
-        {isExpanded && (
-          <View style={styles.expandedItems}>
-            {itemGroup.items.map((item, index) => {
-              const currentStatusIndex = STATUS_ORDER.indexOf(itemGroup.status);
-              const canGoBack = currentStatusIndex > 0;
-              const canGoForward = currentStatusIndex < STATUS_ORDER.length - 1;
-
-              const handleItemStatusBack = () => {
-                if (canGoBack && onIndividualItemStatusChange) {
-                  const newStatus = STATUS_ORDER[currentStatusIndex - 1];
-                  onIndividualItemStatusChange(item, newStatus);
-                }
-              };
-
-              const handleItemStatusForward = () => {
-                if (canGoForward && onIndividualItemStatusChange) {
-                  const newStatus = STATUS_ORDER[currentStatusIndex + 1];
-                  onIndividualItemStatusChange(item, newStatus);
-                }
-              };
-
-              return (
-                <View key={item.id} style={styles.itemRow}>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>
-                      {item.itemName}
-                    </Text>
-                    {item.type === 'MENU_ITEM' && item.menuName && (
-                      <Text style={styles.menuName}>
-                        {item.menuName}
-                      </Text>
-                    )}
-                    {item.itemType && (
-                      <Text style={styles.itemType}>
-                        {item.itemType}
-                      </Text>
-                    )}
-                  </View>
-                  
-                  <View style={styles.itemControls}>
-                    {item.isOverdue && (
-                      <View style={styles.itemOverdueIndicator}>
-                        <Text style={styles.overdueText}>!</Text>
-                      </View>
-                    )}
+      {/* Contenu expansible - Style OrderCard */}
+      {isExpanded && (
+        <View style={styles.expandedContent}>
+          <View style={styles.divider} />
+          <View style={styles.itemGroup}>
+            <View style={styles.groupHeader}>
+              <Text style={styles.groupName}>Détails des articles</Text>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(itemGroup.status) }]}>
+                <Text style={styles.statusText}>{getStatusText(itemGroup.status)}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.itemsList}>
+              {itemGroup.items.map((item) => {
+                return (
+                  <View key={item.id} style={styles.orderItem}>
+                    {/* Zone gauche - Bouton précédent */}
+                    <View style={styles.leftButtonZone}>
+                      {itemGroup.status !== Status.PENDING && (item.status === Status.INPROGRESS || item.status === Status.READY || item.status === Status.PENDING || !item.status) && (
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (onIndividualItemStatusChange) {
+                              const newStatus = STATUS_ORDER[STATUS_ORDER.indexOf(itemGroup.status) - 1];
+                              onIndividualItemStatusChange(item, newStatus);
+                            }
+                          }}
+                          style={[styles.itemActionButton, styles.itemPreviousButton]}
+                          activeOpacity={0.7}
+                        >
+                          <ArrowLeft size={14} color="#6B7280" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                     
-                    {/* Contrôles individuels si la fonction est fournie */}
-                    {onIndividualItemStatusChange && (
-                      <View style={styles.itemStatusControls}>
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          disabled={!canGoBack}
-                          onPress={handleItemStatusBack}
-                          style={[
-                            styles.itemStatusButton,
-                            !canGoBack && styles.disabledButton
-                          ]}
+                    {/* Zone centrale - Texte */}
+                    <View style={styles.itemDetails}>
+                      <Text style={[
+                        styles.itemName,
+                        item.isOverdue && { color: '#DC2626', fontWeight: '700' }
+                      ]}>
+                        {item.itemName}
+                      </Text>
+                      {(item.type === 'MENU_ITEM' && item.menuName) || item.itemType ? (
+                        <Text style={[
+                          styles.itemNote,
+                          item.isOverdue && { color: '#DC2626', fontWeight: '600' }
+                        ]}>
+                          {[
+                            item.type === 'MENU_ITEM' && item.menuName ? `Menu: ${item.menuName}` : null,
+                            item.itemType || null
+                          ].filter(Boolean).join(' - ')}
+                        </Text>
+                      ) : null}
+                    </View>
+                    
+                    {/* Zone droite - Bouton suivant */}
+                    <View style={styles.rightButtonZone}>
+                      {itemGroup.status !== Status.READY && (item.status === Status.PENDING || item.status === Status.INPROGRESS || !item.status) && (
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (onIndividualItemStatusChange) {
+                              const newStatus = STATUS_ORDER[STATUS_ORDER.indexOf(itemGroup.status) + 1];
+                              onIndividualItemStatusChange(item, newStatus);
+                            }
+                          }}
+                          style={[styles.itemActionButton, styles.itemNextButton]}
+                          activeOpacity={0.7}
                         >
-                          <ArrowLeft size={12} color={canGoBack ? "#374151" : "#D1D5DB"} />
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          disabled={!canGoForward}
-                          onPress={handleItemStatusForward}
-                          style={[
-                            styles.itemStatusButton,
-                            !canGoForward && styles.disabledButton
-                          ]}
-                        >
-                          <ArrowRight size={12} color={canGoForward ? "#374151" : "#D1D5DB"} />
-                        </Button>
-                      </View>
-                    )}
+                          <ArrowRight size={14} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
+            
+            {/* Boutons de contrôle de statut au niveau groupe */}
+            <View style={styles.buttonContainer}>
+              {(itemGroup.status === Status.INPROGRESS || itemGroup.status === Status.READY) && (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleStatusBack();
+                  }}
+                  style={[styles.actionButton, styles.previousButton]}
+                  activeOpacity={0.7}
+                >
+                  <ArrowLeft size={18} color="#6B7280" />
+                </TouchableOpacity>
+              )}
+              {(itemGroup.status === Status.PENDING || itemGroup.status === Status.INPROGRESS) && (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleStatusForward();
+                  }}
+                  style={[styles.actionButton, styles.nextButton]}
+                  activeOpacity={0.7}
+                >
+                  <ArrowRight size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        )}
-      </View>
-
-      {/* Boutons de contrôle de statut */}
-      <View style={styles.statusControls}>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!canGoBack}
-          onPress={handleStatusBack}
-          style={[
-            styles.statusButton,
-            !canGoBack && styles.disabledButton
-          ]}
-        >
-          <ArrowLeft size={16} color={canGoBack ? "#374151" : "#D1D5DB"} />
-        </Button>
-
-        <View style={[
-          styles.statusBadge,
-          { backgroundColor: getStatusColor(itemGroup.status) }
-        ]}>
-          <Text style={styles.statusText}>
-            {getStatusText(itemGroup.status)}
-          </Text>
         </View>
-
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!canGoForward}
-          onPress={handleStatusForward}
-          style={[
-            styles.statusButton,
-            !canGoForward && styles.disabledButton
-          ]}
-        >
-          <ArrowRight size={16} color={canGoForward ? "#374151" : "#D1D5DB"} />
-        </Button>
-      </View>
-    </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -223,157 +215,200 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   overdueCard: {
-    borderColor: '#F59E0B',
+    borderColor: '#DC2626',
     borderWidth: 2,
-    backgroundColor: '#FFFBF0',
+    shadowColor: '#DC2626',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  header: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   orderInfo: {
     flex: 1,
   },
-  orderNumber: {
+  orderId: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#2A2E33',
     marginBottom: 2,
   },
-  tableName: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  headerRight: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  timestamp: {
+  itemCount: {
     fontSize: 12,
     color: '#9CA3AF',
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  expandButton: {
+    padding: 4,
+  },
+  cardBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  tableInfo: {
+    gap: 4,
+  },
+  tableName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2A2E33',
+  },
+  orderTime: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '400',
   },
   overdueIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#F59E0B',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
   overdueText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
+    textTransform: 'uppercase',
   },
-  itemsContainer: {
+  expandedContent: {
+    paddingBottom: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
     marginBottom: 16,
   },
-  itemsSummary: {
+  itemGroup: {
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  groupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
   },
-  itemsCount: {
+  groupName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2A2E33',
+    textTransform: 'capitalize',
+    flex: 1,
+    minWidth: 100,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+    flexShrink: 0,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2A2E33',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemsList: {
+    marginBottom: 16,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  leftButtonZone: {
+    width: 32,
+    alignItems: 'flex-start',
+  },
+  rightButtonZone: {
+    width: 32,
+    alignItems: 'flex-end',
+  },
+  itemDetails: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  itemName: {
     fontSize: 14,
     color: '#374151',
     fontWeight: '500',
   },
-  expandedItems: {
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  menuName: {
+  itemNote: {
     fontSize: 12,
-    color: '#7C3AED',
-    fontWeight: '500',
-    marginBottom: 1,
-  },
-  itemType: {
-    fontSize: 11,
     color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
-  itemOverdueIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#F59E0B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  itemControls: {
+  buttonContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  itemStatusControls: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  itemStatusButton: {
-    minWidth: 28,
-    height: 28,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-  },
-  statusControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
-  statusButton: {
-    minWidth: 40,
+  actionButton: {
+    flex: 1,
     height: 40,
     borderRadius: 8,
+    alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  previousButton: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  nextButton: {
+    backgroundColor: '#2A2E33',
+  },
+  itemActionButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
   },
-  disabledButton: {
-    opacity: 0.3,
+  itemPreviousButton: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  statusBadge: {
-    flex: 1,
-    marginHorizontal: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+  itemNextButton: {
+    backgroundColor: '#2A2E33',
   },
 });
