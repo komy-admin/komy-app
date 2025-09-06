@@ -4,15 +4,31 @@ import { twMerge } from 'tailwind-merge';
 import { ItemTypes } from '~/types/item-type.enum';
 import { Status } from '~/types/status.enum';
 import { UserProfile } from '~/types/user.types';
+import { OrderLine, OrderLineType } from '~/types/order-line.types';
+import { Order } from '~/types/order.types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const getTableStatus = (table: Table): Status => {
-  const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
+export const getTableStatus = (table: Table & { orders?: (Order & { lines?: OrderLine[] })[] }): Status => {
+  const allStatuses: Status[] = [];
   
-  return getMostImportantStatus(statuses);
+  table.orders?.forEach(order => {
+    if (order.lines) {
+      order.lines.forEach(line => {
+        if (line.type === OrderLineType.ITEM && line.status) {
+          allStatuses.push(line.status);
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          line.items.forEach(menuItem => {
+            allStatuses.push(menuItem.status);
+          });
+        }
+      });
+    }
+  });
+  
+  return getMostImportantStatus(allStatuses);
 }
 
 export const getMostImportantStatus = (statuses: Status[]): Status => {
@@ -45,8 +61,29 @@ export const hasDraftWithOtherStatus = (statuses: Status[]): boolean => {
   return uniqueStatuses.includes(Status.DRAFT) && uniqueStatuses.length > 1;
 }
 
-export const shouldTableHaveDottedBorder = (table: Table): boolean => {
-  const statuses = table.orders?.flatMap(order => order.orderItems?.map(item => item.status) ?? []) ?? [];
+// Fonction pour détecter si un menu a des items avec des statuts différents
+export const hasMenuMixedStatuses = (statuses: Status[]): boolean => {
+  const uniqueStatuses = [...new Set(statuses)];
+  return uniqueStatuses.length > 1;
+}
+
+export const shouldTableHaveDottedBorder = (table: Table & { orders?: (Order & { lines?: OrderLine[] })[] }): boolean => {
+  const statuses: Status[] = [];
+  
+  table.orders?.forEach(order => {
+    if (order.lines) {
+      order.lines.forEach(line => {
+        if (line.type === OrderLineType.ITEM && line.status) {
+          statuses.push(line.status);
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          line.items.forEach(menuItem => {
+            statuses.push(menuItem.status);
+          });
+        }
+      });
+    }
+  });
+  
   return hasDraftWithOtherStatus(statuses);
 }
 
@@ -63,18 +100,32 @@ export const getStatusColor = (status: Status) => {
   return colors[status] || colors[Status.ERROR];
 }
 
-export const getStatusBorderStyle = (status: Status, table?: Table) => {
-  // Vérifier si la table a vraiment des orderItems (pas juste vide)
-  const hasActualOrderItems = table?.orders?.some(order => 
-    order.orderItems && order.orderItems.length > 0
+// Version spécifique pour les tags de statut dans les OrderItems (avec DRAFT plus visible)
+export const getStatusTagColor = (status: Status) => {
+  const colors = {
+    [Status.READY]: '#D7E3FC',
+    [Status.PENDING]: '#F9F1C8',
+    [Status.INPROGRESS]: '#FFD1AD',
+    [Status.SERVED]: '#B7E1CC',
+    [Status.ERROR]: '#F7BFB5',
+    [Status.TERMINATED]: '#EBEBEB',
+    [Status.DRAFT]: '#D1D5DB', // Gris plus foncé pour une meilleure visibilité des tags
+  };
+  return colors[status] || colors[Status.ERROR];
+}
+
+export const getStatusBorderStyle = (status: Status, table?: Table & { orders?: (Order & { lines?: OrderLine[] })[] }) => {
+  // Vérifier si la table a vraiment des OrderLines (pas juste vide)
+  const hasActualOrderLines = table?.orders?.some(order => 
+    order.lines && order.lines.length > 0
   ) ?? false;
   
   // Bordure pointillée SEULEMENT si:
-  // 1. La table a des orderItems réels ET le statut est DRAFT
+  // 1. La table a des OrderLines réels ET le statut est DRAFT
   // 2. OU il y a du DRAFT mélangé avec d'autres statuts
   const hasDraftMixed = table ? shouldTableHaveDottedBorder(table) : false;
   
-  if ((status === Status.DRAFT && hasActualOrderItems) || hasDraftMixed) {
+  if ((status === Status.DRAFT && hasActualOrderLines) || hasDraftMixed) {
     return {
       borderStyle: 'dashed' as const,
       borderColor: '#2A2E33',
@@ -85,6 +136,17 @@ export const getStatusBorderStyle = (status: Status, table?: Table) => {
   return {
     borderStyle: 'solid' as const,
     borderColor: '#AAAAAA',
+    borderWidth: 2,
+  };
+}
+
+// Style de bordure pour les groupes (menus et articles)
+export const getBorderStyle = (statuses: Status[], baseColor: string) => {
+  const hasMixed = hasMenuMixedStatuses(statuses);
+  
+  return {
+    borderStyle: 'solid' as const,
+    borderColor: baseColor,
     borderWidth: 2,
   };
 }
@@ -207,3 +269,102 @@ export const formatDate = (date: string | Date, format: DateFormat): string => {
     return 'Invalid date';
   }
 };
+
+// 🆕 Fonctions utilitaires pour OrderLines (nouvelle architecture)
+
+/**
+ * Calculer le statut global d'une commande basé sur ses OrderLines
+ */
+export const calculateOrderStatusFromLines = (orderLines: OrderLine[]): Status => {
+  if (orderLines.length === 0) return Status.DRAFT;
+
+  const allStatuses: Status[] = [];
+  
+  orderLines.forEach(line => {
+    if (line.type === OrderLineType.ITEM && line.status) {
+      // Items individuels: status sur OrderLine
+      allStatuses.push(line.status);
+    } else if (line.type === OrderLineType.MENU && line.items) {
+      // Menus: collecter les status de tous les OrderLineItems
+      line.items.forEach(menuItem => {
+        allStatuses.push(menuItem.status);
+      });
+    }
+  });
+  
+  return getMostImportantStatus(allStatuses);
+};
+
+/**
+ * Calculer la progression d'un menu (OrderLine de type MENU)
+ */
+export const calculateMenuProgress = (menuLine: OrderLine) => {
+  if (menuLine.type !== OrderLineType.MENU || !menuLine.items) {
+    return { completed: 0, total: 0, percentage: 0, hasErrors: false };
+  }
+
+  const items = menuLine.items;
+  const completedCount = items.filter(item => 
+    [Status.READY, Status.SERVED, Status.TERMINATED].includes(item.status)
+  ).length;
+  
+  return {
+    completed: completedCount,
+    total: items.length,
+    percentage: Math.round((completedCount / items.length) * 100),
+    hasErrors: items.some(item => item.status === Status.ERROR)
+  };
+};
+
+
+/**
+ * Vérifier si un menu a des statuts mixtes (OrderLine de type MENU)
+ */
+export const hasMenuLineItemsMixedStatuses = (menuLine: OrderLine): boolean => {
+  if (menuLine.type !== OrderLineType.MENU || !menuLine.items) {
+    return false;
+  }
+  
+  const statuses = menuLine.items.map(item => item.status);
+  return hasMenuMixedStatuses(statuses);
+};
+
+/**
+ * Obtenir le style de bordure pour un menu basé sur ses OrderLineItems
+ */
+export const getMenuLineBorderStyle = (menuLine: OrderLine, baseColor: string) => {
+  const hasMixed = hasMenuLineItemsMixedStatuses(menuLine);
+  
+  if (hasMixed) {
+    return {
+      borderStyle: 'solid' as const,
+      borderColor: '#2A2E33', // Noir pour les bordures épaisses
+      borderWidth: 2, // Bordure normale pour les statuts mixtes
+    };
+  }
+  
+  return {
+    borderStyle: 'solid' as const,
+    borderColor: baseColor,
+    borderWidth: 2,
+  };
+};
+
+/**
+ * Obtenir le texte descriptif du type d'OrderLine
+ */
+export const getOrderLineTypeText = (type: OrderLineType): string => {
+  const texts = {
+    [OrderLineType.ITEM]: 'Item individuel',
+    [OrderLineType.MENU]: 'Menu',
+  };
+  return texts[type];
+};
+
+/**
+ * Calculer le prix total d'une commande basée sur ses OrderLines
+ */
+export const calculateOrderTotalFromLines = (orderLines: OrderLine[]): number => {
+  return orderLines.reduce((total, line) => total + line.totalPrice, 0);
+};
+

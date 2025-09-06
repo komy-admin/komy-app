@@ -3,7 +3,7 @@ import { View, ScrollView, Pressable } from 'react-native';
 import { Button, Text } from '~/components/ui';
 import { X, CheckSquare, Square, Plus, Minus, DivideIcon, Equal } from 'lucide-react-native';
 import { Order } from '~/types/order.types';
-import { OrderItem } from '~/types/order-item.types';
+import { OrderLine } from '~/types/order-line.types';
 
 interface PaymentViewProps {
   order: Order;
@@ -29,28 +29,31 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
   const [waitingForNext, setWaitingForNext] = useState(false);
   const [calculationHistory, setCalculationHistory] = useState<string[]>([]);
 
-  // Grouper les items par type
+  // Grouper les OrderLines par type
   const groupedItems = useMemo(() => {
-    const groups: { [key: string]: OrderItem[] } = {};
+    const groups: { [key: string]: OrderLine[] } = {};
 
-    order.orderItems.forEach(item => {
-      const typeName = item.itemType?.name || 'Sans catégorie';
+    (order.lines || []).forEach(line => {
+      let typeName = 'Articles';
+      if (line.type === 'MENU') {
+        typeName = 'Menus';
+      }
       if (!groups[typeName]) {
         groups[typeName] = [];
       }
-      groups[typeName].push(item);
+      groups[typeName].push(line);
     });
 
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [order.orderItems]);
+  }, [order.lines]);
 
-  // Calculer le total des items sélectionnés
+  // Calculer le total des OrderLines sélectionnées
   const selectedTotal = useMemo(() => {
-    return Array.from(selectedItems).reduce((total, itemId) => {
-      const item = order.orderItems.find(oi => oi.id === itemId);
-      return total + (item?.item.price || 0);
+    return Array.from(selectedItems).reduce((total, lineId) => {
+      const line = (order.lines || []).find(ol => ol.id === lineId);
+      return total + (line?.totalPrice || 0);
     }, 0);
-  }, [selectedItems, order.orderItems]);
+  }, [selectedItems, order.lines]);
 
   // Affichage des calculs ligne par ligne
   const calculationLines = useMemo(() => {
@@ -58,19 +61,20 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
 
     const lines: { operator: string; value: string; price: number }[] = [];
 
-    Array.from(selectedItems).forEach((itemId, index) => {
-      const item = order.orderItems.find(oi => oi.id === itemId);
-      if (item) {
+    Array.from(selectedItems).forEach((lineId, index) => {
+      const line = (order.lines || []).find(ol => ol.id === lineId);
+      if (line) {
+        const name = line.type === 'MENU' ? (line.menu?.name || 'Menu') : (line.item?.name || 'Article');
         lines.push({
           operator: index === 0 ? '' : '+',
-          value: item.item.name,
-          price: item.item.price
+          value: name,
+          price: line.totalPrice
         });
       }
     });
 
     return lines;
-  }, [selectedItems, order.orderItems]);
+  }, [selectedItems, order.lines]);
 
   const handleItemToggle = (itemId: string) => {
     if (paidItems.has(itemId)) return;
@@ -86,13 +90,13 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
     });
   };
 
-  // Vérifier si tous les items disponibles sont sélectionnés
+  // Vérifier si toutes les OrderLines disponibles sont sélectionnées
   const availableItems = useMemo(() => {
-    return order.orderItems.filter(item => !paidItems.has(item.id));
-  }, [order.orderItems, paidItems]);
+    return (order.lines || []).filter(line => !paidItems.has(line.id));
+  }, [order.lines, paidItems]);
 
   const allAvailableSelected = useMemo(() => {
-    return availableItems.length > 0 && availableItems.every(item => selectedItems.has(item.id));
+    return availableItems.length > 0 && availableItems.every(line => selectedItems.has(line.id));
   }, [availableItems, selectedItems]);
 
   const handleToggleSelectAll = () => {
@@ -202,9 +206,11 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
     return `${price.toFixed(2)}€`;
   };
 
-  const renderItem = ({ item }: { item: OrderItem }) => {
+  const renderItem = ({ item }: { item: OrderLine }) => {
     const isSelected = selectedItems.has(item.id);
     const isPaid = paidItems.has(item.id);
+    const itemName = item.type === 'MENU' ? (item.menu?.name || 'Menu') : (item.item?.name || 'Article');
+    const itemTypeLabel = item.type === 'MENU' ? 'Menu' : (item.item?.itemType?.name || 'Article');
 
     return (
       <Pressable
@@ -226,15 +232,15 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
           </View>
           <View className="flex-1">
             <Text className={`text-sm font-medium ${isPaid ? 'text-gray-400' : 'text-gray-900'}`}>
-              {item.item.name}
+              {itemName}
             </Text>
             <Text className={`text-sm ${isPaid ? 'text-gray-300' : 'text-gray-600'}`}>
-              {item.itemType?.name}
+              {itemTypeLabel}
             </Text>
           </View>
         </View>
         <Text className={`text-sm font-semibold ${isPaid ? 'text-gray-400' : 'text-gray-900'}`}>
-          {formatPrice(item.item.price)}
+          {formatPrice(item.totalPrice)}
         </Text>
       </Pressable>
     );
@@ -274,7 +280,7 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
       {/* Liste des items à gauche */}
       <View className="w-80 border-r border-gray-200">
         <View className="p-3 bg-gray-50 border-b border-gray-200 flex-row justify-between items-center">
-          <Text className="font-semibold text-gray-900">Articles ({order.orderItems.length - paidItems.size} restants)</Text>
+          <Text className="font-semibold text-gray-900">Articles ({(order.lines || []).length - paidItems.size} restants)</Text>
           <Pressable onPress={onClose} className="p-1">
             <X size={20} color="#6B7280" />
           </Pressable>

@@ -21,15 +21,10 @@ import ordersReducer, {
   selectOrdersByRoomId,
   selectOrderById,
   selectOrderByTableId,
-  selectAllOrderItems,
-  selectOrderItemById,
   selectOrdersLoading,
   selectOrdersError,
-  selectOrderIndividualItems,
-  selectOrderMenus,
-  selectOrderAllItems,
-  selectOrderHasMenus,
-  selectOrderHasIndividualItems,
+  selectAllOrderLinesWithOrderId,
+  selectAllKitchenItems,
 } from './orders.slice';
 import menuReducer, { 
   menuActions,
@@ -76,9 +71,20 @@ import uiReducer, {
   selectErrorByDomain,
   selectLoadingByDomain,
 } from './ui.slice';
+import menuOrderGroupsReducer, {
+  menuOrderGroupsActions,
+  type MenuOrderGroupsState,
+  selectAllMenuOrderGroups,
+  selectMenuOrderGroupsLoading,
+  selectMenuOrderGroupsError,
+  setMenuOrderGroups,
+  addMenuOrderGroup,
+  deleteMenuOrderGroup,
+} from './menu-order-groups.slice';
 import { createSelector } from '@reduxjs/toolkit';
 import { Order } from '@/types/order.types';
 import { Table } from '@/types/table.types';
+import { MenuOrderGroup } from '~/types/menu-order-group.types';
 
 // État combiné du restaurant
 export interface RestaurantState {
@@ -89,6 +95,7 @@ export interface RestaurantState {
   menus: MenusState;
   users: UsersState;
   ui: UiState;
+  menuOrderGroups: MenuOrderGroupsState;
 }
 
 // Reducer combiné
@@ -100,6 +107,7 @@ export const restaurantReducer = combineReducers({
   menus: menusReducer,
   users: usersReducer,
   ui: uiReducer,
+  menuOrderGroups: menuOrderGroupsReducer,
 });
 
 // Actions combinées
@@ -139,6 +147,11 @@ export const restaurantActions = {
     Object.entries(uiActions).map(([key, action]) => [`ui_${key}`, action])
   ),
   
+  // Actions des menu order groups
+  ...Object.fromEntries(
+    Object.entries(menuOrderGroupsActions).map(([key, action]) => [`menuOrderGroups_${key}`, action])
+  ),
+  
   // Actions simplifiées pour compatibilité
   setRooms: roomsActions.setRooms,
   setCurrentRoom: roomsActions.setCurrentRoom,
@@ -153,14 +166,16 @@ export const restaurantActions = {
   deleteTable: tablesActions.deleteTable,
   
   setOrders: ordersActions.setOrders,
+  setAllOrders: ordersActions.setAllOrders,
   createOrder: ordersActions.createOrder,
   updateOrder: ordersActions.updateOrder,
   deleteOrder: ordersActions.deleteOrder,
-  updateOrderItem: ordersActions.updateOrderItem,
-  deleteOrderItem: ordersActions.deleteOrderItem,
-  updateOrderStatus: ordersActions.updateOrderStatus,
-  orderItemsStatusUpdated: ordersActions.orderItemsStatusUpdated,
-  createOrderItemsBatch: ordersActions.createOrderItemsBatch,
+
+  createOrderLinesBatch: ordersActions.createOrderLinesBatch,
+  updateOrderLine: ordersActions.updateOrderLine,
+  deleteOrderLine: ordersActions.deleteOrderLine,
+  orderLinesStatusUpdated: ordersActions.orderLinesStatusUpdated,
+  orderLineItemsStatusUpdated: ordersActions.orderLineItemsStatusUpdated,
   
   setItems: menuActions.setItems,
   setItemTypes: menuActions.setItemTypes,
@@ -182,6 +197,10 @@ export const restaurantActions = {
   createMenuCategoryItem: menusActions.createMenuCategoryItem,
   updateMenuCategoryItem: menusActions.updateMenuCategoryItem,
   deleteMenuCategoryItem: menusActions.deleteMenuCategoryItem,
+  
+  setMenuOrderGroups: setMenuOrderGroups,
+  addMenuOrderGroup: addMenuOrderGroup,
+  deleteMenuOrderGroup: deleteMenuOrderGroup,
   
   setUsers: usersActions.setUsers,
   createUser: usersActions.createUser,
@@ -220,15 +239,23 @@ export const restaurantActions = {
 
 // Selectors combinés avec logique métier
 
-// Selectors enrichis
+// Selectors enrichis - OPTIMISÉ avec référence stable
 export const selectEnrichedTables = createSelector(
   [
     (state: { restaurant: RestaurantState }) => selectAllTables({ tables: state.restaurant.tables }),
     (state: { restaurant: RestaurantState }) => selectOrders({ orders: state.restaurant.orders }),
   ],
   (tables, orders) => {
+    // Index des orders par tableId pour éviter find() O(n) -> O(1)
+    const ordersByTableId = new Map<string, Order>();
+    orders.forEach(order => {
+      if (order.tableId) {
+        ordersByTableId.set(order.tableId, order);
+      }
+    });
+
     return tables.map((table: Table) => {
-      const currentOrder = orders.find((order: Order) => order.tableId === table.id);
+      const currentOrder = ordersByTableId.get(table.id);
       return {
         ...table,
         currentOrder,
@@ -246,14 +273,25 @@ export const selectCurrentRoomTables = createSelector(
   ],
   (currentRoomId, tables, orders) => {
     if (!currentRoomId) return [];
-    return tables.filter((table: Table) => table.roomId === currentRoomId).map((table: Table) => {
-      const currentOrder = orders.find((order: Order) => order.tableId === table.id);
-      return {
-        ...table,
-        currentOrder,
-        status: currentOrder?.status,
-      };
+    
+    // Index des orders par tableId - performance O(1)
+    const ordersByTableId = new Map<string, Order>();
+    orders.forEach(order => {
+      if (order.tableId) {
+        ordersByTableId.set(order.tableId, order);
+      }
     });
+
+    return tables
+      .filter((table: Table) => table.roomId === currentRoomId)
+      .map((table: Table) => {
+        const currentOrder = ordersByTableId.get(table.id);
+        return {
+          ...table,
+          currentOrder,
+          status: currentOrder?.status,
+        };
+      });
   }
 );
 
@@ -296,6 +334,37 @@ export const selectCurrentRoomId = (state: { restaurant: RestaurantState }) =>
 export const selectRoomById = (roomId: string) => (state: { restaurant: RestaurantState }) => 
   state.restaurant.rooms.rooms[roomId] || null;
 
+// OPTIMISÉ : Sélecteurs memoizés pour MenuOrderGroups avec index pré-calculé
+export const selectOptimizedMenuOrderGroupsByOrderId = createSelector(
+  [(state: { restaurant: RestaurantState }) => state.restaurant.menuOrderGroups.menuOrderGroups],
+  (menuOrderGroups) => {
+    // Créer un index Map une seule fois quand menuOrderGroups change
+    const groupsByOrderId = new Map<string, MenuOrderGroup[]>();
+    menuOrderGroups.forEach((group: MenuOrderGroup) => {
+      if (!groupsByOrderId.has(group.orderId)) {
+        groupsByOrderId.set(group.orderId, []);
+      }
+      groupsByOrderId.get(group.orderId)!.push(group);
+    });
+    
+    // Retourner une fonction de lookup O(1)
+    return (orderId: string) => groupsByOrderId.get(orderId) || [];
+  }
+);
+
+export const selectOptimizedMenuOrderGroupById = createSelector(
+  [(state: { restaurant: RestaurantState }) => state.restaurant.menuOrderGroups.menuOrderGroups],
+  (menuOrderGroups) => {
+    // Index par ID pour lookup O(1)
+    const groupsById = new Map<string, MenuOrderGroup>();
+    menuOrderGroups.forEach((group: MenuOrderGroup) => {
+      groupsById.set(group.id, group);
+    });
+    
+    return (groupId: string) => groupsById.get(groupId) || null;
+  }
+);
+
 export const selectRoomsLoading = (state: { restaurant: RestaurantState }) => 
   state.restaurant.rooms.loading;
 
@@ -319,15 +388,10 @@ export {
   selectOrdersByRoomId,
   selectOrderById,
   selectOrderByTableId,
-  selectAllOrderItems,
-  selectOrderItemById,
   selectOrdersLoading,
   selectOrdersError,
-  selectOrderIndividualItems,
-  selectOrderMenus,
-  selectOrderAllItems,
-  selectOrderHasMenus,
-  selectOrderHasIndividualItems,
+  selectAllOrderLinesWithOrderId,
+  selectAllKitchenItems,
   
   // Menu
   selectAllItems,
@@ -365,6 +429,11 @@ export {
   selectHasErrors,
   selectErrorByDomain,
   selectLoadingByDomain,
+  
+  // MenuOrderGroups
+  selectAllMenuOrderGroups,
+  selectMenuOrderGroupsLoading,
+  selectMenuOrderGroupsError,
 };
 
 // Export des types
@@ -376,4 +445,5 @@ export type {
   MenusState,
   UsersState,
   UiState,
+  MenuOrderGroupsState,
 };

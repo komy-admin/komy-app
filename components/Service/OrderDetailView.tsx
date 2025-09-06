@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ItemType } from '~/types/item-type.types';
-import { OrderItem } from '~/types/order-item.types';
+import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText, getNextStatus, getPreviousStatus } from '~/lib/utils';
 import { Button } from '../ui';
@@ -21,7 +21,7 @@ import MenuGroupView from './MenuGroupView';
 interface OrderItemsGroupProps {
   itemType: ItemType;
   status: Status;
-  orderItems: OrderItem[];
+  orderLines: OrderLine[];
   isExpanded: boolean;
   onToggle: () => void;
   onUpdateStatus: (newStatus: Status) => void;
@@ -42,11 +42,22 @@ const getItemTypeIcon = (itemTypeName: string) => {
   }
 };
 
-const OrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, onUpdateStatus }: OrderItemsGroupProps) => {
+const OrderItemsGroup = ({ itemType, status, orderLines, isExpanded, onToggle, onUpdateStatus }: OrderItemsGroupProps) => {
   const [showStatusSelector, setShowStatusSelector] = useState(false);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
-  const itemStatus = getMostImportantStatus(orderItems.map(orderItem => orderItem.status));
+  
+  // Collecter tous les statuts des OrderLines
+  const allStatuses: Status[] = [];
+  orderLines.forEach(line => {
+    if (line.type === OrderLineType.ITEM && line.status) {
+      allStatuses.push(line.status);
+    } else if (line.type === OrderLineType.MENU && line.items) {
+      line.items.forEach(item => allStatuses.push(item.status));
+    }
+  });
+  
+  const itemStatus = getMostImportantStatus(allStatuses);
   const nextStatus = itemStatus ? getNextStatus(itemStatus) : null;
   const previousStatus = itemStatus ? getPreviousStatus(itemStatus) : null;
 
@@ -236,41 +247,89 @@ const OrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, o
 
             {isExpanded && (
               <View>
-                {orderItems.map((orderItem) => (
-                  <View
-                    key={orderItem.id}
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderTopWidth: 1,
-                      borderTopColor: '#E5E7EB',
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16 }}>{orderItem.item.name}</Text>
-                      {orderItem.note && (
-                        <Text style={{ fontSize: 14, color: '#666666', fontStyle: 'italic' }}>
-                          Commentaire : {orderItem.note}
-                        </Text>
-                      )}
-                    </View>
-                    <View>
-                      <Text style={{ fontSize: 14, color: '#666666' }}>
-                        {formatDate(orderItem.updatedAt, DateFormat.TIME)}
-                      </Text>
-                      <Text style={{
-                        fontSize: 14,
-                        color: '#666666',
-                        textAlign: 'right'
-                      }}>
-                        {itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+                {orderLines.map((orderLine, index) => {
+                  if (orderLine.type === OrderLineType.ITEM && orderLine.item) {
+                    return (
+                      <View
+                        key={orderLine.id}
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderTopWidth: 1,
+                          borderTopColor: '#E5E7EB',
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 16 }}>{orderLine.item.name} (x{orderLine.quantity})</Text>
+                          {orderLine.note && (
+                            <Text style={{ fontSize: 14, color: '#666666', fontStyle: 'italic' }}>
+                              Commentaire : {orderLine.note}
+                            </Text>
+                          )}
+                        </View>
+                        <View>
+                          <Text style={{
+                            fontSize: 14,
+                            color: '#666666',
+                            textAlign: 'right'
+                          }}>
+                            {orderLine.status ? getStatusText(orderLine.status) : 'Aucun statut'}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  } else if (orderLine.type === OrderLineType.MENU && orderLine.items) {
+                    return (
+                      <View key={orderLine.id}>
+                        <View
+                          style={{
+                            paddingVertical: 8,
+                            paddingHorizontal: 16,
+                            borderTopWidth: 1,
+                            borderTopColor: '#E5E7EB',
+                            backgroundColor: '#F8F9FA',
+                          }}
+                        >
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#666' }}>
+                            Menu: {orderLine.menu?.name} (x{orderLine.quantity})
+                          </Text>
+                        </View>
+                        {orderLine.items.map((menuItem) => (
+                          <View
+                            key={menuItem.id}
+                            style={{
+                              flexDirection: 'row',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              paddingVertical: 8,
+                              paddingHorizontal: 32,
+                              borderTopWidth: 1,
+                              borderTopColor: '#F0F0F0',
+                            }}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 15 }}>{menuItem.item.name}</Text>
+                              <Text style={{ fontSize: 12, color: '#888' }}>Catégorie: {menuItem.categoryName}</Text>
+                            </View>
+                            <View>
+                              <Text style={{
+                                fontSize: 14,
+                                color: '#666666',
+                                textAlign: 'right'
+                              }}>
+                                {getStatusText(menuItem.status)}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  }
+                  return null;
+                })}
                 <Button
                   onPress={() => setShowStatusSelector(true)}
                   style={{ backgroundColor: '#2A2E33', margin: 16, borderRadius: 8 }}
@@ -307,7 +366,7 @@ const OrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, o
 interface OrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
-  onStatusUpdate: (orderItems: OrderItem[], status: Status) => void;
+  onStatusUpdate: (orderLines: OrderLine[], status: Status) => void;
 }
 
 export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: OrderDetailViewProps) {
@@ -330,74 +389,66 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
     );
   };
 
-  // Créer une structure de groupement par type ET par statut pour les items individuels
-  const createGroupedIndividualItems = () => {
+  // Créer une structure de groupement par type d'item pour les OrderLines
+  const createGroupedOrderLines = () => {
     const groups: Array<{
       id: string;
       itemType: ItemType;
       status: Status;
-      orderItems: OrderItem[];
+      orderLines: OrderLine[];
     }> = [];
 
-    // Obtenir les items individuels (nouvelle structure ou fallback)
-    let individualItems: OrderItem[] = [];
-    if (order.individualItems) {
-      individualItems = order.individualItems;
-    } else if (order.orderItems) {
-      // Fallback: filtrer les items sans menuGroupId
-      individualItems = order.orderItems.filter(item => !item.menuGroupId);
-    }
+    if (!order.lines || order.lines.length === 0) return [];
 
     // Pour chaque type d'item
     itemTypes.forEach(itemType => {
-      // Récupérer tous les orderItems individuels de ce type
-      const itemsOfType = individualItems.filter(
-        orderItem => orderItem.item.itemType.id === itemType.id
-      );
-
-      if (itemsOfType.length === 0) return;
-
-      // Grouper par statut au sein de ce type
-      const statusGroups = itemsOfType.reduce((acc, orderItem) => {
-        const status = orderItem.status;
-        if (!acc[status]) {
-          acc[status] = [];
+      // Filtrer les OrderLines qui correspondent à ce type d'item
+      const linesOfType = order.lines.filter(line => {
+        if (line.type === OrderLineType.ITEM && line.item) {
+          return (line.item as any).itemTypeId === itemType.id;
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          // Pour les menus, vérifier si des items du menu correspondent à ce type
+          return line.items.some(menuItem => 
+            (menuItem.item as any).itemTypeId === itemType.id
+          );
         }
-        acc[status].push(orderItem);
-        return acc;
-      }, {} as Record<Status, OrderItem[]>);
+        return false;
+      });
 
-      // Créer un groupe pour chaque combinaison type + statut
-      Object.entries(statusGroups).forEach(([status, orderItems]) => {
-        groups.push({
-          id: `${itemType.id}-${status}`,
-          itemType,
-          status: status as Status,
-          orderItems
-        });
+      if (linesOfType.length === 0) return;
+
+      // Calculer le statut global pour ce groupe
+      const allStatuses: Status[] = [];
+      linesOfType.forEach(line => {
+        if (line.type === OrderLineType.ITEM && line.status) {
+          allStatuses.push(line.status);
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          line.items.forEach(item => {
+            if ((item.item as any).itemTypeId === itemType.id) {
+              allStatuses.push(item.status);
+            }
+          });
+        }
+      });
+      
+      const globalStatus = getMostImportantStatus(allStatuses);
+      
+      groups.push({
+        id: `${itemType.id}-${globalStatus}`,
+        itemType,
+        status: globalStatus,
+        orderLines: linesOfType
       });
     });
 
-    // Trier les groupes : d'abord par type, puis par priorité de statut
-    const getStatusPriority = (status: Status): number => {
-      const order = [Status.TERMINATED, Status.DRAFT, Status.INPROGRESS, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
-      return order.indexOf(status);
-    };
-
-    return groups.sort((a, b) => {
-      // D'abord trier par nom de type
-      const typeComparison = a.itemType.name.localeCompare(b.itemType.name);
-      if (typeComparison !== 0) return typeComparison;
-
-      // Puis par priorité de statut - avec fallback pour les statuts non définis
-      const aPriority = getStatusPriority(a.status);
-      const bPriority = getStatusPriority(b.status);
-      return aPriority - bPriority;
-    });
+    // Trier les groupes par nom de type
+    return groups.sort((a, b) => a.itemType.name.localeCompare(b.itemType.name));
   };
 
-  const groupedIndividualItems = createGroupedIndividualItems();
-  const orderMenus = order.menus || [];
+  const groupedOrderLines = createGroupedOrderLines();
+  
+  // Séparer les menus des autres items pour l'affichage
+  const menuOrderLines = order.lines?.filter(line => line.type === OrderLineType.MENU) || [];
 
   return (
     <ScrollView
@@ -411,7 +462,7 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
       nestedScrollEnabled={true}
     >
       {/* Section Menus */}
-      {orderMenus.length > 0 && (
+      {menuOrderLines.length > 0 && (
         <View>
           <Text style={{
             fontSize: 18,
@@ -421,47 +472,47 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
           }}>
             🍽️ Menus
           </Text>
-          {orderMenus.map((menuGroup) => (
+          {menuOrderLines.map((orderLine) => (
             <MenuGroupView
-              key={menuGroup.id}
-              menuGroup={menuGroup}
-              isExpanded={expandedMenus.includes(menuGroup.id)}
-              onToggle={() => toggleMenuExpanded(menuGroup.id)}
-              onStatusUpdate={onStatusUpdate}
+              key={orderLine.id}
+              orderLine={orderLine}
+              isExpanded={expandedMenus.includes(orderLine.id)}
+              onToggle={() => toggleMenuExpanded(orderLine.id)}
+              onStatusUpdate={(orderLineItems, status) => onStatusUpdate([orderLine], status)}
             />
           ))}
         </View>
       )}
 
-      {/* Section Items individuels */}
-      {groupedIndividualItems.length > 0 && (
-        <View style={{ marginTop: orderMenus.length > 0 ? 24 : 0 }}>
-          {orderMenus.length > 0 && (
+      {/* Section Items par type */}
+      {groupedOrderLines.length > 0 && (
+        <View style={{ marginTop: menuOrderLines.length > 0 ? 24 : 0 }}>
+          {menuOrderLines.length > 0 && (
             <Text style={{
               fontSize: 18,
               fontWeight: '600',
               color: '#1A1A1A',
               marginBottom: 12,
             }}>
-              🍹 Items à la carte
+              🍹 Items par catégorie
             </Text>
           )}
-          {groupedIndividualItems.map((group) => (
+          {groupedOrderLines.map((group) => (
             <OrderItemsGroup
               key={group.id}
               itemType={group.itemType}
               status={group.status}
-              orderItems={group.orderItems}
+              orderLines={group.orderLines}
               isExpanded={expandedGroups.includes(group.id)}
               onToggle={() => toggleExpanded(group.id)}
-              onUpdateStatus={(newStatus) => onStatusUpdate(group.orderItems, newStatus)}
+              onUpdateStatus={(newStatus) => onStatusUpdate(group.orderLines, newStatus)}
             />
           ))}
         </View>
       )}
 
       {/* Message si aucun item */}
-      {orderMenus.length === 0 && groupedIndividualItems.length === 0 && (
+      {menuOrderLines.length === 0 && groupedOrderLines.length === 0 && (
         <View style={{
           flex: 1,
           justifyContent: 'center',

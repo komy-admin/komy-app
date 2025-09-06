@@ -1,12 +1,12 @@
 import React from 'react';
 import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Button, ConfirmDialog, ForkModal, Text } from "~/components/ui";
+import { Badge, Button, ForkModal, Text } from "~/components/ui";
+import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
-import { Minus, Plus, Grid3X3Icon, ListFilter } from "lucide-react-native";
 import OrderList from "~/components/Service/OrderList";
 import { SearchBar } from "~/components/Service/SearchBar";
 import { useOrderFilters } from "~/hooks/useOrderFilters";
@@ -14,7 +14,7 @@ import StartOrderCard from "~/components/Service/StartOrderCard";
 import { Status } from "~/types/status.enum";
 import AdminOrderDetailView from "~/components/Service/AdminOrderDetailView";
 import PaymentView from "~/components/Service/PaymentView";
-import { OrderItem } from '~/types/order-item.types';
+import { OrderLine } from '~/types/order-line.types';
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import {
@@ -44,13 +44,13 @@ export default function ServicePage() {
   const {
     currentRoomOrders,
     selectedTableOrder,
-    createOrder,
+    // createOrder, // Non utilisé
     updateOrder,
     deleteOrder,
-    createOrderItem,
     deleteOrderItem,
     deleteManyOrderItems,
-    updateOrderItemStatus
+    // updateOrderItemStatus, // Non utilisé (remplacé par updateOrderLinesStatus)
+    updateOrderLinesStatus
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
 
@@ -78,22 +78,43 @@ export default function ServicePage() {
       openReassign: () => updateModal({ showReassignModal: true }),
       closeReassign: () => updateModal({ showReassignModal: false }),
       setReassigning: (isReassigning: boolean) => updateModal({ isReassigning }),
-      
+
       openDeleteDialog: () => updateModal({ showDeleteOrderDialog: true }),
       closeDeleteDialog: () => updateModal({ showDeleteOrderDialog: false }),
-      
+
       openPayment: () => updateModal({ showPaymentModal: true }),
       closePayment: () => updateModal({ showPaymentModal: false }),
-      
+
       openOrderDetail: (order?: Order) => {
+        console.log('🚀 [DEBUG] openOrderDetail called:', {
+          orderId: order?.id,
+          tableId: order?.tableId,
+          isSaving: !!isSavingOrderRef.current,
+          currentModalState: modals.showOrderDetailModal
+        });
+
+        if (!order) {
+          console.warn('⚠️ [DEBUG] Cannot open order detail modal: no order provided');
+          return;
+        }
+
+        // 🔧 CORRECTION: Vérifier si une autre modal n'est pas déjà ouverte
+        if (modals.showOrderDetailModal) {
+          console.log('🛡️ [DEBUG] Modal already open - skipping duplicate opening');
+          return;
+        }
+
         if (order?.tableId) setSelectedTable(order.tableId);
         updateModal({ showOrderDetailModal: true });
+
+        console.log('✅ [DEBUG] Modal opening requested:', { showOrderDetailModal: true });
       },
       closeOrderDetail: () => {
+        console.log('🚪 [DEBUG] closeOrderDetail called - closing modal and clearing table selection');
         updateModal({ showOrderDetailModal: false });
         setSelectedTable(null);
       },
-      
+
       setCameFromOrderDetail: (came: boolean) => updateModal({ cameFromOrderDetailModal: came }),
       setModalTitle: (title: string) => updateModal({ modalTitle: title })
     }), [updateModal]);
@@ -115,7 +136,7 @@ export default function ServicePage() {
     handleFiltersChange,
     handleClearFilters,
     isLoaded: filtersLoaded,
-  } = useOrderFilters(currentRoomOrders.filter(order => order.orderItems && order.orderItems.length > 0));
+  } = useOrderFilters(currentRoomOrders.filter(order => order.lines && order.lines.length > 0));
 
 
   // Désélectionner la table lors de la navigation
@@ -129,143 +150,155 @@ export default function ServicePage() {
   );
 
 
-  // Fonction pour vérifier et supprimer une commande vide après suppression
-  const checkAndHandleEmptyOrder = async (deletedItemIds: string[]) => {
-    if (!selectedTableOrder) {
-      return false;
-    }
-
-    // Calculer les orderItems restants SANS attendre Redux
-    const remainingOrderItems = selectedTableOrder.orderItems.filter(
-      item => !deletedItemIds.includes(item.id)
-    );
-
-
-    if (remainingOrderItems.length === 0) {
-      try {
-        // FERMER LA MODAL EN PREMIER pour éviter l'effet de "vidage"
-        modalActions.closeOrderDetail();
-
-        // PUIS supprimer la commande vide
-        await deleteOrder(selectedTableOrder.id);
-        showToast('Commande supprimée car vide.', 'info');
-        return true; // Commande était vide et supprimée
-      } catch (error) {
-        console.error('Erreur lors de la suppression de la commande vide:', error);
-        showToast('Erreur lors de la suppression de la commande vide.', 'error');
-      }
-    }
-    return false; // Commande pas vide
-  };
 
   const handleChangeRoom = (room: any) => {
     setSelectedTable(null);
     setCurrentRoom(room.id);
   };
 
-  const handleTablePress = (table: Table | null) => {
+  const handleTablePress = useCallback((table: Table | null) => {
     if (!table) return;
 
-    // Supprimer les commandes vides si on change de table
-    if (selectedTableId && selectedTableOrder && (!selectedTableOrder.orderItems || selectedTableOrder.orderItems.length === 0)) {
-      try {
-        deleteOrder(selectedTableOrder.id);
-      } catch (error) {
-        console.error('Failed to delete empty order:', error);
-      }
-    }
+    // 🔧 CORRECTION: Trouver la commande AVANT de changer la table sélectionnée
+    const tableOrder = currentRoomOrders.find(order => order.tableId === table.id);
 
+    // Sélectionner la table
     setSelectedTable(table.id);
 
     // Si la table a une commande, ouvrir directement la modal de détails
-    const tableOrder = currentRoomOrders.find(order => order.tableId === table.id);
     if (tableOrder) {
-      handleOpenOrderDetailModal(tableOrder);
+      console.log('✅ [DEBUG] Opening modal for table order:', { orderId: tableOrder.id });
+      modalActions.openOrderDetail(tableOrder);
+    } else {
+      console.log('ℹ️ [DEBUG] No order found for table:', table.id);
     }
-  };
+  }, [currentRoomOrders, selectedTableId, selectedTableOrder, deleteOrder, setSelectedTable, modalActions.openOrderDetail]);
 
-  const handleCreateOrder = async () => {
-    try {
-      if (!selectedTableId) {
-        showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
-        return;
-      }
-      const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTableId);
-      if (existingOrder) {
-        showToast('Une commande existe déjà pour cette table.', 'warning');
-        return;
-      }
-
-      await createOrder(selectedTableId);
-      setOrderCreatedFromStart(true); // Marquer que la commande a été créée depuis "Start"
-      modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
-      modalActions.setModalTitle(`Créer la commande - ${selectedTable?.name}`); // Titre stable pour nouvelle commande
-      // selectedTableOrder sera mis à jour par Redux, on l'utilisera dans un useEffect
-      orderFormView.openCreate(); // Ouvrir la AdminFormView
-      showToast('Commande créée avec succès.', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la création de la commande. Veuillez réessayer.', 'error');
-      console.error(error);
+  const handleCreateOrder = () => {
+    if (!selectedTableId) {
+      showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
+      return;
     }
+    const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTableId);
+    if (existingOrder) {
+      showToast('Une commande existe déjà pour cette table.', 'warning');
+      return;
+    }
+
+    // NOUVEAU FLUX : Ouvrir directement le formulaire SANS créer de commande
+    // La commande sera créée à la fin quand le serveur validera avec les OrderLines
+    setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
+    modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
+    modalActions.setModalTitle(`Prendre la commande - ${selectedTable?.name}`); // Titre pour nouvelle commande
+    orderFormView.openCreate(); // Ouvrir la AdminFormView
+    showToast('Commande en cours de préparation.', 'info');
   };
 
 
   const handleOpenOrderModal = () => {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
     modalActions.setCameFromOrderDetail(true); // Marquer qu'on vient de la modal détails
-    modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table.name}` : "Modifier la commande"); // Titre stable pour modification
+    modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Modifier la commande"); // Titre stable pour modification
     // La commande courante est déjà disponible via selectedTableOrder
     orderFormView.openEdit(); // Ouvrir en mode édition
   };
 
-  const handleOpenOrderDetailModal = modalActions.openOrderDetail;
+  // Utiliser directement modalActions.openOrderDetail au lieu d'une référence séparée
   const handleCloseOrderDetailModal = modalActions.closeOrderDetail;
 
 
   // Ref pour tracker les sauvegardes en cours (persiste entre les renders)
-  const isSavingOrderRef = useRef(false);
+  const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
 
   // ✅ Hook personnalisé pour la logique de fermeture intelligente
   const useSmartOrderClose = () => {
     return useCallback(() => {
-      if (isSavingOrderRef.current) {
-        // Sauvegarde en cours : fermeture automatique
-        orderFormView.close();
-        isSavingOrderRef.current = false;
-        return;
-      }
-
-      // Fermeture manuelle : logique de nettoyage
-      orderFormView.close();
-      
+      const wasSaving = !!isSavingOrderRef.current;
       const wasOrderCreatedFromStart = orderCreatedFromStart;
+
+      // Fermer le formulaire
+      orderFormView.close();
       setOrderCreatedFromStart(false);
 
-      // Nettoyage conditionnel de commande vide
-      if (selectedTableOrder && wasOrderCreatedFromStart && selectedTableOrder.orderItems.length === 0) {
-        deleteOrder(selectedTableOrder.id)
-          .then(() => showToast('Commande annulée car aucun article n\'a été ajouté.', 'info'))
-          .catch((error) => console.error('Erreur lors de la suppression:', error));
+
+
+      // 🔧 CORRECTION: Réouverture conditionnelle de la modal détails avec délai
+      // Utiliser l'ordre sauvegardé stocké dans isSavingOrderRef au lieu de selectedTableOrder
+      if (wasSaving) {
+        console.log('🔄 [DEBUG] useSmartOrderClose - planning modal reopening after save');
+
+        // Récupérer l'ordre sauvegardé depuis la ref
+        const savedOrderData = typeof isSavingOrderRef.current === 'object' ? isSavingOrderRef.current.savedOrder : null;
+
+        console.log('📦 [DEBUG] Saved order data:', {
+          savedOrderData: savedOrderData?.id,
+          wasOrderCreatedFromStart,
+          cameFromOrderDetailModal: modals.cameFromOrderDetailModal
+        });
+
+        // Délai pour permettre aux WebSocket de se stabiliser
+        setTimeout(() => {
+          const shouldReopen = (
+            (wasOrderCreatedFromStart) ||
+            (savedOrderData && savedOrderData.lines && savedOrderData.lines.length > 0 && modals.cameFromOrderDetailModal)
+          );
+
+          if (shouldReopen && savedOrderData) {
+            console.log('🚀 [DEBUG] Reopening AdminOrderDetailView with saved order:', savedOrderData.id);
+            modalActions.openOrderDetail(savedOrderData);
+          } else {
+            console.log('📝 [DEBUG] Conditions not met for reopening - skipping', {
+              shouldReopen,
+              hasSavedOrder: !!savedOrderData
+            });
+          }
+        }, 300); // Délai augmenté pour plus de stabilité
       }
 
-      // Réouverture conditionnelle de la modal détails
-      if (modals.cameFromOrderDetailModal && selectedTableOrder && selectedTableOrder.orderItems.length > 0) {
-        modalActions.openOrderDetail();
-      }
-
-      modalActions.setCameFromOrderDetail(false);
+      // Réinitialiser le ref à la fin avec délai (après la réouverture)
+      setTimeout(() => {
+        isSavingOrderRef.current = false;
+        modalActions.setCameFromOrderDetail(false);
+      }, 400); // Délai plus long que la réouverture (300ms)
     }, [
-      orderFormView, 
-      orderCreatedFromStart, 
-      selectedTableOrder, 
-      modals.cameFromOrderDetailModal, 
-      modalActions, 
-      deleteOrder, 
+      orderFormView,
+      orderCreatedFromStart,
+      selectedTableOrder,
+      modals.cameFromOrderDetailModal,
+      modalActions,
+      deleteOrder,
       showToast
     ]);
   };
 
   const handleSmartCloseOrderModal = useSmartOrderClose();
+
+  // Fermeture automatique de la modale si l'ordre est supprimé (WebSocket)
+  useEffect(() => {
+    // 🔧 CORRECTION: Ajouter un délai pour éviter les fermetures prématurées pendant les transitions d'état
+    if (modals.showOrderDetailModal && !selectedTableOrder) {
+      console.log('⚠️ [DEBUG] Modal auto-close triggered - selectedTableOrder is null');
+
+      // 🔴 NOUVEAU: Vérifier si on est en train de sauvegarder pour éviter les fermetures intempestives
+      if (isSavingOrderRef.current) {
+        console.log('🛡️ [DEBUG] Skipping auto-close - save in progress');
+        return;
+      }
+
+      // Délai de 300ms pour permettre aux états de se stabiliser (augmenté)
+      const timeoutId = setTimeout(() => {
+        // Double vérification après le délai
+        if (modals.showOrderDetailModal && !selectedTableOrder && !isSavingOrderRef.current) {
+          console.log('🚪 [DEBUG] Closing modal after timeout - order still null');
+          modalActions.closeOrderDetail();
+        } else {
+          console.log('✅ [DEBUG] Modal stay open - order found after timeout or save in progress');
+        }
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedTableOrder, modals.showOrderDetailModal, modalActions]);
 
   // Optimisation des callbacks pour performances mobiles - batching des re-renders
   const handleConfigurationModeChange = useCallback((configuring: boolean) => {
@@ -286,7 +319,7 @@ export default function ServicePage() {
   const handleSaveOrder = async (getFormData: () => any) => {
     try {
       const formResult = getFormData();
-      
+
       if (!formResult.isValid) {
         return false;
       }
@@ -297,24 +330,19 @@ export default function ServicePage() {
       // Utiliser la fonction de sauvegarde complexe fournie par OrderItemsForm
       if (formResult.data.processComplexSave && formResult.hasChanges) {
         const updatedOrder = await formResult.data.processComplexSave();
-        
-        // Désactiver les flags avant que AdminFormView appelle onClose automatiquement
-        setOrderCreatedFromStart(false);
-        modalActions.setCameFromOrderDetail(false);
 
-        // Planifier la réouverture de la modal détails après la fermeture automatique
-        requestAnimationFrame(() => {
-          if (updatedOrder && updatedOrder.orderItems && updatedOrder.orderItems.length > 0) {
-            modalActions.openOrderDetail();
-          }
-        });
+        // Stocker le résultat pour useSmartOrderClose
+        isSavingOrderRef.current = { savedOrder: updatedOrder };
+
+        // Désactiver le flag orderCreatedFromStart seulement
+        // Ne pas toucher à cameFromOrderDetailModal - laisser useSmartOrderClose gérer la réouverture
+        setOrderCreatedFromStart(false);
 
         showToast('Commande mise à jour avec succès.', 'success');
         return true;
       } else {
         // Pas de modifications, AdminFormView va fermer automatiquement
         setOrderCreatedFromStart(false);
-        modalActions.setCameFromOrderDetail(false);
         return true;
       }
     } catch (error) {
@@ -325,16 +353,23 @@ export default function ServicePage() {
     }
   };
 
-  const handleStatusUpdate = async (orderItems: OrderItem[], status: Status) => {
+  const handleStatusUpdate = async (orderLines: OrderLine[], status: Status) => {
     if (!selectedTableOrder) {
       showToast('Aucune commande sélectionnée.', 'warning');
       return;
     }
 
     try {
-      const orderItemsIds = orderItems.map(orderItem => orderItem.id);
-      // Utiliser l'action Redux au lieu de l'appel API direct
-      await updateOrderItemStatus(orderItemsIds, status);
+      const orderLinesIds = orderLines.map(orderLine => orderLine.id);
+
+      console.log('🔄 [DEBUG] Service handleStatusUpdate:', {
+        orderId: selectedTableOrder.id,
+        status,
+        orderLinesIds: orderLinesIds.length
+      });
+
+      // 🆕 Utiliser la nouvelle API PATCH avec OrderLines
+      await updateOrderLinesStatus(selectedTableOrder.id, orderLinesIds, status);
       showToast('Statut mis à jour avec succès.', 'success');
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
@@ -411,7 +446,7 @@ export default function ServicePage() {
               <OrderList
                 orders={filteredOrders}
                 onOrderPress={(order) => {
-                  handleOpenOrderDetailModal(order);
+                  modalActions.openOrderDetail(order);
                 }}
                 onOrderDelete={handleDeleteOrder}
               />
@@ -495,7 +530,7 @@ export default function ServicePage() {
         onClose={handleCloseOrderDetailModal}
         width={900}
         height={700}
-        title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table.name}` : "Détails de la commande"}
+        title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Détails de la commande"}
       >
         {selectedTableOrder && (
           <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -507,8 +542,6 @@ export default function ServicePage() {
                   await deleteOrderItem(orderItemId);
                   showToast('Élément supprimé avec succès.', 'success');
 
-                  // Vérifier si la commande est maintenant vide IMMÉDIATEMENT
-                  await checkAndHandleEmptyOrder([orderItemId]);
                 } catch (error) {
                   console.error('Erreur lors de la suppression:', error);
                   showToast('Erreur lors de la suppression de l\'élément.', 'error');
@@ -519,8 +552,6 @@ export default function ServicePage() {
                   const result = await deleteManyOrderItems(orderItemIds);
                   showToast(`${result.deletedCount} éléments supprimés avec succès.`, 'success');
 
-                  // Vérifier si la commande est maintenant vide IMMÉDIATEMENT
-                  await checkAndHandleEmptyOrder(orderItemIds);
 
                   return result;
                 } catch (error) {
@@ -598,9 +629,18 @@ export default function ServicePage() {
           confirmButtonColor: '#059669' // Vert pour différencier de l'enregistrement normal
         } : undefined}
       >
-        {selectedTableOrder && (
+        {(selectedTableOrder || orderCreatedFromStart) && (
           <OrderItemsForm
-            order={selectedTableOrder}
+            order={selectedTableOrder || {
+              id: 'new-order-' + selectedTableId,
+              tableId: selectedTableId!,
+              table: selectedTable!,
+              lines: [],
+              status: Status.DRAFT,
+              account: '',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }}
             items={allItems.filter(item => item.isActive)}
             itemTypes={allItemTypes}
             onConfigurationModeChange={handleConfigurationModeChange}
@@ -610,15 +650,9 @@ export default function ServicePage() {
       </AdminFormView>
 
       {selectedTableOrder && modals.showDeleteOrderDialog && (
-        <ConfirmDialog
-          open={modals.showDeleteOrderDialog}
-          onOpenChange={(value) => {
-            if (value) modalActions.openDeleteDialog();
-            else modalActions.closeDeleteDialog();
-          }}
-          title="Supprimer la commande"
-          content="Êtes-vous sûr de vouloir supprimer cette commande ?"
-          onCancel={() => {
+        <DeleteConfirmationModal
+          isVisible={modals.showDeleteOrderDialog}
+          onClose={() => {
             modalActions.closeDeleteDialog();
             modalActions.openOrderDetail(); // Rouvrir la modal de détails si annulation
           }}
@@ -628,8 +662,8 @@ export default function ServicePage() {
             deleteOrder(selectedTableOrder.id);
             setSelectedTable(null);
           }}
-          confirmText="Supprimer"
-          variant="destructive"
+          entityName={`de la table ${selectedTableOrder.table?.name || selectedTableOrder.table?.id || 'N/A'}`}
+          entityType="la commande"
         />
       )}
       <CustomModal

@@ -37,7 +37,7 @@ export const useAppInit = () => {
   
   // Hooks spécialisés
   const { loadRooms } = useRooms();
-  const { loadOrdersForRoom } = useOrders();
+  const { loadAllOrders, loadOrdersForRoom } = useOrders();
   const { loadItemTypes, loadItems } = useMenu();
   const { loadAllMenus } = useMenus();
   const { loadUsers } = useUsers();
@@ -164,18 +164,17 @@ export const useAppInit = () => {
         })
       ]);
 
-      // Étape 4: Charger les commandes de la première salle
-      if (rooms.length > 0) {
-        console.log(`📝 Chargement des commandes pour la salle: ${rooms[0].name}`);
-        const orders = await loadOrdersForRoom(rooms[0].id).then(result => {
-          updateProgress('orders', true);
-          console.log('✅ Commandes chargées:', result.length);
-          return result;
-        });
-      } else {
+      // Étape 5: Charger toutes les commandes (toutes salles)
+      console.log('📝 Chargement de toutes les commandes...');
+      const orders = await loadAllOrders().then(result => {
         updateProgress('orders', true);
-        console.log('⚠️ Aucune salle trouvée, pas de commandes à charger');
-      }
+        console.log('✅ Toutes les commandes chargées:', result.length);
+        return result;
+      }).catch(error => {
+        console.error('⚠️ Erreur lors du chargement des commandes:', error);
+        updateProgress('orders', true); // Continuer même si erreur
+        return [];
+      });
 
       // Étape 5: Marquer l'initialisation comme terminée
       setState(prev => ({
@@ -219,6 +218,7 @@ export const useAppInit = () => {
     loadItemTypes, 
     loadItems,
     loadAllMenus,
+    loadAllOrders,
     loadOrdersForRoom,
     loadUsers,
     dispatch

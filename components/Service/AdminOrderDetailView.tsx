@@ -1,31 +1,30 @@
-import { View, Text, Pressable, ScrollView, Animated, Platform } from 'react-native';
-import { ChevronDown, ChevronUp, Wine, UtensilsCrossed, Soup, Dessert, Trash2, AlertTriangle, Settings } from 'lucide-react-native';
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Reanimated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
+import { View, Text, Pressable, ScrollView } from 'react-native';
+import { ChevronDown, ChevronUp, Wine, UtensilsCrossed, Soup, Dessert, Trash2, Settings, Menu } from 'lucide-react-native';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ItemType } from '~/types/item-type.types';
-import { OrderItem } from '~/types/order-item.types';
+import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from '~/lib/utils';
+import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, getBorderStyle, hasMenuMixedStatuses } from '~/lib/utils';
 import { Order } from '~/types/order.types';
-import { ConfirmDialog } from '~/components/ui';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import StatusSelector from './StatusSelector';
+import { useOrderLines } from '~/hooks/useOrderLines';
+import { useOrders } from '~/hooks/useOrders';
+import { useMenus } from '~/hooks/useMenus';
+import { restaurantActions } from '~/store/restaurant';
+import { useDispatch } from 'react-redux';
+import { useToast } from '~/components/ToastProvider';
 
-interface AdminOrderItemsGroupProps {
+interface AdminOrderLinesGroupProps {
   itemType: ItemType;
   status: Status;
-  orderItems: OrderItem[];
+  orderLines: OrderLine[];
   isExpanded: boolean;
   onToggle: () => void;
-  onDeleteOrderItem: (orderItemId: string) => void;
-  onUpdateOrderItemStatus?: (orderItems: OrderItem[], status: Status) => void;
-  onDeleteGroup?: (orderItems: OrderItem[]) => void;
+  onDeleteOrderLine: (orderLineId: string) => void;
+  onUpdateOrderLineStatus?: (orderLines: OrderLine[], status: Status) => void;
+  onDeleteGroup?: (orderLines: OrderLine[]) => void;
   groupId: string;
   isMenuOpen: boolean;
   onMenuOpenChange: (groupId: string | null) => void;
@@ -46,25 +45,28 @@ const getItemTypeIcon = (itemTypeName: string) => {
   }
 };
 
-// Composant pour un élément de commande individuel avec swipe menu
-const AdminOrderItem = ({ 
-  orderItem, 
-  onDelete, 
+// Composant pour une ligne de commande individuelle avec options toujours visibles
+const AdminOrderLineItem = ({
+  orderLine,
+  orderLineItem,
+  onDelete,
   onUpdateStatus,
-  isGroupMenuOpen = false
-}: { 
-  orderItem: OrderItem, 
-  onDelete: () => void,
+  isGroupMenuOpen = false,
+  isFirstInCategory = false,
+  isMenuItem = false
+}: {
+  orderLine?: OrderLine,
+  orderLineItem?: OrderLineItem,
+  onDelete?: () => void,
   onUpdateStatus?: (status: Status) => void,
-  isGroupMenuOpen?: boolean
+  isGroupMenuOpen?: boolean,
+  isFirstInCategory?: boolean,
+  isMenuItem?: boolean
 }) => {
-  const translateX = useSharedValue(0);
   const [showStatusSelector, setShowStatusSelector] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  const SWIPE_THRESHOLD = -120; // Plus large pour afficher 2 boutons
-  
+
   const handleDeleteItem = () => {
     setIsDeleting(true);
     try {
@@ -72,9 +74,9 @@ const AdminOrderItem = ({
     } catch (error) {
       // Haptic feedback non critique
     }
-    
+
     try {
-      onDelete();
+      onDelete?.();
     } catch (error) {
       console.error('Erreur dans onDelete:', error);
       setIsDeleting(false);
@@ -82,165 +84,116 @@ const AdminOrderItem = ({
   };
 
   const handleDeleteClick = () => {
-    // Fermer le menu et ouvrir la modal de confirmation
-    translateX.value = withSpring(0);
     setShowConfirmDialog(true);
   };
 
   const handleStatusClick = () => {
-    translateX.value = withSpring(0);
     if (onUpdateStatus) {
       setShowStatusSelector(true);
     }
   };
 
-  const panGesture = Gesture.Pan()
-    // .enabled(!isGroupMenuOpen && Platform.OS !== 'web') // Désactiver les gestes sur web et si le menu du groupe est ouvert
-    .enabled(!isGroupMenuOpen) // Désactiver si le menu du groupe est ouvert
-    .activeOffsetX([-10, 10]) // Seuil d'activation horizontal
-    .failOffsetY([-15, 15]) // Échouer si mouvement vertical trop important
-    .onStart((event) => {
-      // Déterminer l'intention du geste dès le début
-      const isHorizontalIntent = Math.abs(event.velocityX) > Math.abs(event.velocityY) * 1.5;
-      if (!isHorizontalIntent) {
-        // Si l'intention est verticale, ne pas intercepter le geste
-        return;
-      }
-    })
-    .onUpdate((event) => {
-      // Vérifier que le geste reste principalement horizontal
-      const isHorizontalGesture = Math.abs(event.translationX) > Math.abs(event.translationY) * 1.2;
-      if (!isHorizontalGesture) return;
-      
-      // Swipe vers la gauche seulement, limité à la largeur du menu
-      if (event.translationX <= 0) {
-        translateX.value = Math.max(event.translationX, SWIPE_THRESHOLD);
-      }
-    })
-    .onEnd((event) => {
-      if (event.translationX <= SWIPE_THRESHOLD) {
-        // Maintenir la position swipée pour afficher le menu
-        translateX.value = withSpring(SWIPE_THRESHOLD);
-      } else {
-        translateX.value = withSpring(0);
-      }
-    });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: translateX.value }],
-    };
-  });
-
-  const menuOpacity = useAnimatedStyle(() => {
-    const isMenuVisible = translateX.value < 0;
-    return {
-      opacity: isMenuVisible ? Math.abs(translateX.value) / Math.abs(SWIPE_THRESHOLD) : 0,
-      pointerEvents: isMenuVisible && Math.abs(translateX.value) > 20 ? 'auto' : 'none',
-    };
-  });
-
   if (isDeleting) {
     return null; // Masquer le composant pendant la suppression
   }
 
+  // Obtenir les données de l'item (OrderLine ou OrderLineItem)
+  const itemName = orderLine?.item?.name || orderLineItem?.item?.name || 'Article inconnu';
+  const itemNote = orderLine?.note || null;
+  const itemStatus = orderLine?.status || orderLineItem?.status || Status.PENDING;
+  const updatedAt = new Date().toISOString(); // OrderLine n'a pas de updatedAt, utiliser date actuelle
+
+  // Calculer la hauteur dynamique basée sur le contenu
+  const itemHeight = itemNote ? 75 : 56; // Plus haut si il y a un commentaire
+
   return (
-    <View style={{ position: 'relative' }}>
-      {/* Menu avec options suppression et statut */}
-      <Reanimated.View
-        style={[
-          {
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: 120,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          },
-          menuOpacity,
-        ]}
-      >
+    <View style={{
+      flexDirection: 'row',
+      backgroundColor: isMenuItem ? `${getStatusColor(itemStatus)}60` : 'white',
+      borderTopWidth: isFirstInCategory ? 0 : 1,
+      borderTopColor: '#E5E7EB',
+      minHeight: itemHeight,
+    }}>
+      {/* Contenu principal de l'item */}
+      <View style={{
+        flex: 1,
+        paddingVertical: 12,
+        paddingLeft: 16,
+        paddingRight: 8,
+        justifyContent: 'center',
+      }}>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          {/* Nom, tag statut et heure sur la même ligne */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: itemNote ? 4 : 0 }}>
+            <Text style={{ fontSize: 16, flex: 1, marginRight: 8 }}>{itemName}</Text>
+            {/* Tag du statut */}
+            <View style={{
+              backgroundColor: getStatusTagColor(itemStatus),
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 12,
+              marginRight: 8,
+            }}>
+              <Text style={{
+                fontSize: 11,
+                fontWeight: '600',
+                color: '#1A1A1A'
+              }}>
+                {getStatusText(itemStatus)}
+              </Text>
+            </View>
+            {/* Heure */}
+            <Text style={{ fontSize: 12, color: '#666666' }}>
+              {formatDate(updatedAt, DateFormat.TIME)}
+            </Text>
+          </View>
+          {/* Commentaire sur une ligne séparée si présent */}
+          {itemNote && (
+            <Text style={{ fontSize: 14, color: '#666666', fontStyle: 'italic' }}>
+              Commentaire : {itemNote}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* Boutons d'action toujours visibles - s'étirent pour coller aux bords */}
+      <View style={{ flexDirection: 'row', alignSelf: 'stretch' }}>
         {/* Bouton modification statut */}
         {onUpdateStatus && (
           <Pressable
             onPress={handleStatusClick}
             style={{
-              width: 60,
-              height: '100%',
               backgroundColor: '#3B82F6',
+              width: 60,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Settings size={20} color="white" strokeWidth={2} />
+            <Settings size={18} color="white" strokeWidth={2} />
           </Pressable>
         )}
-        
-        {/* Bouton suppression */}
-        <Pressable
-          onPress={handleDeleteClick}
-          style={{
-            width: 60,
-            height: '100%',
-            backgroundColor: '#EF4444',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Trash2 size={20} color="white" strokeWidth={2} />
-        </Pressable>
-      </Reanimated.View>
 
-      <GestureDetector gesture={panGesture}>
-        <Reanimated.View
-          style={[
-            {
-              backgroundColor: 'white',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
+        {/* Bouton suppression - masqué pour les items de menu */}
+        {!isMenuItem && onDelete && (
+          <Pressable
+            onPress={handleDeleteClick}
+            style={{
+              backgroundColor: '#EF4444',
+              width: 60,
               alignItems: 'center',
-              paddingVertical: 12,
-              paddingLeft: 16,
-              paddingRight: 16,
-              borderTopWidth: 1,
-              borderTopColor: '#E5E7EB',
-            },
-            animatedStyle,
-          ]}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16 }}>{orderItem.item.name}</Text>
-            {orderItem.note && (
-              <Text style={{ fontSize: 14, color: '#666666', fontStyle: 'italic' }}>
-                Commentaire : {orderItem.note}
-              </Text>
-            )}
-            <Text style={{ fontSize: 12, color: '#999999', marginTop: 4 }}>
-              ← Swiper pour options (statut/suppression)
-            </Text>
-          </View>
-          <View>
-            <Text style={{ fontSize: 14, color: '#666666' }}>
-              {formatDate(orderItem.updatedAt, DateFormat.TIME)}
-            </Text>
-            <Text style={{
-              fontSize: 14,
-              color: '#666666',
-              textAlign: 'right'
-            }}>
-              {getStatusText(orderItem.status)}
-            </Text>
-          </View>
-        </Reanimated.View>
-      </GestureDetector>
-      
+              justifyContent: 'center',
+            }}
+          >
+            <Trash2 size={18} color="white" strokeWidth={2} />
+          </Pressable>
+        )}
+      </View>
+
       {/* StatusSelector */}
       {onUpdateStatus && (
         <StatusSelector
           visible={showStatusSelector}
-          currentStatus={orderItem.status}
+          currentStatus={itemStatus}
           onClose={() => setShowStatusSelector(false)}
           onStatusSelect={(newStatus) => {
             setShowStatusSelector(false);
@@ -248,126 +201,77 @@ const AdminOrderItem = ({
           }}
         />
       )}
-      
+
       {/* Modal de confirmation de suppression */}
-      <ConfirmDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        title="Confirmer la suppression"
-        content={`Êtes-vous sûr de vouloir supprimer l'élément "${orderItem.item.name}" ?`}
-        onCancel={() => setShowConfirmDialog(false)}
+      <DeleteConfirmationModal
+        isVisible={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
         onConfirm={() => {
           setShowConfirmDialog(false);
           handleDeleteItem();
         }}
-        confirmText="Supprimer"
-        variant="destructive"
+        entityName={`"${itemName}"`}
+        entityType="l'article"
+        usePortal={true}
       />
     </View>
   );
 };
 
-const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onToggle, onDeleteOrderItem, onUpdateOrderItemStatus, onDeleteGroup, groupId, isMenuOpen, onMenuOpenChange }: AdminOrderItemsGroupProps) => {
-  const itemStatus = getMostImportantStatus(orderItems.map(orderItem => orderItem.status));
-  const translateX = useSharedValue(0);
+// Composant pour afficher un menu avec le même style que les articles individuels
+const AdminMenuOrderGroup = ({
+  menuOrderGroup,
+  menuInfo,
+  orderItems,
+  isExpanded,
+  onToggle,
+  onDelete,
+  onDeleteOrderItem,
+  onUpdateOrderItemStatus,
+  groupId,
+  isMenuOpen,
+  onMenuOpenChange
+}: {
+  menuOrderGroup: any,
+  menuInfo: any, // Info du menu depuis order.menus
+  orderItems: any[], // OrderLineItems du menu
+  isExpanded: boolean,
+  onToggle: () => void,
+  onDelete: () => void,
+  onDeleteOrderItem: (orderLineId: string) => void,
+  onUpdateOrderItemStatus?: (orderLines: any[], status: Status) => void,
+  groupId: string,
+  isMenuOpen: boolean,
+  onMenuOpenChange: (groupId: string | null) => void
+}) => {
+  const statuses = orderItems.map((orderLineItem: any) => orderLineItem.status);
+  const itemStatus = getMostImportantStatus(statuses); // Utilisation de la fonction générique
+  const hasMixed = hasMenuMixedStatuses(statuses);
+
   const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
   const [showGroupStatusSelector, setShowGroupStatusSelector] = useState(false);
-  
-  const SWIPE_THRESHOLD = -120; // Plus large pour 2 boutons
-
-  // Fermer le menu si un autre groupe devient actif
-  useEffect(() => {
-    if (!isMenuOpen) {
-      translateX.value = 0; // Fermeture instantanée
-    }
-  }, [isMenuOpen]);
 
   const handleGroupDeleteClick = () => {
-    translateX.value = 0; // Fermeture instantanée
-    onMenuOpenChange(null);
-    if (onDeleteGroup) {
-      setShowGroupConfirmDialog(true);
-    }
+    setShowGroupConfirmDialog(true);
   };
 
   const handleGroupStatusClick = () => {
-    translateX.value = 0; // Fermeture instantanée
-    onMenuOpenChange(null);
     if (onUpdateOrderItemStatus) {
       setShowGroupStatusSelector(true);
     }
   };
 
-  const groupPanGesture = Gesture.Pan()
-    // .enabled(Platform.OS !== 'web') // Désactiver les gestes sur web
-    .activeOffsetX([-10, 10]) // Seuil d'activation horizontal
-    .failOffsetY([-15, 15]) // Échouer si mouvement vertical trop important
-    .onStart((event) => {
-      // Déterminer l'intention du geste dès le début
-      const isHorizontalIntent = Math.abs(event.velocityX) > Math.abs(event.velocityY) * 1.5;
-      if (!isHorizontalIntent) {
-        // Si l'intention est verticale, ne pas intercepter le geste
-        return;
-      }
-    })
-    .onUpdate((event) => {
-      // Vérifier que le geste reste principalement horizontal
-      const isHorizontalGesture = Math.abs(event.translationX) > Math.abs(event.translationY) * 1.2;
-      if (!isHorizontalGesture) return;
-      
-      // Si le menu est déjà ouvert et qu'on swipe encore vers la gauche, ne rien faire
-      if (translateX.value === SWIPE_THRESHOLD && event.translationX <= 0) {
-        return;
-      }
-      
-      // Swipe vers la gauche seulement, limité à la largeur du menu
-      if (event.translationX <= 0) {
-        translateX.value = Math.max(event.translationX, SWIPE_THRESHOLD);
-      }
-    })
-    .onEnd((event) => {
-      if (event.translationX <= SWIPE_THRESHOLD) {
-        // Si pas déjà ouvert, ouvrir avec animation
-        if (translateX.value !== SWIPE_THRESHOLD) {
-          translateX.value = withSpring(SWIPE_THRESHOLD);
-        }
-        runOnJS(onMenuOpenChange)(groupId);
-      } else {
-        translateX.value = 0; // Fermeture instantanée
-        runOnJS(onMenuOpenChange)(null);
-      }
-    });
-
-  const groupAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: translateX.value }],
-    };
-  });
-
-  const groupMenuOpacity = useAnimatedStyle(() => {
-    const isMenuVisible = translateX.value < 0;
-    return {
-      opacity: isMenuVisible ? Math.abs(translateX.value) / Math.abs(SWIPE_THRESHOLD) : 0,
-      pointerEvents: isMenuVisible && Math.abs(translateX.value) > 20 ? 'auto' : 'none',
-    };
-  });
-
   const getGroupStyle = () => {
     const baseColor = getStatusColor(itemStatus);
+    const borderStyle = getBorderStyle(statuses, baseColor);
+
     return {
-      backgroundColor: isExpanded ? 'white' : `${baseColor}80`,
+      backgroundColor: hasMixed
+        ? 'white' // Statuts mixtes : fond blanc
+        : (isExpanded ? `${baseColor}20` : `${baseColor}80`), // Statut uniforme : couleur du statut
       borderRadius: 16,
       overflow: 'hidden' as const,
-      borderWidth: 2,
-      borderColor: isExpanded ? baseColor : 'transparent',
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: isExpanded ? 0.15 : 0.08,
-      shadowRadius: isExpanded ? 8 : 4,
-      elevation: isExpanded ? 6 : 3,
+      ...borderStyle, // Application du style de bordure (normale ou épaisse)
     };
   };
 
@@ -381,194 +285,196 @@ const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onTogg
     };
   };
 
-  const GroupContent = () => (
-    <View style={[
-      getGroupStyle()
-    ]}>
-      {/* Menu avec options intégré dans le groupe */}
-      <Reanimated.View
-        style={[
-          {
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: 120,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1,
-          },
-          groupMenuOpacity,
-        ]}
-      >
-        {/* Bouton modification statut du groupe */}
-        {onUpdateOrderItemStatus && (
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <View style={[getGroupStyle()]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 84 }}>
+          {/* Zone cliquable principale */}
           <Pressable
-            onPress={handleGroupStatusClick}
-            style={{
-              width: 60,
-              height: '100%',
-              backgroundColor: '#3B82F6',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            onPress={onToggle}
+            style={[getHeaderStyle(), { flex: 1 }]}
+            android_ripple={{ color: `${getStatusColor(itemStatus)}40` }}
           >
-            <Settings size={20} color="white" strokeWidth={2} />
-          </Pressable>
-        )}
-        
-        {/* Bouton suppression du groupe */}
-        {onDeleteGroup && (
-          <Pressable
-            onPress={handleGroupDeleteClick}
-            style={{
-              width: 60,
-              height: '100%',
-              backgroundColor: '#EF4444',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Trash2 size={20} color="white" strokeWidth={2} />
-          </Pressable>
-        )}
-      </Reanimated.View>
-      
-      <Pressable
-        onPress={() => {
-          // Fermer le menu si ouvert quand on clique sur le header
-          if (isMenuOpen) {
-            onMenuOpenChange(null);
-          }
-          onToggle();
-        }}
-        style={getHeaderStyle()}
-        android_ripple={{ color: `${getStatusColor(itemStatus)}40` }}
-      >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 16 }}>
-              <View style={{
-                backgroundColor: getStatusColor(itemStatus),
-                borderRadius: 24,
-                width: 48,
-                height: 48,
-                justifyContent: 'center',
-                alignItems: 'center',
-                shadowColor: '#000',
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 4,
-              }}>
-                {getItemTypeIcon(itemType.name)}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ 
-                  fontSize: 18, 
-                  fontWeight: '700', 
-                  color: '#1A1A1A',
-                  marginBottom: 2
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 16 }}>
+                <View style={{
+                  backgroundColor: getStatusColor(itemStatus),
+                  borderRadius: 24,
+                  width: 48,
+                  height: 48,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    width: 0,
+                    height: 2,
+                  },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 4,
                 }}>
-                  {itemType.name}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{
-                    backgroundColor: getStatusColor(itemStatus),
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 12,
+                  <Menu size={24} color="#1A1A1A" strokeWidth={1.5} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: '700',
+                    color: '#1A1A1A',
+                    marginBottom: 2
                   }}>
-                    <Text style={{ 
-                      fontSize: 12, 
-                      fontWeight: '600', 
-                      color: '#1A1A1A' 
+                    Menu : {menuInfo?.name || 'Menu'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {/* Indicateur de statuts mixtes */}
+                    {hasMixed && (
+                      <View style={{
+                        backgroundColor: getStatusTagColor(itemStatus),
+                        borderRadius: 6,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                      }}>
+                        <Text style={{ fontSize: 10, color: '#1A1A1A', fontWeight: '600' }}>
+                          STATUTS MIXTES
+                        </Text>
+                      </View>
+                    )}
+                    {/* Afficher le tag de statut global seulement si pas de statuts mixtes */}
+                    {!hasMixed && (
+                      <View style={{
+                        backgroundColor: getStatusTagColor(itemStatus),
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 12,
+                      }}>
+                        <Text style={{
+                          fontSize: 12,
+                          fontWeight: '600',
+                          color: '#1A1A1A'
+                        }}>
+                          {itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={{
+                      fontSize: 13,
+                      color: '#666666',
+                      fontWeight: '500'
                     }}>
-                      {itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}
+                      {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
                     </Text>
                   </View>
-                  <Text style={{ 
-                    fontSize: 13, 
-                    color: '#666666',
-                    fontWeight: '500'
-                  }}>
-                    {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
-                  </Text>
                 </View>
               </View>
-            </View>
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              gap: 8,
-              backgroundColor: isExpanded ? `${getStatusColor(itemStatus)}30` : `${getStatusColor(itemStatus)}20`,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 20,
-            }}>
-              {(onUpdateOrderItemStatus || onDeleteGroup) && (
-                <Text style={{ 
-                  fontSize: 10, 
-                  color: '#666666',
-                  marginRight: 4
-                }}>
-                  ← Options
-                </Text>
-              )}
+
+              {/* Chevron */}
               {isExpanded ? (
                 <ChevronUp size={20} color="#1A1A1A" strokeWidth={2.5} />
               ) : (
                 <ChevronDown size={20} color="#1A1A1A" strokeWidth={2.5} />
               )}
             </View>
-          </View>
-        </Pressable>
+          </Pressable>
+
+          {/* Boutons d'action sans padding (masqués quand ouvert) */}
+          {!isExpanded && (
+            <View style={{ flexDirection: 'row', alignSelf: 'stretch', height: '100%' }}>
+              {/* Bouton modification statut du groupe */}
+              {onUpdateOrderItemStatus && (
+                <Pressable
+                  onPress={handleGroupStatusClick}
+                  style={{
+                    backgroundColor: '#3B82F6',
+                    width: 60,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    alignSelf: 'stretch',
+                  }}
+                >
+                  <Settings size={20} color="white" strokeWidth={2} />
+                </Pressable>
+              )}
+
+              {/* Bouton suppression du groupe */}
+              <Pressable
+                onPress={handleGroupDeleteClick}
+                style={{
+                  backgroundColor: '#EF4444',
+                  width: 60,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  alignSelf: 'stretch',
+                }}
+              >
+                <Trash2 size={20} color="white" strokeWidth={2} />
+              </Pressable>
+            </View>
+          )}
+        </View>
 
         {isExpanded && (
           <View style={{
             backgroundColor: '#FAFBFC',
           }}>
-            {orderItems.map((orderItem, index) => (
-              <View key={orderItem.id} style={{
-                backgroundColor: index % 2 === 0 ? 'white' : '#F8F9FA'
-              }}>
-                <AdminOrderItem
-                  orderItem={orderItem}
-                  onDelete={() => onDeleteOrderItem(orderItem.id)}
-                  onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderItem], newStatus) : undefined}
-                  isGroupMenuOpen={isMenuOpen}
-                />
-              </View>
-            ))}
+            {/* Grouper les items par type d'item */}
+            {(() => {
+              // Grouper les orderItems par type d'item
+              const itemsByCategory = orderItems.reduce((acc, orderLineItem) => {
+                const categoryName = orderLineItem.item.itemType.name;
+                if (!acc[categoryName]) {
+                  acc[categoryName] = [];
+                }
+                acc[categoryName].push(orderLineItem);
+                return acc;
+              }, {} as Record<string, any[]>);
+
+              return Object.entries(itemsByCategory).map(([categoryName, categoryItems]) => (
+                <View key={categoryName}>
+                  {/* Header de catégorie */}
+                  <View style={{
+                    backgroundColor: '#E5E7EB',
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                  }}>
+                    <Text style={{
+                      fontSize: 14,
+                      fontWeight: '700',
+                      color: '#1F2937',
+                    }}>
+                      {categoryName}
+                    </Text>
+                  </View>
+
+                  {/* Items de la catégorie */}
+                  {(categoryItems as any[]).map((orderLineItem: any, index: number) => (
+                    <AdminOrderLineItem
+                      key={orderLineItem.id}
+                      orderLineItem={orderLineItem}
+                      onDelete={() => onDeleteOrderItem(orderLineItem.id)}
+                      onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLineItem], newStatus) : undefined}
+                      isGroupMenuOpen={isMenuOpen}
+                      isFirstInCategory={index === 0}
+                      isMenuItem={true}
+                    />
+                  ))}
+                </View>
+              ));
+            })()}
           </View>
         )}
       </View>
-  );
 
-  return (
-    <View style={{ marginBottom: 12 }}>
-      {/* Toujours permettre le swipe pour accéder au menu */}
-      <GestureDetector gesture={groupPanGesture}>
-        <GroupContent />
-      </GestureDetector>
-
-      <ConfirmDialog
-        open={showGroupConfirmDialog}
-        onOpenChange={setShowGroupConfirmDialog}
-        title="Supprimer tout le groupe"
-        content={`Êtes-vous sûr de vouloir supprimer tous les articles de "${itemType.name}" (${orderItems.length} article${orderItems.length > 1 ? 's' : ''}) ?`}
-        onCancel={() => setShowGroupConfirmDialog(false)}
+      <DeleteConfirmationModal
+        isVisible={showGroupConfirmDialog}
+        onClose={() => setShowGroupConfirmDialog(false)}
         onConfirm={() => {
           setShowGroupConfirmDialog(false);
-          onDeleteGroup?.(orderItems);
+          onDelete();
         }}
-        confirmText="Supprimer le groupe"
-        variant="destructive"
+        entityName={`"${menuInfo?.name || 'Menu'}" (${orderItems.length} article${orderItems.length > 1 ? 's' : ''})`}
+        entityType="le menu"
+        usePortal={true}
       />
-      
+
       {/* StatusSelector pour le groupe */}
       {onUpdateOrderItemStatus && itemStatus && (
         <StatusSelector
@@ -585,86 +491,338 @@ const AdminOrderItemsGroup = ({ itemType, status, orderItems, isExpanded, onTogg
   );
 };
 
+const AdminOrderItemsGroup = ({
+  itemType,
+  status,
+  orderItems,
+  isExpanded,
+  onToggle,
+  onDeleteOrderItem,
+  onUpdateOrderItemStatus,
+  onDeleteGroup,
+  groupId,
+  isMenuOpen,
+  onMenuOpenChange
+}: {
+  itemType: ItemType;
+  status: Status;
+  orderItems: OrderLine[];
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDeleteOrderItem: (orderLineId: string) => void;
+  onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
+  onDeleteGroup?: (orderLines: OrderLine[]) => void;
+  groupId: string;
+  isMenuOpen: boolean;
+  onMenuOpenChange: (groupId: string | null) => void;
+}) => {
+  const itemStatus = getMostImportantStatus(orderItems.map((orderLine: OrderLine) => orderLine.status || Status.PENDING));
+  const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
+  const [showGroupStatusSelector, setShowGroupStatusSelector] = useState(false);
+
+  const handleGroupDeleteClick = () => {
+    if (onDeleteGroup) {
+      setShowGroupConfirmDialog(true);
+    }
+  };
+
+  const handleGroupStatusClick = () => {
+    if (onUpdateOrderItemStatus) {
+      setShowGroupStatusSelector(true);
+    }
+  };
+
+  const getGroupStyle = () => {
+    const baseColor = getStatusColor(itemStatus);
+    const statuses = orderItems.map(orderItem => orderItem.status || Status.PENDING);
+    const borderStyle = getBorderStyle(statuses, baseColor);
+
+    return {
+      backgroundColor: isExpanded ? 'white' : `${baseColor}80`,
+      borderRadius: 16,
+      overflow: 'hidden' as const,
+      ...borderStyle,
+    };
+  };
+
+  const getHeaderStyle = () => {
+    const baseColor = getStatusColor(itemStatus);
+    return {
+      backgroundColor: isExpanded ? `${baseColor}20` : 'transparent',
+      padding: 18,
+      borderBottomWidth: isExpanded ? 1 : 0,
+      borderBottomColor: isExpanded ? `${baseColor}30` : 'transparent',
+    };
+  };
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <View style={[getGroupStyle()]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 84 }}>
+          {/* Zone cliquable principale */}
+          <Pressable
+            onPress={onToggle}
+            style={[getHeaderStyle(), { flex: 1 }]}
+            android_ripple={{ color: `${getStatusColor(itemStatus)}40` }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 16 }}>
+                <View style={{
+                  backgroundColor: getStatusColor(itemStatus),
+                  borderRadius: 24,
+                  width: 48,
+                  height: 48,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    width: 0,
+                    height: 2,
+                  },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 4,
+                }}>
+                  {getItemTypeIcon(itemType.name)}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: '700',
+                    color: '#1A1A1A',
+                    marginBottom: 2
+                  }}>
+                    {itemType.name}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{
+                      backgroundColor: getStatusTagColor(itemStatus),
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 12,
+                    }}>
+                      <Text style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: '#1A1A1A'
+                      }}>
+                        {itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}
+                      </Text>
+                    </View>
+                    <Text style={{
+                      fontSize: 13,
+                      color: '#666666',
+                      fontWeight: '500'
+                    }}>
+                      {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Chevron */}
+              {isExpanded ? (
+                <ChevronUp size={20} color="#1A1A1A" strokeWidth={2.5} />
+              ) : (
+                <ChevronDown size={20} color="#1A1A1A" strokeWidth={2.5} />
+              )}
+            </View>
+          </Pressable>
+
+          {/* Boutons d'action sans padding (masqués quand ouvert) */}
+          {!isExpanded && (
+            <View style={{ flexDirection: 'row', alignSelf: 'stretch', height: '100%' }}>
+              {/* Bouton modification statut du groupe */}
+              {onUpdateOrderItemStatus && (
+                <Pressable
+                  onPress={handleGroupStatusClick}
+                  style={{
+                    backgroundColor: '#3B82F6',
+                    width: 60,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    alignSelf: 'stretch',
+                  }}
+                >
+                  <Settings size={20} color="white" strokeWidth={2} />
+                </Pressable>
+              )}
+
+              {/* Bouton suppression du groupe */}
+              {onDeleteGroup && (
+                <Pressable
+                  onPress={handleGroupDeleteClick}
+                  style={{
+                    backgroundColor: '#EF4444',
+                    width: 60,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    alignSelf: 'stretch',
+                  }}
+                >
+                  <Trash2 size={20} color="white" strokeWidth={2} />
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
+
+        {isExpanded && (
+          <View style={{
+            backgroundColor: '#FAFBFC',
+          }}>
+            {orderItems.map((orderLine: any, index: number) => (
+              <View key={orderLine.id} style={{
+                backgroundColor: index % 2 === 0 ? 'white' : '#F8F9FA'
+              }}>
+                <AdminOrderLineItem
+                  orderLine={orderLine}
+                  onDelete={() => onDeleteOrderItem(orderLine.id)}
+                  onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLine], newStatus) : undefined}
+                  isGroupMenuOpen={false}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Modals */}
+      <DeleteConfirmationModal
+        isVisible={showGroupConfirmDialog}
+        onClose={() => setShowGroupConfirmDialog(false)}
+        onConfirm={() => {
+          setShowGroupConfirmDialog(false);
+          onDeleteGroup?.(orderItems);
+        }}
+        entityName={`"${itemType.name}" (${orderItems.length} article${orderItems.length > 1 ? 's' : ''})`}
+        entityType="le groupe"
+        usePortal={true}
+      />
+
+      {onUpdateOrderItemStatus && itemStatus && (
+        <StatusSelector
+          visible={showGroupStatusSelector}
+          currentStatus={itemStatus}
+          onClose={() => setShowGroupStatusSelector(false)}
+          onStatusSelect={(newStatus) => {
+            setShowGroupStatusSelector(false);
+            onUpdateOrderItemStatus(orderItems, newStatus);
+          }}
+        />
+      )}
+    </View>
+  );
+
+};
+
 interface AdminOrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
-  onDeleteOrderItem: (orderItemId: string) => void;
-  onDeleteManyOrderItems?: (orderItemIds: string[]) => Promise<{ deletedCount: number; deletedIds: string[] }>;
-  onUpdateOrderItemStatus?: (orderItems: OrderItem[], status: Status) => void;
+  onDeleteOrderItem: (orderLineId: string) => void;
+  onDeleteManyOrderItems?: (orderLineIds: string[]) => Promise<{ deletedCount: number; deletedIds: string[] }>;
+  onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
 }
 
 export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderItem, onDeleteManyOrderItems, onUpdateOrderItemStatus }: AdminOrderDetailViewProps) {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string | null>(null);
 
-  const toggleExpanded = (groupId: string) => {
+  // Hooks pour les menus et UI
+  const dispatch = useDispatch();
+  const { showToast } = useToast();
+  const { activeMenus, loadAllMenus } = useMenus();
+  const { updateOrderLineItemsStatus } = useOrders();
+  const { deleteOrderLine } = useOrderLines();
+
+  // Si les menus ne sont pas chargés, les charger
+  useEffect(() => {
+    if (activeMenus.length === 0) {
+      loadAllMenus();
+    }
+  }, [activeMenus, loadAllMenus]);
+
+  // OPTIMISÉ : Callback memoized pour éviter re-renders
+  const toggleExpanded = useCallback((groupId: string) => {
     setExpandedGroups(prev =>
       prev.includes(groupId)
         ? prev.filter(id => id !== groupId)
         : [...prev, groupId]
     );
-  };
+  }, []);
 
-  // Créer une structure de groupement par type ET par statut
-  const createGroupedItems = () => {
+  // OPTIMISÉ : Memoization du groupement coûteux
+  const groupedItems = useMemo(() => {
+    // Récupérer toutes les OrderLines de type ITEM
+    const individualItems = (order.lines || []).filter((line: OrderLine) => line.type === OrderLineType.ITEM);
+
+    if (individualItems.length === 0) return [];
+
     const groups: Array<{
       id: string;
       itemType: ItemType;
       status: Status;
-      orderItems: OrderItem[];
+      orderItems: OrderLine[];
     }> = [];
 
-    // Pour chaque type d'item
-    itemTypes.forEach(itemType => {
-      // Récupérer tous les orderItems de ce type
-      const itemsOfType = order.orderItems.filter(
-        orderItem => orderItem.item.itemType.id === itemType.id
-      );
+    // Grouper d'abord par itemType, puis par statut
+    const itemTypeGroups: Record<string, OrderLine[]> = {};
 
-      if (itemsOfType.length === 0) return;
+    individualItems.forEach(line => {
+      const itemTypeId = line.item?.itemType.id;
+      if (itemTypeId) {
+        if (!itemTypeGroups[itemTypeId]) {
+          itemTypeGroups[itemTypeId] = [];
+        }
+        itemTypeGroups[itemTypeId].push(line);
+      }
+    });
+
+    // Pour chaque itemType, créer des groupes par statut
+    Object.entries(itemTypeGroups).forEach(([itemTypeId, itemsOfType]) => {
+      // Récupérer les infos du premier item pour l'itemType
+      const itemTypeInfo = itemsOfType[0]?.item?.itemType
 
       // Grouper par statut au sein de ce type
-      const statusGroups = itemsOfType.reduce((acc, orderItem) => {
-        const status = orderItem.status;
+      const statusGroups = itemsOfType.reduce((acc, line) => {
+        const status = line.status || Status.PENDING;
         if (!acc[status]) {
           acc[status] = [];
         }
-        acc[status].push(orderItem);
+        acc[status].push(line);
         return acc;
-      }, {} as Record<Status, OrderItem[]>);
+      }, {} as Record<Status, OrderLine[]>);
 
-      // Créer un groupe pour chaque combinaison type + statut
-      Object.entries(statusGroups).forEach(([status, orderItems]) => {
+      // Créer un groupe pour chaque combinaison itemType + statut
+      Object.entries(statusGroups).forEach(([status, orderLines]) => {
         groups.push({
-          id: `${itemType.id}-${status}`,
-          itemType,
+          id: `${itemTypeId}-${status}`,
+          itemType: itemTypeInfo as ItemType,
           status: status as Status,
-          orderItems
+          orderItems: orderLines
         });
       });
     });
 
-    // Trier les groupes : d'abord par type, puis par priorité de statut
+    // Trier les groupes : d'abord par itemType, puis par priorité de statut
     const getStatusPriority = (status: Status): number => {
-      const order = [Status.TERMINATED, Status.DRAFT, Status.INPROGRESS, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
-      return order.indexOf(status);
+      const statusOrder = [Status.TERMINATED, Status.DRAFT, Status.INPROGRESS, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
+      return statusOrder.indexOf(status);
     };
 
     return groups.sort((a, b) => {
-      // D'abord trier par nom de type
+      // D'abord trier par nom de type d'item
       const typeComparison = a.itemType.name.localeCompare(b.itemType.name);
       if (typeComparison !== 0) return typeComparison;
 
-      // Puis par priorité de statut - avec fallback pour les statuts non définis
+      // Puis par priorité de statut au sein du même type
       const aPriority = getStatusPriority(a.status);
       const bPriority = getStatusPriority(b.status);
       return aPriority - bPriority;
     });
-  };
+  }, [order.lines]); // Dépendances optimisées
 
-  const groupedItems = createGroupedItems();
-
-  const RootComponent = Platform.OS === 'web' ? View : GestureHandlerRootView;
+  const RootComponent = View;
 
   return (
     <RootComponent style={{ flex: 1 }}>
@@ -674,47 +832,139 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
         bounces={true}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
-        removeClippedSubviews={false}
+        removeClippedSubviews={true} // OPTIMISÉ : Activer pour grandes listes
         scrollEnabled={true}
         nestedScrollEnabled={true}
         // Optimisations pour la gestion des gestes
         directionalLockEnabled={true}
         // Priorité au scroll vertical sur tablette
         alwaysBounceVertical={true}
+        // OPTIMISATIONS AJOUTÉES :
+        decelerationRate="normal" // Meilleure expérience scroll
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+          autoscrollToTopThreshold: 10
+        }} // Maintien position lors des updates
       >
-      {groupedItems.map((group) => (
-        <AdminOrderItemsGroup
-          key={group.id}
-          itemType={group.itemType}
-          status={group.status}
-          orderItems={group.orderItems}
-          isExpanded={expandedGroups.includes(group.id)}
-          onToggle={() => {
-            // Fermer tout menu ouvert avant de toggle
-            setOpenGroupMenuId(null);
-            toggleExpanded(group.id);
-          }}
-          onDeleteOrderItem={onDeleteOrderItem}
-          onUpdateOrderItemStatus={onUpdateOrderItemStatus}
-          onDeleteGroup={async (orderItems) => {
-            // Utiliser l'API de suppression en lot si disponible, sinon fallback vers les appels individuels
-            if (onDeleteManyOrderItems) {
-              const orderItemIds = orderItems.map(orderItem => orderItem.id);
-              await onDeleteManyOrderItems(orderItemIds);
-            } else {
-              // Fallback: supprimer tous les éléments du groupe en parallèle
-              const deletePromises = orderItems.map(orderItem => 
-                Promise.resolve(onDeleteOrderItem(orderItem.id))
-              );
-              await Promise.all(deletePromises);
-            }
-            
-          }}
-          groupId={group.id}
-          isMenuOpen={openGroupMenuId === group.id}
-          onMenuOpenChange={setOpenGroupMenuId}
-        />
-      ))}
+        {(() => {
+          // Vérifier s'il y a des menus dans les OrderLines
+          const menuLines = (order.lines || []).filter((line: OrderLine) => line.type === OrderLineType.MENU);
+          const hasMenus = menuLines.length > 0;
+          const hasIndividualItems = groupedItems && groupedItems.length > 0;
+
+
+          return (
+            <>
+              {/* Section Menus */}
+              {hasMenus && (
+                <>
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '700',
+                      color: '#1A1A1A',
+                      marginBottom: 12
+                    }}>
+                      🍽️ Menus
+                    </Text>
+                  </View>
+
+                  {/* Affichage des menus avec le style original */}
+                  {menuLines.map((menuLine: OrderLine) => (
+                    <AdminMenuOrderGroup
+                      key={menuLine.id}
+                      menuOrderGroup={menuLine}
+                      menuInfo={menuLine.menu}
+                      orderItems={menuLine.items || []}
+                      isExpanded={expandedGroups.includes(`menu-${menuLine.id}`)}
+                      onToggle={() => {
+                        // Fermer tout menu ouvert avant de toggle
+                        setOpenGroupMenuId(null);
+                        toggleExpanded(`menu-${menuLine.id}`);
+                      }}
+                      onDelete={async () => {
+                        try {
+                          await deleteOrderLine(menuLine.id);
+                          showToast('Menu supprimé avec succès.', 'success');
+                        } catch (error) {
+                          console.error('Erreur lors de la suppression du menu:', error);
+                          showToast('Erreur lors de la suppression du menu.', 'error');
+                        }
+                      }}
+                      onDeleteOrderItem={onDeleteOrderItem}
+                      onUpdateOrderItemStatus={onUpdateOrderItemStatus ? async (orderLines: any[], newStatus: Status) => {
+                        // Pour les items de menu, utiliser la nouvelle API spécialisée
+                        try {
+                          const orderLineIds = orderLines.map(ol => ol.id);
+                          await updateOrderLineItemsStatus(order.id, orderLineIds, newStatus);
+                          showToast('Statut mis à jour avec succès.', 'success');
+                        } catch (error) {
+                          console.error('Erreur lors de la mise à jour du statut:', error);
+                          showToast('Erreur lors de la mise à jour du statut.', 'error');
+                        }
+                      } : undefined}
+                      groupId={`menu-${menuLine.id}`}
+                      isMenuOpen={openGroupMenuId === `menu-${menuLine.id}`}
+                      onMenuOpenChange={setOpenGroupMenuId}
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* Section Articles Individuels */}
+              {hasIndividualItems && (
+                <>
+                  {hasMenus && <View style={{ height: 24 }} />}
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '700',
+                      color: '#1A1A1A',
+                      marginBottom: 12
+                    }}>
+                      📋 Articles individuels
+                    </Text>
+                  </View>
+                </>
+              )}
+
+              {/* Affichage des groupes d'items individuels */}
+              {groupedItems.map((group: { id: string; itemType: ItemType; status: Status; orderItems: OrderLine[] }) => (
+                <AdminOrderItemsGroup
+                  key={group.id}
+                  itemType={group.itemType}
+                  status={group.status}
+                  orderItems={group.orderItems}
+                  isExpanded={expandedGroups.includes(group.id)}
+                  onToggle={() => {
+                    // Fermer tout menu ouvert avant de toggle
+                    setOpenGroupMenuId(null);
+                    toggleExpanded(group.id);
+                  }}
+                  onDeleteOrderItem={onDeleteOrderItem}
+                  onUpdateOrderItemStatus={onUpdateOrderItemStatus}
+                  onDeleteGroup={async (orderLines: OrderLine[]) => {
+                    // Utiliser l'API de suppression en lot si disponible, sinon fallback vers les appels individuels
+                    if (onDeleteManyOrderItems) {
+                      const orderLineIds = orderLines.map((orderLine: OrderLine) => orderLine.id);
+                      await onDeleteManyOrderItems(orderLineIds);
+                    } else {
+                      // Fallback: supprimer tous les éléments du groupe en parallèle
+                      const deletePromises = orderLines.map((orderLine: OrderLine) =>
+                        Promise.resolve(onDeleteOrderItem(orderLine.id))
+                      );
+                      await Promise.all(deletePromises);
+                    }
+
+                  }}
+                  groupId={group.id}
+                  isMenuOpen={openGroupMenuId === group.id}
+                  onMenuOpenChange={setOpenGroupMenuId}
+                />
+              ))}
+            </>
+          );
+        })()}
         <View style={{ height: 20 }} />
       </ScrollView>
     </RootComponent>

@@ -1,4 +1,5 @@
 import { OrderItem } from "~/types/order-item.types";
+import { MenuOrderGroup } from "~/types/menu-order-group.types";
 import { BaseApiService } from "./base.api";
 import { Status } from "~/types/status.enum";
 
@@ -33,11 +34,18 @@ export class OrderItemApiService extends BaseApiService<OrderItem> {
   async createBulk(bulkData: {
     orderId: string;
     items: Array<{
-      itemId: string;
-      quantity: number;
+      itemId?: string;
+      quantity?: number;
       status?: Status;
+      menuId?: string;
+      selectedItems?: Record<string, string[]>;
     }>;
-  }): Promise<OrderItem[]> {
+  }): Promise<{
+    message: string;
+    createdCount: number;
+    orderItems: OrderItem[];
+    menuOrderGroups: MenuOrderGroup[];
+  }> {
     try {
       const response = await this.axiosInstance.post(`${this.endpoint}/bulk`, bulkData);
       return response.data;

@@ -1,15 +1,15 @@
-import { OrderItem } from "~/types/order-item.types";
+import { OrderLine } from "~/types/order-line.types";
 import { Status } from "~/types/status.enum";
 import { Table } from '~/types/table.types';
-import { MenuGroup } from '~/types/menu.types';
 
 export type Order = {
   id: string;
   tableId: string;
   table: Table;
-  individualItems?: OrderItem[];
-  menus?: MenuGroup[];
-  orderItems: OrderItem[];
+  
+  // 🆕 Structure unifiée OrderLine
+  lines: OrderLine[];
+  
   status: Status;
   account: string;
   createdAt: string;

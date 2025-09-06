@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CustomModal } from '~/components/CustomModal';
 import { Button } from '~/components/ui';
+import { Portal } from '@rn-primitives/portal';
 
 interface DeleteConfirmationModalProps {
   isVisible: boolean;
@@ -10,6 +11,7 @@ interface DeleteConfirmationModalProps {
   entityName: string;
   entityType: string;
   isLoading?: boolean;
+  usePortal?: boolean; // Nouveau prop pour contrôler l'utilisation du Portal
 }
 
 export function DeleteConfirmationModal({
@@ -18,9 +20,10 @@ export function DeleteConfirmationModal({
   onConfirm,
   entityName,
   entityType,
-  isLoading = false
+  isLoading = false,
+  usePortal = false // Par défaut, n'utilise pas le Portal
 }: DeleteConfirmationModalProps) {
-  return (
+  const modalContent = (
     <CustomModal
       isVisible={isVisible}
       onClose={onClose}
@@ -60,6 +63,15 @@ export function DeleteConfirmationModal({
         </View>
       </View>
     </CustomModal>
+  );
+
+  // Utilise Portal conditionnellement
+  return usePortal ? (
+    <Portal name="delete-confirmation-modal">
+      {modalContent}
+    </Portal>
+  ) : (
+    modalContent
   );
 }
 

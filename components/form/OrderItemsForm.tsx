@@ -1,54 +1,52 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, ScrollView, Pressable, StyleSheet, Platform, useWindowDimensions } from 'react-native';
-import { Text, Button } from '~/components/ui';
+import { Text } from '~/components/ui';
 import { Plus, Minus, Menu as MenuIcon } from 'lucide-react-native';
 import { Order } from '~/types/order.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
-import { OrderItem } from '~/types/order-item.types';
-import { Status } from '~/types/status.enum';
-import { orderItemApiService } from '~/api/order-item.api';
+import { OrderLineType, CreateOrderLineRequest } from '~/types/order-line.types';
 import { useToast } from '~/components/ToastProvider';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { useMenus } from '~/hooks/useMenus';
+import { useOrderLines } from '~/hooks/useOrderLines';
 import { AdminFormData, AdminFormRef } from '~/components/admin/AdminFormView';
 
 interface OrderItemsFormProps {
   order: Order;
   items: Item[];
   itemTypes: ItemType[];
-  onSave?: (order: Order) => void;
-  onCancel?: () => void;
   onConfigurationModeChange?: (isConfiguring: boolean) => void;
   onConfigurationActionsChange?: (actions: { onCancel: () => void; onConfirm: () => void } | null) => void;
 }
 
-// Interface pour les items en brouillon (local)
-interface DraftOrderItem {
-  itemId: string;
+// Interface pour les lignes en brouillon (local) - nouvelle structure unifiée
+interface DraftOrderLine {
+  type: OrderLineType;
   quantity: number;
-}
 
-// Interface pour les menus en brouillon (local)
-interface DraftMenuOrderItem {
-  menuId: string;
-  quantity: number;
-  selectedItems: Record<string, string[]>; // categoryId -> itemIds[]
+  // Pour les items individuels
+  itemId?: string;
+
+  // Pour les menus
+  menuId?: string;
+  selectedItems?: Record<string, string | string[]>; // categoryName -> itemId (un seul item par catégorie)
+
+  // Note optionnelle
+  note?: string;
 }
 
 const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps>(function OrderItemsForm({
   order,
   items,
   itemTypes,
-  onSave,
-  onCancel,
   onConfigurationModeChange,
   onConfigurationActionsChange
 }: OrderItemsFormProps, ref) {
   // ✅ Détection taille écran pour optimiser tactile tablette
   const { width } = useWindowDimensions();
   const isTablet = width >= 768; // iPad et tablettes
-  
+
   // ✅ Styles dynamiques pour boutons optimisés tablette
   const dynamicButtonSize = isTablet ? 38 : 32; // +6px sur tablette
   const dynamicButtonStyles = {
@@ -56,11 +54,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     width: dynamicButtonSize,
     height: dynamicButtonSize,
   };
-  
+
   const [activeMainTab, setActiveMainTab] = useState<string>('ITEMS');
   const [activeItemType, setActiveItemType] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  
+
   // États pour la configuration de menu
   const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
   const [menuBeingConfigured, setMenuBeingConfigured] = useState<Menu | null>(null);
@@ -71,11 +68,80 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
 
   const { showToast } = useToast();
   const { activeMenus, getMenuCategoryItems } = useMenus();
-  
-  // État local pour les modifications (brouillon)
-  const [draftItems, setDraftItems] = useState<DraftOrderItem[]>([]);
-  const [draftMenus, setDraftMenus] = useState<DraftMenuOrderItem[]>([]);
+  const {
+    createOrderLines,
+    createOrderWithLines
+  } = useOrderLines();
+
+
+  // État local pour les modifications (brouillon) - nouvelle structure unifiée
+  const [draftOrderLines, setDraftOrderLines] = useState<DraftOrderLine[]>([]);
   const [menuCategoryItems, setMenuCategoryItems] = useState<Record<string, any[]>>({});
+  const isSavingRef = useRef(false);
+
+  // Dérivés de draftOrderLines pour compatibilité
+  const draftItems = useMemo(() =>
+    draftOrderLines.filter(draft => draft.type === OrderLineType.ITEM && draft.itemId)
+      .map(draft => ({ itemId: draft.itemId!, quantity: draft.quantity })),
+    [draftOrderLines]
+  );
+
+  const draftMenus = useMemo(() =>
+    draftOrderLines.filter(draft => draft.type === OrderLineType.MENU && draft.menuId)
+      .map(draft => ({ menuId: draft.menuId!, quantity: draft.quantity, selectedItems: draft.selectedItems || {} })),
+    [draftOrderLines]
+  );
+
+  // Interfaces pour les types dans setDraftItems et setDraftMenus
+  interface DraftItemUpdate {
+    itemId: string;
+    quantity: number;
+  }
+
+  interface DraftMenuUpdate {
+    menuId: string;
+    quantity: number;
+    selectedItems: Record<string, string | string[]>;
+  }
+
+  // Fonctions de mise à jour pour compatibilité
+  const setDraftItems = useCallback((updater: DraftItemUpdate[] | ((prev: DraftItemUpdate[]) => DraftItemUpdate[])) => {
+    setDraftOrderLines((prevLines: DraftOrderLine[]) => {
+      const nonItemLines = prevLines.filter(line => line.type !== OrderLineType.ITEM);
+      const currentItems = prevLines.filter(line => line.type === OrderLineType.ITEM && line.itemId)
+        .map(line => ({ itemId: line.itemId!, quantity: line.quantity }));
+
+      const newItems = typeof updater === 'function' ? updater(currentItems) : updater;
+      const newItemLines = newItems.map((item: DraftItemUpdate) => ({
+        type: OrderLineType.ITEM,
+        quantity: item.quantity,
+        itemId: item.itemId
+      }));
+
+      return [...nonItemLines, ...newItemLines];
+    });
+  }, []);
+
+  const setDraftMenus = useCallback((updater: DraftMenuUpdate[] | ((prev: DraftMenuUpdate[]) => DraftMenuUpdate[])) => {
+    setDraftOrderLines((prevLines: DraftOrderLine[]) => {
+      const nonMenuLines = prevLines.filter(line => line.type !== OrderLineType.MENU);
+      const currentMenus = prevLines.filter(line => line.type === OrderLineType.MENU && line.menuId)
+        .map(line => ({ menuId: line.menuId!, quantity: line.quantity, selectedItems: line.selectedItems || {} }));
+
+      const newMenus = typeof updater === 'function' ? updater(currentMenus) : updater;
+      const newMenuLines = newMenus.map((menu: DraftMenuUpdate) => ({
+        type: OrderLineType.MENU,
+        quantity: menu.quantity,
+        menuId: menu.menuId,
+        selectedItems: menu.selectedItems
+      }));
+
+      return [...nonMenuLines, ...newMenuLines];
+    });
+  }, []);
+
+  // Snapshot des quantités totales au moment de la sauvegarde pour éviter la disparition/réapparition
+  // Snapshots supprimés car non nécessaires avec la nouvelle logique de bulk update
 
   // Initialisation des itemTypes (une seule fois)
   useEffect(() => {
@@ -84,42 +150,27 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     }
   }, [itemTypes]); // Retirer activeItemType de la dépendance pour éviter la boucle
 
-  // Initialisation des draftItems (séparée)
-  useEffect(() => {
-    const initialDraft: DraftOrderItem[] = [];
-
-    // Compter les quantités des items existants
-    order.orderItems.forEach((orderItem: OrderItem) => {
-      const existingDraft = initialDraft.find(draft => draft.itemId === orderItem.item.id);
-      if (existingDraft) {
-        existingDraft.quantity += 1;
-      } else {
-        initialDraft.push({
-          itemId: orderItem.item.id,
-          quantity: 1
-        });
-      }
-    });
-
-    setDraftItems(initialDraft);
-  }, [order]);
 
   // ✅ Index mémorisés pour performances O(1) au lieu de O(n)
   const quantitiesIndex = useMemo(() => {
     const index: Record<string, number> = {};
-    draftItems.forEach(draft => {
-      index[draft.itemId] = draft.quantity;
+    draftOrderLines.forEach(draft => {
+      if (draft.type === OrderLineType.ITEM && draft.itemId) {
+        index[draft.itemId] = draft.quantity;
+      }
     });
     return index;
-  }, [draftItems]);
+  }, [draftOrderLines]);
 
   const menuQuantitiesIndex = useMemo(() => {
     const index: Record<string, number> = {};
-    draftMenus.forEach(draft => {
-      index[draft.menuId] = draft.quantity;
+    draftOrderLines.forEach(draft => {
+      if (draft.type === OrderLineType.MENU && draft.menuId) {
+        index[draft.menuId] = draft.quantity;
+      }
     });
     return index;
-  }, [draftMenus]);
+  }, [draftOrderLines]);
 
   const itemsIndex = useMemo(() => {
     const index: Record<string, Item> = {};
@@ -138,193 +189,278 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
   }, [activeMenus]);
 
   // ✅ Fonctions optimisées avec accès O(1)
-  const getItemQuantity = useCallback((itemId: string) => {
+  // 🔧 NOUVELLE LOGIQUE : Obtenir les quantités existantes dans la commande sauvegardée
+  const getExistingItemQuantity = useCallback((itemId: string) => {
+    let count = 0;
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    if (currentOrder.lines) {
+      currentOrder.lines.forEach((line) => {
+        // Pour les items individuels - chaque ligne = 1 quantité
+        if (line.type === OrderLineType.ITEM && line.item && (line.item as any).id === itemId) {
+          count += 1; // Chaque ligne représente une quantité de 1
+        }
+      });
+    }
+    return count;
+  }, [order.lines]);
+
+  // Obtenir la quantité draft (ajoutée localement dans cette session)
+  const getDraftItemQuantity = useCallback((itemId: string) => {
     return quantitiesIndex[itemId] || 0;
   }, [quantitiesIndex]);
+
+  // Obtenir la quantité totale affichée avec gestion stable pendant la sauvegarde
+  const getTotalItemQuantity = useCallback((itemId: string) => {
+    // Fonctionnement normal - toujours afficher existing + draft
+    return getExistingItemQuantity(itemId) + getDraftItemQuantity(itemId);
+  }, [getExistingItemQuantity, getDraftItemQuantity]);
+
+  // 🔧 NOUVELLE LOGIQUE : Mêmes fonctions pour les menus
+  const getExistingMenuQuantity = useCallback((menuId: string) => {
+    let count = 0;
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    if (currentOrder.lines) {
+      currentOrder.lines.forEach((line) => {
+        // Pour les menus - chaque ligne = 1 quantité
+        if (line.type === OrderLineType.MENU && line.menu && line.menu.id === menuId) {
+          count += 1; // Chaque ligne représente une quantité de 1
+        }
+      });
+    }
+    return count;
+  }, [order.lines]);
+
+  const getDraftMenuQuantity = useCallback((menuId: string) => {
+    return menuQuantitiesIndex[menuId] || 0;
+  }, [menuQuantitiesIndex]);
+
+  const getTotalMenuQuantity = useCallback((menuId: string) => {
+    // Fonctionnement normal - toujours afficher existing + draft
+    return getExistingMenuQuantity(menuId) + getDraftMenuQuantity(menuId);
+  }, [getExistingMenuQuantity, getDraftMenuQuantity]);
+
+  // 🔧 NOUVELLES FONCTIONS : Calcul des totaux pour le recap
+  const getTotalItemsCount = useCallback(() => {
+    // Utiliser frozenOrderRef pendant la sauvegarde pour éviter les WebSocket
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    const existingItemsCount = currentOrder.lines
+      ?.filter(line => line.type === OrderLineType.ITEM)
+      .reduce((total, _) => total + 1, 0) || 0;
+
+    const draftItemsCount = draftOrderLines
+      .filter(draft => draft.type === OrderLineType.ITEM)
+      .reduce((total, draft) => total + draft.quantity, 0);
+
+    return existingItemsCount + draftItemsCount;
+  }, [order.lines, draftOrderLines]);
+
+  const getTotalMenusCount = useCallback(() => {
+    // Utiliser frozenOrderRef pendant la sauvegarde pour éviter les WebSocket
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    const existingMenusCount = currentOrder.lines
+      ?.filter(line => line.type === OrderLineType.MENU)
+      .reduce((total, _) => total + 1, 0) || 0;
+
+    const draftMenusCount = draftMenus.reduce((total, draft) => total + draft.quantity, 0);
+
+    return existingMenusCount + draftMenusCount;
+  }, [order.lines, draftMenus]);
 
   const onUpdateQuantity = (itemId: string, action: 'remove' | 'add') => {
     setDraftItems(prevDraft => {
       const existingDraft = prevDraft.find(draft => draft.itemId === itemId);
+      let newDraft = prevDraft;
 
       if (action === 'add') {
         if (existingDraft) {
-          return prevDraft.map(draft =>
+          newDraft = prevDraft.map(draft =>
             draft.itemId === itemId
               ? { ...draft, quantity: draft.quantity + 1 }
               : draft
           );
         } else {
-          return [...prevDraft, { itemId, quantity: 1 }];
+          newDraft = [...prevDraft, { itemId, quantity: 1 }];
         }
       } else if (action === 'remove') {
-        if (existingDraft) {
+        // 🔧 NOUVELLE SÉCURITÉ : Ne permettre la décrémentation que des items ajoutés localement
+        if (existingDraft && existingDraft.quantity > 0) {
           if (existingDraft.quantity <= 1) {
-            return prevDraft.filter(draft => draft.itemId !== itemId);
+            newDraft = prevDraft.filter(draft => draft.itemId !== itemId);
           } else {
-            return prevDraft.map(draft =>
+            newDraft = prevDraft.map(draft =>
               draft.itemId === itemId
                 ? { ...draft, quantity: draft.quantity - 1 }
                 : draft
             );
           }
+        } else {
+          // Pas d'items draft à supprimer - utiliser AdminOrderDetailView pour supprimer des items sauvegardés
+          newDraft = prevDraft;
         }
       }
 
-      return prevDraft;
+
+      return newDraft;
     });
   };
 
-  // Fonction de sauvegarde complexe qui sera exposée via AdminFormRef
+  // 🆕 FONCTION BULK UPDATE - Utilise la nouvelle API backend
   const processOrderSave = async () => {
-    
-    // 0. Convertir les draftMenus en draftItems équivalents
-    const menuItemsToAdd: { itemId: string; quantity: number }[] = [];
-    draftMenus.forEach(draftMenu => {
-      // Pour chaque menu configuré, on ajoute tous les articles sélectionnés
-      const menu = activeMenus.find(m => m.id === draftMenu.menuId);
-      if (menu) {
-        menu.categories.forEach(category => {
-          const selectedItemIds = draftMenu.selectedItems[category.id] || [];
-          selectedItemIds.forEach(itemId => {
-            // Ajouter chaque article sélectionné avec la quantité du menu
-            menuItemsToAdd.push({ itemId, quantity: draftMenu.quantity });
-          });
+    isSavingRef.current = true; // Empêcher les réinitialisations pendant la sauvegarde
+
+    console.log('🔄 [DEBUG] processOrderSave - Start bulk update:', {
+      orderId: order.id,
+      isNewOrder: order.id.startsWith('new-order-'),
+      existingLinesCount: order.lines?.length || 0,
+      draftItemsCount: draftItems.length,
+      draftMenusCount: draftMenus.length
+    });
+
+    try {
+      // 1. Détection : nouvelle commande vs modification
+      if (order.id.startsWith('new-order-')) {
+        // NOUVELLE COMMANDE : Utiliser l'ancien flow createOrderWithLines
+        const createRequests: CreateOrderLineRequest[] = [];
+
+        // Convertir draftItems vers CreateOrderLineRequest
+        draftItems.forEach(draft => {
+          if (draft.quantity > 0) {
+            createRequests.push({
+              type: OrderLineType.ITEM,
+              quantity: draft.quantity,
+              itemId: draft.itemId
+            });
+          }
         });
+
+        // Convertir draftMenus vers CreateOrderLineRequest  
+        draftMenus.forEach(draftMenu => {
+          if (draftMenu.quantity > 0) {
+            // Convertir selectedItems de Record<string, string[]> vers Record<string, string>
+            const selectedItemsConverted: Record<string, string> = {};
+            Object.entries(draftMenu.selectedItems || {}).forEach(([categoryId, itemIds]) => {
+              selectedItemsConverted[categoryId] = Array.isArray(itemIds) ? itemIds[0] : itemIds;
+            });
+
+            createRequests.push({
+              type: OrderLineType.MENU,
+              quantity: draftMenu.quantity,
+              menuId: draftMenu.menuId,
+              selectedItems: selectedItemsConverted
+            });
+          }
+        });
+
+        console.log('🆕 [DEBUG] Creating new order with lines:', createRequests);
+        const newOrder = await createOrderWithLines(order.tableId, createRequests);
+
+        // Nettoyer les drafts
+        setDraftItems([]);
+        setDraftMenus([]);
+        isSavingRef.current = false;
+
+        return newOrder;
+      } else {
+        // 🆕 COMMANDE EXISTANTE : Ajouter seulement les nouvelles lignes
+
+        // 2. Créer les requêtes pour les nouvelles lignes seulement
+        const newLineRequests: CreateOrderLineRequest[] = [];
+
+        // 3. Ajouter les nouvelles lignes des drafts
+        draftOrderLines.forEach(draft => {
+          if (draft.quantity > 0) {
+            if (draft.type === OrderLineType.ITEM && draft.itemId) {
+              newLineRequests.push({
+                type: OrderLineType.ITEM,
+                quantity: draft.quantity,
+                itemId: draft.itemId,
+                note: draft.note
+              });
+            } else if (draft.type === OrderLineType.MENU && draft.menuId) {
+              // Convertir selectedItems de Record<string, string[]> vers Record<string, string>
+              const selectedItemsConverted: Record<string, string> = {};
+              Object.entries(draft.selectedItems || {}).forEach(([categoryId, itemIds]) => {
+                selectedItemsConverted[categoryId] = Array.isArray(itemIds) ? itemIds[0] : itemIds;
+              });
+
+              newLineRequests.push({
+                type: OrderLineType.MENU,
+                quantity: draft.quantity,
+                menuId: draft.menuId,
+                selectedItems: selectedItemsConverted,
+                note: draft.note
+              });
+            }
+          }
+        });
+
+        console.log('🔄 [DEBUG] Creating new lines for existing order:', {
+          orderId: order.id,
+          newLinesCount: newLineRequests.length
+        });
+
+        // 5. Créer seulement les nouvelles lignes via POST /order/:orderId/lines
+        if (newLineRequests.length > 0) {
+          const createdLines = await createOrderLines(order.id, newLineRequests);
+
+          console.log('✅ [DEBUG] New lines created successfully:', {
+            orderId: order.id,
+            updatedOrder: createdLines
+          });
+
+          // Nettoyer les drafts
+          setDraftItems([]);
+          setDraftMenus([]);
+          isSavingRef.current = false;
+
+          // Retourner l'order mis à jour (sera récupéré via Redux)
+          return order;
+        }
       }
-    });
-    
-    // Fusionner les menuItemsToAdd avec les draftItems existants
-    const combinedItems = new Map<string, number>();
-    
-    // Ajouter les draftItems normaux
-    draftItems.forEach(draft => {
-      combinedItems.set(draft.itemId, draft.quantity);
-    });
-    
-    // Ajouter les items des menus configurés
-    menuItemsToAdd.forEach(({ itemId, quantity }) => {
-      const existing = combinedItems.get(itemId) || 0;
-      combinedItems.set(itemId, existing + quantity);
-    });
-    
-    // 1. Analyser les changements par rapport à l'état actuel
-    const currentItemCounts = new Map<string, number>();
-    order.orderItems.forEach((orderItem: OrderItem) => {
-      const itemId = orderItem.item.id;
-      currentItemCounts.set(itemId, (currentItemCounts.get(itemId) || 0) + 1);
-    });
-
-    const newItemCounts = combinedItems;
-
-    // 2. Identifier les items à supprimer et à ajouter
-    const itemsToRemove: string[] = [];
-    const itemsToAdd: { itemId: string; quantity: number }[] = [];
-
-    // Vérifier les items existants
-    for (const [itemId, currentCount] of currentItemCounts) {
-      const newCount = newItemCounts.get(itemId) || 0;
-      const difference = newCount - currentCount;
-
-      if (difference < 0) {
-        // Il faut supprimer des items (on supprime les plus récents)
-        const orderItemsToRemove = order.orderItems
-          .filter((oi: OrderItem) => oi.item.id === itemId)
-          .sort((a: OrderItem, b: OrderItem) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, Math.abs(difference));
-
-        itemsToRemove.push(...orderItemsToRemove.map((oi: OrderItem) => oi.id));
-      } else if (difference > 0) {
-        // Il faut ajouter des items
-        itemsToAdd.push({ itemId, quantity: difference });
-      }
+    } catch (error) {
+      console.error('❌ [DEBUG] processOrderSave error:', error);
+      isSavingRef.current = false;
+      throw error;
     }
 
-    // Vérifier les nouveaux items
-    for (const [itemId, newCount] of newItemCounts) {
-      if (!currentItemCounts.has(itemId) && newCount > 0) {
-        itemsToAdd.push({ itemId, quantity: newCount });
-      }
-    }
-
-    // 3. Supprimer les orderItems en trop
-    if (itemsToRemove.length > 0) {
-      const deletePromises = itemsToRemove.map(orderItemId =>
-        orderItemApiService.delete(orderItemId)
-      );
-      await Promise.all(deletePromises);
-    }
-
-    // 4. Ajouter les nouveaux orderItems en lot (SEULEMENT avec le statut DRAFT)
-    if (itemsToAdd.length > 0) {
-      const bulkData = {
-        orderId: order.id,
-        items: itemsToAdd.map(({ itemId, quantity }) => ({
-          itemId,
-          quantity,
-          status: Status.DRAFT // SEULEMENT les nouveaux items sont en DRAFT
-        }))
-      };
-      
-      await orderItemApiService.createBulk(bulkData);
-    }
-
-    // 5. Retourner l'ordre actuel - les mises à jour seront gérées par le store Redux/WebSocket
-    // Pas besoin d'appels API supplémentaires, la sauvegarde en lot suffit
+    // Aucune modification à sauvegarder
+    isSavingRef.current = false;
     return order;
   };
 
-  const handleSave = async () => {
-    if (!onSave) return;
-    
-    setIsLoading(true);
-    try {
-      const updatedOrder = await processOrderSave();
-      onSave(updatedOrder);
-    } catch (error) {
-      showToast('Erreur lors de l\'enregistrement de la commande');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleCancel = () => {
-    // Simplement fermer sans sauvegarder les modifications locales
-    if (onCancel) {
-      onCancel();
-    }
-  };
 
-  // Fonction utilitaire pour obtenir l'état initial des drafts - Version optimisée
-  const getInitialDraftItems = React.useCallback(() => {
-    // Utiliser Map pour de meilleures performances sur les grandes listes
-    const itemQuantities = new Map<string, number>();
-    
-    order.orderItems.forEach((orderItem: OrderItem) => {
-      const itemId = orderItem.item.id;
-      itemQuantities.set(itemId, (itemQuantities.get(itemId) || 0) + 1);
-    });
-    
-    // Convertir Map en array de DraftOrderItem
-    return Array.from(itemQuantities.entries()).map(([itemId, quantity]) => ({
-      itemId,
-      quantity
-    }));
-  }, [order.orderItems]);
+
+  // Initialisation des draftItems et draftMenus (après définition des fonctions)
+  // Utiliser une ref pour suivre l'ID de l'order et ne réinitialiser que lors d'un vrai changement d'order
+  const currentOrderIdRef = useRef(order.id);
+  const frozenOrderRef = useRef(order); // Ordre gelé pendant la sauvegarde
+  
+  useEffect(() => {
+    // Ne pas réinitialiser pendant la sauvegarde pour éviter les scintillements
+    if (isSavingRef.current) return;
+
+    // Mettre à jour l'ordre gelé en dehors de la sauvegarde
+    frozenOrderRef.current = order;
+
+    // Ne réinitialiser que si l'order ID a vraiment changé (pas juste une mise à jour WebSocket)
+    if (currentOrderIdRef.current !== order.id) {
+      currentOrderIdRef.current = order.id;
+      setDraftItems([]);
+      setDraftMenus([]);
+    }
+  }, [order]);
 
   // Implémenter l'interface AdminFormRef pour AdminFormView
   React.useImperativeHandle(ref, () => ({
     getFormData: (): AdminFormData<Order> => {
-      const initialItems = getInitialDraftItems();
-      const hasItemChanges = JSON.stringify(draftItems) !== JSON.stringify(initialItems);
-      const hasMenuChanges = draftMenus.length > 0; // Si des menus sont configurés, il y a des changements
-      const hasChanges = hasItemChanges || hasMenuChanges;
-      
+      const hasChanges = draftItems.length > 0 || draftMenus.length > 0;
+
       return {
         data: {
           ...order,
           draftItems,
-          draftMenus, // Inclure les menus configurés
-          // Fournir la fonction de sauvegarde directement
+          draftMenus,
           processComplexSave: processOrderSave
         } as any,
         isValid: true,
@@ -334,28 +470,29 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     },
     validateForm: () => true,
     resetForm: () => {
-      setDraftItems(getInitialDraftItems());
-      setDraftMenus([]); // Nettoyer aussi les menus configurés
+      setDraftItems([]);
+      setDraftMenus([]);
     }
   }), [order, draftItems, draftMenus, processOrderSave]);
 
 
   // Calculer le prix d'un menu avec les suppléments des items sélectionnés
-  const calculateMenuPriceWithSupplements = (menu: Menu, selectedItems: Record<string, string[]>) => {
+  const calculateMenuPriceWithSupplements = (menu: Menu, selectedItems: Record<string, string | string[]>) => {
     let totalPrice = menu.basePrice;
-    
+
     // Parcourir chaque catégorie et ses items sélectionnés
-    Object.entries(selectedItems).forEach(([categoryId, itemIds]) => {
+    Object.entries(selectedItems).forEach(([categoryId, itemSelection]) => {
+      const itemIds = Array.isArray(itemSelection) ? itemSelection : [itemSelection];
       const category = menu.categories.find(c => c.id === categoryId);
       if (!category) return;
-      
+
       // Ajouter le priceModifier de la catégorie (supplément par catégorie)
       // Le priceModifier s'applique une seule fois par catégorie qui a des sélections
       if (itemIds.length > 0) {
         const categoryModifier = parseFloat(String(category.priceModifier || '0'));
         totalPrice += categoryModifier;
       }
-      
+
       // Ajouter les suppléments des items individuels
       itemIds.forEach(itemId => {
         const menuCategoryItem = category.items?.find(mci => mci.itemId === itemId);
@@ -365,7 +502,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
         }
       });
     });
-    
+
     return totalPrice;
   };
 
@@ -375,29 +512,42 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     return calculateMenuPriceWithSupplements(menuBeingConfigured, tempMenuSelections);
   };
 
-  // ✅ Calcul mémorisé du prix total avec index optimisés
+  // ✅ Calcul mémorisé du prix total - utiliser frozenOrderRef pendant la sauvegarde
   const totalPrice = useMemo(() => {
-    const itemsTotal = draftItems.reduce((total, draft) => {
+    // Utiliser frozenOrderRef pendant la sauvegarde pour éviter les WebSocket
+    const currentOrder = isSavingRef.current ? frozenOrderRef.current : order;
+    
+    // 1. Prix des articles existants (sauvegardés)
+    const existingItemsTotal = (currentOrder.lines || [])
+      .filter(line => line.type === OrderLineType.ITEM)
+      .reduce((total, line) => total + line.totalPrice, 0);
+
+    // 2. Prix des menus existants (sauvegardés)
+    const menuLines = (currentOrder.lines || [])
+      .filter(line => line.type === OrderLineType.MENU);
+    const existingMenusTotal = menuLines.reduce((total, line) => {
+      return total + line.totalPrice;
+    }, 0);
+
+    // 3. Prix des articles ajoutés localement
+    const draftItemsTotal = draftItems.reduce((total, draft) => {
       const item = itemsIndex[draft.itemId];
       return total + (item ? item.price * draft.quantity : 0);
     }, 0);
-    
-    const menusTotal = draftMenus.reduce((total, draft) => {
-      const menu = menusIndex[draft.menuId];
-      if (!menu) return total;
-      
-      // Calculer le prix du menu avec ses suppléments
-      const menuPriceWithSupplements = calculateMenuPriceWithSupplements(menu, draft.selectedItems);
-      return total + (menuPriceWithSupplements * draft.quantity);
-    }, 0);
-    
-    return itemsTotal + menusTotal;
-  }, [draftItems, draftMenus, itemsIndex, menusIndex]);
 
-  // ✅ Fonction optimisée pour les menus avec accès O(1)
-  const getMenuQuantity = useCallback((menuId: string) => {
-    return menuQuantitiesIndex[menuId] || 0;
-  }, [menuQuantitiesIndex]);
+    // 4. Prix des menus ajoutés localement
+    const draftMenusTotal = draftMenus.reduce((total, draft) => {
+      const menu = menusIndex[draft.menuId];
+      if (menu) {
+        const menuPriceWithSupplements = calculateMenuPriceWithSupplements(menu, draft.selectedItems || {});
+        return total + (menuPriceWithSupplements * draft.quantity);
+      }
+      return total;
+    }, 0);
+
+    return existingItemsTotal + existingMenusTotal + draftItemsTotal + draftMenusTotal;
+  }, [order.lines, order.id, draftItems, draftMenus, itemsIndex, menusIndex]);
+
 
   // ✅ Vérifier si un menu peut être ajouté directement (toutes catégories requises = 1 article ou 0 article)
   const canAddMenuDirectly = useCallback((menu: Menu): boolean => {
@@ -434,7 +584,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     // Construire automatiquement les sélections (1 article par catégorie ou vide si 0 article)
     const autoSelections: Record<string, string[]> = {};
     let selectedItemsCount = 0;
-    
+
     menu.categories.forEach((category) => {
       const menuCategoryItems = getMenuCategoryItems(category.id);
       const availableItems = menuCategoryItems.filter((menuCategoryItem: MenuCategoryItem) => {
@@ -453,7 +603,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     });
 
     // Ajouter le menu aux brouillons
-    const newDraftMenu: DraftMenuOrderItem = {
+    const newDraftMenu = {
       menuId: menu.id,
       quantity: 1,
       selectedItems: autoSelections
@@ -477,19 +627,37 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     if (action === 'add') {
       const menu = activeMenus.find(m => m.id === menuId);
       if (menu) {
-        // ✅ Optimisation : Vérifier si on peut ajouter directement sans configuration
+        // D'abord, vérifier s'il y a déjà un menu existant avec la même configuration
+        const existingMenuDraft = draftMenus.find(draft => draft.menuId === menuId);
+
+        // ✅ Vérifier d'abord si ce menu nécessite une configuration
         if (canAddMenuDirectly(menu)) {
-          addMenuDirectly(menu);
+          // Menu simple : peut être ajouté directement
+          if (existingMenuDraft) {
+            // Incrémenter le menu existant
+            setDraftMenus(prevDraft => {
+              const newDraft = prevDraft.map(draft =>
+                draft.menuId === menuId
+                  ? { ...draft, quantity: draft.quantity + 1 }
+                  : draft
+              );
+              return newDraft;
+            });
+          } else {
+            // Ajouter un nouveau menu simple
+            addMenuDirectly(menu);
+          }
         } else {
-          // Sinon, démarrer la configuration normale
+          // Menu avec configuration : toujours ouvrir la configuration
+          // même s'il y en a déjà un, pour permettre différentes sélections
           startMenuConfiguration(menu);
         }
       }
     } else if (action === 'remove') {
-      // Pour remove, on agit normalement
+      // 🔧 NOUVELLE SÉCURITÉ : Ne permettre la décrémentation que des menus ajoutés localement
       setDraftMenus(prevDraft => {
         const existingDraft = prevDraft.find(draft => draft.menuId === menuId);
-        if (existingDraft) {
+        if (existingDraft && existingDraft.quantity > 0) {
           if (existingDraft.quantity <= 1) {
             return prevDraft.filter(draft => draft.menuId !== menuId);
           } else {
@@ -499,8 +667,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                 : draft
             );
           }
+        } else {
+          // Pas de menus draft à supprimer - utiliser AdminOrderDetailView pour supprimer des menus sauvegardés
+          return prevDraft;
         }
-        return prevDraft;
       });
     }
   };
@@ -513,29 +683,29 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
       if (onConfigurationModeChange) {
         onConfigurationModeChange(true);
       }
-      
+
       if (onConfigurationActionsChange) {
         onConfigurationActionsChange({
           onCancel: () => cancelMenuConfiguration(),
           onConfirm: () => confirmMenuConfiguration()
         });
       }
-      
+
       // 2. Configurer l'état local APRÈS pour éviter les re-renders intermédiaires
       setIsConfiguringMenu(true);
       setMenuBeingConfigured(menu);
       // ✅ tempMenuSelections sera initialisé après l'analyse des catégories
-      
+
       // activeConfigCategory supprimé car inutilisé
     });
-    
+
     // 3. Préparer les données de référence (synchrone, n'affecte pas les re-renders)
     menuBeingConfiguredRef.current = menu;
     tempMenuSelectionsRef.current = {};
-    
+
     // Préparer les items des catégories depuis la structure du menu
     prepareMenuItemsFromCategories(menu);
-    
+
     // ✅ 4. Optimisation : Sélection automatique des articles uniques par catégorie
     autoSelectUniqueItemsInCategories(menu);
   };
@@ -545,13 +715,13 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     if (!menu || !menu.categories) {
       return;
     }
-    
+
     const itemsData: Record<string, any[]> = {};
-    
+
     menu.categories.forEach((category) => {
       // ✅ Utiliser le store Redux au lieu de category.items pour avoir les données à jour
       const menuCategoryItems = getMenuCategoryItems(category.id);
-      
+
       const categoryItems = menuCategoryItems.map((menuCategoryItem: MenuCategoryItem) => {
         // Trouver l'item complet dans le store
         const fullItem = items.find(item => item.id === menuCategoryItem.itemId);
@@ -560,10 +730,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
           item: fullItem
         };
       }).filter((item: any) => item.isAvailable && item.item) || [];
-      
+
       itemsData[category.id] = categoryItems;
     });
-    
+
     setMenuCategoryItems(itemsData);
   };
 
@@ -626,11 +796,11 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     if (!isConfiguringMenu || !menuBeingConfigured) {
       return;
     }
-    
+
     setTempMenuSelections(prev => {
       const currentSelections = prev[categoryId] || [];
       const isSelected = currentSelections.includes(itemId);
-      
+
       let newSelections;
       if (isSelected) {
         // Retirer l'item
@@ -650,7 +820,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
           [categoryId]: [...currentSelections, itemId]
         };
       }
-      
+
       // Synchroniser avec la référence
       tempMenuSelectionsRef.current = newSelections;
       return newSelections;
@@ -665,11 +835,11 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
       if (onConfigurationActionsChange) {
         onConfigurationActionsChange(null);
       }
-      
+
       if (onConfigurationModeChange) {
         onConfigurationModeChange(false);
       }
-      
+
       // 2. Nettoyer l'état local EN DERNIER pour éviter les re-renders intermédiaires
       setIsConfiguringMenu(false);
       setMenuBeingConfigured(null);
@@ -677,7 +847,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
       setMenuCategoryItems({});
       // activeConfigCategory supprimé car inutilisé
     });
-    
+
     // 3. Nettoyer les refs (synchrone, n'affecte pas les re-renders)
     menuBeingConfiguredRef.current = null;
     tempMenuSelectionsRef.current = {};
@@ -709,23 +879,23 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
     // Ajouter le menu aux drafts
     setDraftMenus(prev => {
       const existingDraft = prev.find(draft => draft.menuId === currentMenu.id);
-      const newDrafts = existingDraft ? 
+      const newDrafts = existingDraft ?
         prev.map(draft =>
           draft.menuId === currentMenu.id
             ? { ...draft, quantity: draft.quantity + 1, selectedItems: currentSelections }
             : draft
         ) :
-        [...prev, { 
-          menuId: currentMenu.id, 
-          quantity: 1, 
-          selectedItems: currentSelections 
+        [...prev, {
+          menuId: currentMenu.id,
+          quantity: 1,
+          selectedItems: currentSelections
         }];
-      
+
       return newDrafts;
     });
 
     showToast(`Menu "${currentMenu.name}" ajouté avec succès`, 'success');
-    
+
     // Fermer immédiatement sans délai pour éviter la latence
     cancelMenuConfiguration();
   };
@@ -739,154 +909,154 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
         <View style={styles.compactHeader}>
           {/* Navigation principale - Menu et Articles sur la même ligne */}
           <View style={styles.mainNavigation}>
-          {Platform.OS === 'web' ? (
-            <>
-              <div
-                style={{
-                  ...styles.mainNavButton,
-                  ...(activeMainTab === 'MENUS' && {
-                    backgroundColor: '#2A2E33',
-                    borderColor: '#2A2E33',
-                  }),
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                onClick={() => setActiveMainTab('MENUS')}
-              >
-                <span style={{
-                  ...styles.mainNavButtonText,
-                  ...(activeMainTab === 'MENUS' && {
-                    color: '#FFFFFF',
-                    fontWeight: '700'
-                  })
-                }}>
-                  Menus
-                </span>
-              </div>
-              
-              <div
-                style={{
-                  ...styles.mainNavButton,
-                  ...(activeMainTab === 'ITEMS' && {
-                    backgroundColor: '#2A2E33',
-                    borderColor: '#2A2E33',
-                  }),
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                onClick={() => setActiveMainTab('ITEMS')}
-              >
-                <span style={{
-                  ...styles.mainNavButtonText,
-                  ...(activeMainTab === 'ITEMS' && {
-                    color: '#FFFFFF',
-                    fontWeight: '700'
-                  })
-                }}>
-                  Articles
-                </span>
-              </div>
-            </>
-          ) : (
-            <>
-              <Pressable
-                style={[
-                  styles.mainNavButton,
-                  activeMainTab === 'MENUS' && styles.mainNavButtonActive
-                ]}
-                onPress={() => setActiveMainTab('MENUS')}
-              >
-                <Text style={[
-                  styles.mainNavButtonText,
-                  activeMainTab === 'MENUS' && styles.mainNavButtonTextActive
-                ]}>
-                  Menus
-                </Text>
-              </Pressable>
-              
-              <Pressable
-                style={[
-                  styles.mainNavButton,
-                  activeMainTab === 'ITEMS' && styles.mainNavButtonActive
-                ]}
-                onPress={() => setActiveMainTab('ITEMS')}
-              >
-                <Text style={[
-                  styles.mainNavButtonText,
-                  activeMainTab === 'ITEMS' && styles.mainNavButtonTextActive
-                ]}>
-                  Articles
-                </Text>
-              </Pressable>
-            </>
+            {Platform.OS === 'web' ? (
+              <>
+                <div
+                  style={{
+                    ...styles.mainNavButton,
+                    ...(activeMainTab === 'MENUS' && {
+                      backgroundColor: '#2A2E33',
+                      borderColor: '#2A2E33',
+                    }),
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onClick={() => setActiveMainTab('MENUS')}
+                >
+                  <span style={{
+                    ...styles.mainNavButtonText,
+                    ...(activeMainTab === 'MENUS' && {
+                      color: '#FFFFFF',
+                      fontWeight: '700'
+                    })
+                  }}>
+                    Menus
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    ...styles.mainNavButton,
+                    ...(activeMainTab === 'ITEMS' && {
+                      backgroundColor: '#2A2E33',
+                      borderColor: '#2A2E33',
+                    }),
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onClick={() => setActiveMainTab('ITEMS')}
+                >
+                  <span style={{
+                    ...styles.mainNavButtonText,
+                    ...(activeMainTab === 'ITEMS' && {
+                      color: '#FFFFFF',
+                      fontWeight: '700'
+                    })
+                  }}>
+                    Articles
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <Pressable
+                  style={[
+                    styles.mainNavButton,
+                    activeMainTab === 'MENUS' && styles.mainNavButtonActive
+                  ]}
+                  onPress={() => setActiveMainTab('MENUS')}
+                >
+                  <Text style={[
+                    styles.mainNavButtonText,
+                    activeMainTab === 'MENUS' && styles.mainNavButtonTextActive
+                  ]}>
+                    Menus
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.mainNavButton,
+                    activeMainTab === 'ITEMS' && styles.mainNavButtonActive
+                  ]}
+                  onPress={() => setActiveMainTab('ITEMS')}
+                >
+                  <Text style={[
+                    styles.mainNavButtonText,
+                    activeMainTab === 'ITEMS' && styles.mainNavButtonTextActive
+                  ]}>
+                    Articles
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+
+          {/* Types d'articles - en dessous si Articles sélectionné */}
+          {activeMainTab === 'ITEMS' && (
+            <View style={styles.subNavigation}>
+              <View style={styles.categoryButtons}>
+                {itemTypes.map((itemType) => {
+                  return Platform.OS === 'web' ? (
+                    <div
+                      key={itemType.id}
+                      style={{
+                        ...styles.subCategoryButton,
+                        ...(activeItemType === itemType.id && {
+                          backgroundColor: '#2A2E33',
+                          borderColor: '#2A2E33',
+                        }),
+                        paddingLeft: '20px', // Padding 10px de chaque côté
+                        paddingRight: '20px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      onClick={() => setActiveItemType(itemType.id)}
+                    >
+                      <span style={{
+                        ...styles.subCategoryButtonText,
+                        ...(activeItemType === itemType.id && {
+                          color: '#FFFFFF',
+                          fontWeight: '600'
+                        })
+                      }}>
+                        {itemType.name}
+                      </span>
+                    </div>
+                  ) : (
+                    <Pressable
+                      key={itemType.id}
+                      style={[
+                        styles.subCategoryButton,
+                        activeItemType === itemType.id && styles.subCategoryButtonActive
+                      ]}
+                      onPress={() => setActiveItemType(itemType.id)}
+                    >
+                      <Text style={[
+                        styles.subCategoryButtonText,
+                        activeItemType === itemType.id && styles.subCategoryButtonTextActive
+                      ]}>
+                        {itemType.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           )}
         </View>
-
-        {/* Types d'articles - en dessous si Articles sélectionné */}
-        {activeMainTab === 'ITEMS' && (
-          <View style={styles.subNavigation}>
-            <View style={styles.categoryButtons}>
-              {itemTypes.map((itemType) => {
-                return Platform.OS === 'web' ? (
-                  <div
-                    key={itemType.id}
-                    style={{
-                      ...styles.subCategoryButton,
-                      ...(activeItemType === itemType.id && {
-                        backgroundColor: '#2A2E33',
-                        borderColor: '#2A2E33',
-                      }),
-                      paddingLeft: '20px', // Padding 10px de chaque côté
-                      paddingRight: '20px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    onClick={() => setActiveItemType(itemType.id)}
-                  >
-                    <span style={{
-                      ...styles.subCategoryButtonText,
-                      ...(activeItemType === itemType.id && {
-                        color: '#FFFFFF',
-                        fontWeight: '600'
-                      })
-                    }}>
-                      {itemType.name}
-                    </span>
-                  </div>
-                ) : (
-                  <Pressable
-                    key={itemType.id}
-                    style={[
-                      styles.subCategoryButton,
-                      activeItemType === itemType.id && styles.subCategoryButtonActive
-                    ]}
-                    onPress={() => setActiveItemType(itemType.id)}
-                  >
-                    <Text style={[
-                      styles.subCategoryButtonText,
-                      activeItemType === itemType.id && styles.subCategoryButtonTextActive
-                    ]}>
-                      {itemType.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-      </View>
       )}
 
 
       {/* Section Articles - Bloc principal */}
       <View style={styles.mainArticlesSection}>
-        
+
         {/* Version une ligne par article */}
         <ScrollView
           style={styles.optimizedScrollView}
@@ -945,7 +1115,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                 const categoryName = getCategoryNameFromItemTypeId(category.itemTypeId);
                 const selectedItems = tempMenuSelections[category.id] || [];
                 const hasSupplementPrice = parseFloat(category.priceModifier?.toString() || '0') > 0;
-                
+
                 return (
                   <View key={category.id} style={styles.categoryCardMenuConfig}>
                     {/* Header de catégorie style MenuEditor */}
@@ -1051,7 +1221,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                         .map((menuCategoryItem: any) => {
                           const item = menuCategoryItem?.item;
                           if (!item) return null;
-                          
+
                           const supplement = parseFloat(menuCategoryItem.supplement || '0');
                           const isSelected = selectedItems.includes(item.id);
                           const hasSupplementPrice = supplement > 0;
@@ -1118,7 +1288,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                                     )}
                                   </View>
                                 </View>
-                                
+
                                 <View style={styles.menuEditorItemActionsNew}>
                                   <View style={[
                                     styles.menuEditorItemCheckbox,
@@ -1150,7 +1320,8 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
             ) : (
               // Liste simple des menus comme des articles
               activeMenus.map((menu) => {
-                const quantity = getMenuQuantity(menu.id);
+                const totalQuantity = getTotalMenuQuantity(menu.id);
+                const draftQuantity = getDraftMenuQuantity(menu.id);
 
                 return (
                   <View key={menu.id} style={styles.compactItemCard}>
@@ -1196,29 +1367,26 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                         <Pressable
                           onPress={() => onUpdateMenuQuantity(menu.id, 'remove')}
                           style={[
-                            dynamicButtonStyles, 
-                            (quantity === 0 || isLoading) && styles.compactQuantityButtonDisabled
+                            dynamicButtonStyles,
+                            // 🔧 NOUVELLE LOGIQUE : Désactiver si pas de menus draft à supprimer
+                            draftQuantity === 0 && styles.compactQuantityButtonDisabled
                           ]}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={quantity === 0 || isLoading}
+                          disabled={draftQuantity === 0}
                         >
-                          <Minus size={14} color={quantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                          <Minus size={14} color={draftQuantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
                         </Pressable>
 
                         <Text style={styles.compactQuantityText}>
-                          {quantity}
+                          {totalQuantity}
                         </Text>
 
                         <Pressable
                           onPress={() => onUpdateMenuQuantity(menu.id, 'add')}
-                          style={[
-                            dynamicButtonStyles, 
-                            isLoading && styles.compactQuantityButtonDisabled
-                          ]}
+                          style={dynamicButtonStyles}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={isLoading}
                         >
-                          <Plus size={14} color={isLoading ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                          <Plus size={14} color="#2A2E33" strokeWidth={2} />
                         </Pressable>
                       </View>
                     </View>
@@ -1229,7 +1397,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
           ) : (
             (() => {
               const filteredItems = items.filter(item => item.itemType.id === activeItemType);
-              
+
               if (filteredItems.length === 0) {
                 return (
                   <View style={styles.emptyState}>
@@ -1240,9 +1408,10 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                   </View>
                 );
               }
-              
+
               return filteredItems.map((item) => {
-                const quantity = getItemQuantity(item.id);
+                const totalQuantity = getTotalItemQuantity(item.id);
+                const draftQuantity = getDraftItemQuantity(item.id);
 
                 return (
                   <View key={item.id} style={styles.compactItemCard}>
@@ -1288,29 +1457,26 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                         <Pressable
                           onPress={() => onUpdateQuantity(item.id, 'remove')}
                           style={[
-                            dynamicButtonStyles, 
-                            (quantity === 0 || isLoading) && styles.compactQuantityButtonDisabled
+                            dynamicButtonStyles,
+                            // 🔧 NOUVELLE LOGIQUE : Désactiver si pas d'items draft à supprimer
+                            draftQuantity === 0 && styles.compactQuantityButtonDisabled
                           ]}
+                          disabled={draftQuantity === 0}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={quantity === 0 || isLoading}
                         >
-                          <Minus size={14} color={quantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                          <Minus size={14} color={draftQuantity === 0 ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
                         </Pressable>
 
                         <Text style={styles.compactQuantityText}>
-                          {quantity}
+                          {totalQuantity}
                         </Text>
 
                         <Pressable
                           onPress={() => onUpdateQuantity(item.id, 'add')}
-                          style={[
-                            dynamicButtonStyles, 
-                            isLoading && styles.compactQuantityButtonDisabled
-                          ]}
+                          style={dynamicButtonStyles}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          disabled={isLoading}
                         >
-                          <Plus size={14} color={isLoading ? "#D1D5DB" : "#2A2E33"} strokeWidth={2} />
+                          <Plus size={14} color="#2A2E33" strokeWidth={2} />
                         </Pressable>
                       </View>
                     </View>
@@ -1322,33 +1488,6 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
         </ScrollView>
       </View>
 
-      {/* Boutons conditionnels si utilisés sans AdminFormView */}
-      {(onSave || onCancel) && (
-        <View style={styles.buttonContainer}>
-          {onCancel && (
-            <Button
-              onPress={handleCancel}
-              variant="ghost"
-              style={styles.cancelButton}
-              disabled={isLoading}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
-          )}
-
-          {onSave && (
-            <Button
-              onPress={handleSave}
-              style={styles.saveButton}
-              disabled={isLoading}
-            >
-              <Text style={styles.saveButtonText}>
-                {isLoading ? 'Enregistrement...' : 'Valider la commande'}
-              </Text>
-            </Button>
-          )}
-        </View>
-      )}
 
 
       {/* Résumé en bas - Masqué pendant la configuration - Repositionné au niveau du container principal */}
@@ -1366,7 +1505,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                     textAlign: 'center',
                     fontFamily: 'system-ui, -apple-system, sans-serif'
                   }}>
-                    {draftItems.reduce((total, draft) => total + draft.quantity, 0)}
+                    {getTotalItemsCount()}
                   </span>
                   <span style={{
                     fontSize: '10px',
@@ -1384,18 +1523,18 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
               ) : (
                 <>
                   <Text style={styles.bottomSummaryValue}>
-                    {draftItems.reduce((total, draft) => total + draft.quantity, 0)}
+                    {getTotalItemsCount()}
                   </Text>
                   <Text style={styles.bottomSummaryLabel}>articles</Text>
                 </>
               )}
             </View>
-            
+
             {/* Séparateur */}
-            {draftMenus.length > 0 && <View style={styles.bottomSummaryDivider} />}
-            
+            {getTotalMenusCount() > 0 && <View style={styles.bottomSummaryDivider} />}
+
             {/* Menus - Affiché seulement s'il y en a */}
-            {draftMenus.length > 0 && (
+            {getTotalMenusCount() > 0 && (
               <View style={styles.bottomSummaryItem}>
                 {Platform.OS === 'web' ? (
                   <>
@@ -1406,7 +1545,7 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                       textAlign: 'center',
                       fontFamily: 'system-ui, -apple-system, sans-serif'
                     }}>
-                      {draftMenus.reduce((total, draft) => total + draft.quantity, 0)}
+                      {getTotalMenusCount()}
                     </span>
                     <span style={{
                       fontSize: '10px',
@@ -1424,17 +1563,17 @@ const OrderItemsForm = React.forwardRef<AdminFormRef<Order>, OrderItemsFormProps
                 ) : (
                   <>
                     <Text style={[styles.bottomSummaryValue, { color: '#7C3AED' }]}>
-                      {draftMenus.reduce((total, draft) => total + draft.quantity, 0)}
+                      {getTotalMenusCount()}
                     </Text>
                     <Text style={styles.bottomSummaryLabel}>menus</Text>
                   </>
                 )}
               </View>
             )}
-            
+
             {/* Séparateur avant total */}
             <View style={styles.bottomSummaryDivider} />
-            
+
             {/* Total */}
             <View style={styles.bottomSummaryItem}>
               {Platform.OS === 'web' ? (
@@ -1995,20 +2134,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  saveButton: {
-    flex: 2,
-    backgroundColor: '#2A2E33',
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
   subTabTrigger: {
     flex: 1,
     paddingVertical: 8,
@@ -2535,7 +2660,7 @@ const styles = StyleSheet.create({
   },
 
   // === STYLES POUR LA SÉLECTION DE MENUS ===
-  
+
   // Sélection du menu (première étape)
   menuSelectionContainer: {
     flex: 1,
@@ -3249,7 +3374,7 @@ const styles = StyleSheet.create({
   },
 
   // === STYLES POUR LA CONFIGURATION DE MENU ===
-  
+
   menuConfigurationView: {
     flex: 1,
   },
@@ -3354,7 +3479,7 @@ const styles = StyleSheet.create({
   },
 
   // === STYLES MenuEditor EXACTS ===
-  
+
   // Header de configuration identique à MenuEditor
   menuEditorConfigHeader: {
     backgroundColor: '#FFFFFF',
