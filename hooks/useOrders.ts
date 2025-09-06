@@ -108,7 +108,7 @@ export const useOrders = () => {
   // }, [dispatch]);
 
   // 🆕 Nouvelle fonction pour la mise à jour complète (bulk update)
-  const updateOrder = useCallback(async (payload: Partial<Order> & { id: string }) => {
+  const updateOrder = useCallback(async (payload: Order) => {
     try {
       const orderId = payload.id;
       const updatedOrder = await orderApiService.update(orderId, payload);
