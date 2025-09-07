@@ -166,7 +166,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
       console.log('Image utilisateur:', currentUser.profileImage);
       return { uri: currentUser.profileImage };
     }
-    return require('~/assets/images/user-profile-default-2.png');
+    return require('~/assets/images/userprofiledefault.jpg');
   };
 
   // Fonction pour tronquer le texte

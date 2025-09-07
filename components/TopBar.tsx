@@ -48,7 +48,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
     if (currentUser?.profileImage) {
       return { uri: currentUser.profileImage };
     }
-    return require('~/assets/images/user-profile-default-2.png');
+    return require('~/assets/images/userprofiledefault.jpg');
   };
 
   const handleLogout = () => {

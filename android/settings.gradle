@@ -21,7 +21,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   }
 }
 
-rootProject.name = 'Fork-it-app'
+rootProject.name = 'Fork-it'
 
 dependencyResolutionManagement {
   versionCatalogs {

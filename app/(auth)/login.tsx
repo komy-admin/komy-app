@@ -7,6 +7,7 @@ import { authApiService } from "~/api/auth.api";
 import { Link } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner'; // chemin relatif à ajuster si besoin
+import { useToast } from '~/components/ToastProvider';
 
 export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
@@ -14,10 +15,12 @@ export default function LoginScreen() {
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [qrResult, setQrResult] = useState<string | null>(null);
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
 
   const handleLogin = async () => {
     try {
       const { token, ...user } = await authApiService.login({ loginId, password });
+      showToast('Login successful!', 'success');
       dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
       dispatch(setCurrentUser(user));
 
@@ -25,6 +28,7 @@ export default function LoginScreen() {
       // router.replace(`/${user.profil}/` as any);
     } catch (error) {
       console.error(error);
+      showToast(`Login failed: ${error}`, 'error');
     }
   };
 
