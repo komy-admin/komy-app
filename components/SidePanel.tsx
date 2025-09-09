@@ -245,20 +245,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
     zIndex: 1000,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 2, height: 0 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
-      },
-    }),
   },
   content: {
     flex: 1,
@@ -308,9 +294,6 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 2, height: 0 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
       },
       web: {
         boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
