@@ -58,24 +58,24 @@ export function SidePanel({
   useEffect(() => {
     if (!isInitialized) return;
 
-    // Animation séquentielle optimisée pour éviter la latence des inputs
+    // Animation séquentielle légèrement optimisée pour éviter la latence des inputs
     if (isCollapsed) {
       // Fermeture : cacher le contenu puis réduire la largeur
       Animated.sequence([
         Animated.timing(contentOpacity, {
           toValue: 0,
-          duration: 100,
+          duration: 80, // Légèrement plus rapide
           useNativeDriver: true,
         }),
         Animated.parallel([
           Animated.timing(animatedWidth, {
             toValue: collapsedWidth,
-            duration: Platform.OS === 'ios' ? 200 : 250,
+            duration: Platform.OS === 'ios' ? 180 : 200, // Légèrement optimisé
             useNativeDriver: false,
           }),
           Animated.timing(collapsedOpacity, {
             toValue: 1,
-            duration: Platform.OS === 'ios' ? 150 : 200,
+            duration: Platform.OS === 'ios' ? 120 : 150, // Légèrement optimisé
             useNativeDriver: true,
           })
         ])
@@ -90,12 +90,12 @@ export function SidePanel({
         }),
         Animated.timing(animatedWidth, {
           toValue: width,
-          duration: Platform.OS === 'ios' ? 200 : 250,
+          duration: Platform.OS === 'ios' ? 180 : 200, // Légèrement optimisé
           useNativeDriver: false,
         }),
         Animated.timing(contentOpacity, {
           toValue: 1,
-          duration: 100,
+          duration: 80, // Légèrement plus rapide
           useNativeDriver: true,
         })
       ]).start();
