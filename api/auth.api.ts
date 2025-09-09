@@ -72,10 +72,12 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     } catch (error: any) {
       if (showToast) {
         // Log temporaire pour debug
+        console.log('Error status:', error?.response?.status);
+        console.log('Error data:', error?.response?.data);
         
         let errorMessage = 'Identifiants incorrects';
         
-        if (error?.response?.status === 422) {
+        if (error?.response?.status === 400 || error?.response?.status === 422) {
           errorMessage = 'Identifiant ou mot de passe incorrect';
         } else if (error?.response?.status === 500) {
           errorMessage = 'Erreur serveur, veuillez réessayer';
