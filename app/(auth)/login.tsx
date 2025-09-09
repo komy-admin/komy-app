@@ -1,6 +1,6 @@
-import { View, StyleSheet, Platform, Text as RNText, KeyboardAvoidingView, ScrollView, Modal } from 'react-native';
+import { View, StyleSheet, Platform, Text as RNText, ScrollView, Modal, Keyboard, Dimensions } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
@@ -14,21 +14,55 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [qrResult, setQrResult] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [availableHeight, setAvailableHeight] = useState(Dimensions.get('window').height);
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const dimensionSubscription = Dimensions.addEventListener('change', ({ window }) => {
+      if (!isKeyboardVisible) {
+        setAvailableHeight(window.height);
+      }
+    });
+
+    const keyboardShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (event) => {
+        const keyboardHeight = event.endCoordinates.height;
+        const screenHeight = Dimensions.get('window').height;
+        const newAvailableHeight = screenHeight - keyboardHeight;
+        
+        setIsKeyboardVisible(true);
+        setAvailableHeight(newAvailableHeight);
+      }
+    );
+
+    const keyboardHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        const screenHeight = Dimensions.get('window').height;
+        
+        setIsKeyboardVisible(false);
+        setAvailableHeight(screenHeight);
+      }
+    );
+
+    return () => {
+      dimensionSubscription?.remove();
+      keyboardShowListener?.remove();
+      keyboardHideListener?.remove();
+    };
+  }, [isKeyboardVisible]);
 
   const handleLogin = async () => {
     try {
-      const { token, ...user } = await authApiService.login({ loginId, password });
-      showToast('Login successful!', 'success');
+      const { token, ...user } = await authApiService.login({ loginId, password }, showToast);
       dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
       dispatch(setCurrentUser(user));
-
-      // Laisser _layout.tsx gérer la redirection automatiquement
-      // router.replace(`/${user.profil}/` as any);
-    } catch (error) {
-      console.error(error);
-      showToast(`Login failed: ${error}`, 'error');
+    } catch {
+      // La gestion d'erreur est maintenant faite dans l'API service
     }
   };
 
@@ -37,30 +71,39 @@ export default function LoginScreen() {
     setShowQrScanner(false);
     const qrLogin = await authApiService.qrLogin(data);
     if (!qrLogin.token.token) {
-      console.error('Token non trouvé');
       return;
     }
     const currentUser = await authApiService.getUserWithToken();
-    console.log('QR login response:', qrLogin);
     dispatch(setCredentials({ token: qrLogin.token.token, userProfile: currentUser.profil }));
     dispatch(setCurrentUser(currentUser));
+  };
 
-    // Laisser _layout.tsx gérer la redirection automatiquement
-    // router.replace(`/${currentUser.profil}/` as any);
+  const handleInputFocus = (inputType: 'username' | 'password') => {
+    if (scrollViewRef.current) {
+      setTimeout(() => {
+        const scrollY = inputType === 'password' && Platform.OS === 'android' 
+          ? 120 // Plus de scroll pour le champ mot de passe sur Android
+          : 80;  // Scroll standard pour les autres cas
+        
+        scrollViewRef.current?.scrollTo({
+          y: scrollY,
+          animated: true,
+        });
+      }, Platform.OS === 'ios' ? 100 : 200); // Délai plus long sur Android
+    }
   };
 
   return (
     <>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+      <View style={styles.container}>
+        <View style={[styles.availableSpace, { height: availableHeight }]}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
           <View style={styles.contentContainer}>
             <RNText style={styles.title}>
               Fork'it
@@ -96,23 +139,33 @@ export default function LoginScreen() {
               id="LoginId"
               value={loginId}
               onChangeText={setLoginId}
+              onFocus={() => handleInputFocus('username')}
               placeholder="Identifiant"
               style={styles.input}
               placeholderTextColor="#9CA3AF"
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="ascii-capable"
+              returnKeyType="next"
+              textContentType="username"
             />
 
             <TextInput
               id="LoginPassword"
               value={password}
               onChangeText={setPassword}
+              onFocus={() => handleInputFocus('password')}
+              onSubmitEditing={handleLogin}
               placeholder="Mot de passe"
               secureTextEntry
               style={styles.input}
               placeholderTextColor="#9CA3AF"
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="ascii-capable"
+              returnKeyType="done"
+              textContentType="password"
+              passwordRules={undefined}
             />
 
             <View style={styles.forgotPasswordContainer}>
@@ -127,8 +180,9 @@ export default function LoginScreen() {
               <Text style={styles.loginButtonText}>Se connecter</Text>
             </Button>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </View>
+      </View>
       <Modal
         visible={showQrScanner}
         animationType="slide"
@@ -148,6 +202,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  availableSpace: {
+    width: '100%',
+    justifyContent: 'center',
   },
   scrollContainer: {
     flexGrow: 1,

@@ -60,18 +60,33 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     }
   }
 
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials, showToast?: (message: string, type: 'success' | 'error') => void): Promise<AuthResponse> {
     try {
       const { data } = await this.axiosInstance.post<AuthResponse>(
         `${this.endpoint}/login`,
         credentials
       );
       await this.setToken(data.token.token);
-      await this.setUserProfile(data.profil);
+      await this.setUserProfile(data.profil);  
       return data;
-    } catch (err) {
-      console.error('Error in login:', err);
-      throw err;
+    } catch (error: any) {
+      if (showToast) {
+        // Log temporaire pour debug
+        
+        let errorMessage = 'Identifiants incorrects';
+        
+        if (error?.response?.status === 422) {
+          errorMessage = 'Identifiant ou mot de passe incorrect';
+        } else if (error?.response?.status === 500) {
+          errorMessage = 'Erreur serveur, veuillez réessayer';
+        } else if (!error?.response) {
+          errorMessage = 'Problème de connexion réseau';
+        }
+        
+        showToast(errorMessage, 'error');
+      }
+      
+      throw error;
     }
   }
 
