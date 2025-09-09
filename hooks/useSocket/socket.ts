@@ -31,7 +31,6 @@ export class SocketService {
 
     on<K extends keyof SocketEvents>(event: K, callback: (payload: SocketEvents[K]) => void) {
         if (this.socket) {
-          console.log('Registering event:', event);
           this.socket.on(event, callback);
         } else {
             console.error('Socket is not connected');

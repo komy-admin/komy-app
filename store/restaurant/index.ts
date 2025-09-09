@@ -323,6 +323,22 @@ export const selectAllRooms = createSelector(
   (rooms) => Object.values(rooms)
 );
 
+export const selectAllMenusAdapted = createSelector(
+  [(state: { restaurant: RestaurantState }) => state.restaurant.menus.menus],
+  (menus) => Object.values(menus)
+);
+
+export const selectActiveMenusAdapted = createSelector(
+  [selectAllMenusAdapted],
+  (menus) => menus.filter(menu => menu.isActive)
+);
+
+export const selectMenusLoadingAdapted = (state: { restaurant: RestaurantState }) => 
+  state.restaurant.menus.loading;
+
+export const selectMenusErrorAdapted = (state: { restaurant: RestaurantState }) => 
+  state.restaurant.menus.error;
+
 export const selectCurrentRoom = (state: { restaurant: RestaurantState }) => {
   const { currentRoomId, rooms } = state.restaurant.rooms;
   return currentRoomId ? rooms[currentRoomId] || null : null;
@@ -410,6 +426,8 @@ export {
   selectAvailableMenuCategoryItems,
   selectMenusLoading,
   selectMenusError,
+  
+  // Menus adaptés pour state.restaurant - exportés directement ci-dessus
   
   // Users
   selectUsers,

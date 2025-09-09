@@ -93,6 +93,29 @@ export type CreateOrderLinesResponse = {
   lines: OrderLine[];
 };
 
+// Type pour les OrderLineItem en draft (sans ID car pas encore persistés)
+export type DraftOrderLineItem = {
+  id?: string; // ID optionnel pour les drafts
+  categoryName: string;
+  item: OrderLineItemSnapshot | Item; // Peut être un Item ou un snapshot
+  supplementPrice?: number; // Prix du supplément pour le menu
+  note?: string; // Note optionnelle
+};
+
+// Type pour les lignes en draft (sans ID car pas encore persistées)
+export type DraftOrderLine = {
+  id?: string; // ID optionnel pour les drafts
+  type: OrderLineType;
+  quantity: number;
+  totalPrice: number;
+  note?: string;
+  status?: Status;
+  unitPrice?: number; // Optionnel pour les drafts
+  item?: OrderLineItemSnapshot | Item | null; // Peut être un Item ou un snapshot
+  menu?: OrderLineMenuSnapshot | Menu | null; // Peut être un Menu ou un snapshot
+  items?: DraftOrderLineItem[]; // Items peuvent aussi être des drafts
+};
+
 // Helper type guards
 export const isOrderLineItem = (orderLine: OrderLine): orderLine is OrderLine & { type: OrderLineType.ITEM } => {
   return orderLine.type === OrderLineType.ITEM;
@@ -100,4 +123,8 @@ export const isOrderLineItem = (orderLine: OrderLine): orderLine is OrderLine & 
 
 export const isOrderLineMenu = (orderLine: OrderLine): orderLine is OrderLine & { type: OrderLineType.MENU } => {
   return orderLine.type === OrderLineType.MENU;
+};
+
+export const isDraftOrderLine = (line: OrderLine | DraftOrderLine): line is DraftOrderLine => {
+  return !line.id || line.id.startsWith('draft-');
 };

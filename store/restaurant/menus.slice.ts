@@ -212,7 +212,10 @@ const selectMenusState = (state: { menus: MenusState }) => state.menus;
 
 export const selectAllMenus = createSelector(
   [selectMenusState],
-  (menusState) => menusState ? Object.values(menusState.menus) : []
+  (menusState) => {
+    if (!menusState) return [];
+    return Object.values(menusState.menus);
+  }
 );
 
 export const selectActiveMenus = createSelector(

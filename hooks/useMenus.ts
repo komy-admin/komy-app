@@ -2,10 +2,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
 import { 
   restaurantActions,
-  selectAllMenus,
-  selectActiveMenus,
-  selectMenusLoading,
-  selectMenusError,
+  selectAllMenusAdapted,
+  selectActiveMenusAdapted,
+  selectMenusLoadingAdapted,
+  selectMenusErrorAdapted,
 } from '~/store/restaurant';
 import { menuApiService } from '~/api/menu.api';
 import { menuCategoryApiService } from '~/api/menu-category.api';
@@ -19,10 +19,10 @@ export const useMenus = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const allMenus = useSelector((state: any) => selectAllMenus({ menus: state.restaurant.menus }));
-  const activeMenus = useSelector((state: any) => selectActiveMenus({ menus: state.restaurant.menus }));
-  const loading = useSelector((state: any) => selectMenusLoading({ menus: state.restaurant.menus }));
-  const error = useSelector((state: any) => selectMenusError({ menus: state.restaurant.menus }));
+  const allMenus = useSelector((state: any) => selectAllMenusAdapted(state));
+  const activeMenus = useSelector((state: any) => selectActiveMenusAdapted(state));
+  const loading = useSelector((state: any) => selectMenusLoadingAdapted(state));
+  const error = useSelector((state: any) => selectMenusErrorAdapted(state));
   
   // Sélecteur pour tous les MenuCategoryItems (pour éviter useSelector dans callbacks)
   const allMenuCategoryItems = useSelector((state: any) => state.restaurant.menus.menuCategoryItems || {});
@@ -39,7 +39,6 @@ export const useMenus = () => {
       dispatch(restaurantActions.setMenus({ menus }));
       
       // Extraire les MenuCategoryItems déjà présents dans la réponse API
-      console.log('📦 Extraction des MenuCategoryItems depuis la réponse API...');
       for (const menu of menus) {
         if (menu.categories && menu.categories.length > 0) {
           for (const category of menu.categories) {
@@ -49,12 +48,10 @@ export const useMenus = () => {
                 menuCategoryId: category.id, 
                 items: category.items 
               }));
-              console.log(`✅ ${category.items.length} items extraits pour catégorie ${category.id}`);
             }
           }
         }
       }
-      console.log('✅ Tous les MenuCategoryItems extraits et stockés dans le store');
       
       return menus;
     } catch (error) {

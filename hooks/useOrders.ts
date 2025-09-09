@@ -256,7 +256,7 @@ export const useOrders = () => {
   }, [updateManyOrderLinesStatus]);
 
   // NOTE: Les méthodes de création d'orderItems sont maintenant gérées 
-  // par OrderItemsForm via useOrderLines.createOrderLines() et createOrderWithLines()
+  // par OrderLinesForm via useOrderLines.createOrderLines() et createOrderWithLines()
 
   return {
     // Données

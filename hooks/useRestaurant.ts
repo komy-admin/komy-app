@@ -13,6 +13,7 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useUsers } from './useUsers';
 import { useRestaurantInit } from './useRestaurantInit';
+import { useMenus } from './useMenus';
 
 /**
  * Hook principal simplifié qui combine tous les hooks spécialisés
@@ -34,6 +35,7 @@ export const useRestaurant = () => {
   const tablesHook = useTables();
   const ordersHook = useOrders();
   const menuHook = useMenu();
+  const menusHook = useMenus();
   const usersHook = useUsers();
 
   return {
@@ -54,6 +56,7 @@ export const useRestaurant = () => {
     currentRoomOrders: ordersHook.currentRoomOrders,
     
     // Menu
+    menus: menusHook.allMenus,
     items: menuHook.items,
     itemTypes: menuHook.itemTypes,
     
