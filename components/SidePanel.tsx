@@ -30,6 +30,7 @@ export function SidePanel({
 }: SidePanelProps) {
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
 
   // Animations refs
@@ -79,7 +80,9 @@ export function SidePanel({
             useNativeDriver: true,
           })
         ])
-      ]).start();
+      ]).start(() => {
+        setIsAnimating(false); // Réactiver les clics après l'animation
+      });
     } else {
       // Ouverture : élargir d'abord puis afficher le contenu
       Animated.sequence([
@@ -98,13 +101,17 @@ export function SidePanel({
           duration: 80, // Légèrement plus rapide
           useNativeDriver: true,
         })
-      ]).start();
+      ]).start(() => {
+        setIsAnimating(false); // Réactiver les clics après l'animation
+      });
     }
   }, [isCollapsed, collapsedWidth, width, isInitialized]);
 
   const toggleCollapse = () => {
     if (hideCloseButton && !showCloseButtonWhenTableSelected) return;
+    if (isAnimating) return; // Bloquer les clics multiples pendant l'animation
 
+    setIsAnimating(true);
     const newCollapsedState = !isCollapsed;
     if (onCollapsedChange) {
       onCollapsedChange(newCollapsedState);
