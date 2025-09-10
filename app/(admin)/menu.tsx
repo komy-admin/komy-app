@@ -12,7 +12,7 @@ import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
 import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
-import { MenuEditor } from '~/components/admin/MenuEditor';
+import { MenuEditor } from '~/components/Menu/MenuEditor';
 import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
