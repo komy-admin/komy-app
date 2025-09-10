@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Button } from '~/components/ui';
 import { NumberInput } from '~/components/ui/number-input';
+import { useKeyboardDismiss } from '~/hooks/useKeyboardDismiss';
+import { KEYBOARD_AWARE_CONFIG_LONG } from '~/constants/keyboardConfig';
 
 export interface RoomFilterState {
   name: string;
@@ -40,8 +43,16 @@ export const RoomFilters: React.FC<RoomFiltersProps> = ({
            filters.maxTables !== null;
   };
 
+  const { handleScrollBeginDrag, scrollViewRef } = useKeyboardDismiss({ delayReset: 15 });
+
   return (
-    <View style={styles.filterContainer}>
+    <KeyboardAwareScrollView
+      ref={scrollViewRef}
+      style={styles.filterContainer}
+      contentContainerStyle={styles.filterContent}
+      {...KEYBOARD_AWARE_CONFIG_LONG}
+      onScrollBeginDrag={handleScrollBeginDrag}
+    >
       {/* Nom de la salle */}
       <View style={styles.filterGroup}>
         <Text style={styles.filterLabel}>Nom de la salle</Text>
@@ -165,14 +176,18 @@ export const RoomFilters: React.FC<RoomFiltersProps> = ({
           </Text>
         </Button>
       </View>
-    </View>
+    </KeyboardAwareScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   filterContainer: {
-    padding: 20,
-    gap: 20,
+    flex: 1,
+  },
+  filterContent: {
+    padding: 16,
+    gap: 16,
+    paddingBottom: Platform.OS === 'android' ? 120 : 60,
   },
   filterGroup: {
     gap: 8,
@@ -195,10 +210,10 @@ const styles = StyleSheet.create({
     color: '#2A2E33',
   },
   rangeContainer: {
-    gap: 12,
+    gap: 8,
   },
   dimensionGroup: {
-    gap: 8,
+    gap: 6,
   },
   rangeLabel: {
     fontSize: 12,

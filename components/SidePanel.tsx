@@ -251,7 +251,6 @@ const styles = StyleSheet.create({
   },
   childrenContainer: {
     flex: 1,
-    overflow: 'hidden',
   },
   header: {
     width: '100%',
