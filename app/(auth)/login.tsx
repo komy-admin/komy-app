@@ -1,12 +1,13 @@
-import { View, StyleSheet, Platform, Text as RNText, ScrollView, Modal, Keyboard, Dimensions } from 'react-native';
+import { View, StyleSheet, Platform, Text as RNText, Modal } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Button, Text, TextInput } from '~/components/ui';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useAppDispatch } from '~/store/hooks';
 import { setCredentials, setCurrentUser } from '~/store/auth.slice';
 import { authApiService } from "~/api/auth.api";
 import { Link } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
-import QrCodeScanner from '../../components/auth/QrCodeScanner'; // chemin relatif à ajuster si besoin
+import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
 
 export default function LoginScreen() {
@@ -14,47 +15,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [qrResult, setQrResult] = useState<string | null>(null);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [availableHeight, setAvailableHeight] = useState(Dimensions.get('window').height);
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const dimensionSubscription = Dimensions.addEventListener('change', ({ window }) => {
-      if (!isKeyboardVisible) {
-        setAvailableHeight(window.height);
-      }
-    });
-
-    const keyboardShowListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (event) => {
-        const keyboardHeight = event.endCoordinates.height;
-        const screenHeight = Dimensions.get('window').height;
-        const newAvailableHeight = screenHeight - keyboardHeight;
-        
-        setIsKeyboardVisible(true);
-        setAvailableHeight(newAvailableHeight);
-      }
-    );
-
-    const keyboardHideListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        const screenHeight = Dimensions.get('window').height;
-        
-        setIsKeyboardVisible(false);
-        setAvailableHeight(screenHeight);
-      }
-    );
-
-    return () => {
-      dimensionSubscription?.remove();
-      keyboardShowListener?.remove();
-      keyboardHideListener?.remove();
-    };
-  }, [isKeyboardVisible]);
 
   const handleLogin = async () => {
     try {
@@ -78,33 +40,19 @@ export default function LoginScreen() {
     dispatch(setCurrentUser(currentUser));
   };
 
-  const handleInputFocus = (inputType: 'username' | 'password') => {
-    if (scrollViewRef.current) {
-      setTimeout(() => {
-        const scrollY = inputType === 'password' && Platform.OS === 'android' 
-          ? 120 // Plus de scroll pour le champ mot de passe sur Android
-          : 80;  // Scroll standard pour les autres cas
-        
-        scrollViewRef.current?.scrollTo({
-          y: scrollY,
-          animated: true,
-        });
-      }, Platform.OS === 'ios' ? 100 : 200); // Délai plus long sur Android
-    }
-  };
-
   return (
     <>
-      <View style={styles.container}>
-        <View style={[styles.availableSpace, { height: availableHeight }]}>
-          <ScrollView
-            ref={scrollViewRef}
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-          <View style={styles.contentContainer}>
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={Platform.OS === 'android' ? 40 : 20}
+      >
+        <View style={styles.contentContainer}>
             <RNText style={styles.title}>
               Fork'it
             </RNText>
@@ -136,10 +84,8 @@ export default function LoginScreen() {
             )}
 
             <TextInput
-              id="LoginId"
               value={loginId}
               onChangeText={setLoginId}
-              onFocus={() => handleInputFocus('username')}
               placeholder="Identifiant"
               style={styles.input}
               placeholderTextColor="#9CA3AF"
@@ -151,10 +97,8 @@ export default function LoginScreen() {
             />
 
             <TextInput
-              id="LoginPassword"
               value={password}
               onChangeText={setPassword}
-              onFocus={() => handleInputFocus('password')}
               onSubmitEditing={handleLogin}
               placeholder="Mot de passe"
               secureTextEntry
@@ -165,7 +109,6 @@ export default function LoginScreen() {
               keyboardType="ascii-capable"
               returnKeyType="done"
               textContentType="password"
-              passwordRules={undefined}
             />
 
             <View style={styles.forgotPasswordContainer}>
@@ -179,10 +122,8 @@ export default function LoginScreen() {
             <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
               <Text style={styles.loginButtonText}>Se connecter</Text>
             </Button>
-          </View>
-          </ScrollView>
         </View>
-      </View>
+      </KeyboardAwareScrollView>
       <Modal
         visible={showQrScanner}
         animationType="slide"
@@ -203,14 +144,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  availableSpace: {
-    width: '100%',
-    justifyContent: 'center',
-  },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    minHeight: '100%',
+    paddingVertical: 20,
   },
   contentContainer: {
     alignItems: 'center',

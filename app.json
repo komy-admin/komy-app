@@ -27,7 +27,8 @@
       },
       "package": "com.forkit",
       "usesCleartextTraffic": true,
-      "networkSecurityConfig": "./android/network_security_config.xml"
+      "networkSecurityConfig": "./android/network_security_config.xml",
+      "softwareKeyboardLayoutMode": "adjustResize"
     },
     "web": {
       "bundler": "metro",
