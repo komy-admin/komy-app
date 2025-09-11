@@ -28,7 +28,7 @@
       "package": "com.forkit",
       "usesCleartextTraffic": true,
       "networkSecurityConfig": "./android/network_security_config.xml",
-      "softwareKeyboardLayoutMode": "adjustResize"
+      "softwareKeyboardLayoutMode": "adjustPan"
     },
     "web": {
       "bundler": "metro",

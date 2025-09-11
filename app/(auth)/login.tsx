@@ -50,7 +50,8 @@ export default function LoginScreen() {
         keyboardDismissMode="on-drag"
         enableOnAndroid={true}
         enableAutomaticScroll={true}
-        extraScrollHeight={Platform.OS === 'android' ? 40 : 20}
+        extraScrollHeight={Platform.OS === 'android' ? 20 : 20}
+        enableResetScrollToCoords={false}
       >
         <View style={styles.contentContainer}>
             <RNText style={styles.title}>
