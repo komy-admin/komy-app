@@ -423,17 +423,16 @@ export default function MenuPage() {
             style={{
               backgroundColor: '#FBFBFB',
               height: 50,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              position: 'relative',
+              flexDirection: 'row'
             }}
           >
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
               style={{
-                flex: 1,
-                maxWidth: '80%'
+                flex: 1
               }}
               contentContainerStyle={{
                 alignItems: 'center'
@@ -480,12 +479,7 @@ export default function MenuPage() {
             <View
               style={{
                 width: 200,
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
                 backgroundColor: '#FBFBFB',
-                zIndex: 10,
                 shadowColor: '#000',
                 shadowOffset: { width: -4, height: 0 },
                 shadowOpacity: 0.05,

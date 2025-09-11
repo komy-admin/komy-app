@@ -283,18 +283,19 @@ export default function TeamPage() {
             style={{
               backgroundColor: '#FBFBFB',
               height: 50,
-              position: 'relative'
+              flexDirection: 'row'
             }}
           >
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
               style={{
-                maxWidth: '80%'
+                flex: 1
               }}
               contentContainerStyle={{
-                alignItems: 'center',
-                height: 50
+                alignItems: 'center'
               }}
             >
               <TabsList
@@ -335,12 +336,7 @@ export default function TeamPage() {
               <View
                 style={{
                   width: 200,
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
                   backgroundColor: '#FBFBFB',
-                  zIndex: 10,
                   shadowColor: '#000',
                   shadowOffset: { width: -4, height: 0 },
                   shadowOpacity: 0.05,
