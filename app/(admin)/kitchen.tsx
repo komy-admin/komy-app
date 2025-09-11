@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
     shadowColor: '#000',
@@ -301,17 +301,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#2A2E33',
-    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#6B7280',
     fontWeight: '400',
+    marginTop: 2,
+    opacity: 0.8,
   },
   columnsContainer: {
     flex: 1,
