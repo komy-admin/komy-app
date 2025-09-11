@@ -25,9 +25,9 @@ export const KEYBOARD_AWARE_CONFIG_SMOOTH = {
 // Configuration spéciale pour RoomFilters (contenu très long)
 export const KEYBOARD_AWARE_CONFIG_LONG = {
   ...KEYBOARD_AWARE_CONFIG_SMOOTH,
-  extraScrollHeight: Platform.OS === 'android' ? 120 : 60, // Plus d'espace
-  extraHeight: Platform.OS === 'android' ? 80 : 40, // Plus de marge
-  scrollEventThrottle: 80, // Encore plus lent pour contenu long
-  enableResetScrollToCoords: true,
-  resetScrollToCoords: { x: 0, y: 0 },
+  extraScrollHeight: Platform.OS === 'android' ? 40 : 20, // Moins agressif
+  extraHeight: Platform.OS === 'android' ? 30 : 15, // Moins de marge
+  scrollEventThrottle: 80, // Plus réactif
+  enableResetScrollToCoords: false, // Pas de repositionnement forcé
+  keyboardDismissMode: 'on-drag' as const, // Contrôle manuel
 } as const;
