@@ -420,7 +420,7 @@ export default function ServicePage() {
     setSelectedTable(null);
   };
 
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -528,8 +528,8 @@ export default function ServicePage() {
       <CustomModal
         isVisible={modals.showOrderDetailModal}
         onClose={handleCloseOrderDetailModal}
-        width={900}
-        height={700}
+        width={width * 0.8}
+        height={height * 0.8}
         title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Détails de la commande"}
       >
         {selectedTableOrder && (
@@ -575,6 +575,7 @@ export default function ServicePage() {
                   variant="outline"
                   style={{ flex: 1 }}
                   onPress={modalActions.openPayment}
+                  disabled={true}
                 >
                   <Text>Régler la note</Text>
                 </Button>
@@ -672,8 +673,8 @@ export default function ServicePage() {
           modalActions.closeReassign();
           modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
         }}
-        width={800}
-        height={600}
+        width={width * 0.8}
+        height={height * 0.8}
         title={modals.isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
       >
         <View style={{ flex: 1, padding: 20 }}>
@@ -690,7 +691,10 @@ export default function ServicePage() {
               height={currentRoom?.height}
               editionMode={false}
               isLoading={isLoading || modals.isReassigning}
-              containerDimensions={{ width: 760, height: 560 }} // 800-40 et 600-40 pour les paddings
+              containerDimensions={{ 
+                width: width * 0.8 - 40, 
+                height: height * 0.7 - 40 
+              }} // Responsive dimensions minus padding
               onTablePress={async (pressedTable: Table | null) => {
                 if (pressedTable && selectedTableOrder && !modals.isReassigning) {
                   modalActions.setReassigning(true); // Bloquer les autres clics
@@ -740,7 +744,7 @@ export default function ServicePage() {
           modalActions.closePayment();
           modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
         }}
-        maxWidth={1200}
+        maxWidth={Math.min(1200, width * 0.95)}
         title="Régler l'addition"
       >
         {selectedTableOrder && (
