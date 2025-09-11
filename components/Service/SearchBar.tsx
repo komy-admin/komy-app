@@ -184,7 +184,7 @@ export function SearchBar({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 3,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 22,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     height: 44,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -262,8 +262,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
     overflow: 'hidden',
-    minWidth: 120,
-    maxWidth: '100%',
+    minWidth: 80,
     ...Platform.select({
       web: { cursor: 'text' as any }
     })
@@ -281,7 +280,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     textAlign: 'left',
     includeFontPadding: false,
-    minWidth: 60,
+    minWidth: 40,
     maxWidth: '100%',
     ...Platform.select({
       web: {
@@ -289,17 +288,17 @@ const styles = StyleSheet.create({
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        minWidth: 60,
+        minWidth: 40,
       },
       android: {
         textAlignVertical: 'center',
         includeFontPadding: false,
-        minWidth: 60,
+        minWidth: 40,
         textBreakStrategy: 'simple',
       },
       ios: {
         textAlign: 'left',
-        minWidth: 60,
+        minWidth: 40,
       }
     })
   },

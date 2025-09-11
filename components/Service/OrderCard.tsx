@@ -129,8 +129,8 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.title}>{orderType}</Text>
-            <Text style={styles.status}>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{orderType}</Text>
+            <Text style={styles.status} numberOfLines={1} ellipsizeMode="tail">
               {statusText}
             </Text>
           </View>
@@ -196,8 +196,8 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.title}>{orderType}</Text>
-            <Text style={styles.status}>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{orderType}</Text>
+            <Text style={styles.status} numberOfLines={1} ellipsizeMode="tail">
               {statusText}
             </Text>
           </View>
@@ -283,15 +283,39 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     marginLeft: 12,
+    minWidth: 0,
+    overflow: 'hidden',
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1A1A1A',
+    numberOfLines: 1,
+    ...Platform.select({
+      web: {
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      },
+      default: {
+        numberOfLines: 1,
+      }
+    })
   },
   status: {
     fontSize: 14,
     marginTop: 4,
+    numberOfLines: 1,
+    ...Platform.select({
+      web: {
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      },
+      default: {
+        numberOfLines: 1,
+      }
+    })
   },
   rightContent: {
     flexDirection: 'row',
