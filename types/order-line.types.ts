@@ -35,11 +35,13 @@ export type OrderLineItem = {
   categoryName: string; // Nom de la catégorie (ex: "Entrées", "Plats")
   status: Status; // Status individuel de cet item dans le menu
   item: OrderLineItemSnapshot; // Snapshot de l'item
+  updatedAt?: string; // Timestamp de dernière mise à jour
 };
 
 // Structure unifiée OrderLine remplaçant OrderItem + MenuOrderGroup
 export type OrderLine = {
   id: string;
+  orderId: string; // Référence à la commande parente
   type: OrderLineType; // ITEM ou MENU
   quantity: number;
   unitPrice: number; // Prix unitaire
@@ -55,7 +57,14 @@ export type OrderLine = {
 
   // Items du menu avec statuts individuels (seulement si type = MENU)
   items?: OrderLineItem[];
+  
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
 };
+
+// Alias temporaire pour la migration (OrderItem était l'ancien nom)
+export type OrderItem = OrderLine;
 
 // Types pour les requêtes de création
 export type CreateOrderLineItemRequest = {

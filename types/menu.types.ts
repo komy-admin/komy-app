@@ -1,6 +1,6 @@
 import { ItemType } from './item-type.types';
 import { Item } from './item.types';
-import { OrderItem } from './order-item.types';
+import { OrderItem } from './order-line.types';
 
 export type Menu = {
   id: string;

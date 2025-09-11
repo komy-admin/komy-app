@@ -10,7 +10,7 @@ import { useSelector } from 'react-redux';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 import { getMostImportantStatus } from '~/lib/utils';
-import { selectAllKitchenItems } from '~/store/restaurant';
+import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -99,11 +99,11 @@ export default function CookKitchenPage() {
   // Utilisation des hooks Redux uniquement  
   const { orders, loading, error, updateOrderStatus } = useOrders();
   const { updateOrderLineItemStatus } = useOrderLines();
-  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
+  // TODO: Restore accountConfig functionality if needed
+  const overdueOrderIds: string[] = [];
+  const overdueOrderItemIds: string[] = [];
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
   
   const kitchenItems = useSelector(selectAllKitchenItems);
 
@@ -229,7 +229,7 @@ export default function CookKitchenPage() {
     }
   };
 
-  if (loading || error || globalLoading) {
+  if (loading || error) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>

@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '~/store';
+import { sessionActions } from '~/store/slices/session.slice';
 import { useRooms } from './useRooms';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
-import { restaurantActions } from '~/store/restaurant';
-import { setAccountConfig } from '@/store/account-config.slice';
+// TODO: Migrer setAccountConfig vers le nouveau store
+// import { setAccountConfig } from '@/store/account-config.slice';
 import { accountConfigApiService } from '~/api/account-config.api';
 
 interface InitializationState {
@@ -34,8 +35,8 @@ interface InitializationState {
  */
 export const useAppInit = () => {
   const dispatch = useDispatch();
-  const { token, userProfile } = useSelector((state: RootState) => state.auth);
-  const isAuthenticated = !!(token && userProfile);
+  const { token, user } = useSelector((state: RootState) => state.session);
+  const isAuthenticated = !!(token && user);
   
   // Hooks spécialisés
   const { loadRooms } = useRooms();
@@ -74,9 +75,10 @@ export const useAppInit = () => {
   };
 
   const initializeApp = useCallback(async () => {
+    // Vérifications préliminaires synchrones
     if (!isAuthenticated) {
       console.log('❌ Utilisateur non authentifié, initialisation annulée');
-      return; // Ne pas initialiser si pas connecté
+      return;
     }
 
     if (state.isInitialized || state.isLoading || state.error) {
@@ -100,23 +102,24 @@ export const useAppInit = () => {
       try {
         // Charger la configuration depuis l'API backend
         const accountConfig = await accountConfigApiService.getAccountConfig();
-        dispatch(setAccountConfig({
-          id: accountConfig.id,
-          reminderMinutes: accountConfig.reminderMinutes,
-          reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
-        }));
+        // TODO: Migrer setAccountConfig vers le nouveau store
+        // dispatch(setAccountConfig({
+        //   id: accountConfig.id,
+        //   reminderMinutes: accountConfig.reminderMinutes,
+        //   reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
+        // }));
         updateProgress('accountConfig', true);
         console.log('✅ Configuration chargée');
       } catch (error) {
         console.error('⚠️ Erreur lors du chargement de la configuration:', error);
-        updateProgress('accountConfig', true); // Continue même si erreur
+        updateProgress('accountConfig', true);
       }
 
       // Étape 1: Charger les données de base en parallèle
       console.log('📦 Chargement des données de base...');
       
       // Vérifier les droits utilisateur pour charger les users
-      const canLoadUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile);
+      const canLoadUsers = user?.profil && ['superadmin', 'admin', 'manager'].includes(user.profil);
       
       const promises: Promise<any>[] = [
         loadRooms().then(result => {
@@ -142,7 +145,7 @@ export const useAppInit = () => {
         );
       } else {
         updateProgress('users', true);
-        console.log('⚠️ Pas de droits pour charger les utilisateurs (profil:', userProfile, ')');
+        console.log('⚠️ Pas de droits pour charger les utilisateurs (profil:', user?.profil, ')');
       }
       
       const results = await Promise.all(promises);
@@ -166,7 +169,7 @@ export const useAppInit = () => {
           return result;
         }).catch(error => {
           console.error('⚠️ Erreur lors du chargement des menus:', error);
-          updateProgress('menus', true); // Continuer même si erreur
+          updateProgress('menus', true);
           return [];
         })
       ]);
@@ -179,7 +182,7 @@ export const useAppInit = () => {
         return result;
       }).catch(error => {
         console.error('⚠️ Erreur lors du chargement des commandes:', error);
-        updateProgress('orders', true); // Continuer même si erreur
+        updateProgress('orders', true);
         return [];
       });
 
@@ -224,12 +227,22 @@ export const useAppInit = () => {
         ...prev,
         isInitialized: true,
         isLoading: false,
-        error: null
+        error: null,
+        progress: {
+          rooms: true,
+          tables: true,
+          itemTypes: true,
+          items: true,
+          menus: true,
+          orders: true,
+          users: true,
+          accountConfig: true,
+        }
       }));
 
       // Déclencher la synchronisation WebSocket
-      dispatch(restaurantActions.setConnected(true));
-
+      dispatch(sessionActions.setWebSocketConnected(true));
+      
       console.log('🎉 Initialisation terminée avec succès !');
 
       return {
@@ -238,6 +251,7 @@ export const useAppInit = () => {
         items,
         menus,
         users,
+        orders,
         success: true
       };
 
@@ -248,6 +262,7 @@ export const useAppInit = () => {
       setState(prev => ({
         ...prev,
         isLoading: false,
+        isInitialized: false,
         error: errorMessage
       }));
       
@@ -255,8 +270,6 @@ export const useAppInit = () => {
     }
   }, [
     isAuthenticated,
-    state.isInitialized, 
-    state.isLoading, 
     loadRooms, 
     loadItemTypes, 
     loadItems,
@@ -264,15 +277,16 @@ export const useAppInit = () => {
     loadAllOrders,
     loadOrdersForRoom,
     loadUsers,
-    dispatch
+    dispatch,
+    user?.profil
   ]);
 
   // Initialisation automatique quand l'utilisateur se connecte
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user?.profil) {
+      // Simple appel, les protections sont dans initializeApp
       initializeApp();
-    } else {
-      // Reset de l'état quand l'utilisateur se déconnecte
+    } else if (!isAuthenticated) {
       setState({
         isInitialized: false,
         isLoading: false,
@@ -291,7 +305,7 @@ export const useAppInit = () => {
         isFinalizingStage: false
       });
     }
-  }, [isAuthenticated, initializeApp]);
+  }, [isAuthenticated, user?.profil]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fonction pour réinitialiser manuellement
   const reinitializeApp = useCallback(async () => {
@@ -307,7 +321,7 @@ export const useAppInit = () => {
   const switchRoom = useCallback(async (roomId: string) => {
     try {
       console.log(`🔄 Changement de salle vers: ${roomId}`);
-      await loadOrdersForRoom(roomId);
+      await loadOrdersForRoom();
       console.log('✅ Commandes de la nouvelle salle chargées');
     } catch (error) {
       console.error('❌ Erreur lors du changement de salle:', error);

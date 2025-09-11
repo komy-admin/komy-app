@@ -46,6 +46,7 @@ export default function ServicePage() {
   const {
     currentRoomOrders,
     selectedTableOrder,
+    loading,
     // createOrder, // Non utilisé
     updateOrder,
     deleteOrder,
@@ -58,7 +59,6 @@ export default function ServicePage() {
   const { activeMenus: allMenus } = useMenus();
 
 
-  const { isLoading } = useRestaurant();
 
   // ✅ Hook personnalisé pour centraliser la gestion des modals
   const useOrderModals = () => {
@@ -472,7 +472,7 @@ export default function ServicePage() {
         onBack={handleDeselectTable}
       >
         <View style={{ padding: 16, flex: 1 }}>
-          {isLoading || !filtersLoaded ? (
+          {loading || !filtersLoaded ? (
             <Text>Chargement...</Text>
           ) : (
             <>
@@ -555,7 +555,7 @@ export default function ServicePage() {
           orders={currentRoomOrders}
           editingTableId={selectedTableId ?? undefined}
           editionMode={false}
-          isLoading={isLoading}
+          isLoading={loading}
           width={currentRoom?.width}
           height={currentRoom?.height}
           onTablePress={handleTablePress}
@@ -748,17 +748,17 @@ export default function ServicePage() {
               width={currentRoom?.width}
               height={currentRoom?.height}
               editionMode={false}
-              isLoading={isLoading || modals.isReassigning}
-              containerDimensions={{ 
-                width: width * 0.8 - 40, 
-                height: height * 0.7 - 40 
+              isLoading={loading || modals.isReassigning}
+              containerDimensions={{
+                width: width * 0.8 - 40,
+                height: height * 0.7 - 40
               }} // Responsive dimensions minus padding
               onTablePress={async (pressedTable: Table | null) => {
                 if (pressedTable && selectedTableOrder && !modals.isReassigning) {
                   modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
-                    await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
+                    await updateOrder(selectedTableOrder.id, { ...selectedTableOrder, tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
                     modalActions.openOrderDetail();
@@ -775,7 +775,7 @@ export default function ServicePage() {
                   modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
-                    await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
+                    await updateOrder(selectedTableOrder.id, { ...selectedTableOrder, tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
                     modalActions.openOrderDetail();

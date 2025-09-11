@@ -1,15 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
-import { 
-  restaurantActions,
-  selectAllItems,
-  selectAllItemTypes,
-  selectItemsByType,
-  selectItemById,
-  selectItemTypeById,
-  selectMenuLoading,
-  selectMenuError,
-} from '~/store/restaurant';
+import { RootState, entitiesActions } from '~/store';
 import { itemApiService } from '~/api/item.api';
 import { itemTypeApiService } from '~/api/item-type.api';
 import { Item } from '~/types/item.types';
@@ -22,34 +13,32 @@ export const useMenu = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const items = useSelector((state: any) => selectAllItems({ menu: state.restaurant.menu }));
-  const itemTypes = useSelector((state: any) => selectAllItemTypes({ menu: state.restaurant.menu }));
-  const loading = useSelector((state: any) => selectMenuLoading({ menu: state.restaurant.menu }));
-  const error = useSelector((state: any) => selectMenuError({ menu: state.restaurant.menu }));
+  const items = useSelector((state: RootState) => Object.values(state.entities.items));
+  const itemTypes = useSelector((state: RootState) => Object.values(state.entities.itemTypes));
+  const loading = false; // Géré globalement maintenant
+  const error = null; // Géré globalement maintenant
 
   // Actions asynchrones pour charger les données
   const loadItems = useCallback(async () => {
     try {
-      dispatch(restaurantActions.setLoadingMenu(true));
       const { data: items } = await itemApiService.getAll();
-      dispatch(restaurantActions.setItems({ items }));
+      dispatch(entitiesActions.setItems({ items }));
       return items;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement du menu';
-      dispatch(restaurantActions.setErrorMenu(errorMessage));
+      console.error('Erreur lors du chargement du menu:', errorMessage);
       throw error;
     }
   }, [dispatch]);
 
   const loadItemTypes = useCallback(async () => {
     try {
-      dispatch(restaurantActions.setLoadingMenu(true));
       const { data: itemTypes } = await itemTypeApiService.getAll();
-      dispatch(restaurantActions.setItemTypes({ itemTypes }));
+      dispatch(entitiesActions.setItemTypes({ itemTypes }));
       return itemTypes;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des types d\'articles';
-      dispatch(restaurantActions.setErrorMenu(errorMessage));
+      console.error('Erreur lors du chargement des types d\'articles:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -58,7 +47,7 @@ export const useMenu = () => {
   const createMenuItem = useCallback(async (itemData: Partial<Item>) => {
     try {
       const newItem = await itemApiService.create(itemData);
-      dispatch(restaurantActions.createMenuItem({ item: newItem }));
+      dispatch(entitiesActions.createMenuItem({ item: newItem }));
       return newItem;
     } catch (error) {
       console.error('Erreur lors de la création de l\'article:', error);
@@ -69,7 +58,7 @@ export const useMenu = () => {
   const updateMenuItem = useCallback(async (itemId: string, itemData: Partial<Item>) => {
     try {
       const updatedItem = await itemApiService.update(itemId, itemData);
-      dispatch(restaurantActions.updateMenuItem({ item: updatedItem }));
+      dispatch(entitiesActions.updateMenuItem({ item: updatedItem }));
       return updatedItem;
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'article:', error);
@@ -80,7 +69,7 @@ export const useMenu = () => {
   const deleteMenuItem = useCallback(async (itemId: string) => {
     try {
       await itemApiService.delete(itemId);
-      dispatch(restaurantActions.deleteMenuItem({ itemId }));
+      dispatch(entitiesActions.deleteMenuItem({ itemId }));
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'article:', error);
       throw error;
@@ -91,7 +80,7 @@ export const useMenu = () => {
   const createItemType = useCallback(async (itemTypeData: Partial<ItemType>) => {
     try {
       const newItemType = await itemTypeApiService.create(itemTypeData);
-      dispatch(restaurantActions.createItemType({ itemType: newItemType }));
+      dispatch(entitiesActions.createItemType({ itemType: newItemType }));
       return newItemType;
     } catch (error) {
       console.error('Erreur lors de la création du type d\'article:', error);
@@ -102,7 +91,7 @@ export const useMenu = () => {
   const updateItemType = useCallback(async (itemTypeId: string, itemTypeData: Partial<ItemType>) => {
     try {
       const updatedItemType = await itemTypeApiService.update(itemTypeId, itemTypeData);
-      dispatch(restaurantActions.updateItemType({ itemType: updatedItemType }));
+      dispatch(entitiesActions.updateItemType({ itemType: updatedItemType }));
       return updatedItemType;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du type d\'article:', error);
@@ -113,7 +102,7 @@ export const useMenu = () => {
   const deleteItemType = useCallback(async (itemTypeId: string) => {
     try {
       await itemTypeApiService.delete(itemTypeId);
-      dispatch(restaurantActions.deleteItemType({ itemTypeId }));
+      dispatch(entitiesActions.deleteItemType({ itemTypeId }));
     } catch (error) {
       console.error('Erreur lors de la suppression du type d\'article:', error);
       throw error;
@@ -148,7 +137,7 @@ export const useMenu = () => {
         isActive: !item.isActive
       });
       
-      dispatch(restaurantActions.updateMenuItem({ item: updatedItem }));
+      dispatch(entitiesActions.updateMenuItem({ item: updatedItem }));
       return updatedItem;
     } catch (error) {
       console.error('Erreur lors du changement de statut de l\'article:', error);

@@ -41,8 +41,6 @@ export default function MenuPage() {
 
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
   const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
@@ -514,10 +512,10 @@ export default function MenuPage() {
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             {activeTab === 'menus' ? (
               // Affichage des menus
-              menusLoading || globalLoading || menusError ? (
+              menusLoading || menusError ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                   <Text style={{ color: menusError ? '#ef4444' : '#666', fontSize: 16 }}>
-                    {menusLoading || globalLoading ? 'Chargement...' : menusError || 'Erreur lors du chargement'}
+                    {menusLoading ? 'Chargement...' : menusError || 'Erreur lors du chargement'}
                   </Text>
                 </View>
               ) : (
@@ -536,10 +534,10 @@ export default function MenuPage() {
               )
             ) : (
               // Affichage des items (articles)
-              loading || globalLoading || error ? (
+              loading || error ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                   <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
-                    {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+                    {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
                   </Text>
                 </View>
               ) : (

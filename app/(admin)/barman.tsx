@@ -5,7 +5,7 @@ import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
-import { selectAllKitchenItems } from '~/store/restaurant';
+import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 
@@ -98,9 +98,10 @@ function useBarItemGrouping(orders: Order[], kitchenItems: any[], overdueOrderIt
 export default function BarmanPage() {
   const { orders, loading, error, updateOrderStatus } = useOrders();
 
-  const { isLoading: globalLoading } = useRestaurant();
   const kitchenItems = useSelector(selectAllKitchenItems);
-  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
+  // TODO: Restore accountConfig functionality if needed
+  const overdueOrderIds: string[] = [];
+  const overdueOrderItemIds: string[] = [];
   const { showToast } = useToast();
 
   // Filtrer les items selon les statuts disponibles au bar

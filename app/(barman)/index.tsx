@@ -3,10 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
-import { OrderItem } from '~/types/order-item.types';
+import { OrderLine, OrderItem } from '~/types/order-line.types';
 import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
-import { selectAllOrderItems } from '~/store/restaurant';
+import { selectAllOrderItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 
@@ -63,29 +63,29 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrder
 export default function BarmanKitchenPage() {
   // Utilisation des hooks Redux uniquement
   const { orders, loading, error, updateOrderItemStatus } = useOrders();
-  const orderItems = useSelector((state: any) => selectAllOrderItems({ orders: state.restaurant.orders }));
-  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
+  const orderItems = useSelector((state: RootState) => selectAllOrderItems(state));
+  // TODO: Restore accountConfig functionality if needed
+  const overdueOrderIds: string[] = [];
+  const overdueOrderItemIds: string[] = [];
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Filtrer les commandes et items selon les statuts disponibles en cuisine
   const kitchenOrders = useMemo(() => {
     return orders.filter(order =>
-      order.orderItems.some(item => AVAILABLE_STATUSES.includes(item.status))
+      order.lines?.some(line => line.status && AVAILABLE_STATUSES.includes(line.status)) || false
     );
   }, [orders]);
 
   const kitchenOrderItems = useMemo(() => {
-    return orderItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
+    return orderItems.filter(item => item.status && AVAILABLE_STATUSES.includes(item.status));
   }, [orderItems]);
 
   const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems, overdueOrderIds || [], overdueOrderItemIds || []);
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
-      await updateOrderItemStatus(order.orderItems.map(oi => oi.id), newStatus);
+      await updateOrderItemStatus(order.lines?.map(line => line.id) || [], newStatus);
       // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
     } catch (error: any) {
       console.error('Error updating status:', error);
@@ -103,7 +103,7 @@ export default function BarmanKitchenPage() {
     }
   };
 
-  if (loading || error || globalLoading) {
+  if (loading || error) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>

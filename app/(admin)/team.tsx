@@ -36,13 +36,11 @@ export default function TeamPage() {
   const { showToast } = useToast();
 
   // Vérifier les droits d'accès aux utilisateurs
-  const { userProfile } = useSelector((state: RootState) => state.auth);
-  const canManageUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile);
-  const canModifyUsers = userProfile && ['superadmin', 'admin'].includes(userProfile);
-  const isManager = userProfile === 'manager';
+  const { user } = useSelector((state: RootState) => state.session);
+  const canManageUsers = user?.profil && ['superadmin', 'admin', 'manager'].includes(user.profil);
+  const canModifyUsers = user?.profil && ['superadmin', 'admin'].includes(user.profil);
+  const isManager = user?.profil === 'manager';
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux (seulement si autorisé)
   const { users, loading, error, createUser, updateUser, deleteUser, getOrGenerateQrToken, regenerateQrToken, loadUsers, getUsersByProfile } = useUsers();

@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useDispatch } from 'react-redux';
-import { restaurantActions } from '~/store/restaurant';
+import { entitiesActions } from '~/store';
 import { tableApiService } from '~/api/table.api';
 import { Table } from '~/types/table.types';
 
@@ -69,7 +69,7 @@ export const useTableEditor = () => {
       }
 
       // Dispatch direct pour performance maximale
-      dispatch(restaurantActions.createTable({ table: newTable }));
+      dispatch(entitiesActions.createTable({ table: newTable }));
 
       return newTable;
     } catch (error) {
@@ -116,7 +116,7 @@ export const useTableEditor = () => {
         throw new Error('Réponse API invalide: table mise à jour sans ID');
       }
 
-      dispatch(restaurantActions.updateTable({ table: updatedTable }));
+      dispatch(entitiesActions.updateTable({ table: updatedTable }));
       return updatedTable;
     } catch (error) {
       console.error('Erreur lors de la mise à jour de table:', {
@@ -154,7 +154,7 @@ export const useTableEditor = () => {
       }
 
       await tableApiService.delete(tableId);
-      dispatch(restaurantActions.deleteTable({ tableId }));
+      dispatch(entitiesActions.deleteTable({ tableId }));
     } catch (error) {
       console.error('Erreur lors de la suppression de table:', {
         error,

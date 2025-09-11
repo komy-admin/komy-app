@@ -15,7 +15,7 @@ import { Status } from '~/types/status.enum';
 import { useToast } from '~/components/ToastProvider';
 import { AlertCircle, SquareArrowRight } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
-import { OrderItem } from '@/types/order-item.types';
+import { OrderItem } from '~/types/order-line.types';
 import * as Haptics from 'expo-haptics';
 import { useMenu, useOrders, useRestaurant, useRooms, useTables } from '~/hooks/useRestaurant';
 
@@ -26,8 +26,6 @@ export default function ServerHome() {
   const snapPoints = useMemo(() => ['15%', '50%', '90%'], []);
   const screenHeight = Dimensions.get('window').height;
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   const { rooms, currentRoom, error: roomsError, setCurrentRoom } = useRooms();
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();

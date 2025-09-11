@@ -1,22 +1,12 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { useCallback } from 'react';
-import { 
-  restaurantActions,
-  selectOrders,
-  selectOrdersByRoomId,
-  selectOrderById,
-  selectOrderByTableId,
-  selectCurrentRoomOrders,
-  selectSelectedTableOrder,
-  selectOrdersLoading,
-  selectOrdersError,
-} from '~/store/restaurant';
+import { useCallback, useMemo } from 'react';
+import { RootState, entitiesActions } from '~/store';
+import { selectCurrentRoomId, selectSelectedTableId } from '~/store/slices/session.slice';
 import { orderApiService, UpdateOrderStatusPayload } from '~/api/order.api';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
 import { OrderLine } from '~/types/order-line.types';
-import { FilterQueryBuilder } from './useFilter/query-builder';
 
 /**
  * Hook spécialisé pour la gestion des commandes
@@ -24,151 +14,172 @@ import { FilterQueryBuilder } from './useFilter/query-builder';
 export const useOrders = () => {
   const dispatch = useDispatch();
   const { 
-    deleteOrderLine, 
     deleteOrderLines, 
     updateManyOrderLinesStatus 
   } = useOrderLines();
 
   // Sélecteurs
-  const orders = useSelector((state: any) => selectOrders({ orders: state.restaurant.orders }));
-  const currentRoomOrders = useSelector(selectCurrentRoomOrders);
-  const selectedTableOrder = useSelector(selectSelectedTableOrder);
-  const loading = useSelector((state: any) => selectOrdersLoading({ orders: state.restaurant.orders }));
-  const error = useSelector((state: any) => selectOrdersError({ orders: state.restaurant.orders }));
+  const orders = useSelector((state: RootState) => Object.values(state.entities.orders));
+  const tables = useSelector((state: RootState) => state.entities.tables);
+  const currentRoomId = useSelector(selectCurrentRoomId);
+  const selectedTableId = useSelector(selectSelectedTableId);
+  
+  // Commandes de la salle courante
+  const currentRoomOrders = useMemo(() => {
+    if (!currentRoomId) return [];
+    return orders.filter(order => {
+      // Si la table a un roomId directement, l'utiliser
+      if (order.table?.roomId) {
+        return order.table.roomId === currentRoomId;
+      }
+      // Sinon, chercher la table dans le store pour obtenir son roomId
+      if (order.tableId && tables[order.tableId]) {
+        return tables[order.tableId].roomId === currentRoomId;
+      }
+      return false;
+    });
+  }, [orders, currentRoomId, tables]);
+  
+  // Commande de la table sélectionnée
+  const selectedTableOrder = useMemo(() => {
+    if (!selectedTableId) return null;
+    return orders.find(order => 
+      order.tableId === selectedTableId && 
+      order.status !== Status.TERMINATED && 
+      order.status !== Status.DRAFT
+    ) || null;
+  }, [orders, selectedTableId]);
+  
+  const loading = false; // Géré globalement maintenant
+  const error = null; // Géré globalement maintenant
 
   // Actions asynchrones pour charger les données
-  const loadOrdersForRoom = useCallback(async (roomId: string) => {
+  const loadOrdersForRoom = useCallback(async () => {
     try {
-      dispatch(restaurantActions.setLoadingOrders(true));
+      // Pour l'instant, on charge toutes les orders et on filtre côté client
+      // TODO: Implémenter le filtre côté serveur quand l'API le supportera
+      const { data: orders } = await orderApiService.getAll();
       
-      // Utiliser FilterQueryBuilder pour construire la query string correctement
-      const queryString = FilterQueryBuilder.build({
-        filters: [
-          { field: 'table.roomId', value: roomId, operator: '=' }
-        ],
-        sort: { field: 'updatedAt', direction: 'asc' },
-        perPage: 100
+      // Corriger les orders qui n'ont pas de status
+      const ordersWithStatus = orders.map(order => {
+        if (!order.status && order.lines && order.lines.length > 0) {
+          // Prendre le status de priorité des lines
+          const hasReady = order.lines.some(line => line.status === Status.READY);
+          const hasInProgress = order.lines.some(line => line.status === Status.INPROGRESS);
+          const hasPending = order.lines.some(line => line.status === Status.PENDING);
+          
+          let status = Status.PENDING;
+          if (hasReady) status = Status.READY;
+          else if (hasInProgress) status = Status.INPROGRESS;
+          else if (hasPending) status = Status.PENDING;
+          
+          return { ...order, status };
+        }
+        return order;
       });
       
-      const { data: orders } = await orderApiService.getAll(queryString);
-      dispatch(restaurantActions.setOrders({ orders, roomId }));
-      return orders;
+      dispatch(entitiesActions.setOrders({ orders: ordersWithStatus }));
+      
+      return ordersWithStatus;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des commandes';
-      dispatch(restaurantActions.setErrorOrders(errorMessage));
+      console.error('Erreur lors du chargement des commandes de la salle:', errorMessage);
       throw error;
     }
   }, [dispatch]);
 
   const loadAllOrders = useCallback(async () => {
     try {
-      dispatch(restaurantActions.setLoadingOrders(true));
-      const queryString = FilterQueryBuilder.build({
-        filters: [],
-        sort: { field: 'updatedAt', direction: 'asc' },
-        perPage: 500
+      const { data: orders } = await orderApiService.getAll();
+      
+      // Corriger les orders qui n'ont pas de status
+      const ordersWithStatus = orders.map(order => {
+        if (!order.status && order.lines && order.lines.length > 0) {
+          // Prendre le status de priorité des lines
+          const hasReady = order.lines.some(line => line.status === Status.READY);
+          const hasInProgress = order.lines.some(line => line.status === Status.INPROGRESS);
+          const hasPending = order.lines.some(line => line.status === Status.PENDING);
+          
+          let status = Status.PENDING;
+          if (hasReady) status = Status.READY;
+          else if (hasInProgress) status = Status.INPROGRESS;
+          else if (hasPending) status = Status.PENDING;
+          
+          return { ...order, status };
+        }
+        return order;
       });
       
-      const { data: orders } = await orderApiService.getAll(queryString);
-      dispatch(restaurantActions.setAllOrders({ orders }));
-      return orders;
+      dispatch(entitiesActions.setOrders({ orders: ordersWithStatus }));
+      return ordersWithStatus;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement de toutes les commandes';
-      dispatch(restaurantActions.setErrorOrders(errorMessage));
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des commandes';
+      console.error('Erreur lors du chargement de toutes les commandes:', errorMessage);
       throw error;
     }
   }, [dispatch]);
 
-  // Actions pour gérer les commandes
-  const createOrder = useCallback(async (tableId: string) => {
+  const createOrder = useCallback(async (orderData: Partial<Order>) => {
     try {
-      const newOrder = await orderApiService.create({
-        tableId,
-        lines: [],
-        status: Status.DRAFT
-      });
-
-      dispatch(restaurantActions.createOrder({ order: newOrder }));
+      const newOrder = await orderApiService.create(orderData);
+      dispatch(entitiesActions.createOrder({ order: newOrder }));
       return newOrder;
     } catch (error) {
-      console.error('Erreur lors de la création de la commande:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la création de la commande';
+      console.error('Erreur lors de la création de la commande:', errorMessage);
       throw error;
     }
   }, [dispatch]);
 
-  // const updateOrder = useCallback(async (order: Order) => {
-  //   try {
-  //     const updatedOrder = await orderApiService.update(order.id, order);
-  //     dispatch(restaurantActions.updateOrder({ order: updatedOrder }));
-  //     return updatedOrder;
-  //   } catch (error) {
-  //     console.error('Erreur lors de la mise à jour de la commande:', error);
-  //     throw error;
-  //   }
-  // }, [dispatch]);
-
-  // 🆕 Nouvelle fonction pour la mise à jour complète (bulk update)
-  const updateOrder = useCallback(async (payload: Order) => {
+  const updateOrder = useCallback(async (orderId: string, orderData: Partial<Order>) => {
     try {
-      const orderId = payload.id;
-      const updatedOrder = await orderApiService.update(orderId, payload);
-
-      dispatch(restaurantActions.updateOrder({ order: updatedOrder }));
+      const updatedOrder = await orderApiService.update(orderId, orderData);
+      dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
       return updatedOrder;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour complète de la commande:', error);
+      console.error('Erreur lors de la mise à jour de la commande:', error);
       throw error;
     }
   }, [dispatch]);
+
+  // Update order status avec possibilité de mise à jour en masse des orderLines
+  const updateOrderStatus = useCallback(async (orderId: string, statusData: UpdateOrderStatusPayload) => {
+    try {
+      const { orderLineIds, ...updateData } = statusData;
+      
+      // Si des orderLineIds sont fournis et qu'on passe au statut INPROGRESS,
+      // on met à jour les orderLines en même temps
+      if (orderLineIds && orderLineIds.length > 0 && updateData.status === Status.INPROGRESS) {
+        await updateManyOrderLinesStatus(orderLineIds, Status.INPROGRESS);
+      }
+      
+      const updatedOrder = await orderApiService.updateStatus(orderId, updateData);
+      dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
+      return updatedOrder;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut de la commande:', error);
+      throw error;
+    }
+  }, [dispatch, updateManyOrderLinesStatus]);
 
   const deleteOrder = useCallback(async (orderId: string) => {
     try {
+      // Récupérer la commande pour obtenir ses lignes
+      const order = orders.find(o => o.id === orderId);
+      
+      if (order?.lines) {
+        // Supprimer toutes les lignes de commande d'abord
+        await deleteOrderLines(order.lines.map((line: OrderLine) => line.id));
+      }
+      
+      // Ensuite supprimer la commande
       await orderApiService.delete(orderId);
-      dispatch(restaurantActions.deleteOrder({ orderId }));
+      dispatch(entitiesActions.deleteOrder({ orderId }));
     } catch (error) {
       console.error('Erreur lors de la suppression de la commande:', error);
       throw error;
     }
-  }, [dispatch]);
-
-  // 🆕 Nouvelle fonction utilisant la route PATCH /order/:id/status
-  const updateOrderStatus = useCallback(async (payload: UpdateOrderStatusPayload & { orderId: string }) => {
-    try {
-      const { orderId, ...statusPayload } = payload;
-
-      // Validation : au moins un des deux arrays doit être fourni
-      if ((!statusPayload.orderLineIds || statusPayload.orderLineIds.length === 0) && 
-          (!statusPayload.orderLineItemIds || statusPayload.orderLineItemIds.length === 0)) {
-        throw new Error('Au moins un orderLineId ou orderLineItemId doit être fourni');
-      }
-
-      const updatedOrder = await orderApiService.updateStatus(orderId, statusPayload);
-      
-      // Le WebSocket se charge de la synchronisation des données
-      return updatedOrder;
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
-      throw error;
-    }
-  }, [dispatch]);
-
-  // 🆕 Fonction helper pour mettre à jour le statut d'OrderLines (items individuels)
-  const updateOrderLinesStatus = useCallback(async (orderId: string, orderLineIds: string[], status: Status) => {
-    return updateOrderStatus({
-      orderId,
-      status,
-      orderLineIds,
-    });
-  }, [updateOrderStatus]);
-
-  // 🆕 Fonction helper pour mettre à jour le statut d'OrderLineItems (items de menu)
-  const updateOrderLineItemsStatus = useCallback(async (orderId: string, orderLineItemIds: string[], status: Status) => {
-    return updateOrderStatus({
-      orderId,
-      status,
-      orderLineItemIds,
-    });
-  }, [updateOrderStatus]);
+  }, [dispatch, orders, deleteOrderLines]);
 
   // Utilitaires
   const getOrderById = useCallback((orderId: string) => {
@@ -176,87 +187,32 @@ export const useOrders = () => {
   }, [orders]);
 
   const getOrderByTableId = useCallback((tableId: string) => {
-    return orders.find(order => order.tableId === tableId) || null;
+    // Retourne la commande active de la table (non terminée et non brouillon)
+    return orders.find(order => 
+      order.tableId === tableId && 
+      order.status !== Status.TERMINATED && 
+      order.status !== Status.DRAFT
+    ) || null;
   }, [orders]);
 
-  const getOrderItems = useCallback((orderId: string) => {
-    const order = getOrderById(orderId);
-    return order?.lines || [];
-  }, [getOrderById]);
-
-
-  const getOrdersByRoom = useCallback((roomId: string) => {
-    return orders.filter(order => order.table?.roomId === roomId);
+  const getOrdersByStatus = useCallback((status: Status) => {
+    return orders.filter(order => order.status === status);
   }, [orders]);
 
-  // Nouvelles méthodes pour la structure OrderLine
-  const getOrderIndividualItems = useCallback((orderId: string) => {
-    const order = getOrderById(orderId);
-    if (!order) return [];
-    // Retourner les OrderLines de type ITEM
-    return (order.lines || []).filter(line => line.type === 'ITEM');
-  }, [getOrderById]);
+  const getActiveOrders = useCallback(() => {
+    return orders.filter(order => 
+      order.status !== Status.TERMINATED && 
+      order.status !== Status.DRAFT
+    );
+  }, [orders]);
 
-  const getOrderMenus = useCallback((orderId: string) => {
-    const order = getOrderById(orderId);
-    if (!order) return [];
-    // Retourner les OrderLines de type MENU
-    return (order.lines || []).filter(line => line.type === 'MENU');
-  }, [getOrderById]);
-
-  const getOrderAllItems = useCallback((orderId: string) => {
-    const order = getOrderById(orderId);
-    if (!order) return [];
-    
-    // Retourner toutes les OrderLines
-    return order.lines || [];
-  }, [getOrderById]);
-
-  const hasOrderMenus = useCallback((orderId: string) => {
-    const order = getOrderById(orderId);
-    return Boolean(order?.lines && order.lines.some(line => line.type === 'MENU'));
-  }, [getOrderById]);
-
-  const hasOrderIndividualItems = useCallback((orderId: string) => {
-    const order = getOrderById(orderId);
-    return Boolean(order?.lines && order.lines.some(line => line.type === 'ITEM'));
-  }, [getOrderById]);
-
-  // Actions pour les orderItems - MIGRÉES vers OrderLine
-  const deleteOrderItem = useCallback(async (orderLineId: string) => {
-    try {
-      await deleteOrderLine(orderLineId);
-    } catch (error) {
-      console.error('Erreur lors de la suppression de l\'orderLine:', error);
-      throw error;
-    }
-  }, [deleteOrderLine]);
-
-  const deleteManyOrderItems = useCallback(async (orderLineIds: string[]) => {
-    try {
-      await deleteOrderLines(orderLineIds);
-      
-      return {
-        deletedCount: orderLineIds.length,
-        deletedIds: orderLineIds
-      };
-    } catch (error) {
-      console.error('Erreur lors de la suppression multiple d\'orderLines:', error);
-      throw error;
-    }
-  }, [deleteOrderLines]);
-
-  const updateOrderItemStatus = useCallback(async (orderLineIds: string[], status: Status) => {
-    try {
-      await updateManyOrderLinesStatus(orderLineIds, status);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut des orderLines:', error);
-      throw error;
-    }
-  }, [updateManyOrderLinesStatus]);
-
-  // NOTE: Les méthodes de création d'orderItems sont maintenant gérées 
-  // par OrderLinesForm via useOrderLines.createOrderLines() et createOrderWithLines()
+  const hasActiveOrder = useCallback((tableId: string) => {
+    return orders.some(order => 
+      order.tableId === tableId && 
+      order.status !== Status.TERMINATED && 
+      order.status !== Status.DRAFT
+    );
+  }, [orders]);
 
   return {
     // Données
@@ -268,36 +224,19 @@ export const useOrders = () => {
     loading,
     error,
     
-    // Actions de chargement
+    // Actions CRUD
     loadOrdersForRoom,
     loadAllOrders,
-    
-    // Actions CRUD pour les orders
     createOrder,
     updateOrder,
-    deleteOrder,
     updateOrderStatus,
+    deleteOrder,
     
-    // 🆕 Nouvelles fonctions de statut (API spécialisée)
-    updateOrderLinesStatus,
-    updateOrderLineItemsStatus,
-    
-    // Actions CRUD pour les orderItems (migrées vers OrderLine)
-    deleteOrderItem,
-    deleteManyOrderItems,
-    updateOrderItemStatus,
-    
-    // Utilitaires (anciens)
+    // Utilitaires
     getOrderById,
     getOrderByTableId,
-    getOrderItems,
-    getOrdersByRoom,
-    
-    // Nouveaux utilitaires pour structure avec menus
-    getOrderIndividualItems,
-    getOrderMenus,
-    getOrderAllItems,
-    hasOrderMenus,
-    hasOrderIndividualItems,
+    getOrdersByStatus,
+    getActiveOrders,
+    hasActiveOrder,
   };
 };

@@ -25,8 +25,6 @@ export default function RoomListPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
   const { rooms, loading, error, createRoom, updateRoom, deleteRoom, getRoomById } = useRooms();

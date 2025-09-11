@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useAppInit } from '~/hooks/useAppInit';
 import { useAlertMonitor } from '~/hooks/useAlertMonitor';
+import { WebSocketListener } from './WebSocketListener';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -86,7 +87,7 @@ const LogoPulse: React.FC = () => {
 
   return (
     <Animated.View style={[styles.logoAnimated, { transform: [{ scale: scaleAnim }] }]}>
-      <Image 
+      <Image
         source={require('~/assets/images/icone_fork_it.png')}
         style={styles.logoImage}
         resizeMode="contain"
@@ -95,13 +96,13 @@ const LogoPulse: React.FC = () => {
   );
 };
 
-export const AppInitializer: React.FC<AppInitializerProps> = ({ 
-  children, 
-  fallback 
+export const AppInitializer: React.FC<AppInitializerProps> = ({
+  children,
+  fallback
 }) => {
-  const { token, userProfile } = useSelector((state: RootState) => state.auth);
-  const isAuthenticated = !!(token && userProfile);
-  
+  const { token, user } = useSelector((state: RootState) => state.session);
+  const isAuthenticated = !!(token && user?.profil);
+
   const {
     isInitialized,
     isLoading,
@@ -120,7 +121,46 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
     return <>{children}</>;
   }
 
-  // Affichage normal avec erreur en cas de problème
+  // Si erreur, afficher l'écran d'erreur
+  if (error && !isLoading) {
+    return fallback || (
+      <View style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#f8f9fa'
+      }}>
+        <Text style={{
+          fontSize: 24,
+          fontWeight: 'bold',
+          color: '#dc3545',
+          marginBottom: 16,
+          textAlign: 'center'
+        }}>
+          Erreur d'initialisation
+        </Text>
+        <Text style={{
+          fontSize: 16,
+          color: '#6c757d',
+          marginBottom: 24,
+          textAlign: 'center'
+        }}>
+          {error}
+        </Text>
+        <Text
+          style={{
+            fontSize: 16,
+            color: '#007bff',
+            textDecorationLine: 'underline'
+          }}
+          onPress={reinitializeApp}
+        >
+          Réessayer
+        </Text>
+      </View>
+    );
+  }
 
   // Si pas encore initialisé, afficher l'écran de chargement
   if (!isInitialized) {
@@ -130,7 +170,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
         <View style={styles.logoContainer}>
           {/* Logo avec pulsation */}
           <LogoPulse />
-          
+
           {/* Onde ripple synchronisée */}
           <RippleWave />
         </View>
@@ -155,8 +195,12 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
     );
   }
 
-  // App initialisée, afficher le contenu principal
-  return <>{children}</>;
+  // App initialisée, afficher le contenu principal avec les listeners WebSocket
+  return (
+    <WebSocketListener>
+      {children}
+    </WebSocketListener>
+  );
 };
 
 function getCurrentStepLabel(progress: Record<string, boolean>): string {

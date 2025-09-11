@@ -7,7 +7,7 @@ import { OrderLine, OrderLineType } from '~/types/order-line.types';
 import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useSelector } from 'react-redux';
-import { selectAllKitchenItems } from '~/store/restaurant';
+import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 
@@ -109,13 +109,12 @@ function useKitchenItemGrouping(orders: Order[], kitchenItems: any[], overdueOrd
 }
 
 export default function KitchenPage() {
-  // Utilisation des hooks Redux + initialisation WebSocket
+  // Utilisation des hooks Redux
   const { orders, loading, error, updateOrderStatus } = useOrders();
-
-  // IMPORTANT: Initialiser la connexion WebSocket
-  const { isLoading: globalLoading } = useRestaurant();
   const kitchenItems = useSelector(selectAllKitchenItems);
-  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
+  // TODO: Restore accountConfig functionality if needed
+  const overdueOrderIds: string[] = [];
+  const overdueOrderItemIds: string[] = [];
   const { showToast } = useToast();
 
   // Filtrer les items selon les statuts disponibles en cuisine

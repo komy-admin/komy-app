@@ -18,8 +18,6 @@ export default function RoomPage() {
   const roomId = params.roomId as string;
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
   const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading } = useRooms();

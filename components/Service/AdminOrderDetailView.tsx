@@ -12,7 +12,7 @@ import StatusSelector from './StatusSelector';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useOrders } from '~/hooks/useOrders';
 import { useMenus } from '~/hooks/useMenus';
-import { restaurantActions } from '~/store/restaurant';
+import { entitiesActions } from '~/store';
 import { useDispatch } from 'react-redux';
 import { useToast } from '~/components/ToastProvider';
 

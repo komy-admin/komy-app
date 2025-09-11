@@ -10,8 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
-import { setCredentials, setCurrentUser, setLoading } from '~/store/auth.slice';
-import { UserProfile } from '~/types/user.types';
+import { sessionActions } from '~/store';
 import { authApiService } from '~/api/auth.api';
 import {
   configureReanimatedLogger,
@@ -59,34 +58,40 @@ function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
   const dispatch = useDispatch();
-  const { token, userProfile, isLoading } = useSelector((state: RootState) => state.auth);
+  const { token, user: userProfile, isLoggingIn: isLoading } = useSelector((state: RootState) => state.session);
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   React.useEffect(() => {
     const initializeAuth = async () => {
       try {
         const storedToken = await storageService.getItem('token');
-        const storedUserProfile = await storageService.getItem('userProfile');
 
-        if (storedToken && storedUserProfile) {
-          dispatch(setCredentials({
-            token: storedToken,
-            userProfile: storedUserProfile as UserProfile
-          }));
-
+        if (storedToken) {
+          // D'abord, on indique qu'on est en train de se connecter
+          dispatch(sessionActions.loginStart());
+          
           try {
+            // Ensuite on charge le vrai user depuis l'API
             const user = await authApiService.getUserWithToken();
-            dispatch(setCurrentUser(user));
+            
+            // Maintenant on peut faire le loginSuccess avec le vrai user
+            dispatch(sessionActions.loginSuccess({
+              token: storedToken,
+              user: user
+            }));
+            
+            // On met à jour le profil dans le localStorage pour la prochaine fois
+            await storageService.setItem('userProfile', user.profil);
           } catch (error) {
             await storageService.removeItem('token');
             await storageService.removeItem('userProfile');
-            dispatch(setCredentials({ token: null, userProfile: null }));
+            dispatch(sessionActions.logout());
           }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
-        dispatch(setLoading(false));
+        // Plus besoin de setLoginLoading ici car loginSuccess/logout le gère
         setIsInitialized(true);
       }
     };
@@ -102,31 +107,38 @@ function AuthenticationGate() {
     const fullPath = segments.length ? `/${segments.join('/')}` : '/';
     if (fullPath === '/(auth)/forgot-password') return
     if (fullPath === '/(auth)/reset-password') return
+    
+    // Si pas de token, rediriger vers login
     if (!token) {
       if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
         return;
       }
-
       router.replace(LOGIN_ROUTE);
       return;
     }
 
-    if (token && userProfile) {
-      if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
-        const role = userProfile as keyof typeof HOME_ROUTES;
+    // Si on a un token et un user complet avec profil
+    if (token && userProfile && userProfile.profil) {
+      // Si on est sur la page de login, rediriger vers la home du profil
+      if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login' || fullPath === '/') {
+        const role = userProfile.profil as keyof typeof HOME_ROUTES;
         if (!role || !HOME_ROUTES[role]) {
-          dispatch(setCredentials({ token: null, userProfile: null }));
+          console.error('Profil invalide:', role);
+          dispatch(sessionActions.logout());
           router.replace(LOGIN_ROUTE);
           return;
         }
-
+        
+        console.log('Redirection vers:', HOME_ROUTES[role]);
         router.replace(HOME_ROUTES[role] as any);
         return;
       }
 
+      // Vérifier si l'utilisateur a accès à la route actuelle
       const firstSegment = segments[0];
-      if (firstSegment && !PROTECTED_ROUTES[userProfile as keyof ProtectedRoutes]?.includes(firstSegment)) {
-        const role = userProfile as keyof typeof HOME_ROUTES;
+      if (firstSegment && !PROTECTED_ROUTES[userProfile.profil as keyof ProtectedRoutes]?.includes(firstSegment)) {
+        const role = userProfile.profil as keyof typeof HOME_ROUTES;
+        console.log('Accès refusé, redirection vers:', HOME_ROUTES[role]);
         router.replace(HOME_ROUTES[role] as any);
         return;
       }

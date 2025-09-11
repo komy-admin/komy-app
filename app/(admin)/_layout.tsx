@@ -8,8 +8,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui';
 import { router } from 'expo-router';
 import { authApiService } from '@/api/auth.api';
-import { logout } from '@/store/auth.slice';
-import { useAppDispatch } from '@/store/hooks';
+import { sessionActions } from '~/store';
+import { useAppDispatch } from '~/store/hooks';
 
 
 // Composant pour la vérification de l'écran admin
@@ -19,7 +19,7 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const handleLogout = () => {
-      dispatch(logout());
+      dispatch(sessionActions.logout());
   };
 
   useEffect(() => {

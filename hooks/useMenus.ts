@@ -1,12 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
-import { 
-  restaurantActions,
-  selectAllMenusAdapted,
-  selectActiveMenusAdapted,
-  selectMenusLoadingAdapted,
-  selectMenusErrorAdapted,
-} from '~/store/restaurant';
+import { RootState, entitiesActions } from '~/store';
 import { menuApiService } from '~/api/menu.api';
 import { menuCategoryApiService } from '~/api/menu-category.api';
 import { menuCategoryItemApiService } from '~/api/menu-category-item.api';
@@ -19,24 +13,35 @@ export const useMenus = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const allMenus = useSelector((state: any) => selectAllMenusAdapted(state));
-  const activeMenus = useSelector((state: any) => selectActiveMenusAdapted(state));
-  const loading = useSelector((state: any) => selectMenusLoadingAdapted(state));
-  const error = useSelector((state: any) => selectMenusErrorAdapted(state));
+  const allMenus = useSelector((state: RootState) => Object.values(state.entities.menus));
+  const activeMenus = useSelector((state: RootState) => Object.values(state.entities.menus).filter(menu => menu.isActive));
+  const loading = false; // Géré globalement maintenant
+  const error = null; // Géré globalement maintenant
   
   // Sélecteur pour tous les MenuCategoryItems (pour éviter useSelector dans callbacks)
-  const allMenuCategoryItems = useSelector((state: any) => state.restaurant.menus.menuCategoryItems || {});
+  // Note: MenuCategoryItems are nested within menu.categories[].items, not stored separately
+  const allMenuCategoryItems = useSelector((state: RootState) => {
+    const items: Record<string, MenuCategoryItem[]> = {};
+    Object.values(state.entities.menus).forEach(menu => {
+      menu.categories?.forEach(category => {
+        if (category.items) {
+          items[category.id] = category.items;
+        }
+      });
+    });
+    return items;
+  });
 
   // Actions asynchrones pour charger les données
   const loadAllMenus = useCallback(async () => {
     try {
-      dispatch(restaurantActions.setLoadingMenus(true));
+      // Loading géré globalement maintenant
       const response = await menuApiService.getAll();
       
       // Extraire le tableau de données de la réponse
       const menus = Array.isArray(response?.data) ? response.data : [];
       
-      dispatch(restaurantActions.setMenus({ menus }));
+      dispatch(entitiesActions.setMenus({ menus }));
       
       // Extraire les MenuCategoryItems déjà présents dans la réponse API
       for (const menu of menus) {
@@ -44,7 +49,7 @@ export const useMenus = () => {
           for (const category of menu.categories) {
             if (category.id && category.items && Array.isArray(category.items)) {
               // Les items sont déjà dans la réponse, pas besoin d'appel API !
-              dispatch(restaurantActions.setMenuCategoryItems({ 
+              dispatch(entitiesActions.setMenuCategoryItems({ 
                 menuCategoryId: category.id, 
                 items: category.items 
               }));
@@ -56,24 +61,24 @@ export const useMenus = () => {
       return menus;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des menus';
-      dispatch(restaurantActions.setErrorMenus(errorMessage));
+      console.error('Erreur lors de l\'opération menus:', errorMessage);
       throw error;
     }
   }, [dispatch]);
 
   const loadActiveMenus = useCallback(async () => {
     try {
-      dispatch(restaurantActions.setLoadingMenus(true));
+      // Loading géré globalement maintenant
       const response = await menuApiService.getActiveMenus();
       
       // S'assurer que la réponse est un tableau
       const menus = Array.isArray(response) ? response : [];
       
-      dispatch(restaurantActions.setMenus({ menus }));
+      dispatch(entitiesActions.setMenus({ menus }));
       return menus;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des menus actifs';
-      dispatch(restaurantActions.setErrorMenus(errorMessage));
+      console.error('Erreur lors de l\'opération menus:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -81,13 +86,13 @@ export const useMenus = () => {
 
   const loadAvailableMenuCategoryItems = useCallback(async (menuCategoryId: string) => {
     try {
-      dispatch(restaurantActions.setLoadingMenus(true));
+      // Loading géré globalement maintenant
       const items = await menuCategoryItemApiService.getAvailableByMenuCategoryId(menuCategoryId);
-      dispatch(restaurantActions.setMenuCategoryItems({ menuCategoryId, items }));
+      dispatch(entitiesActions.setMenuCategoryItems({ menuCategoryId, items }));
       return items;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des items disponibles';
-      dispatch(restaurantActions.setErrorMenus(errorMessage));
+      console.error('Erreur lors de l\'opération menus:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -139,7 +144,7 @@ export const useMenus = () => {
         console.log('⚠️ Aucune catégorie à créer');
       }
       
-      dispatch(restaurantActions.createMenu({ menu: newMenu }));
+      dispatch(entitiesActions.createMenu({ menu: newMenu }));
       console.log('✅ Menu ajouté au store Redux');
       return newMenu;
     } catch (error) {
@@ -216,7 +221,7 @@ export const useMenus = () => {
         console.log('⚠️ Aucune catégorie à gérer');
       }
       
-      dispatch(restaurantActions.updateMenu({ menu: updatedMenu }));
+      dispatch(entitiesActions.updateMenu({ menu: updatedMenu }));
       console.log('✅ Menu mis à jour dans le store Redux');
       return updatedMenu;
     } catch (error) {
@@ -228,7 +233,7 @@ export const useMenus = () => {
   const deleteMenu = useCallback(async (menuId: string) => {
     try {
       await menuApiService.delete(menuId);
-      dispatch(restaurantActions.deleteMenu({ menuId }));
+      dispatch(entitiesActions.deleteMenu({ menuId }));
     } catch (error) {
       console.error('Erreur lors de la suppression du menu:', error);
       throw error;
@@ -244,13 +249,13 @@ export const useMenus = () => {
       console.log('✅ Menu créé via API bulk:', createdMenu);
       
       // Ajouter au store Redux avec le menu complet
-      dispatch(restaurantActions.createMenu({ menu: createdMenu }));
+      dispatch(entitiesActions.createMenu({ menu: createdMenu }));
       
       // Extraire et stocker les MenuCategoryItems créés
       if (createdMenu.categories && createdMenu.categories.length > 0) {
         for (const category of createdMenu.categories) {
           if (category.id && category.items && Array.isArray(category.items)) {
-            dispatch(restaurantActions.setMenuCategoryItems({ 
+            dispatch(entitiesActions.setMenuCategoryItems({ 
               menuCategoryId: category.id, 
               items: category.items 
             }));
@@ -276,13 +281,13 @@ export const useMenus = () => {
       console.log('✅ Menu mis à jour via API bulk:', updatedMenu);
       
       // Mettre à jour le store Redux avec le menu complet
-      dispatch(restaurantActions.updateMenu({ menu: updatedMenu }));
+      dispatch(entitiesActions.updateMenu({ menu: updatedMenu }));
       
       // Extraire et stocker les MenuCategoryItems mis à jour
       if (updatedMenu.categories && updatedMenu.categories.length > 0) {
         for (const category of updatedMenu.categories) {
           if (category.id && category.items && Array.isArray(category.items)) {
-            dispatch(restaurantActions.setMenuCategoryItems({ 
+            dispatch(entitiesActions.setMenuCategoryItems({ 
               menuCategoryId: category.id, 
               items: category.items 
             }));
@@ -303,7 +308,7 @@ export const useMenus = () => {
   const createMenuCategoryItem = useCallback(async (itemData: Partial<MenuCategoryItem>) => {
     try {
       const newItem = await menuCategoryItemApiService.create(itemData);
-      dispatch(restaurantActions.createMenuCategoryItem({ menuCategoryItem: newItem }));
+      dispatch(entitiesActions.createMenuCategoryItem({ menuCategoryItem: newItem }));
       return newItem;
     } catch (error) {
       console.error('Erreur lors de la création de l\'item de catégorie:', error);
@@ -314,7 +319,7 @@ export const useMenus = () => {
   const updateMenuCategoryItem = useCallback(async (itemId: string, itemData: Partial<MenuCategoryItem>) => {
     try {
       const updatedItem = await menuCategoryItemApiService.update(itemId, itemData);
-      dispatch(restaurantActions.updateMenuCategoryItem({ menuCategoryItem: updatedItem }));
+      dispatch(entitiesActions.updateMenuCategoryItem({ menuCategoryItem: updatedItem }));
       return updatedItem;
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'item de catégorie:', error);
@@ -325,7 +330,7 @@ export const useMenus = () => {
   const deleteMenuCategoryItem = useCallback(async (itemId: string) => {
     try {
       await menuCategoryItemApiService.delete(itemId);
-      dispatch(restaurantActions.deleteMenuCategoryItem({ menuCategoryItemId: itemId }));
+      dispatch(entitiesActions.deleteMenuCategoryItem({ menuCategoryItemId: itemId }));
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'item de catégorie:', error);
       throw error;

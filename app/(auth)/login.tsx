@@ -2,8 +2,8 @@ import { View, StyleSheet, Platform, Text as RNText, Modal } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
-import { useAppDispatch } from '~/store/hooks';
-import { setCredentials, setCurrentUser } from '~/store/auth.slice';
+import { useDispatch } from 'react-redux';
+import { sessionActions } from '~/store';
 import { authApiService } from "~/api/auth.api";
 import { Link } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
@@ -15,16 +15,24 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [qrResult, setQrResult] = useState<string | null>(null);
-  const dispatch = useAppDispatch();
+  const dispatch = useDispatch();
   const { showToast } = useToast();
 
   const handleLogin = async () => {
     try {
-      const { token, ...user } = await authApiService.login({ loginId, password }, showToast);
-      dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
-      dispatch(setCurrentUser(user));
-    } catch {
-      // La gestion d'erreur est maintenant faite dans l'API service
+      const { token, ...user } = await authApiService.login({ loginId, password });
+      showToast('Login successful!', 'success');
+      dispatch(sessionActions.loginSuccess({
+        token: token.token,
+        refreshToken: token.refreshToken,
+        user
+      }));
+
+      // Laisser _layout.tsx gérer la redirection automatiquement
+      // router.replace(`/${user.profil}/` as any);
+    } catch (error) {
+      console.error(error);
+      showToast(`Login failed: ${error}`, 'error');
     }
   };
 
@@ -36,8 +44,15 @@ export default function LoginScreen() {
       return;
     }
     const currentUser = await authApiService.getUserWithToken();
-    dispatch(setCredentials({ token: qrLogin.token.token, userProfile: currentUser.profil }));
-    dispatch(setCurrentUser(currentUser));
+    console.log('QR login response:', qrLogin);
+    dispatch(sessionActions.loginSuccess({
+      token: qrLogin.token.token,
+      refreshToken: qrLogin.token.refreshToken,
+      user: currentUser
+    }));
+
+    // Laisser _layout.tsx gérer la redirection automatiquement
+    // router.replace(`/${currentUser.profil}/` as any);
   };
 
   return (
@@ -54,75 +69,75 @@ export default function LoginScreen() {
         enableResetScrollToCoords={false}
       >
         <View style={styles.contentContainer}>
-            <RNText style={styles.title}>
-              Fork'it
-            </RNText>
+          <RNText style={styles.title}>
+            Fork'it
+          </RNText>
 
-            <View style={styles.qrButtonContainer}>
-              <Button
-                variant="outline"
-                style={styles.qrButton}
-                onPress={() => setShowQrScanner(true)}
-              >
-                <View style={styles.qrButtonContent}>
-                  <QrCode size={20} color="#1F2937" strokeWidth={2} />
-                  <Text style={styles.qrButtonText}>Connexion via QR code</Text>
-                </View>
-              </Button>
-            </View>
-
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {qrResult && (
-              <View style={styles.qrResultContainer}>
-                <Text style={styles.qrResultLabel}>QR scanné :</Text>
-                <Text style={styles.qrResultText} selectable>{qrResult}</Text>
+          <View style={styles.qrButtonContainer}>
+            <Button
+              variant="outline"
+              style={styles.qrButton}
+              onPress={() => setShowQrScanner(true)}
+            >
+              <View style={styles.qrButtonContent}>
+                <QrCode size={20} color="#1F2937" strokeWidth={2} />
+                <Text style={styles.qrButtonText}>Connexion via QR code</Text>
               </View>
-            )}
-
-            <TextInput
-              value={loginId}
-              onChangeText={setLoginId}
-              placeholder="Identifiant"
-              style={styles.input}
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="ascii-capable"
-              returnKeyType="next"
-              textContentType="username"
-            />
-
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              onSubmitEditing={handleLogin}
-              placeholder="Mot de passe"
-              secureTextEntry
-              style={styles.input}
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="ascii-capable"
-              returnKeyType="done"
-              textContentType="password"
-            />
-
-            <View style={styles.forgotPasswordContainer}>
-              <Link href="/forgot-password" asChild>
-                <Text style={styles.forgotPasswordText}>
-                  Mot de passe oublié ?
-                </Text>
-              </Link>
-            </View>
-
-            <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>Se connecter</Text>
             </Button>
+          </View>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {qrResult && (
+            <View style={styles.qrResultContainer}>
+              <Text style={styles.qrResultLabel}>QR scanné :</Text>
+              <Text style={styles.qrResultText} selectable>{qrResult}</Text>
+            </View>
+          )}
+
+          <TextInput
+            value={loginId}
+            onChangeText={setLoginId}
+            placeholder="Identifiant"
+            style={styles.input}
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="ascii-capable"
+            returnKeyType="next"
+            textContentType="username"
+          />
+
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            onSubmitEditing={handleLogin}
+            placeholder="Mot de passe"
+            secureTextEntry
+            style={styles.input}
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="ascii-capable"
+            returnKeyType="done"
+            textContentType="password"
+          />
+
+          <View style={styles.forgotPasswordContainer}>
+            <Link href="/forgot-password" asChild>
+              <Text style={styles.forgotPasswordText}>
+                Mot de passe oublié ?
+              </Text>
+            </Link>
+          </View>
+
+          <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
+            <Text style={styles.loginButtonText}>Se connecter</Text>
+          </Button>
         </View>
       </KeyboardAwareScrollView>
       <Modal

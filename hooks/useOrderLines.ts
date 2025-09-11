@@ -1,16 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
-import { 
-  ordersActions,
-  selectAllOrderLines,
-  selectOrderLineById,
-  selectAllOrderLineItems,
-  selectOrderLineItemById,
-  selectOrderLinesByOrderId,
-  selectOrderHasLines,
-  selectOrderStatusFromLines,
-  selectOrderMenuProgress,
-} from '~/store/restaurant/orders.slice';
+import { RootState, entitiesActions } from '~/store';
 import { orderLineApiService } from '~/api/order-line.api';
 import { orderApiService } from '~/api/order.api';
 import { 
@@ -31,33 +21,83 @@ export const useOrderLines = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs de base
-  const allOrderLines = useSelector((state: any) => selectAllOrderLines({ orders: state.restaurant.orders }));
-  const allOrderLineItems = useSelector((state: any) => selectAllOrderLineItems({ orders: state.restaurant.orders }));
+  const allOrderLines = useSelector((state: RootState) => Object.values(state.entities.orderLines));
+  const allOrderLineItems = useSelector((state: RootState) => Object.values(state.entities.orderLineItems));
 
   // Sélecteurs spécifiques
   const getOrderLineById = useCallback((orderLineId: string) => {
-    return useSelector((state: any) => selectOrderLineById(orderLineId)({ orders: state.restaurant.orders }));
-  }, []);
+    return allOrderLines.find(line => line.id === orderLineId) || null;
+  }, [allOrderLines]);
 
   const getOrderLineItemById = useCallback((orderLineItemId: string) => {
-    return useSelector((state: any) => selectOrderLineItemById(orderLineItemId)({ orders: state.restaurant.orders }));
-  }, []);
+    return allOrderLineItems.find(item => item.id === orderLineItemId) || null;
+  }, [allOrderLineItems]);
 
   const getOrderLinesByOrderId = useCallback((orderId: string) => {
-    return useSelector((state: any) => selectOrderLinesByOrderId(orderId)({ orders: state.restaurant.orders }));
-  }, []);
+    return allOrderLines.filter(line => line.orderId === orderId);
+  }, [allOrderLines]);
 
   const getOrderHasLines = useCallback((orderId: string) => {
-    return useSelector((state: any) => selectOrderHasLines(orderId)({ orders: state.restaurant.orders }));
-  }, []);
+    return allOrderLines.some(line => line.orderId === orderId);
+  }, [allOrderLines]);
 
   const getOrderStatusFromLines = useCallback((orderId: string) => {
-    return useSelector((state: any) => selectOrderStatusFromLines(orderId)({ orders: state.restaurant.orders }));
-  }, []);
+    const orderLines = getOrderLinesByOrderId(orderId);
+    if (!orderLines.length) return null;
+
+    const allStatuses: Status[] = [];
+    
+    orderLines.forEach(line => {
+      if (line.type === OrderLineType.ITEM && line.status) {
+        allStatuses.push(line.status);
+      } else if (line.type === OrderLineType.MENU && line.items) {
+        line.items.forEach(menuItem => {
+          const orderLineItem = getOrderLineItemById(menuItem.id);
+          if (orderLineItem) {
+            allStatuses.push(orderLineItem.status);
+          }
+        });
+      }
+    });
+    
+    if (allStatuses.every(s => s === Status.SERVED)) return Status.SERVED;
+    if (allStatuses.some(s => s === Status.ERROR)) return Status.ERROR;
+    if (allStatuses.some(s => s === Status.INPROGRESS)) return Status.INPROGRESS;
+    if (allStatuses.some(s => s === Status.READY)) return Status.READY;
+    if (allStatuses.some(s => s === Status.TERMINATED)) return Status.TERMINATED;
+    return Status.PENDING;
+  }, [allOrderLines, getOrderLinesByOrderId, getOrderLineItemById]);
 
   const getOrderMenuProgress = useCallback((orderId: string) => {
-    return useSelector((state: any) => selectOrderMenuProgress(orderId)({ orders: state.restaurant.orders }));
-  }, []);
+    const orderLines = getOrderLinesByOrderId(orderId);
+    const menuLines = orderLines.filter(line => line.type === OrderLineType.MENU);
+    
+    if (!menuLines.length) return { completed: 0, total: 0, percentage: 0, hasErrors: false };
+
+    let totalCompleted = 0;
+    let totalItems = 0;
+    let hasErrors = false;
+
+    menuLines.forEach(line => {
+      if (line.items) {
+        const items = line.items.map(item => getOrderLineItemById(item.id)).filter(Boolean) as OrderLineItem[];
+        const completedCount = items.filter(item => 
+          [Status.READY, Status.SERVED, Status.TERMINATED].includes(item.status)
+        ).length;
+        
+        totalCompleted += completedCount;
+        totalItems += items.length;
+        hasErrors = hasErrors || items.some(item => item.status === Status.ERROR);
+      }
+    });
+
+    return {
+      completed: totalCompleted,
+      total: totalItems,
+      percentage: totalItems > 0 ? Math.round((totalCompleted / totalItems) * 100) : 0,
+      hasErrors
+    };
+  }, [getOrderLinesByOrderId, getOrderLineItemById]);
 
   // Actions pour gérer les OrderLines
 
@@ -84,7 +124,7 @@ export const useOrderLines = () => {
       const newOrderLine = await orderLineApiService.createLine(orderId, lineData);
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.updateOrderLine({ orderLine: newOrderLine }));
+      dispatch(entitiesActions.updateOrderLine({ orderLine: newOrderLine }));
       
       return newOrderLine;
     } catch (error) {
@@ -116,7 +156,7 @@ export const useOrderLines = () => {
       };
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.createOrder({ order: enrichedOrder }));
+      dispatch(entitiesActions.createOrder({ order: enrichedOrder }));
       
       return enrichedOrder;
     } catch (error) {
@@ -133,7 +173,7 @@ export const useOrderLines = () => {
       const orderWithNewLines = await orderLineApiService.createLines(orderId, linesData);
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.updateOrder({ order: orderWithNewLines }));
+      dispatch(entitiesActions.updateOrder({ order: orderWithNewLines }));
       
       return orderWithNewLines;
     } catch (error) {
@@ -150,7 +190,7 @@ export const useOrderLines = () => {
       const updatedOrderLine = await orderLineApiService.update(orderLineId, updateData);
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.updateOrderLine({ orderLine: updatedOrderLine }));
+      dispatch(entitiesActions.updateOrderLine({ orderLine: updatedOrderLine }));
       
       return updatedOrderLine;
     } catch (error) {
@@ -167,7 +207,7 @@ export const useOrderLines = () => {
       await orderLineApiService.delete(orderLineId);
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.deleteOrderLine({ orderLineId }));
+      dispatch(entitiesActions.deleteOrderLine({ orderLineId }));
     } catch (error) {
       console.error('Erreur lors de la suppression de la ligne de commande:', error);
       throw error;
@@ -185,7 +225,7 @@ export const useOrderLines = () => {
       await orderLineApiService.updateLineItemStatus(orderLineItemId, { status });
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.orderLineItemsStatusUpdated({ 
+      dispatch(entitiesActions.orderLineItemsStatusUpdated({ 
         orderLineItemIds: [orderLineItemId], 
         status 
       }));
@@ -206,7 +246,7 @@ export const useOrderLines = () => {
       await orderLineApiService.updateManyItemsStatus(orderLineItemIds, status);
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.orderLineItemsStatusUpdated({ 
+      dispatch(entitiesActions.orderLineItemsStatusUpdated({ 
         orderLineItemIds, 
         status 
       }));
@@ -227,7 +267,7 @@ export const useOrderLines = () => {
       await orderLineApiService.updateManyLinesStatus(orderLineIds, status);
       
       // Dispatcher l'action pour mettre à jour le store
-      dispatch(ordersActions.orderLinesStatusUpdated({ 
+      dispatch(entitiesActions.orderLinesStatusUpdated({ 
         orderLineIds, 
         status 
       }));
@@ -244,10 +284,8 @@ export const useOrderLines = () => {
     try {
       await orderLineApiService.deleteLines(orderLineIds);
       
-      // Dispatcher les actions pour mettre à jour le store
-      orderLineIds.forEach(orderLineId => {
-        dispatch(ordersActions.deleteOrderLine({ orderLineId }));
-      });
+      // Dispatcher l'action pour mettre à jour le store
+      dispatch(entitiesActions.deleteOrderLinesBatch({ orderLineIds }));
     } catch (error) {
       console.error('Erreur lors de la suppression des lignes:', error);
       throw error;
@@ -260,34 +298,8 @@ export const useOrderLines = () => {
    * Calculer le statut global d'une commande basé sur ses OrderLines
    */
   const calculateOrderStatus = useCallback((orderId: string): Status | null => {
-    const orderLines = getOrderLinesByOrderId(orderId);
-    if (!orderLines.length) return null;
-
-    const allStatuses: Status[] = [];
-    
-    orderLines.forEach(line => {
-      if (line.type === OrderLineType.ITEM && line.status) {
-        // Items individuels: status sur OrderLine
-        allStatuses.push(line.status);
-      } else if (line.type === OrderLineType.MENU && line.items) {
-        // Menus: collecter les status de tous les OrderLineItems
-        line.items.forEach(menuItem => {
-          const orderLineItem = getOrderLineItemById(menuItem.id);
-          if (orderLineItem) {
-            allStatuses.push(orderLineItem.status);
-          }
-        });
-      }
-    });
-    
-    // Logique de priorité des statuts
-    if (allStatuses.every(s => s === Status.SERVED)) return Status.SERVED;
-    if (allStatuses.some(s => s === Status.ERROR)) return Status.ERROR;
-    if (allStatuses.some(s => s === Status.INPROGRESS)) return Status.INPROGRESS;
-    if (allStatuses.some(s => s === Status.READY)) return Status.READY;
-    if (allStatuses.some(s => s === Status.TERMINATED)) return Status.TERMINATED;
-    return Status.PENDING;
-  }, [getOrderLinesByOrderId, getOrderLineItemById]);
+    return getOrderStatusFromLines(orderId);
+  }, [getOrderStatusFromLines]);
 
   /**
    * Calculer la progression d'un menu

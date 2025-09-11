@@ -3,8 +3,7 @@ import { View, Image, Text, Pressable, TouchableWithoutFeedback} from 'react-nat
 import { FileText, Calendar, LogOut } from 'lucide-react-native'
 import { Href, Link } from 'expo-router'
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '~/store';
-import { logout } from '~/store/auth.slice';
+import { RootState, sessionActions } from '~/store';
 
 interface TopBarProps {
   showAdditions?: boolean;
@@ -12,13 +11,13 @@ interface TopBarProps {
 }
 
 export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBarProps) {
-  const { currentUser } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.session);
   const dispatch = useDispatch();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   
   // Les managers ont accès à l'interface admin mais pas à la config
-  const isManager = currentUser?.profil === 'manager'
+  const isManager = user?.profil === 'manager'
   const shouldEnableConfigClick = enableConfigClick && !isManager
 
   // Fonction pour formater la date
@@ -45,14 +44,14 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   }, [])
 
   const getImageSource = () => {
-    if (currentUser?.profileImage) {
-      return { uri: currentUser.profileImage };
+    if (user?.profileImage) {
+      return { uri: user.profileImage };
     }
     return require('~/assets/images/userprofiledefault.jpg');
   };
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(sessionActions.logout());
     setShowProfileMenu(false);
   };
 
@@ -141,10 +140,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                           fontWeight: '300'
                         }}
                       >
-                        {`${(currentUser?.firstName ?? '').charAt(0).toUpperCase() + (currentUser?.firstName ?? '').slice(1)} ${(currentUser?.lastName ?? '').charAt(0).toUpperCase() + (currentUser?.lastName ?? '').slice(1)}`}
+                        {`${(user?.firstName ?? '').charAt(0).toUpperCase() + (user?.firstName ?? '').slice(1)} ${(user?.lastName ?? '').charAt(0).toUpperCase() + (user?.lastName ?? '').slice(1)}`}
                       </Text>
                       <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                        {(currentUser?.profil ?? '').charAt(0).toUpperCase() + (currentUser?.profil ?? '').slice(1)}
+                        {(user?.profil ?? '').charAt(0).toUpperCase() + (user?.profil ?? '').slice(1)}
                       </Text>
                     </View>
                   </View>
@@ -180,10 +179,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                         fontWeight: '300'
                       }}
                     >
-                      {`${(currentUser?.firstName ?? '').charAt(0).toUpperCase() + (currentUser?.firstName ?? '').slice(1)} ${(currentUser?.lastName ?? '').charAt(0).toUpperCase() + (currentUser?.lastName ?? '').slice(1)}`}
+                      {`${(user?.firstName ?? '').charAt(0).toUpperCase() + (user?.firstName ?? '').slice(1)} ${(user?.lastName ?? '').charAt(0).toUpperCase() + (user?.lastName ?? '').slice(1)}`}
                     </Text>
                     <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                      {(currentUser?.profil ?? '').charAt(0).toUpperCase() + (currentUser?.profil ?? '').slice(1)}
+                      {(user?.profil ?? '').charAt(0).toUpperCase() + (user?.profil ?? '').slice(1)}
                     </Text>
                   </View>
                 </View>
