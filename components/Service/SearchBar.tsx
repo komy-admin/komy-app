@@ -73,12 +73,15 @@ export function SearchBar({
             spellCheck={false}
             numberOfLines={1}
             multiline={false}
+            maxLength={50}
             {...Platform.select({
               ios: {
                 enablesReturnKeyAutomatically: true,
               },
               android: {
                 underlineColorAndroid: 'transparent',
+                textBreakStrategy: 'simple',
+                hyphenationFrequency: 'none',
               },
               web: {
                 tabIndex: 0,
@@ -258,6 +261,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    overflow: 'hidden',
+    minWidth: 120,
+    maxWidth: '100%',
     ...Platform.select({
       web: { cursor: 'text' as any }
     })
@@ -273,13 +279,27 @@ const styles = StyleSheet.create({
     margin: 0,
     height: 28,
     borderWidth: 0,
+    textAlign: 'left',
+    includeFontPadding: false,
+    minWidth: 60,
+    maxWidth: '100%',
     ...Platform.select({
       web: {
         backgroundColor: 'transparent',
-        // cursor: 'text' as any,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        minWidth: 60,
       },
       android: {
         textAlignVertical: 'center',
+        includeFontPadding: false,
+        minWidth: 60,
+        textBreakStrategy: 'simple',
+      },
+      ios: {
+        textAlign: 'left',
+        minWidth: 60,
       }
     })
   },
