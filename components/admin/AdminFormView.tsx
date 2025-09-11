@@ -12,7 +12,7 @@ const PrimaryActionButton = ({ children, disabled, style, ...props }: any) => (
         flex: 2,
         backgroundColor: disabled ? '#6B7280' : '#2A2E33',
         borderRadius: 12,
-        height: 52,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#2A2E33',
@@ -53,16 +53,11 @@ const SecondaryActionButton = ({ children, disabled, style, ...props }: any) => 
         flex: 1,
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        height: 52,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
         borderColor: '#E5E7EB',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
         ...(Platform.OS === 'web' && {
           cursor: 'pointer',
           transition: 'all 0.2s ease',
@@ -79,9 +74,9 @@ const SecondaryActionButton = ({ children, disabled, style, ...props }: any) => 
   >
     <Text style={{
       color: '#6B7280',
-      fontWeight: '600',
+      fontWeight: '700',
       fontSize: 16,
-      letterSpacing: 0.3,
+      letterSpacing: 0.5,
     }}>
       {children}
     </Text>
@@ -94,7 +89,7 @@ const ConfigActionButton = ({ children, disabled, style, backgroundColor = '#059
     style={[
       {
         borderRadius: 12,
-        height: 52,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor,
@@ -137,16 +132,11 @@ const ConfigCancelButton = ({ children, disabled, style, ...props }: any) => (
       {
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        height: 52,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
         borderColor: '#E5E7EB',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
         ...(Platform.OS === 'web' && {
           cursor: 'pointer',
           transition: 'all 0.2s ease',
@@ -163,9 +153,9 @@ const ConfigCancelButton = ({ children, disabled, style, ...props }: any) => (
   >
     <Text style={{
       color: '#6B7280',
-      fontWeight: '600',
-      fontSize: 14,
-      letterSpacing: 0.3,
+      fontWeight: '700',
+      fontSize: 16,
+      letterSpacing: 0.5,
     }}>
       {children}
     </Text>
@@ -561,7 +551,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: COMMON_STYLES.spacing.xl,
     paddingTop: COMMON_STYLES.spacing.lg,
-    paddingBottom: 140, // Espace pour les boutons sticky
+    paddingBottom: 100, // Espace pour les boutons sticky réduit
   },
   
   stickyActions: {
@@ -590,9 +580,9 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: 'row',
     gap: COMMON_STYLES.spacing.md,
-    paddingTop: COMMON_STYLES.spacing.xl,
+    paddingTop: COMMON_STYLES.spacing.md,
     paddingHorizontal: COMMON_STYLES.spacing.xl,
-    paddingBottom: COMMON_STYLES.spacing.xl,
+    paddingBottom: COMMON_STYLES.spacing.md,
     borderTopWidth: 1,
     borderTopColor: COMMON_STYLES.colors.border,
   },
