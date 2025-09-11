@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Platform, TouchableOpacity, Modal } from 'react-native';
 import { TextInput, Text } from '~/components/ui';
 import { ListFilter, Search, X } from 'lucide-react-native';
@@ -65,12 +65,14 @@ export function SearchBar({
             ref={searchInputRef}
             value={searchQuery}
             onChangeText={onSearchChange}
-            placeholder="Rechercher par table..."
+            placeholder="Rechercher"
             placeholderTextColor="#9CA3AF"
             style={styles.searchInput}
             autoCorrect={false}
             autoCapitalize="none"
             spellCheck={false}
+            numberOfLines={1}
+            multiline={false}
             {...Platform.select({
               ios: {
                 enablesReturnKeyAutomatically: true,
