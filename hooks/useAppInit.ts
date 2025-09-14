@@ -24,6 +24,8 @@ interface InitializationState {
     users: boolean;
     accountConfig: boolean;
   };
+  finalizationProgress: number; // 0 à 100 pour la phase finale
+  isFinalizingStage: boolean;
 }
 
 /**
@@ -56,7 +58,9 @@ export const useAppInit = () => {
       orders: false,
       users: false,
       accountConfig: false,
-    }
+    },
+    finalizationProgress: 0,
+    isFinalizingStage: false
   });
 
   const updateProgress = (key: keyof InitializationState['progress'], value: boolean) => {
@@ -74,13 +78,16 @@ export const useAppInit = () => {
       console.log('❌ Utilisateur non authentifié, initialisation annulée');
       return; // Ne pas initialiser si pas connecté
     }
-    
-    if (state.isInitialized || state.isLoading) {
-      return; // Éviter les doubles initialisations
+
+    if (state.isInitialized || state.isLoading || state.error) {
+      return; // Éviter les doubles initialisations et les re-tentatives automatiques après erreur
     }
 
     console.log('🚀 Début de l\'initialisation de l\'application...');
-    
+
+    const startTime = Date.now();
+    const MIN_LOADING_TIME = 2000; // 2 secondes minimum
+
     setState(prev => ({
       ...prev,
       isLoading: true,
@@ -176,7 +183,43 @@ export const useAppInit = () => {
         return [];
       });
 
-      // Étape 5: Marquer l'initialisation comme terminée
+      // Calculer le temps écoulé et commencer la finalisation si nécessaire
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = MIN_LOADING_TIME - elapsedTime;
+
+      if (remainingTime > 0) {
+        console.log(`⏳ Phase de finalisation: ${remainingTime}ms`);
+
+        // Marquer le début de la phase de finalisation
+        setState(prev => ({
+          ...prev,
+          isFinalizingStage: true,
+          finalizationProgress: 0
+        }));
+
+        // Animation progressive de 0% à 100% pendant le temps restant
+        const progressInterval = 50; // Mise à jour toutes les 50ms
+        const totalSteps = Math.floor(remainingTime / progressInterval);
+        let currentStep = 0;
+
+        const progressTimer = setInterval(() => {
+          currentStep++;
+          const progressPercent = Math.min((currentStep / totalSteps) * 100, 100);
+
+          setState(prev => ({
+            ...prev,
+            finalizationProgress: progressPercent
+          }));
+
+          if (currentStep >= totalSteps) {
+            clearInterval(progressTimer);
+          }
+        }, progressInterval);
+
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+
+      // Marquer comme terminé
       setState(prev => ({
         ...prev,
         isInitialized: true,
@@ -186,9 +229,9 @@ export const useAppInit = () => {
 
       // Déclencher la synchronisation WebSocket
       dispatch(restaurantActions.setConnected(true));
-      
+
       console.log('🎉 Initialisation terminée avec succès !');
-      
+
       return {
         rooms,
         itemTypes,
@@ -243,7 +286,9 @@ export const useAppInit = () => {
           orders: false,
           users: false,
           accountConfig: false,
-        }
+        },
+        finalizationProgress: 0,
+        isFinalizingStage: false
       });
     }
   }, [isAuthenticated, initializeApp]);
@@ -273,7 +318,14 @@ export const useAppInit = () => {
   const getProgressPercentage = () => {
     const completed = Object.values(state.progress).filter(Boolean).length;
     const total = Object.keys(state.progress).length;
-    return Math.round((completed / total) * 100);
+    const baseProgress = Math.round((completed / total) * 90); // 90% max pour les étapes normales
+
+    if (state.isFinalizingStage) {
+      // Phase finale : 90% + progression de finalisation (0-10%)
+      return Math.min(90 + Math.round(state.finalizationProgress * 0.1), 100);
+    }
+
+    return baseProgress;
   };
 
   return {
@@ -283,7 +335,8 @@ export const useAppInit = () => {
     error: state.error,
     progress: state.progress,
     progressPercentage: getProgressPercentage(),
-    
+    isFinalizingStage: state.isFinalizingStage,
+
     // Actions
     initializeApp,
     reinitializeApp,
