@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text } from '~/components/ui';
 
 /**
@@ -20,6 +20,25 @@ export interface OrderLinesFooterProps {
  * @param props - Props du composant
  * @returns Composant footer mémorisé
  */
+// Styles web constants
+const webValueStyle = {
+  fontSize: '16px',
+  fontWeight: '700',
+  textAlign: 'center' as const,
+  fontFamily: 'system-ui, -apple-system, sans-serif'
+};
+
+const webLabelStyle = {
+  fontSize: '10px',
+  fontWeight: '500',
+  color: '#6B7280',
+  textAlign: 'center' as const,
+  marginTop: '1px',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.5px',
+  fontFamily: 'system-ui, -apple-system, sans-serif'
+};
+
 export const OrderLinesFooter = memo<OrderLinesFooterProps>(({
   totalPrice,
   getTotalItemsCount,
@@ -30,38 +49,46 @@ export const OrderLinesFooter = memo<OrderLinesFooterProps>(({
   const totalItems = getTotalItemsCount();
   const totalMenus = getTotalMenusCount();
 
-  // Texte du résumé
-  const getSummaryText = () => {
-    const parts = [];
-    if (totalItems > 0) {
-      parts.push(`${totalItems} article${totalItems > 1 ? 's' : ''}`);
-    }
-    if (totalMenus > 0) {
-      parts.push(`${totalMenus} menu${totalMenus > 1 ? 's' : ''}`);
-    }
-
-    if (parts.length === 0) {
-      return "Aucun article sélectionné";
-    }
-
-    return parts.join(' • ');
-  };
+  // Helper pour render les valeurs selon la plateforme
+  const renderValue = (value: string | number, label: string, color = '#2A2E33') =>
+    Platform.OS === 'web' ? (
+      <>
+        <span style={{ ...webValueStyle, color }}>{value}</span>
+        <span style={webLabelStyle}>{label}</span>
+      </>
+    ) : (
+      <>
+        <Text style={[styles.summaryValue, { color }]}>{value}</Text>
+        <Text style={styles.summaryLabel}>{label}</Text>
+      </>
+    );
 
   return (
     <View style={styles.footer}>
-      {/* Résumé de la commande */}
-      <View style={styles.summary}>
-        <View style={styles.summaryLeft}>
-          <Text style={styles.summaryText}>
-            {getSummaryText()}
-          </Text>
-          <Text style={styles.totalPrice}>
-            Total: {(Number(totalPrice) || 0).toFixed(2)}€
-          </Text>
+      <View style={styles.summaryContent}>
+        {/* Articles */}
+        <View style={styles.summaryItem}>
+          {renderValue(totalItems, 'articles')}
+        </View>
+
+        {/* Séparateur */}
+        {totalMenus > 0 && <View style={styles.summaryDivider} />}
+
+        {/* Menus - Affiché seulement s'il y en a */}
+        {totalMenus > 0 && (
+          <View style={styles.summaryItem}>
+            {renderValue(totalMenus, 'menus', '#7C3AED')}
+          </View>
+        )}
+
+        {/* Séparateur avant total */}
+        <View style={styles.summaryDivider} />
+
+        {/* Total */}
+        <View style={styles.summaryItem}>
+          {renderValue(`${(Number(totalPrice) || 0).toFixed(2)}€`, 'total', '#059669')}
         </View>
       </View>
-
-      {/* Pas de boutons - gérés par AdminFormView */}
     </View>
   );
 });
@@ -73,29 +100,46 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 15,
     paddingBottom: 15,
     backgroundColor: '#ffffff',
   },
-  summary: {
+  summaryContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    // Pas de marginBottom car plus de boutons
+    justifyContent: 'center',
+    gap: 8,
   },
-  summaryLeft: {
-    flex: 1,
+  summaryItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 50,
   },
-  summaryText: {
+  summaryValue: {
     fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  totalPrice: {
-    fontSize: 20,
     fontWeight: '700',
     color: '#2A2E33',
+    textAlign: 'center',
   },
-  // Styles des boutons supprimés - actions gérées par AdminFormView
+  summaryPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#059669',
+    textAlign: 'center',
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summaryDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#D1D5DB',
+    marginHorizontal: 8,
+  },
 });
