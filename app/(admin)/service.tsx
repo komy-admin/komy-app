@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, View, useWindowDimensions, Platform } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Button, ForkModal, Text } from "~/components/ui";
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
@@ -24,7 +24,7 @@ import {
   useOrders
 } from '~/hooks/useRestaurant';
 import { CustomModal } from '@/components/CustomModal';
-import { OrderLinesForm } from '~/components/order/OrderLinesForm';
+import { OrderLinesForm, OrderLinesHeader } from '~/components/order/OrderLinesForm';
 import { Order } from '@/types/order.types';
 import { OrderLine, CreateOrderLineRequest, OrderLineType } from '~/types/order-line.types';
 import { useOrderLines } from '~/hooks/useOrderLines';
@@ -468,25 +468,11 @@ export default function ServicePage() {
       {showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
         <View style={{ flex: 1, flexDirection: 'column' }}>
           {/* Header avec titre et bouton retour - masqué pendant la configuration de menu */}
-          {!isConfiguringMenu && (
-            <View style={{
-              backgroundColor: '#ffffff',
-              borderBottomWidth: 1,
-              borderBottomColor: '#e5e7eb',
-              paddingHorizontal: 20,
-              paddingVertical: 16,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937' }}>
-                {modals.modalTitle}
-              </Text>
-              <Pressable onPress={handleSmartCloseOrderModal}>
-                <Text style={{ fontSize: 24, color: '#6b7280' }}>×</Text>
-              </Pressable>
-            </View>
-          )}
+          <OrderLinesHeader
+            title={modals.modalTitle}
+            onClose={handleSmartCloseOrderModal}
+            isVisible={!isConfiguringMenu}
+          />
 
           {/* OrderLinesForm */}
           <View style={{ flex: 1 }}>

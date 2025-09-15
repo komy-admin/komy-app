@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
-import { OrderLinesNavigation } from './OrderLinesNavigation';
-import { OrderItemsList } from './OrderItemsList';
-import { OrderMenusList } from './OrderMenusList';
-import { MenuConfiguration } from './MenuConfiguration';
-import { OrderLinesFooter } from './OrderLinesFooter';
-import { OrderLinesFormProps } from './OrderLinesForm.types';
+import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
+import { OrderItemsList } from '~/components/order/OrderLinesForm/OrderItemsList';
+import { OrderMenusList } from '~/components/order/OrderLinesForm/OrderMenusList';
+import { MenuConfiguration } from '~/components/order/OrderLinesForm/MenuConfiguration';
+import { OrderLinesFooter } from '~/components/order/OrderLinesForm/OrderLinesFooter';
+import { OrderLinesHeader } from '~/components/order/OrderLinesForm/OrderLinesHeader';
+import { OrderLinesFormProps } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
 import { OrderLine, OrderLineType } from '~/types/order-line.types';
 import { Status } from '@/types/status.enum';
 
@@ -363,7 +364,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
 // Export des types et composants
 export type { OrderLinesFormProps };
-export { OrderLinesNavigation, OrderItemsList, OrderMenusList, MenuConfiguration, OrderLinesFooter };
+export { OrderLinesNavigation, OrderItemsList, OrderMenusList, MenuConfiguration, OrderLinesFooter, OrderLinesHeader };
 
 const styles = StyleSheet.create({
   container: {
