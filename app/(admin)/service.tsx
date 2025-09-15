@@ -463,189 +463,33 @@ export default function ServicePage() {
   const { width, height } = useWindowDimensions();
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel
-        style={{ flex: 1 }}
-        hideCloseButton={true}
-        width={width / 4}
-        title="Service"
-        onBack={handleDeselectTable}
-      >
-        <View style={{ padding: 16, flex: 1 }}>
-          {loading || !filtersLoaded ? (
-            <Text>Chargement...</Text>
-          ) : (
-            <>
-              <SearchBar
-                searchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                onClearFilters={handleClearFilters}
-              />
-              <OrderList
-                orders={filteredOrders}
-                onOrderPress={(order) => {
-                  modalActions.openOrderDetail(order);
-                }}
-                onOrderDelete={handleDeleteOrder}
-              />
-            </>
-          )}
-        </View>
-      </SidePanel>
-
-      <View style={{ flex: 1, height: '100%', position: 'relative' }}>
-        <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              alignItems: 'center',
-              height: '100%'
-            }}
-            className='flex-row p-2 flex-1'
-          >
-            {rooms.map((room, index) => (
-              <Pressable
-                key={`${room.name}-badge-${index}`}
-                onPress={() => handleChangeRoom(room)}>
-                <Badge
-                  variant="outline"
-                  className='mx-1'
-                  active={room.id === currentRoom?.id}
-                  size='lg'
-                >
-                  <Text>{room.name}</Text>
-                </Badge>
+    <View style={{ flex: 1 }}>
+      {/* OrderLinesForm en pleine page - remplace tout le layout */}
+      {showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
+        <View style={{ flex: 1, flexDirection: 'column' }}>
+          {/* Header avec titre et bouton retour - masqué pendant la configuration de menu */}
+          {!isConfiguringMenu && (
+            <View style={{
+              backgroundColor: '#ffffff',
+              borderBottomWidth: 1,
+              borderBottomColor: '#e5e7eb',
+              paddingHorizontal: 20,
+              paddingVertical: 16,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937' }}>
+                {modals.modalTitle}
+              </Text>
+              <Pressable onPress={handleSmartCloseOrderModal}>
+                <Text style={{ fontSize: 24, color: '#6b7280' }}>×</Text>
               </Pressable>
-            ))}
-          </ScrollView>
-          <Button
-            onPress={() => navigateToRoomEdit()}
-            className="w-[200px] h-[50px] flex items-center justify-center"
-            style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
-          >
-            <Text
-              style={{
-                fontSize: 14,
-                color: '#FBFBFB',
-                fontWeight: '500',
-                textAlign: 'center',
-                textTransform: 'uppercase',
-              }}
-            >
-              Mode édition
-            </Text>
-          </Button>
-        </View>
-
-        {selectedTable && !selectedTableOrder && (
-          <StartOrderCard
-            table={selectedTable}
-            onStartPress={handleCreateOrder}
-          />
-        )}
-
-        <RoomComponent
-          tables={currentRoomTables.map(t => ({
-            ...t,
-            orders: t.currentOrder ? [t.currentOrder] : []
-          }))}
-          orders={currentRoomOrders}
-          editingTableId={selectedTableId ?? undefined}
-          editionMode={false}
-          isLoading={loading}
-          width={currentRoom?.width}
-          height={currentRoom?.height}
-          onTablePress={handleTablePress}
-          onTableLongPress={handleTablePress}
-          onTableUpdate={() => { }}
-        />
-      </View>
-
-      {/* Modal pour les détails et actions de la commande */}
-      <CustomModal
-        isVisible={modals.showOrderDetailModal}
-        onClose={handleCloseOrderDetailModal}
-        width={width * 0.8}
-        height={height * 0.8}
-        title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Détails de la commande"}
-      >
-        {selectedTableOrder && (
-          <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
-            <AdminOrderDetailView
-              order={selectedTableOrder}
-              itemTypes={allItemTypes}
-              onDeleteOrderItem={async (orderItemId) => {
-                // Fonction de suppression désactivée - à implémenter si nécessaire
-                showToast('Fonction de suppression temporairement désactivée', 'info');
-              }}
-              onDeleteManyOrderItems={async (orderItemIds) => {
-                // Fonction de suppression désactivée - à implémenter si nécessaire
-                showToast('Fonction de suppression temporairement désactivée', 'info');
-                return { deletedCount: 0, deletedIds: [] };
-              }}
-              onUpdateOrderItemStatus={handleStatusUpdate}
-            />
-            <View style={{ padding: 16 }}>
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <Button
-                  variant="outline"
-                  style={{ flex: 1 }}
-                  onPress={modalActions.openReassign}
-                >
-                  <Text>Assigner une autre table</Text>
-                </Button>
-                <Button
-                  variant="outline"
-                  style={{ flex: 1 }}
-                  onPress={modalActions.openPayment}
-                  disabled={true}
-                >
-                  <Text>Régler la note</Text>
-                </Button>
-                <Button
-                  variant="destructive"
-                  style={{ flex: 1 }}
-                  onPress={modalActions.openDeleteDialog}
-                >
-                  <Text>Supprimer</Text>
-                </Button>
-              </View>
-              <Button
-                onPress={() => {
-                  // Ne pas fermer la modal de détails, juste ouvrir la modal d'édition par-dessus
-                  handleOpenOrderModal();
-                }}
-                className="w-full h-[50px] flex items-center justify-center"
-                style={{ backgroundColor: '#2A2E33' }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: '#FBFBFB',
-                    fontWeight: '500',
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Modifier la commande
-                </Text>
-              </Button>
             </View>
-          </View>
-        )}
-      </CustomModal>
+          )}
 
-      {/* Modal pour l'ajout/modification de commande */}
-      <CustomModal
-        isVisible={showOrderModal}
-        onClose={handleSmartCloseOrderModal}
-        title={modals.modalTitle}
-      >
-        <View style={{ flex: 1 }}>
-          {(selectedTableOrder || orderCreatedFromStart) && (
+          {/* OrderLinesForm */}
+          <View style={{ flex: 1 }}>
             <OrderLinesForm
               lines={getCurrentLines()}
               items={allItems.filter(item => item.isActive)}
@@ -654,11 +498,19 @@ export default function ServicePage() {
               onConfigurationModeChange={handleConfigurationModeChange}
               onConfigurationActionsChange={handleConfigurationActionsChange}
             />
-          )}
+          </View>
 
-          {/* Boutons d'action seulement si pas en configuration de menu */}
+          {/* Boutons d'action */}
           {!isConfiguringMenu && (
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', padding: 16, gap: 12 }}>
+            <View style={{
+              backgroundColor: '#ffffff',
+              borderTopWidth: 1,
+              borderTopColor: '#e5e7eb',
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              padding: 16,
+              gap: 12
+            }}>
               <Button
                 variant="outline"
                 onPress={handleSmartCloseOrderModal}
@@ -677,7 +529,15 @@ export default function ServicePage() {
 
           {/* Boutons de configuration de menu */}
           {isConfiguringMenu && menuConfigActions && (
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', padding: 16, gap: 12 }}>
+            <View style={{
+              backgroundColor: '#ffffff',
+              borderTopWidth: 1,
+              borderTopColor: '#e5e7eb',
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              padding: 16,
+              gap: 12
+            }}>
               <Button
                 variant="outline"
                 onPress={menuConfigActions.onCancel}
@@ -694,7 +554,187 @@ export default function ServicePage() {
             </View>
           )}
         </View>
-      </CustomModal>
+      ) : (
+        // Layout normal service avec SidePanel + Room
+        <View style={{ flexDirection: 'row', flex: 1 }}>
+          <SidePanel
+            style={{ flex: 1 }}
+            hideCloseButton={true}
+            width={width / 4}
+            title="Service"
+            onBack={handleDeselectTable}
+          >
+            <View style={{ padding: 16, flex: 1 }}>
+              {loading || !filtersLoaded ? (
+                <Text>Chargement...</Text>
+              ) : (
+                <>
+                  <SearchBar
+                    searchQuery={searchQuery}
+                    onSearchChange={handleSearchChange}
+                    filters={filters}
+                    onFiltersChange={handleFiltersChange}
+                    onClearFilters={handleClearFilters}
+                  />
+                  <OrderList
+                    orders={filteredOrders}
+                    onOrderPress={(order) => {
+                      modalActions.openOrderDetail(order);
+                    }}
+                    onOrderDelete={handleDeleteOrder}
+                  />
+                </>
+              )}
+            </View>
+          </SidePanel>
+
+          <View style={{ flex: 1, height: '100%', position: 'relative' }}>
+            <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  alignItems: 'center',
+                  height: '100%'
+                }}
+                className='flex-row p-2 flex-1'
+              >
+                {rooms.map((room, index) => (
+                  <Pressable
+                    key={`${room.name}-badge-${index}`}
+                    onPress={() => handleChangeRoom(room)}>
+                    <Badge
+                      variant="outline"
+                      className='mx-1'
+                      active={room.id === currentRoom?.id}
+                      size='lg'
+                    >
+                      <Text>{room.name}</Text>
+                    </Badge>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <Button
+                onPress={() => navigateToRoomEdit()}
+                className="w-[200px] h-[50px] flex items-center justify-center"
+                style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#FBFBFB',
+                    fontWeight: '500',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Mode édition
+                </Text>
+              </Button>
+            </View>
+
+            {selectedTable && !selectedTableOrder && (
+              <StartOrderCard
+                table={selectedTable}
+                onStartPress={handleCreateOrder}
+              />
+            )}
+
+            <RoomComponent
+              tables={currentRoomTables.map(t => ({
+                ...t,
+                orders: t.currentOrder ? [t.currentOrder] : []
+              }))}
+              orders={currentRoomOrders}
+              editingTableId={selectedTableId ?? undefined}
+              editionMode={false}
+              isLoading={loading}
+              width={currentRoom?.width}
+              height={currentRoom?.height}
+              onTablePress={handleTablePress}
+              onTableLongPress={handleTablePress}
+              onTableUpdate={() => { }}
+            />
+          </View>
+        </View>
+      )}
+
+      {/* Modal pour les détails et actions de la commande - masquée si OrderLinesForm est active */}
+      {!showOrderModal && (
+        <CustomModal
+          isVisible={modals.showOrderDetailModal}
+          onClose={handleCloseOrderDetailModal}
+          width={900}
+          height={700}
+          title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Détails de la commande"}
+        >
+          {selectedTableOrder && (
+            <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
+              <AdminOrderDetailView
+                order={selectedTableOrder}
+                itemTypes={allItemTypes}
+                onDeleteOrderItem={async (orderItemId) => {
+                  // Fonction de suppression désactivée - à implémenter si nécessaire
+                  showToast('Fonction de suppression temporairement désactivée', 'info');
+                }}
+                onDeleteManyOrderItems={async (orderItemIds) => {
+                  // Fonction de suppression désactivée - à implémenter si nécessaire
+                  showToast('Fonction de suppression temporairement désactivée', 'info');
+                  return { deletedCount: 0, deletedIds: [] };
+                }}
+                onUpdateOrderItemStatus={handleStatusUpdate}
+              />
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                  <Button
+                    variant="outline"
+                    style={{ flex: 1 }}
+                    onPress={modalActions.openReassign}
+                  >
+                    <Text>Assigner une autre table</Text>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    style={{ flex: 1 }}
+                    onPress={modalActions.openPayment}
+                    disabled={true}
+                  >
+                    <Text>Régler la note</Text>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    style={{ flex: 1 }}
+                    onPress={modalActions.openDeleteDialog}
+                  >
+                    <Text>Supprimer</Text>
+                  </Button>
+                </View>
+                <Button
+                  onPress={() => {
+                    // Ne pas fermer la modal de détails, juste ouvrir la modal d'édition par-dessus
+                    handleOpenOrderModal();
+                  }}
+                  className="w-full h-[50px] flex items-center justify-center"
+                  style={{ backgroundColor: '#2A2E33' }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#FBFBFB',
+                      fontWeight: '500',
+                      textAlign: 'center',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Modifier la commande
+                  </Text>
+                </Button>
+              </View>
+            </View>
+          )}
+        </CustomModal>
+      )}
+
 
       {selectedTableOrder && modals.showDeleteOrderDialog && (
         <DeleteConfirmationModal
