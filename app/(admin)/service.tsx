@@ -24,7 +24,7 @@ import {
   useOrders
 } from '~/hooks/useRestaurant';
 import { CustomModal } from '@/components/CustomModal';
-import { OrderLinesForm, OrderLinesHeader } from '~/components/order/OrderLinesForm';
+import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { Order } from '@/types/order.types';
 import { OrderLine, CreateOrderLineRequest, OrderLineType } from '~/types/order-line.types';
 import { useOrderLines } from '~/hooks/useOrderLines';
@@ -497,19 +497,20 @@ export default function ServicePage() {
               padding: 16,
               gap: 12
             }}>
-              <Button
-                variant="outline"
+              <OrderLinesButton
+                variant="secondary"
                 onPress={handleSmartCloseOrderModal}
               >
-                <Text>Annuler</Text>
-              </Button>
-              <Button
-                variant="default"
+                Annuler
+              </OrderLinesButton>
+              <OrderLinesButton
+                variant="primary"
                 onPress={handleSaveOrder}
                 disabled={!orderLines || orderLines.length === 0}
+                flex={2}
               >
-                <Text>Sauvegarder</Text>
-              </Button>
+                Sauvegarder
+              </OrderLinesButton>
             </View>
           )}
 
@@ -524,19 +525,19 @@ export default function ServicePage() {
               padding: 16,
               gap: 12
             }}>
-              <Button
-                variant="outline"
+              <OrderLinesButton
+                variant="configCancel"
                 onPress={menuConfigActions.onCancel}
               >
-                <Text>Annuler</Text>
-              </Button>
-              <Button
-                variant="default"
+                Annuler
+              </OrderLinesButton>
+              <OrderLinesButton
+                variant="config"
                 onPress={menuConfigActions.onConfirm}
-                style={{ backgroundColor: '#059669' }}
+                flex={2}
               >
-                <Text>Confirmer la sélection</Text>
-              </Button>
+                Confirmer la sélection
+              </OrderLinesButton>
             </View>
           )}
         </View>

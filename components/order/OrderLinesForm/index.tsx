@@ -9,6 +9,7 @@ import { OrderLinesFooter } from '~/components/order/OrderLinesForm/OrderLinesFo
 import { OrderLinesHeader } from '~/components/order/OrderLinesForm/OrderLinesHeader';
 import { OrderLinesFormProps } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
 import { OrderLine, OrderLineType } from '~/types/order-line.types';
+import { OrderLinesButton } from '~/components/order/OrderLinesForm/OrderLinesButton';
 import { Status } from '@/types/status.enum';
 
 /**
@@ -362,7 +363,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
 // Export des types et composants
 export type { OrderLinesFormProps };
-export { OrderLinesNavigation, OrderItemsList, OrderMenusList, MenuConfiguration, OrderLinesFooter, OrderLinesHeader };
+export { OrderLinesNavigation, OrderItemsList, OrderMenusList, MenuConfiguration, OrderLinesFooter, OrderLinesHeader, OrderLinesButton };
+
 
 const styles = StyleSheet.create({
   container: {
