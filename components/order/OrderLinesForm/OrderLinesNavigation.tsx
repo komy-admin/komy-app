@@ -1,6 +1,5 @@
 import React, { memo } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import { Text } from '~/components/ui';
+import { View, Platform } from 'react-native';
 import { ItemType } from '~/types/item-type.types';
 
 /**
@@ -20,10 +19,67 @@ export interface OrderLinesNavigationProps {
 /**
  * Composant de navigation pour OrderLinesForm
  * Gère les tabs principales (ITEMS/MENUS) et la sous-navigation par type d'item
- * 
+ *
  * @param props - Props du composant
  * @returns Composant de navigation mémorisé
  */
+
+// Styles universels (web + mobile)
+const universalStyles = {
+  mainButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    minHeight: 48,
+    ...(Platform.OS === 'web' && {
+      display: 'flex',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease'
+    })
+  },
+  mainButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+    textAlign: 'center' as const,
+    letterSpacing: 0.3,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    })
+  },
+  subButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    minHeight: 36,
+    minWidth: 80,
+    ...(Platform.OS === 'web' && {
+      display: 'flex',
+      cursor: 'pointer'
+    })
+  },
+  subButtonText: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#6b7280',
+    textAlign: 'center' as const,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    })
+  }
+};
+
 export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
   activeMainTab,
   onMainTabChange,
@@ -39,42 +95,54 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
     return null;
   }
 
+  // Helper universel pour tous les boutons
+  const renderButton = (
+    type: 'main' | 'sub',
+    isActive: boolean,
+    content: string,
+    onPress: () => void,
+    key?: string
+  ) => {
+    const isMain = type === 'main';
+    const baseButtonStyle = isMain ? universalStyles.mainButton : universalStyles.subButton;
+    const baseTextStyle = isMain ? universalStyles.mainButtonText : universalStyles.subButtonText;
+
+    const activeStyles = isActive ? {
+      backgroundColor: '#2A2E33',
+      borderColor: '#2A2E33'
+    } : {};
+
+    const activeTextStyles = isActive ? {
+      color: '#FFFFFF',
+      fontWeight: isMain ? '700' : '600'
+    } : {};
+
+    return (
+      <div
+        key={key}
+        style={{
+          ...baseButtonStyle,
+          ...activeStyles
+        }}
+        onClick={onPress}
+      >
+        <span style={{
+          ...baseTextStyle,
+          ...activeTextStyles
+        }}>
+          {content}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <View style={styles.navigationContainer}>
       {/* Navigation principale ITEMS/MENUS */}
       <View style={styles.mainNavigation}>
         <View style={styles.tabsContainer}>
-          {/* Tab Articles */}
-          <Pressable
-            style={[
-              styles.tab,
-              activeMainTab === 'ITEMS' && styles.activeTab
-            ]}
-            onPress={() => onMainTabChange('ITEMS')}
-          >
-            <Text style={[
-              styles.tabText,
-              activeMainTab === 'ITEMS' && styles.activeTabText
-            ]}>
-              Articles ({getTotalItemsCount()})
-            </Text>
-          </Pressable>
-
-          {/* Tab Menus */}
-          <Pressable
-            style={[
-              styles.tab,
-              activeMainTab === 'MENUS' && styles.activeTab
-            ]}
-            onPress={() => onMainTabChange('MENUS')}
-          >
-            <Text style={[
-              styles.tabText,
-              activeMainTab === 'MENUS' && styles.activeTabText
-            ]}>
-              Menus ({getTotalMenusCount()})
-            </Text>
-          </Pressable>
+          {renderButton('main', activeMainTab === 'MENUS', `Menus (${getTotalMenusCount()})`, () => onMainTabChange('MENUS'))}
+          {renderButton('main', activeMainTab === 'ITEMS', `Articles (${getTotalItemsCount()})`, () => onMainTabChange('ITEMS'))}
         </View>
       </View>
 
@@ -82,23 +150,15 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
       {activeMainTab === 'ITEMS' && (
         <View style={styles.subNavigation}>
           <View style={styles.categoryButtons}>
-            {itemTypes.map((itemType) => (
-              <Pressable
-                key={itemType.id}
-                style={[
-                  styles.subCategoryButton,
-                  activeItemType === itemType.id && styles.subCategoryButtonActive
-                ]}
-                onPress={() => onItemTypeChange(itemType.id)}
-              >
-                <Text style={[
-                  styles.subCategoryButtonText,
-                  activeItemType === itemType.id && styles.subCategoryButtonTextActive
-                ]}>
-                  {itemType.name}
-                </Text>
-              </Pressable>
-            ))}
+            {itemTypes.map((itemType) =>
+              renderButton(
+                'sub',
+                activeItemType === itemType.id,
+                itemType.name,
+                () => onItemTypeChange(itemType.id),
+                itemType.id
+              )
+            )}
           </View>
         </View>
       )}
@@ -108,90 +168,41 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
 
 OrderLinesNavigation.displayName = 'OrderLinesNavigation';
 
-const styles = StyleSheet.create({
+const styles = {
   navigationContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    ...(Platform.OS !== 'web' && {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 2,
+    })
   },
   mainNavigation: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    flexDirection: 'row' as const,
+    gap: 12,
   },
   tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    backgroundColor: '#ffffff',
-  },
-  tab: {
+    flexDirection: 'row' as const,
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  activeTab: {
-    backgroundColor: '#2A2E33',
-    borderColor: '#2A2E33',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    gap: 12,
   },
   subNavigation: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#f8fafc',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   categoryButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: 8,
   },
-  subCategoryButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  subCategoryButtonActive: {
-    backgroundColor: '#2A2E33',
-    borderColor: '#2A2E33',
-  },
-  subCategoryButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  subCategoryButtonTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-});
+};
