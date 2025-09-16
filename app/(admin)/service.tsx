@@ -37,6 +37,7 @@ export default function ServicePage() {
   const [menuConfigActions, setMenuConfigActions] = useState<{
     onCancel: () => void;
     onConfirm: () => void;
+    isValid?: boolean;
   } | null>(null);
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
@@ -272,7 +273,7 @@ export default function ServicePage() {
     });
   }, []);
 
-  const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void } | null) => {
+  const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void; isValid?: boolean } | null) => {
     React.startTransition(() => {
       setMenuConfigActions(actions);
     });
@@ -534,6 +535,7 @@ export default function ServicePage() {
               <OrderLinesButton
                 variant="config"
                 onPress={menuConfigActions.onConfirm}
+                disabled={!menuConfigActions.isValid}
                 flex={2}
               >
                 Confirmer la sélection

@@ -1,5 +1,5 @@
 import React, { memo, useCallback } from 'react';
-import { View, Pressable, Platform, StyleSheet } from 'react-native';
+import { View, Pressable, Platform, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '~/components/ui';
 import { Menu as MenuIcon } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
@@ -373,22 +373,28 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
         </View>
       </View>
 
-      {/* Sections de catégories */}
-      {menu.categories && menu.categories.map((category, index) => {
-        const selectedItems = tempMenuSelections[category.id] || [];
-        
-        return (
-          <MenuCategory
-            key={category.id}
-            category={category}
-            index={index}
-            selectedItems={selectedItems}
-            onToggleItem={handleToggleItem}
-            getMenuCategoryItems={getMenuCategoryItems}
-            getCategoryName={getCategoryName}
-          />
-        );
-      })}
+      {/* Sections de catégories avec scroll */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {menu.categories && menu.categories.map((category, index) => {
+          const selectedItems = tempMenuSelections[category.id] || [];
+
+          return (
+            <MenuCategory
+              key={category.id}
+              category={category}
+              index={index}
+              selectedItems={selectedItems}
+              onToggleItem={handleToggleItem}
+              getMenuCategoryItems={getMenuCategoryItems}
+              getCategoryName={getCategoryName}
+            />
+          );
+        })}
+      </ScrollView>
     </View>
   );
 });
@@ -399,6 +405,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   configHeader: {
     paddingHorizontal: 20,
@@ -436,7 +449,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   categoryCard: {
-    marginHorizontal: 20,
     marginVertical: 8,
     backgroundColor: '#ffffff',
     borderRadius: 12,

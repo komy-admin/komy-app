@@ -185,10 +185,62 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // Utiliser un ref pour accéder aux sélections actuelles dans les callbacks
   const tempMenuSelectionsRef = useRef<Record<string, string[]>>({});
 
-  // Mettre à jour le ref quand tempMenuSelections change
+  // Fonction de validation pour vérifier si toutes les catégories obligatoires sont sélectionnées
+  const validateMenuSelections = useCallback((menu: any, selections: Record<string, string[]>): boolean => {
+    if (!menu?.categories) return false;
+
+    // Vérifier que toutes les catégories obligatoires ont au moins une sélection
+    return menu.categories.every((category: any) => {
+      if (!category.isRequired) return true; // Les catégories optionnelles passent toujours
+
+      const categorySelections = selections[category.id] || [];
+      return categorySelections.length > 0; // Au moins un item sélectionné
+    });
+  }, []);
+
+  // Mettre à jour le ref quand tempMenuSelections change ET recréer les actions avec validation
   useEffect(() => {
     tempMenuSelectionsRef.current = tempMenuSelections;
-  }, [tempMenuSelections]);
+
+    // Recréer les actions avec l'état de validation mis à jour
+    if (isConfiguringMenu && menuBeingConfigured) {
+      const isValid = validateMenuSelections(menuBeingConfigured, tempMenuSelections);
+
+      const actions = {
+        onCancel: () => {
+          setIsConfiguringMenu(false);
+          setMenuBeingConfigured(null);
+          setTempMenuSelections({});
+          tempMenuSelectionsRef.current = {};
+          onConfigurationModeChange?.(false);
+          onConfigurationActionsChange?.(null);
+        },
+        onConfirm: () => {
+          const currentSelections = tempMenuSelectionsRef.current;
+          const selectedItems: Record<string, string> = {};
+          Object.entries(currentSelections).forEach(([categoryId, itemIds]) => {
+            if (itemIds && itemIds.length > 0) {
+              selectedItems[categoryId] = itemIds[0];
+            }
+          });
+
+          if (menuBeingConfigured && Object.keys(selectedItems).length > 0) {
+            addMenu(menuBeingConfigured, selectedItems);
+          }
+
+          setIsConfiguringMenu(false);
+          setMenuBeingConfigured(null);
+          setTempMenuSelections({});
+          tempMenuSelectionsRef.current = {};
+          onConfigurationModeChange?.(false);
+          onConfigurationActionsChange?.(null);
+        },
+        isValid // Ajouter l'état de validation
+      };
+
+      onConfigurationActionsChange?.(actions);
+    }
+  }, [tempMenuSelections, isConfiguringMenu, menuBeingConfigured, validateMenuSelections, addMenu, onConfigurationModeChange, onConfigurationActionsChange]);
 
   const startMenuConfiguration = useCallback((menu: any) => {
     setMenuBeingConfigured(menu);
@@ -196,46 +248,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     tempMenuSelectionsRef.current = {};
     setIsConfiguringMenu(true);
     onConfigurationModeChange?.(true);
-
-    // Préparer les actions pour les boutons
-    const actions = {
-      onCancel: () => {
-        setIsConfiguringMenu(false);
-        setMenuBeingConfigured(null);
-        setTempMenuSelections({});
-        tempMenuSelectionsRef.current = {};
-        onConfigurationModeChange?.(false);
-        onConfigurationActionsChange?.(null);
-      },
-      onConfirm: () => {
-        const currentSelections = tempMenuSelectionsRef.current;
-        // Convertir Record<string, string[]> en Record<string, string> en prenant le premier item
-        const selectedItems: Record<string, string> = {};
-        Object.entries(currentSelections).forEach(([categoryId, itemIds]) => {
-          if (itemIds && itemIds.length > 0) {
-            selectedItems[categoryId] = itemIds[0];
-          }
-        });
-
-
-        // Créer la ligne de menu avec les sélections
-        if (menu && Object.keys(selectedItems).length > 0) {
-          addMenu(menu, selectedItems);
-        } else {
-        }
-
-        // Fermer la configuration
-        setIsConfiguringMenu(false);
-        setMenuBeingConfigured(null);
-        setTempMenuSelections({});
-        tempMenuSelectionsRef.current = {};
-        onConfigurationModeChange?.(false);
-        onConfigurationActionsChange?.(null);
-      }
-    };
-
-    onConfigurationActionsChange?.(actions);
-  }, [addMenu, onConfigurationModeChange, onConfigurationActionsChange]);
+    // Les actions seront créées automatiquement par le useEffect
+  }, [onConfigurationModeChange]);
 
   const removeMenu = useCallback((menuId: string) => {
     // Trouver la dernière ligne avec ce menu
