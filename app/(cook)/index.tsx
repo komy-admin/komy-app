@@ -99,9 +99,9 @@ export default function CookKitchenPage() {
   // Utilisation des hooks Redux uniquement  
   const { orders, loading, error, updateOrderStatus } = useOrders();
   const { updateOrderLineItemStatus } = useOrderLines();
-  // TODO: Restore accountConfig functionality if needed
-  const overdueOrderIds: string[] = [];
-  const overdueOrderItemIds: string[] = [];
+  // Récupérer les commandes en retard depuis le store
+  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
+  const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
   
@@ -149,8 +149,7 @@ export default function CookKitchenPage() {
 
       // 🆕 Utiliser la nouvelle API PATCH qui gère tout en une seule requête
       if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
-        await updateOrderStatus({
-          orderId: itemGroup.orderId,
+        await updateOrderStatus(itemGroup.orderId, {
           status: newStatus,
           orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
           orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
@@ -205,8 +204,7 @@ export default function CookKitchenPage() {
       }
 
       // Utiliser la nouvelle API PATCH pour un seul item
-      await updateOrderStatus({
-        orderId: parentGroup.orderId,
+      await updateOrderStatus(parentGroup.orderId, {
         status: newStatus,
         orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
         orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,

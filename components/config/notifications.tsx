@@ -10,7 +10,7 @@ export default function NotificationsPage() {
     alertValue,
     isLoading,
     error,
-    updateAlertTime,
+    updateConfig,
     clearError
   } = useAccountConfig();
   
@@ -47,7 +47,8 @@ export default function NotificationsPage() {
     if (!hasChanges) return;
     
     try {
-      await updateAlertTime({
+      // Utiliser updateConfig directement au lieu de updateAlertTime
+      await updateConfig({
         reminderNotificationsEnabled: localEnabled,
         reminderMinutes: parseInt(localTimeValue) || 15
       });

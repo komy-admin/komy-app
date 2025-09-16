@@ -1,18 +1,15 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '~/store';
-// TODO: Implement account config in new store
-// import { setAccountConfig } from '@/store/account-config.slice';
+import { sessionActions } from '~/store/slices/session.slice';
 import { accountConfigApiService } from '~/api/account-config.api';
 import { useCallback, useState } from 'react';
 
 /**
  * Hook pour gérer la configuration du compte
- * TODO: This needs to be reimplemented with the new store structure
  */
 export const useAccountConfig = () => {
   const dispatch = useDispatch();
-  // TODO: Add accountConfig to the new store structure
-  const config = null; // useSelector((state: RootState) => state.accountConfig);
+  const config = useSelector((state: RootState) => state.session.accountConfig);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +21,11 @@ export const useAccountConfig = () => {
     setError(null);
     try {
       const accountConfig = await accountConfigApiService.getAccountConfig();
-      // TODO: Dispatch to new store
-      // dispatch(setAccountConfig({
-      //   id: accountConfig.id,
-      //   reminderMinutes: accountConfig.reminderMinutes,
-      //   reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
-      // }));
+      dispatch(sessionActions.setAccountConfig({
+        id: accountConfig.id,
+        reminderMinutes: accountConfig.reminderMinutes,
+        reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
+      }));
       return accountConfig;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement de la configuration';
@@ -50,13 +46,17 @@ export const useAccountConfig = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedConfig = await accountConfigApiService.updateAccountConfig(updates);
-      // TODO: Dispatch to new store
-      // dispatch(setAccountConfig({
-      //   id: updatedConfig.id,
-      //   reminderMinutes: updatedConfig.reminderMinutes,
-      //   reminderNotificationsEnabled: updatedConfig.reminderNotificationsEnabled
-      // }));
+      // Récupérer l'ID depuis la config actuelle
+      if (!config?.id) {
+        throw new Error('Configuration non chargée');
+      }
+      // Utiliser la méthode update héritée de BaseApiService (PUT)
+      const updatedConfig = await accountConfigApiService.update(config.id, updates);
+      dispatch(sessionActions.setAccountConfig({
+        id: updatedConfig.id,
+        reminderMinutes: updatedConfig.reminderMinutes,
+        reminderNotificationsEnabled: updatedConfig.reminderNotificationsEnabled
+      }));
       return updatedConfig;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour de la configuration';
@@ -66,6 +66,22 @@ export const useAccountConfig = () => {
       setIsLoading(false);
     }
   }, [dispatch]);
+
+  // Fonctions pour compatibilité avec l'ancien code
+  const isAlertEnabled = config?.reminderNotificationsEnabled ?? false;
+  const alertValue = config?.reminderMinutes ?? 15;
+  
+  const updateAlertTime = useCallback(async (minutes: number) => {
+    return updateConfig({ reminderMinutes: minutes });
+  }, [updateConfig]);
+  
+  const toggleAlertEnabled = useCallback(async (enabled: boolean) => {
+    return updateConfig({ reminderNotificationsEnabled: enabled });
+  }, [updateConfig]);
+  
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   return {
     // État
@@ -80,5 +96,11 @@ export const useAccountConfig = () => {
     // Valeurs directes
     reminderMinutes: config?.reminderMinutes ?? 15,
     reminderNotificationsEnabled: config?.reminderNotificationsEnabled ?? false,
+    
+    // Compatibilité avec l'ancien code
+    isAlertEnabled,
+    alertValue,
+    updateAlertTime,
+    clearError,
   };
 };

@@ -199,7 +199,7 @@ export const selectItemsByType = (typeId: string) => createSelector(
  */
 export const selectUsersByProfile = (profile: string) => createSelector(
   [selectUsers],
-  (users) => users.filter(user => user.profile === profile)
+  (users) => users.filter(user => user.profil === profile)
 );
 
 /**
@@ -239,37 +239,6 @@ export const selectOrdersWithLines = createSelector(
       lines: linesByOrderId.get(order.id) || [],
     }));
   }
-);
-
-/**
- * Items de cuisine (toutes les OrderLines à préparer)
- */
-export const selectKitchenItems = createSelector(
-  [selectOrderLines],
-  (orderLines) => {
-    // Filtrer les lignes qui doivent être préparées en cuisine
-    return orderLines.filter(line => 
-      line.status !== 'delivered' && 
-      line.status !== 'cancelled'
-    );
-  }
-);
-
-/**
- * Stats globales (pour dashboard)
- */
-export const selectRestaurantStats = createSelector(
-  [selectRooms, selectTables, selectOrders, selectUsers],
-  (rooms, tables, orders, users) => ({
-    totalRooms: rooms.length,
-    totalTables: tables.length,
-    totalOrders: orders.length,
-    activeOrders: orders.filter(o => 
-      o.status !== 'delivered' && o.status !== 'cancelled'
-    ).length,
-    totalUsers: users.length,
-    activeServers: users.filter(u => u.profile === 'server').length,
-  })
 );
 
 // === ALIASES pour compatibilité ===

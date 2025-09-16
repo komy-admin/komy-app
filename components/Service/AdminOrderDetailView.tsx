@@ -419,7 +419,8 @@ const AdminMenuOrderGroup = ({
             {(() => {
               // Grouper les orderItems par type d'item
               const itemsByCategory = orderItems.reduce((acc, orderLineItem) => {
-                const categoryName = orderLineItem.item.itemType.name;
+                const categoryName = orderLineItem?.item?.itemType?.name;
+                if (!categoryName) return acc;
                 if (!acc[categoryName]) {
                   acc[categoryName] = [];
                 }
@@ -732,7 +733,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const { activeMenus, loadAllMenus } = useMenus();
-  const { updateOrderLineItemsStatus } = useOrders();
+  const { updateOrderStatus } = useOrders();
   const { deleteOrderLine } = useOrderLines();
 
   // Si les menus ne sont pas chargés, les charger
@@ -769,7 +770,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
     const itemTypeGroups: Record<string, OrderLine[]> = {};
 
     individualItems.forEach(line => {
-      const itemTypeId = line.item?.itemType.id;
+      const itemTypeId = line.item?.itemType?.id;
       if (itemTypeId) {
         if (!itemTypeGroups[itemTypeId]) {
           itemTypeGroups[itemTypeId] = [];
@@ -892,11 +893,14 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                         }
                       }}
                       onDeleteOrderItem={onDeleteOrderItem}
-                      onUpdateOrderItemStatus={onUpdateOrderItemStatus ? async (orderLines: any[], newStatus: Status) => {
+                      onUpdateOrderItemStatus={onUpdateOrderItemStatus ? async (orderLineItems: any[], newStatus: Status) => {
                         // Pour les items de menu, utiliser la nouvelle API spécialisée
                         try {
-                          const orderLineIds = orderLines.map(ol => ol.id);
-                          await updateOrderLineItemsStatus(order.id, orderLineIds, newStatus);
+                          const orderLineItemIds = orderLineItems.map(oli => oli.id);
+                          await updateOrderStatus(order.id, {
+                            orderLineItemIds,
+                            status: newStatus
+                          });
                           showToast('Statut mis à jour avec succès.', 'success');
                         } catch (error) {
                           console.error('Erreur lors de la mise à jour du statut:', error);

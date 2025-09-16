@@ -224,11 +224,32 @@ const entitiesSlice = createSlice({
       }
     },
     deleteOrderLine: (state, action: PayloadAction<{ orderLineId: string }>) => {
-      delete state.orderLines[action.payload.orderLineId];
+      const orderLineId = action.payload.orderLineId;
+      
+      // Récupérer l'OrderLine pour avoir l'orderId
+      const orderLine = state.orderLines[orderLineId];
+      if (orderLine && orderLine.orderId) {
+        // Mise à jour ciblée de l'order concerné uniquement
+        const order = state.orders[orderLine.orderId];
+        if (order && order.lines) {
+          order.lines = order.lines.filter(line => line.id !== orderLineId);
+        }
+      }
+      
+      // Supprimer l'OrderLine du store
+      delete state.orderLines[orderLineId];
     },
     deleteOrderLinesBatch: (state, action: PayloadAction<{ orderLineIds: string[] }>) => {
-      action.payload.orderLineIds.forEach(id => {
+      const { orderLineIds } = action.payload;
+      
+      orderLineIds.forEach(id => {
         delete state.orderLines[id];
+      });
+      
+      Object.values(state.orders).forEach(order => {
+        if (order.lines) {
+          order.lines = order.lines.filter(line => !orderLineIds.includes(line.id));
+        }
       });
     },
     orderLinesStatusUpdated: (state, action: PayloadAction<{ 
@@ -449,7 +470,7 @@ export const selectAllOrders = createSelector(
 
 export const selectOrdersByRoomId = (roomId: string) => createSelector(
   selectEntities,
-  (entities) => Object.values(entities.orders).filter(order => order.roomId === roomId)
+  (entities) => Object.values(entities.orders).filter(order => order.table?.roomId === roomId)
 );
 
 export const selectOrderById = (orderId: string) => createSelector(
@@ -461,12 +482,6 @@ export const selectOrderById = (orderId: string) => createSelector(
 export const selectOrderLinesByOrderId = (orderId: string) => createSelector(
   selectEntities,
   (entities) => Object.values(entities.orderLines).filter(line => line.orderId === orderId)
-);
-
-// Order Line Items
-export const selectOrderLineItemsByOrderLineId = (orderLineId: string) => createSelector(
-  selectEntities,
-  (entities) => Object.values(entities.orderLineItems).filter(item => item.orderLineId === orderLineId)
 );
 
 // Menus
@@ -566,7 +581,7 @@ export const selectAllKitchenItems = createSelector(
             itemName: orderLineItem.item.name,
             itemType: orderLineItem.item.itemType?.name,
             menuName: parentOrderLine.menu?.name,
-            menuId: parentOrderLine.menuId,
+            menuId: parentOrderLine.menu?.id,
             status: orderLineItem.status,
             orderLineId: parentOrderLine.id
           });

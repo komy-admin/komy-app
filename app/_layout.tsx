@@ -60,32 +60,43 @@ function AuthenticationGate() {
   const dispatch = useDispatch();
   const { token, user: userProfile, isLoggingIn: isLoading } = useSelector((state: RootState) => state.session);
   const [isInitialized, setIsInitialized] = React.useState(false);
+  const authInitializedRef = React.useRef(false);
 
   React.useEffect(() => {
+    // Protection contre la double exécution (React StrictMode)
+    if (authInitializedRef.current) {
+      return;
+    }
+
     const initializeAuth = async () => {
       try {
         const storedToken = await storageService.getItem('token');
 
         if (storedToken) {
+          // Marquer comme initialisé avant les appels async
+          authInitializedRef.current = true;
+          
           // D'abord, on indique qu'on est en train de se connecter
           dispatch(sessionActions.loginStart());
-          
+
           try {
             // Ensuite on charge le vrai user depuis l'API
             const user = await authApiService.getUserWithToken();
-            
+
             // Maintenant on peut faire le loginSuccess avec le vrai user
             dispatch(sessionActions.loginSuccess({
               token: storedToken,
               user: user
             }));
-            
+
             // On met à jour le profil dans le localStorage pour la prochaine fois
             await storageService.setItem('userProfile', user.profil);
           } catch (error) {
             await storageService.removeItem('token');
             await storageService.removeItem('userProfile');
             dispatch(sessionActions.logout());
+            // Reset le flag en cas d'erreur pour permettre une nouvelle tentative
+            authInitializedRef.current = false;
           }
         }
       } catch (error) {
@@ -107,7 +118,7 @@ function AuthenticationGate() {
     const fullPath = segments.length ? `/${segments.join('/')}` : '/';
     if (fullPath === '/(auth)/forgot-password') return
     if (fullPath === '/(auth)/reset-password') return
-    
+
     // Si pas de token, rediriger vers login
     if (!token) {
       if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
@@ -128,7 +139,7 @@ function AuthenticationGate() {
           router.replace(LOGIN_ROUTE);
           return;
         }
-        
+
         console.log('Redirection vers:', HOME_ROUTES[role]);
         router.replace(HOME_ROUTES[role] as any);
         return;

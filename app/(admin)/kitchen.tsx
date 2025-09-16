@@ -112,9 +112,9 @@ export default function KitchenPage() {
   // Utilisation des hooks Redux
   const { orders, loading, error, updateOrderStatus } = useOrders();
   const kitchenItems = useSelector(selectAllKitchenItems);
-  // TODO: Restore accountConfig functionality if needed
-  const overdueOrderIds: string[] = [];
-  const overdueOrderItemIds: string[] = [];
+  // Récupérer les commandes en retard depuis le store
+  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
+  const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
   // Filtrer les items selon les statuts disponibles en cuisine
@@ -161,8 +161,7 @@ export default function KitchenPage() {
       });
 
       if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
-        await updateOrderStatus({
-          orderId: itemGroup.orderId,
+        await updateOrderStatus(itemGroup.orderId, {
           status: newStatus,
           orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
           orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
@@ -217,8 +216,7 @@ export default function KitchenPage() {
       }
 
       // Utiliser la nouvelle API PATCH pour un seul item
-      await updateOrderStatus({
-        orderId: parentGroup.orderId,
+      await updateOrderStatus(parentGroup.orderId, {
         status: newStatus,
         orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
         orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,

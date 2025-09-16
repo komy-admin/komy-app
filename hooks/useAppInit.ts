@@ -7,8 +7,6 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
-// TODO: Migrer setAccountConfig vers le nouveau store
-// import { setAccountConfig } from '@/store/account-config.slice';
 import { accountConfigApiService } from '~/api/account-config.api';
 
 interface InitializationState {
@@ -102,12 +100,11 @@ export const useAppInit = () => {
       try {
         // Charger la configuration depuis l'API backend
         const accountConfig = await accountConfigApiService.getAccountConfig();
-        // TODO: Migrer setAccountConfig vers le nouveau store
-        // dispatch(setAccountConfig({
-        //   id: accountConfig.id,
-        //   reminderMinutes: accountConfig.reminderMinutes,
-        //   reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
-        // }));
+        dispatch(sessionActions.setAccountConfig({
+          id: accountConfig.id,
+          reminderMinutes: accountConfig.reminderMinutes,
+          reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
+        }));
         updateProgress('accountConfig', true);
         console.log('✅ Configuration chargée');
       } catch (error) {

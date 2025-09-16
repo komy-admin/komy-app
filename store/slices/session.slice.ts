@@ -24,6 +24,19 @@ export interface SessionState {
   isLoggingIn: boolean;
   isLoggingOut: boolean;
   authError: string | null;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Account Config
+  accountConfig: {
+    id: string;
+    reminderMinutes: number;
+    reminderNotificationsEnabled: boolean;
+  } | null;
+  overdueOrderIds: string[];
+  overdueOrderItemIds: string[];
+  lastAlertCheck: number;
+  triggerAlertCheck: number;
 }
 
 // État initial
@@ -46,6 +59,15 @@ const initialState: SessionState = {
   isLoggingIn: false,
   isLoggingOut: false,
   authError: null,
+  isLoading: false,
+  error: null,
+  
+  // Account Config
+  accountConfig: null,
+  overdueOrderIds: [],
+  overdueOrderItemIds: [],
+  lastAlertCheck: Date.now(),
+  triggerAlertCheck: 0,
 };
 
 /**
@@ -150,6 +172,54 @@ const sessionSlice = createSlice({
       if (action.payload) {
         state.lastSyncTime = Date.now();
       }
+    },
+    
+    // === ACCOUNT CONFIG ===
+    setAccountConfig: (state, action: PayloadAction<{
+      id: string;
+      reminderMinutes: number;
+      reminderNotificationsEnabled: boolean;
+    }>) => {
+      state.accountConfig = action.payload;
+    },
+    
+    setOverdueOrders: (state, action: PayloadAction<string[]>) => {
+      state.overdueOrderIds = action.payload;
+    },
+    
+    setOverdueOrderItems: (state, action: PayloadAction<string[]>) => {
+      state.overdueOrderItemIds = action.payload;
+    },
+    
+    addOverdueOrder: (state, action: PayloadAction<string>) => {
+      if (!state.overdueOrderIds.includes(action.payload)) {
+        state.overdueOrderIds.push(action.payload);
+      }
+    },
+    
+    removeOverdueOrder: (state, action: PayloadAction<string>) => {
+      state.overdueOrderIds = state.overdueOrderIds.filter(id => id !== action.payload);
+    },
+    
+    updateLastAlertCheck: (state) => {
+      state.lastAlertCheck = Date.now();
+    },
+    
+    triggerAlertCheck: (state) => {
+      state.triggerAlertCheck = Date.now();
+    },
+    
+    // === ERROR HANDLING ===
+    setError: (state, action: PayloadAction<string>) => {
+      state.error = action.payload;
+    },
+    
+    clearError: (state) => {
+      state.error = null;
+    },
+    
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
     },
     
     // === RESET ===

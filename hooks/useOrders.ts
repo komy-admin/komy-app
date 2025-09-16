@@ -45,8 +45,7 @@ export const useOrders = () => {
     if (!selectedTableId) return null;
     return orders.find(order => 
       order.tableId === selectedTableId && 
-      order.status !== Status.TERMINATED && 
-      order.status !== Status.DRAFT
+      order.status !== Status.TERMINATED
     ) || null;
   }, [orders, selectedTableId]);
   
@@ -145,34 +144,17 @@ export const useOrders = () => {
   // Update order status avec possibilité de mise à jour en masse des orderLines
   const updateOrderStatus = useCallback(async (orderId: string, statusData: UpdateOrderStatusPayload) => {
     try {
-      const { orderLineIds, ...updateData } = statusData;
-      
-      // Si des orderLineIds sont fournis et qu'on passe au statut INPROGRESS,
-      // on met à jour les orderLines en même temps
-      if (orderLineIds && orderLineIds.length > 0 && updateData.status === Status.INPROGRESS) {
-        await updateManyOrderLinesStatus(orderLineIds, Status.INPROGRESS);
-      }
-      
-      const updatedOrder = await orderApiService.updateStatus(orderId, updateData);
+      const updatedOrder = await orderApiService.updateStatus(orderId, statusData);
       dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
       return updatedOrder;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut de la commande:', error);
       throw error;
     }
-  }, [dispatch, updateManyOrderLinesStatus]);
+  }, [dispatch]);
 
   const deleteOrder = useCallback(async (orderId: string) => {
     try {
-      // Récupérer la commande pour obtenir ses lignes
-      const order = orders.find(o => o.id === orderId);
-      
-      if (order?.lines) {
-        // Supprimer toutes les lignes de commande d'abord
-        await deleteOrderLines(order.lines.map((line: OrderLine) => line.id));
-      }
-      
-      // Ensuite supprimer la commande
       await orderApiService.delete(orderId);
       dispatch(entitiesActions.deleteOrder({ orderId }));
     } catch (error) {
@@ -213,6 +195,7 @@ export const useOrders = () => {
       order.status !== Status.DRAFT
     );
   }, [orders]);
+
 
   return {
     // Données

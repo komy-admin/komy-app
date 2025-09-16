@@ -3,6 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { createSelector } from '@reduxjs/toolkit';
 import { RootState } from '~/store';
 import { Order } from '~/types/order.types';
+import { Status } from '~/types/status.enum';
+import { sessionActions } from '~/store/slices/session.slice';
 
 const CHECK_INTERVAL = 60000; // 1 minute - interval fixe et simple
 
@@ -19,15 +21,15 @@ const selectOrdersArray = createSelector(
 
 /**
  * Hook pour monitorer les commandes en retard et déclencher des alertes
- * TODO: This needs to be reimplemented with account config in the new store
  */
 export const useAlertMonitor = () => {
   const dispatch = useDispatch();
   const intervalRef = useRef<number | null>(null);
   
-  // TODO: Get these from account config when reimplemented
-  const reminderMinutes = 15; // Default value
-  const reminderNotificationsEnabled = false; // Default value
+  // Récupérer la configuration depuis le store
+  const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+  const reminderMinutes = accountConfig?.reminderMinutes || 15;
+  const reminderNotificationsEnabled = accountConfig?.reminderNotificationsEnabled || false;
   
   const { token, user } = useSelector((state: RootState) => state.session);
   const isAuthenticated = !!(token && user);
@@ -53,9 +55,8 @@ export const useAlertMonitor = () => {
         overdueOrderItemIds: []
       };
       setAlertResults(emptyResults);
-      // TODO: Dispatch to new store when account config is reimplemented
-      // dispatch(setOverdueOrders([]));
-      // dispatch(setOverdueOrderItems([]));
+      dispatch(sessionActions.setOverdueOrders([]));
+      dispatch(sessionActions.setOverdueOrderItems([]));
       return;
     }
 
@@ -65,17 +66,38 @@ export const useAlertMonitor = () => {
 
     orders.forEach((order: Order) => {
       // Vérifier si la commande est en retard
-      if (order.createdAt) {
-        const orderDate = new Date(order.createdAt);
-        const diffMinutes = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60));
-        
-        if (diffMinutes >= reminderMinutes) {
-          overdueOrderIds.push(order.id);
+      // Ne considérer comme overdue que les commandes PENDING ou INPROGRESS
+      if (order.status === Status.PENDING || order.status === Status.INPROGRESS) {
+        // Utiliser updatedAt si disponible, sinon createdAt
+        const dateToCheck = order.updatedAt || order.createdAt;
+        if (dateToCheck) {
+          const orderDate = new Date(dateToCheck);
+          const diffMinutes = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60));
+          
+          if (diffMinutes >= reminderMinutes) {
+            overdueOrderIds.push(order.id);
+          }
         }
       }
 
-      // Vérifier les items de la commande
-      // TODO: Check order line items when the structure is clarified
+      // Vérifier les items de la commande (OrderLines)
+      if (order.lines && order.lines.length > 0) {
+        order.lines.forEach(line => {
+          // Ne considérer comme overdue que les lignes PENDING ou INPROGRESS
+          if (line.status === Status.PENDING || line.status === Status.INPROGRESS) {
+            // Utiliser updatedAt si disponible, sinon createdAt
+            const dateToCheck = line.updatedAt || line.createdAt;
+            if (dateToCheck) {
+              const lineDate = new Date(dateToCheck);
+              const diffMinutes = Math.floor((now.getTime() - lineDate.getTime()) / (1000 * 60));
+              
+              if (diffMinutes >= reminderMinutes) {
+                overdueOrderItemIds.push(line.id);
+              }
+            }
+          }
+        });
+      }
     });
 
     const results = {
@@ -85,10 +107,10 @@ export const useAlertMonitor = () => {
 
     setAlertResults(results);
     
-    // TODO: Dispatch to new store when account config is reimplemented
-    // dispatch(setOverdueOrders(overdueOrderIds));
-    // dispatch(setOverdueOrderItems(overdueOrderItemIds));
-    // dispatch(updateLastAlertCheck());
+    // Mettre à jour le store avec les commandes en retard
+    dispatch(sessionActions.setOverdueOrders(overdueOrderIds));
+    dispatch(sessionActions.setOverdueOrderItems(overdueOrderItemIds));
+    dispatch(sessionActions.updateLastAlertCheck());
   }, [orders, reminderMinutes, reminderNotificationsEnabled, isAuthenticated]);
 
   // Configuration de l'intervalle

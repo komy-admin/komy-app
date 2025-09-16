@@ -235,12 +235,7 @@ export const useRestaurantSocket = () => {
     Object.entries(eventHandlers).forEach(([eventName, handler]) => {
       (socket as any).on(eventName, (event: WebSocketEvent) => {
         try {
-          console.log(`📡 Événement WebSocket reçu: ${eventName}`, {
-            model: event.model,
-            action: event.action,
-            dataId: event.data?.id,
-            timestamp: event.timestamp
-          });
+          console.log(`📡 Événement WebSocket reçu: ${eventName}`, event);
           
           handler(event);
         } catch (error) {

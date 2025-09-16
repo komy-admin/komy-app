@@ -49,11 +49,8 @@ export default function ServicePage() {
     loading,
     // createOrder, // Non utilisé
     updateOrder,
-    deleteOrder,
-    deleteOrderItem,
-    deleteManyOrderItems,
-    // updateOrderItemStatus, // Non utilisé (remplacé par updateOrderLinesStatus)
-    updateOrderLinesStatus
+    updateOrderStatus,
+    deleteOrder
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
   const { activeMenus: allMenus } = useMenus();
@@ -412,8 +409,11 @@ export default function ServicePage() {
     try {
       const orderLinesIds = orderLines.map(orderLine => orderLine.id);
 
-      // 🆕 Utiliser la nouvelle API PATCH avec OrderLines
-      await updateOrderLinesStatus(selectedTableOrder.id, orderLinesIds, status);
+      // Utiliser updateOrderStatus pour mettre à jour le statut des OrderLines
+      await updateOrderStatus(selectedTableOrder.id, {
+        status: status,
+        orderLineIds: orderLinesIds
+      });
       showToast('Statut mis à jour avec succès.', 'success');
     } catch (error) {
       showToast('Erreur lors de la mise à jour du statut.', 'error');
@@ -578,25 +578,13 @@ export default function ServicePage() {
               order={selectedTableOrder}
               itemTypes={allItemTypes}
               onDeleteOrderItem={async (orderItemId) => {
-                try {
-                  await deleteOrderItem(orderItemId);
-                  showToast('Élément supprimé avec succès.', 'success');
-
-                } catch (error) {
-                  showToast('Erreur lors de la suppression de l\'élément.', 'error');
-                }
+                // Fonction de suppression désactivée - à implémenter si nécessaire
+                showToast('Fonction de suppression temporairement désactivée', 'info');
               }}
               onDeleteManyOrderItems={async (orderItemIds) => {
-                try {
-                  const result = await deleteManyOrderItems(orderItemIds);
-                  showToast(`${result.deletedCount} éléments supprimés avec succès.`, 'success');
-
-
-                  return result;
-                } catch (error) {
-                  showToast('Erreur lors de la suppression des éléments.', 'error');
-                  throw error;
-                }
+                // Fonction de suppression désactivée - à implémenter si nécessaire
+                showToast('Fonction de suppression temporairement désactivée', 'info');
+                return { deletedCount: 0, deletedIds: [] };
               }}
               onUpdateOrderItemStatus={handleStatusUpdate}
             />
@@ -758,7 +746,7 @@ export default function ServicePage() {
                   modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
-                    await updateOrder(selectedTableOrder.id, { ...selectedTableOrder, tableId: pressedTable.id });
+                    await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
                     modalActions.openOrderDetail();
@@ -775,7 +763,7 @@ export default function ServicePage() {
                   modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
-                    await updateOrder(selectedTableOrder.id, { ...selectedTableOrder, tableId: pressedTable.id });
+                    await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
                     modalActions.openOrderDetail();

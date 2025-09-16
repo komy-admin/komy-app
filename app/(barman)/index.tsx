@@ -62,11 +62,11 @@ function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrder
 
 export default function BarmanKitchenPage() {
   // Utilisation des hooks Redux uniquement
-  const { orders, loading, error, updateOrderItemStatus } = useOrders();
+  const { orders, loading, error, updateOrderStatus } = useOrders();
   const orderItems = useSelector((state: RootState) => selectAllOrderItems(state));
-  // TODO: Restore accountConfig functionality if needed
-  const overdueOrderIds: string[] = [];
-  const overdueOrderItemIds: string[] = [];
+  // Récupérer les commandes en retard depuis le store
+  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
+  const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
 
@@ -85,7 +85,13 @@ export default function BarmanKitchenPage() {
 
   const handleStatusChange = async (order: Order, newStatus: Status) => {
     try {
-      await updateOrderItemStatus(order.lines?.map(line => line.id) || [], newStatus);
+      const orderLineIds = order.lines?.map(line => line.id) || [];
+      if (orderLineIds.length > 0) {
+        await updateOrderStatus(order.id, { 
+          status: newStatus,
+          orderLineIds: orderLineIds
+        });
+      }
       // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
     } catch (error: any) {
       console.error('Error updating status:', error);
