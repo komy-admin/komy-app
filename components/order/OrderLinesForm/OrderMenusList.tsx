@@ -1,5 +1,5 @@
-import React, { memo, useCallback, useMemo } from 'react';
-import { View, Pressable, useWindowDimensions, StyleSheet } from 'react-native';
+import { memo, useCallback, useMemo } from 'react';
+import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus, Minus } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
@@ -57,18 +57,32 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
   const canRemove = draftQuantity > 0;
 
   return (
-    <View style={styles.menuRow}>
+    <>
+      {/* Info du menu */}
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{menu.name}</Text>
+        <Text
+          style={styles.itemName}
+          numberOfLines={1}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.75}
+        >
+          {menu.name}
+        </Text>
         {menu.description && (
-          <Text style={styles.menuDescription}>{menu.description}</Text>
+          <Text
+            style={styles.menuDescription}
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+            minimumFontScale={0.75}
+          >
+            {menu.description}
+          </Text>
         )}
         <Text style={styles.itemPrice}>À partir de {((menu as any).price || menu.basePrice || 0).toFixed(2)}€</Text>
       </View>
-      
-      {/* Toujours afficher les contrôles - et + (comme dans l'original) */}
+
+      {/* Contrôles de quantité en bas */}
       <View style={styles.compactQuantityContainer}>
-        {/* Bouton - */}
         <Pressable
           style={[
             dynamicButtonStyles,
@@ -77,31 +91,29 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
           onPress={handleRemove}
           disabled={!canRemove}
         >
-          <Minus 
-            size={16} 
-            color={canRemove ? "#2A2E33" : "#9CA3AF"} 
-            strokeWidth={2.5} 
+          <Minus
+            size={16}
+            color={canRemove ? "#2A2E33" : "#9CA3AF"}
+            strokeWidth={2}
           />
         </Pressable>
 
-        {/* Quantité */}
         <Text style={styles.compactQuantityText}>
           {isNaN(totalQuantity) ? '0' : totalQuantity}
         </Text>
 
-        {/* Bouton + */}
         <Pressable
           style={dynamicButtonStyles}
           onPress={handleAdd}
         >
-          <Plus 
-            size={16} 
-            color="#2A2E33" 
-            strokeWidth={2.5} 
+          <Plus
+            size={16}
+            color="#2A2E33"
+            strokeWidth={2}
           />
         </Pressable>
       </View>
-    </View>
+    </>
   );
 });
 
@@ -145,19 +157,31 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
   }
 
   return (
-    <View style={styles.container}>
-      {filteredMenus.map(menu => (
-        <OrderMenuRow
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      {filteredMenus.map((menu, index) => (
+        <View
           key={menu.id}
-          menu={menu}
-          totalQuantity={getTotalMenuQuantity(menu.id)}
-          draftQuantity={getDraftMenuQuantity(menu.id)}
-          onMenuAdd={handleMenuAdd}
-          onUpdateQuantity={updateMenuQuantity}
-          dynamicButtonSize={dynamicButtonSize}
-        />
+          style={[
+            styles.menuRow,
+            // Supprime marginRight pour les 2ème cartes de chaque ligne
+            (index + 1) % 2 === 0 && { marginRight: 0 }
+          ]}
+        >
+          <OrderMenuRow
+            menu={menu}
+            totalQuantity={getTotalMenuQuantity(menu.id)}
+            draftQuantity={getDraftMenuQuantity(menu.id)}
+            onMenuAdd={handleMenuAdd}
+            onUpdateQuantity={updateMenuQuantity}
+            dynamicButtonSize={dynamicButtonSize}
+          />
+        </View>
       ))}
-    </View>
+    </ScrollView>
   );
 });
 
@@ -166,8 +190,14 @@ OrderMenusList.displayName = 'OrderMenusList';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    backgroundColor: '#FFFFFF', // Même couleur que navigation et OrderItemsList
+  },
+  contentContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    justifyContent: 'flex-start',
   },
   emptyContainer: {
     flex: 1,
@@ -182,46 +212,51 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginBottom: 14,
-    backgroundColor: '#ffffff',
+    flexBasis: '49%',
+    maxWidth: '49%',
+    height: 180, // Hauteur augmentée
+    padding: 16,
+    marginBottom: 12,
+    marginRight: 8,
+    backgroundColor: '#F8F9FA', // Style ISO OrderItemsList
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#D1D5DB', // Style ISO OrderItemsList
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    minHeight: 80,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    justifyContent: 'space-between',
   },
   itemInfo: {
     flex: 1,
-    marginRight: 20,
+    justifyContent: 'flex-start',
+    marginBottom: 12,
   },
   itemName: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#2A2E33',
     marginBottom: 6,
-    lineHeight: 22,
+    lineHeight: 16,
+    textAlign: 'center',
   },
   itemPrice: {
-    fontSize: 15,
-    color: '#6b7280',
+    fontSize: 13,
+    color: '#059669',
     fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 'auto',
   },
   menuDescription: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6b7280',
-    marginTop: 2,
-    marginBottom: 6,
-    lineHeight: 18,
+    marginTop: 4,
+    marginBottom: 8,
+    lineHeight: 16,
     fontStyle: 'italic',
+    textAlign: 'center',
   },
   menuActions: {
     alignItems: 'center',
@@ -243,11 +278,12 @@ const styles = StyleSheet.create({
   compactQuantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF', // Plus blanc pour plus de contraste
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#D1D5DB', // Border plus visible
     overflow: 'hidden',
+    justifyContent: 'space-between',
   },
   compactQuantityButton: {
     width: 32,
@@ -257,8 +293,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   compactQuantityButtonDisabled: {
-    backgroundColor: '#F8FAFC',
-    opacity: 0.5,
+    backgroundColor: '#F3F4F6',
+    opacity: 0.7,
   },
   compactQuantityText: {
     fontSize: 14,

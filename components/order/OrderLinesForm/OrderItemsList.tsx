@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { View, Pressable, useWindowDimensions, StyleSheet } from 'react-native';
+import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus, Minus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
@@ -27,7 +27,7 @@ interface OrderItemRowProps {
   dynamicButtonSize: number;
 }
 
-const OrderItemRow = memo<OrderItemRowProps>(({
+const OrderItemCard = memo<OrderItemRowProps>(({
   item,
   totalQuantity,
   draftQuantity,
@@ -43,60 +43,61 @@ const OrderItemRow = memo<OrderItemRowProps>(({
     onUpdateQuantity(item.id, 'remove');
   }, [item.id, onUpdateQuantity]);
 
-  const dynamicButtonStyles = {
-    ...styles.compactQuantityButton,
-    width: dynamicButtonSize,
-    height: dynamicButtonSize,
-  };
-
   const canRemove = draftQuantity > 0;
 
+
   return (
-    <View style={styles.itemRow}>
+    <>
+      {/* Info de l'item */}
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.name}</Text>
+        <Text
+          style={styles.itemName}
+          numberOfLines={1}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.75}
+        >
+          {item.name}
+        </Text>
         <Text style={styles.itemPrice}>{item.price.toFixed(2)}€</Text>
       </View>
-      
-      <View style={styles.compactQuantityContainer}>
-        {/* Bouton - */}
+
+      {/* Contrôles de quantité */}
+      <View style={styles.quantityContainer}>
         <Pressable
           style={[
-            dynamicButtonStyles,
-            !canRemove && styles.compactQuantityButtonDisabled
+            styles.quantityButton,
+            !canRemove && styles.quantityButtonDisabled
           ]}
           onPress={handleRemove}
           disabled={!canRemove}
         >
-          <Minus 
-            size={16} 
-            color={canRemove ? "#2A2E33" : "#9CA3AF"} 
-            strokeWidth={2.5} 
+          <Minus
+            size={16}
+            color={canRemove ? COLORS.primary : COLORS.textSecondary}
+            strokeWidth={2}
           />
         </Pressable>
 
-        {/* Quantité */}
-        <Text style={styles.compactQuantityText}>
+        <Text style={styles.quantityText}>
           {totalQuantity}
         </Text>
 
-        {/* Bouton + */}
         <Pressable
-          style={dynamicButtonStyles}
+          style={styles.quantityButton}
           onPress={handleAdd}
         >
-          <Plus 
-            size={16} 
-            color="#2A2E33" 
-            strokeWidth={2.5} 
+          <Plus
+            size={16}
+            color={COLORS.primary}
+            strokeWidth={2}
           />
         </Pressable>
       </View>
-    </View>
+    </>
   );
 });
 
-OrderItemRow.displayName = 'OrderItemRow';
+OrderItemCard.displayName = 'OrderItemCard';
 
 /**
  * Composant de liste des articles pour OrderLinesForm
@@ -139,28 +140,75 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
 
   return (
     <View style={styles.container}>
-      {filteredItems.map(item => (
-        <OrderItemRow
-          key={item.id}
-          item={item}
-          totalQuantity={getTotalItemQuantity(item.id)}
-          draftQuantity={getDraftItemQuantity(item.id)}
-          onUpdateQuantity={updateItemQuantity}
-          isTablet={isTablet}
-          dynamicButtonSize={dynamicButtonSize}
-        />
-      ))}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.gridContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {filteredItems.map((item, index) => (
+          <View
+            key={item.id}
+            style={[
+              styles.itemCard,
+              // Supprime marginRight pour les 3ème cartes de chaque ligne
+              (index + 1) % 3 === 0 && { marginRight: 0 }
+            ]}
+          >
+            <OrderItemCard
+              item={item}
+              totalQuantity={getTotalItemQuantity(item.id)}
+              draftQuantity={getDraftItemQuantity(item.id)}
+              onUpdateQuantity={updateItemQuantity}
+              isTablet={isTablet}
+              dynamicButtonSize={dynamicButtonSize}
+            />
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 });
 
 OrderItemsList.displayName = 'OrderItemsList';
 
+// Constantes de style communes - Style MenuForm avec plus de contraste
+const COLORS = {
+  primary: '#2A2E33',
+  success: '#059669',
+  background: '#F8F9FA', // Background plus clair et visible
+  backgroundSecondary: '#f8fafc',
+  border: '#D1D5DB', // Border plus sombre et contrastée
+  borderLight: '#D1D5DB',
+  disabled: '#E5E7EB',
+  text: '#2A2E33',
+  textSecondary: '#6b7280',
+};
+
+const SHADOWS = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+};
+
 const styles = StyleSheet.create({
+  // Containers
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    backgroundColor: '#FFFFFF', // Même couleur que navigation (blanc pur)
+  },
+  scrollView: {
+    flex: 1,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    justifyContent: 'flex-start',
   },
   emptyContainer: {
     flex: 1,
@@ -168,70 +216,79 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    marginBottom: 14,
-    backgroundColor: '#ffffff',
+
+  // Card styles
+  itemCard: {
+    flexBasis: '32.5%',
+    maxWidth: '32.5%',
+    height: 130,
+    backgroundColor: COLORS.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    minHeight: 80,
+    borderColor: COLORS.border,
+    ...SHADOWS.card,
+    padding: 12,
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    marginRight: 8,
   },
   itemInfo: {
     flex: 1,
-    marginRight: 20,
+    justifyContent: 'flex-start',
+    minHeight: 0,
+  },
+
+  // Text styles
+  emptyText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   itemName: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#2A2E33',
-    marginBottom: 6,
-    lineHeight: 22,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+    lineHeight: 16,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   itemPrice: {
-    fontSize: 15,
-    color: '#6b7280',
+    fontSize: 13,
+    color: COLORS.success,
     fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 'auto',
   },
-  compactQuantityContainer: {
+
+  // Quantity controls - Style unifié avec OrderMenusList
+  quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF', // Plus blanc pour plus de contraste
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#D1D5DB', // Border plus visible
     overflow: 'hidden',
+    marginTop: 8,
+    justifyContent: 'space-between',
   },
-  compactQuantityButton: {
+  quantityButton: {
     width: 32,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.background,
   },
-  compactQuantityButtonDisabled: {
-    backgroundColor: '#F8FAFC',
-    opacity: 0.5,
+  quantityButtonDisabled: {
+    backgroundColor: '#F3F4F6',
+    opacity: 0.7,
   },
-  compactQuantityText: {
+  quantityText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: COLORS.text,
     textAlign: 'center',
     minWidth: 32,
     paddingHorizontal: 8,

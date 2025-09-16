@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
 import { OrderItemsList } from '~/components/order/OrderLinesForm/OrderItemsList';
@@ -329,27 +329,25 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             getTotalMenusCount={getTotalMenusCount}
           />
 
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-            {activeMainTab === 'ITEMS' && (
-              <OrderItemsList
-                items={activeItems}
-                activeItemType={activeItemType}
-                getTotalItemQuantity={getTotalItemQuantity}
-                getDraftItemQuantity={getDraftItemQuantity}
-                updateItemQuantity={updateItemQuantity}
-              />
-            )}
+          {activeMainTab === 'ITEMS' && (
+            <OrderItemsList
+              items={activeItems}
+              activeItemType={activeItemType}
+              getTotalItemQuantity={getTotalItemQuantity}
+              getDraftItemQuantity={getDraftItemQuantity}
+              updateItemQuantity={updateItemQuantity}
+            />
+          )}
 
-            {activeMainTab === 'MENUS' && (
-              <OrderMenusList
-                activeMenus={activeMenus}
-                getTotalMenuQuantity={getTotalMenuQuantity}
-                getDraftMenuQuantity={getDraftMenuQuantity}
-                updateMenuQuantity={updateMenuQuantity}
-                handleMenuAdd={startMenuConfiguration}
-              />
-            )}
-          </ScrollView>
+          {activeMainTab === 'MENUS' && (
+            <OrderMenusList
+              activeMenus={activeMenus}
+              getTotalMenuQuantity={getTotalMenuQuantity}
+              getDraftMenuQuantity={getDraftMenuQuantity}
+              updateMenuQuantity={updateMenuQuantity}
+              handleMenuAdd={startMenuConfiguration}
+            />
+          )}
 
           <OrderLinesFooter
             totalPrice={getTotalPrice()}
@@ -374,11 +372,5 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     backgroundColor: '#ffffff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 20,
   },
 });
