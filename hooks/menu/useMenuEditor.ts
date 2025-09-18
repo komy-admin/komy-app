@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { 
   MenuFormData, 
   MenuCategoryFormData, 
@@ -15,6 +15,7 @@ interface UseMenuEditorProps {
   items: Item[];
   itemTypes: ItemType[];
   onLoadMenuCategoryItems: (menuCategoryId: string) => MenuCategoryItem[];
+  onCreateMenuCategoryItem?: (data: Partial<MenuCategoryItem>) => Promise<MenuCategoryItem>;
 }
 
 interface UseMenuEditorReturn {
@@ -51,7 +52,8 @@ export const useMenuEditor = ({
   menu,
   items,
   itemTypes,
-  onLoadMenuCategoryItems
+  onLoadMenuCategoryItems,
+  onCreateMenuCategoryItem
 }: UseMenuEditorProps): UseMenuEditorReturn => {
   const { showToast } = useToast();
 
@@ -71,6 +73,7 @@ export const useMenuEditor = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [localCategoryItems, setLocalCategoryItems] = useState<Record<number, LocalMenuCategoryItem[]>>({});
+
   const [showAddItemForm, setShowAddItemForm] = useState<Record<string, boolean>>({});
   const [itemFormData, setItemFormData] = useState<Record<string, CategoryItemFormData>>({});
   const [categorySelections, setCategorySelections] = useState<Record<number, any>>({});
@@ -80,39 +83,37 @@ export const useMenuEditor = ({
     isAvailable: true 
   });
 
-  const loadCategoryItemsFromStore = useCallback((categoryId: string, categoryIndex: number) => {
-    const existingItems = onLoadMenuCategoryItems(categoryId);
 
-    const localItems = existingItems.map((item, itemIndex) => ({
-      tempId: `existing-${categoryId}-${itemIndex}`,
-      originalId: item.id,
-      itemId: item.itemId,
-      supplement: typeof item.supplement === 'number' ? item.supplement : Number(item.supplement) || 0,
-      isAvailable: item.isAvailable,
-      item: items.find(i => i.id === item.itemId),
-      isModified: false,
-      isDeleted: false
-    }));
-
-    setLocalCategoryItems(prev => ({
-      ...prev,
-      [categoryIndex]: localItems
-    }));
-  }, [items, onLoadMenuCategoryItems]);
-
+  // Charger les items une seule fois au montage si on est en mode édition
   useEffect(() => {
-    if (menu && menu.categories) {
-      menu.categories.forEach((category, index) => {
-        if (category.id) {
-          loadCategoryItemsFromStore(category.id, index);
-        }
-      });
-    } else {
-      setLocalCategoryItems({});
-      setShowAddItemForm({});
-      setItemFormData({});
+    if (menu?.id && menu.categories) {
+      const loadInitialItems = () => {
+        menu.categories.forEach((category, index) => {
+          if (category.id) {
+            const existingItems = onLoadMenuCategoryItems(category.id);
+            const localItems = existingItems.map((item, itemIndex) => ({
+              tempId: `existing-${category.id}-${itemIndex}`,
+              originalId: item.id,
+              itemId: item.itemId,
+              supplement: typeof item.supplement === 'number' ? item.supplement : Number(item.supplement) || 0,
+              isAvailable: item.isAvailable,
+              item: items.find(i => i.id === item.itemId),
+              isModified: false,
+              isDeleted: false
+            }));
+
+            setLocalCategoryItems(prev => ({
+              ...prev,
+              [index]: localItems
+            }));
+          }
+        });
+      };
+
+      loadInitialItems();
     }
-  }, [menu?.id, loadCategoryItemsFromStore]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menu?.id]); // Uniquement quand l'ID du menu change
 
   useEffect(() => {
     const selections: Record<number, any> = {};
@@ -186,13 +187,21 @@ export const useMenuEditor = ({
       priceModifier: '0',
     };
 
+    const newCategoryIndex = formData.categories.length;
+
     setFormData(prev => ({
       ...prev,
       categories: [...prev.categories, newCategory]
     }));
 
+    // Initialiser le tableau d'items pour la nouvelle catégorie
+    setLocalCategoryItems(prev => ({
+      ...prev,
+      [newCategoryIndex]: []
+    }));
+
     showToast('Nouvelle catégorie ajoutée', 'success');
-  }, [showToast]);
+  }, [showToast, formData.categories.length]);
 
   const removeCategory = useCallback((index: number, confirmationContext: any) => {
     const categoryToRemove = formData.categories[index];
@@ -269,7 +278,7 @@ export const useMenuEditor = ({
     }));
   }, []);
 
-  const addItemToCategory = useCallback((categoryIndex: number) => {
+  const addItemToCategory = useCallback(async (categoryIndex: number) => {
     const key = `category_${categoryIndex}`;
     const formItem = itemFormData[key];
 
@@ -278,7 +287,7 @@ export const useMenuEditor = ({
       return;
     }
 
-    const existing = localCategoryItems[categoryIndex]?.find(item => 
+    const existing = localCategoryItems[categoryIndex]?.find(item =>
       item.itemId === formItem.itemId && !item.isDeleted
     );
 
@@ -290,6 +299,8 @@ export const useMenuEditor = ({
     const selectedItem = items.find(i => i.id === formItem.itemId);
     const supplement = parseFloat(formItem.supplement) || 0;
 
+    // Toujours travailler en mode draft jusqu'à la validation finale
+    // Ajouter l'item localement (mode draft)
     const newItem: LocalMenuCategoryItem = {
       tempId: `new-${categoryIndex}-${Date.now()}`,
       itemId: formItem.itemId,
@@ -300,10 +311,17 @@ export const useMenuEditor = ({
       isDeleted: false
     };
 
-    setLocalCategoryItems(prev => ({
-      ...prev,
-      [categoryIndex]: [...(prev[categoryIndex] || []), newItem]
-    }));
+    setLocalCategoryItems(prev => {
+      // Créer une nouvelle référence pour forcer le re-render
+      const newItems = [...(prev[categoryIndex] || []), newItem];
+      const updated = {
+        ...prev,
+        [categoryIndex]: newItems
+      };
+      return updated;
+    });
+
+    showToast('Article ajouté (sera sauvegardé à la validation)', 'success');
 
     setShowAddItemForm(prev => ({
       ...prev,
@@ -318,22 +336,32 @@ export const useMenuEditor = ({
         isAvailable: true
       }
     }));
+  }, [itemFormData, localCategoryItems, items, showToast, formData.categories, menu, onCreateMenuCategoryItem]);
 
-    showToast('Article ajouté avec succès', 'success');
-  }, [itemFormData, localCategoryItems, items, showToast]);
+  const removeItemFromCategory = useCallback(async (categoryIndex: number, tempId: string) => {
+    const item = localCategoryItems[categoryIndex]?.find(i => i.tempId === tempId);
 
-  const removeItemFromCategory = useCallback((categoryIndex: number, tempId: string) => {
-    setLocalCategoryItems(prev => ({
-      ...prev,
-      [categoryIndex]: prev[categoryIndex]?.map(item =>
-        item.tempId === tempId
-          ? { ...item, isDeleted: true }
-          : item
-      ) || []
-    }));
+    // Toujours travailler en mode draft
+    if (item?.originalId) {
+      // Si l'item existe en base, le marquer comme supprimé (sera supprimé à la validation)
+      setLocalCategoryItems(prev => ({
+        ...prev,
+        [categoryIndex]: prev[categoryIndex]?.map(i =>
+          i.tempId === tempId
+            ? { ...i, isDeleted: true }
+            : i
+        ) || []
+      }));
+    } else {
+      // Si c'est un nouvel item non sauvegardé, le retirer complètement
+      setLocalCategoryItems(prev => ({
+        ...prev,
+        [categoryIndex]: prev[categoryIndex]?.filter(i => i.tempId !== tempId) || []
+      }));
+    }
 
-    showToast('Article retiré', 'success');
-  }, [showToast]);
+    showToast('Article retiré (sera sauvegardé à la validation)', 'success');
+  }, [localCategoryItems, showToast]);
 
   const startEditingItem = useCallback((categoryIndex: number, tempId: string) => {
     const item = localCategoryItems[categoryIndex]?.find(i => i.tempId === tempId);

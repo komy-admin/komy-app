@@ -15,6 +15,7 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
   items,
   itemTypes,
   onLoadMenuCategoryItems,
+  onCreateMenuCategoryItem,
   scrollViewRef,
   confirmationContext
 }, ref) => {
@@ -52,7 +53,8 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
     menu,
     items,
     itemTypes,
-    onLoadMenuCategoryItems
+    onLoadMenuCategoryItems,
+    onCreateMenuCategoryItem
   });
 
   const toggleCategoryExpansion = useCallback((index: number) => {
@@ -161,6 +163,8 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
             {formData.categories.map((category, index) => {
               const isExpanded = expandedCategories[index] ?? false;
               const categoryItems = getCategoryItems(category.itemTypeId);
+              const currentCategoryItems = localCategoryItems[index] || [];
+
 
               return (
                 <View key={index}>
@@ -177,7 +181,7 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
                     {category.itemTypeId && (
                       <CategoryItemAssignment
                         categoryIndex={index}
-                        localItems={localCategoryItems[index] || []}
+                        localItems={currentCategoryItems}
                         availableItems={categoryItems}
                         showAddForm={showAddItemForm[`category_${index}`] || false}
                         itemFormData={itemFormData[`category_${index}`] || {

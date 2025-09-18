@@ -300,10 +300,8 @@ const entitiesSlice = createSlice({
     },
     createMenu: (state, action: PayloadAction<{ menu: Menu }>) => {
       const { menu } = action.payload;
-      state.menus[menu.id] = {
-        ...menu,
-        categories: menu.categories || []
-      };
+      // Stocker le menu complet avec toutes ses relations preloadées
+      state.menus[menu.id] = menu;
     },
     updateMenu: (state, action: PayloadAction<{ menu: Partial<Menu> & { id: string } }>) => {
       const { menu } = action.payload;
@@ -353,17 +351,61 @@ const entitiesSlice = createSlice({
 
     // === MENU CATEGORY ITEMS ===
     createMenuCategoryItem: (state, action: PayloadAction<{ menuCategoryItem: MenuCategoryItem }>) => {
-      // Les items sont stockés séparément, pas dans le menu
-      // Cette action pourrait être utilisée pour mettre à jour un cache local
+      const { menuCategoryItem } = action.payload;
+
+      // Trouver le menu contenant cette catégorie
+      let categoryFound = false;
+      Object.values(state.menus).forEach(menu => {
+        const category = menu.categories?.find(c => c.id === menuCategoryItem.menuCategoryId);
+        if (category) {
+          categoryFound = true;
+          // Initialiser le tableau items s'il n'existe pas
+          if (!category.items) {
+            category.items = [];
+          }
+          // Ajouter le nouvel item
+          category.items.push(menuCategoryItem);
+        }
+      });
+
     },
     updateMenuCategoryItem: (state, action: PayloadAction<{ menuCategoryItem: MenuCategoryItem }>) => {
-      // Mise à jour si nécessaire
+      const { menuCategoryItem } = action.payload;
+
+      // Trouver et mettre à jour l'item dans la catégorie appropriée
+      Object.values(state.menus).forEach(menu => {
+        menu.categories?.forEach(category => {
+          if (category.items) {
+            const index = category.items.findIndex(item => item.id === menuCategoryItem.id);
+            if (index !== -1) {
+              category.items[index] = menuCategoryItem;
+            }
+          }
+        });
+      });
     },
     deleteMenuCategoryItem: (state, action: PayloadAction<{ menuCategoryItemId: string }>) => {
-      // Suppression si nécessaire
+      const { menuCategoryItemId } = action.payload;
+
+      // Trouver et supprimer l'item de la catégorie appropriée
+      Object.values(state.menus).forEach(menu => {
+        menu.categories?.forEach(category => {
+          if (category.items) {
+            category.items = category.items.filter(item => item.id !== menuCategoryItemId);
+          }
+        });
+      });
     },
     setMenuCategoryItems: (state, action: PayloadAction<{ menuCategoryId: string; items: MenuCategoryItem[] }>) => {
-      // Stockage local si nécessaire
+      const { menuCategoryId, items } = action.payload;
+
+      // Trouver la catégorie et définir ses items
+      Object.values(state.menus).forEach(menu => {
+        const category = menu.categories?.find(c => c.id === menuCategoryId);
+        if (category) {
+          category.items = items;
+        }
+      });
     },
 
     // === ITEMS ===

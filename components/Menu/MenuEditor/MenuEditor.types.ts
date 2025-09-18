@@ -11,8 +11,6 @@ export interface MenuEditorProps {
   onSave?: (menuData: Partial<Menu>) => Promise<void>;
   onCancel?: () => void;
   onCreateMenuCategoryItem: (data: Partial<MenuCategoryItem>) => Promise<MenuCategoryItem>;
-  onUpdateMenuCategoryItem: (id: string, data: Partial<MenuCategoryItem>) => Promise<MenuCategoryItem>;
-  onDeleteMenuCategoryItem: (id: string) => Promise<void>;
   onLoadMenuCategoryItems: (menuCategoryId: string) => MenuCategoryItem[];
   scrollViewRef?: React.RefObject<ScrollView | null>;
   confirmationContext?: AdminConfirmationContext;
