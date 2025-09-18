@@ -354,11 +354,9 @@ const entitiesSlice = createSlice({
       const { menuCategoryItem } = action.payload;
 
       // Trouver le menu contenant cette catégorie
-      let categoryFound = false;
       Object.values(state.menus).forEach(menu => {
         const category = menu.categories?.find(c => c.id === menuCategoryItem.menuCategoryId);
         if (category) {
-          categoryFound = true;
           // Initialiser le tableau items s'il n'existe pas
           if (!category.items) {
             category.items = [];
@@ -587,34 +585,71 @@ export const selectInitError = createSelector(
 );
 
 // === KITCHEN SELECTORS ===
+
+// Interface pour les items de cuisine
+interface KitchenItem {
+  id: string;
+  type: 'ITEM' | 'MENU_ITEM';
+  orderId: string;
+  itemName: string;
+  itemType?: string;
+  menuName?: string;
+  menuId?: string;
+  status: Status;
+  orderLineId: string;
+}
+
 // Selector pour les items de cuisine - combine OrderLines et OrderLineItems pour les besoins de la cuisine
 export const selectAllKitchenItems = createSelector(
   selectEntities,
-  (entities) => {
-    const kitchenItems: any[] = [];
-    
-    // Traiter les OrderLines (articles individuels)
+  (entities): KitchenItem[] => {
+    const kitchenItems: KitchenItem[] = [];
+    const processedIds = new Set<string>(); // Set pour O(1) lookup performance
+
+    // Traiter les OrderLines
     Object.values(entities.orderLines).forEach(orderLine => {
-      if (orderLine.item && orderLine.orderId) {
+      if (orderLine.type === 'ITEM' && orderLine.item && orderLine.orderId) {
         kitchenItems.push({
           id: orderLine.id,
           type: 'ITEM',
           orderId: orderLine.orderId,
           itemName: orderLine.item.name,
           itemType: orderLine.item.itemType?.name,
-          status: orderLine.status,
+          status: orderLine.status || Status.PENDING,
           orderLineId: orderLine.id
         });
+        processedIds.add(orderLine.id);
+      }
+
+      if (orderLine.type === 'MENU' && orderLine.menu && orderLine.orderId) {
+        if (orderLine.items && orderLine.items.length > 0) {
+          orderLine.items.forEach(menuItem => {
+            if (menuItem.item) {
+              kitchenItems.push({
+                id: menuItem.id,
+                type: 'MENU_ITEM',
+                orderId: orderLine.orderId,
+                itemName: menuItem.item.name,
+                itemType: menuItem.item.itemType?.name,
+                menuName: orderLine.menu?.name,
+                menuId: orderLine.menu?.id,
+                status: menuItem.status || orderLine.status || Status.PENDING,
+                orderLineId: orderLine.id
+              });
+              processedIds.add(menuItem.id);
+            }
+          });
+        }
       }
     });
-    
-    // Traiter les OrderLineItems (items de menu)
+
+    // Traiter aussi les OrderLineItems orphelins (au cas où)
     Object.values(entities.orderLineItems).forEach(orderLineItem => {
-      if (orderLineItem.item) {
+      if (orderLineItem.item && !processedIds.has(orderLineItem.id)) {
         // Trouver l'OrderLine parent pour obtenir l'orderId
         const parentOrderLine = Object.values(entities.orderLines)
           .find(ol => ol.items?.some(item => item.id === orderLineItem.id));
-        
+
         if (parentOrderLine) {
           kitchenItems.push({
             id: orderLineItem.id,
@@ -624,13 +659,13 @@ export const selectAllKitchenItems = createSelector(
             itemType: orderLineItem.item.itemType?.name,
             menuName: parentOrderLine.menu?.name,
             menuId: parentOrderLine.menu?.id,
-            status: orderLineItem.status,
+            status: orderLineItem.status || Status.PENDING,
             orderLineId: parentOrderLine.id
           });
         }
       }
     });
-    
+
     return kitchenItems;
   }
 );
