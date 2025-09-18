@@ -61,7 +61,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
 
   const addItem = useCallback((item: any) => {
-    const newLine: OrderLine = {
+    const newLine: Partial<OrderLine> = {
       id: `draft-item-${Date.now()}`,
       type: OrderLineType.ITEM,
       quantity: 1,
@@ -80,7 +80,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       menu: null
     };
 
-    const newLines = [...draftLines, newLine];
+    const newLines = [...draftLines, newLine as OrderLine];
     emitChanges(newLines);
   }, [draftLines, emitChanges]);
 
@@ -121,6 +121,14 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, [getTotalItemQuantity, lines]);
 
 
+  // Utiliser un ref pour accéder aux sélections actuelles dans les callbacks
+  const tempMenuSelectionsRef = useRef<Record<string, string[]>>({});
+
+  // Mettre à jour le ref quand tempMenuSelections change
+  useEffect(() => {
+    tempMenuSelectionsRef.current = tempMenuSelections;
+  }, [tempMenuSelections]);
+
   // Fonction pour ajouter un menu (définie avant startMenuConfiguration)
   const addMenu = useCallback((menu: any, selectedItems: Record<string, string>) => {
 
@@ -160,7 +168,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       }
     });
 
-    const newLine: OrderLine = {
+    const newLine: Partial<OrderLine> = {
       id: `draft-menu-${Date.now()}`,
       type: OrderLineType.MENU,
       quantity: 1,
@@ -178,12 +186,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       items: menuItems
     };
 
-    const newLines = [...draftLines, newLine];
+    const newLines = [...draftLines, newLine as OrderLine];
     emitChanges(newLines);
   }, [draftLines, itemTypes, emitChanges]);
-
-  // Utiliser un ref pour accéder aux sélections actuelles dans les callbacks
-  const tempMenuSelectionsRef = useRef<Record<string, string[]>>({});
 
   // Fonction de validation pour vérifier si toutes les catégories obligatoires sont sélectionnées
   const validateMenuSelections = useCallback((menu: any, selections: Record<string, string[]>): boolean => {
@@ -198,49 +203,47 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     });
   }, []);
 
-  // Mettre à jour le ref quand tempMenuSelections change ET recréer les actions avec validation
-  useEffect(() => {
-    tempMenuSelectionsRef.current = tempMenuSelections;
+  // Gérer les actions de configuration de menu
+  const handleCancelMenuConfiguration = useCallback(() => {
+    setIsConfiguringMenu(false);
+    setMenuBeingConfigured(null);
+    setTempMenuSelections({});
+    tempMenuSelectionsRef.current = {};
+    onConfigurationModeChange?.(false);
+    onConfigurationActionsChange?.(null);
+  }, [onConfigurationModeChange, onConfigurationActionsChange]);
 
-    // Recréer les actions avec l'état de validation mis à jour
-    if (isConfiguringMenu && menuBeingConfigured) {
-      const isValid = validateMenuSelections(menuBeingConfigured, tempMenuSelections);
+  const handleConfirmMenuConfiguration = useCallback(() => {
+    const selectedItems: Record<string, string> = {};
+    Object.entries(tempMenuSelections).forEach(([categoryId, itemIds]) => {
+      if (itemIds && itemIds.length > 0) {
+        selectedItems[categoryId] = itemIds[0];
+      }
+    });
 
-      const actions = {
-        onCancel: () => {
-          setIsConfiguringMenu(false);
-          setMenuBeingConfigured(null);
-          setTempMenuSelections({});
-          tempMenuSelectionsRef.current = {};
-          onConfigurationModeChange?.(false);
-          onConfigurationActionsChange?.(null);
-        },
-        onConfirm: () => {
-          const currentSelections = tempMenuSelectionsRef.current;
-          const selectedItems: Record<string, string> = {};
-          Object.entries(currentSelections).forEach(([categoryId, itemIds]) => {
-            if (itemIds && itemIds.length > 0) {
-              selectedItems[categoryId] = itemIds[0];
-            }
-          });
-
-          if (menuBeingConfigured && Object.keys(selectedItems).length > 0) {
-            addMenu(menuBeingConfigured, selectedItems);
-          }
-
-          setIsConfiguringMenu(false);
-          setMenuBeingConfigured(null);
-          setTempMenuSelections({});
-          tempMenuSelectionsRef.current = {};
-          onConfigurationModeChange?.(false);
-          onConfigurationActionsChange?.(null);
-        },
-        isValid // Ajouter l'état de validation
-      };
-
-      onConfigurationActionsChange?.(actions);
+    if (menuBeingConfigured && Object.keys(selectedItems).length > 0) {
+      addMenu(menuBeingConfigured, selectedItems);
     }
-  }, [tempMenuSelections, isConfiguringMenu, menuBeingConfigured, validateMenuSelections, addMenu, onConfigurationModeChange, onConfigurationActionsChange]);
+
+    handleCancelMenuConfiguration();
+  }, [tempMenuSelections, menuBeingConfigured, addMenu, handleCancelMenuConfiguration]);
+
+  // Notifier le parent quand on entre/sort du mode configuration
+  useEffect(() => {
+    if (isConfiguringMenu && menuBeingConfigured) {
+      onConfigurationModeChange?.(true);
+      const isValid = validateMenuSelections(menuBeingConfigured, tempMenuSelections);
+      onConfigurationActionsChange?.({
+        onCancel: handleCancelMenuConfiguration,
+        onConfirm: handleConfirmMenuConfiguration,
+        isValid
+      });
+    } else {
+      onConfigurationModeChange?.(false);
+      onConfigurationActionsChange?.(null);
+    }
+    // Ne dépendre que de isConfiguringMenu et menuBeingConfigured pour éviter les boucles
+  }, [isConfiguringMenu, menuBeingConfigured, tempMenuSelections]);
 
   const startMenuConfiguration = useCallback((menu: any) => {
     setMenuBeingConfigured(menu);
@@ -307,11 +310,22 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
     // Les items sont directement dans category.items
     if (category && category.items) {
-      return category.items;
+      // Enrichir les items avec les données complètes si nécessaire
+      return category.items.map((menuCategoryItem: any) => {
+        // Si l'item n'a pas de propriété 'item' mais a un 'itemId', on essaie de le récupérer
+        if (!menuCategoryItem.item && menuCategoryItem.itemId) {
+          const fullItem = items.find(i => i.id === menuCategoryItem.itemId);
+          return {
+            ...menuCategoryItem,
+            item: fullItem
+          };
+        }
+        return menuCategoryItem;
+      });
     }
 
     return [];
-  }, [menuBeingConfigured]);
+  }, [menuBeingConfigured, items]);
 
 
   return (

@@ -36,11 +36,6 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
   dynamicButtonSize
 }) => {
   const handleAdd = useCallback(() => {
-    console.log('🔍 OrderMenuRow handleAdd called with menu:', {
-      id: menu.id,
-      name: menu.name,
-      categoriesCount: menu.categories?.length
-    });
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
 

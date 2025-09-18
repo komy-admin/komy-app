@@ -8,6 +8,7 @@ import { ItemType } from '~/types/item-type.types';
 export interface ConfigurationActions {
   onCancel: () => void;
   onConfirm: () => void;
+  isValid?: boolean;
 }
 
 /**

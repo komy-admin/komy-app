@@ -41,13 +41,6 @@ const MenuCategory = memo<MenuCategoryProps>(({
   const categoryName = getCategoryName(category.itemTypeId);
   const hasSupplementPrice = parseFloat(category.priceModifier?.toString() || '0') > 0;
   const menuCategoryItems = getMenuCategoryItems(category.id);
-  
-  console.log('🔍 MenuCategory received items:', {
-    categoryId: category.id,
-    categoryName,
-    menuCategoryItemsLength: menuCategoryItems?.length,
-    menuCategoryItems: menuCategoryItems?.slice(0, 2) // Juste les 2 premiers pour éviter de surcharger
-  });
 
   const handleToggleItem = useCallback((itemId: string) => {
     onToggleItem(category.id, itemId);
