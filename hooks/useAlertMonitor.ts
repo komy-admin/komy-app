@@ -66,8 +66,7 @@ export const useAlertMonitor = () => {
 
     orders.forEach((order: Order) => {
       // Vérifier si la commande est en retard
-      // Ne considérer comme overdue que les commandes PENDING ou INPROGRESS
-      if (order.status === Status.PENDING || order.status === Status.INPROGRESS) {
+      if ([Status.PENDING, Status.INPROGRESS, Status.READY].includes(order.status)) {
         // Utiliser updatedAt si disponible, sinon createdAt
         const dateToCheck = order.updatedAt || order.createdAt;
         if (dateToCheck) {
@@ -83,8 +82,7 @@ export const useAlertMonitor = () => {
       // Vérifier les items de la commande (OrderLines)
       if (order.lines && order.lines.length > 0) {
         order.lines.forEach(line => {
-          // Ne considérer comme overdue que les lignes PENDING ou INPROGRESS
-          if (line.status === Status.PENDING || line.status === Status.INPROGRESS) {
+          if (line.status && [Status.PENDING, Status.INPROGRESS, Status.READY].includes(line.status)) {
             // Utiliser updatedAt si disponible, sinon createdAt
             const dateToCheck = line.updatedAt || line.createdAt;
             if (dateToCheck) {
