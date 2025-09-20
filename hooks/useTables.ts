@@ -1,11 +1,9 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback, useMemo } from 'react';
 import { RootState, entitiesActions, sessionActions } from '~/store';
-import { selectTablesByRoomId } from '~/store/slices/entities.slice';
 import { selectCurrentRoomId, selectSelectedTableId } from '~/store/slices/session.slice';
 import { tableApiService } from '~/api/table.api';
 import { Table } from '~/types/table.types';
-import { Status } from '~/types/status.enum';
 
 /**
  * Hook spécialisé pour la gestion des tables
@@ -18,16 +16,12 @@ export const useTables = () => {
   const orders = useSelector((state: RootState) => state.entities.orders);
   const currentRoomId = useSelector(selectCurrentRoomId);
   const selectedTableId = useSelector(selectSelectedTableId);
-  
+
   // Tables enrichies avec leurs commandes
   const enrichedTables = useMemo(() => {
     return tables.map(table => ({
       ...table,
-      currentOrder: Object.values(orders).find(order => 
-        order.tableId === table.id && 
-        order.status !== Status.PAID && 
-        order.status !== Status.DRAFT
-      )
+      orders: Object.values(orders).filter(order => order.tableId === table.id)
     }));
   }, [tables, orders]);
 
@@ -101,20 +95,16 @@ export const useTables = () => {
     return enrichedTables.filter(table => table.roomId === roomId);
   }, [enrichedTables]);
 
-  const getTableStatus = useCallback((tableId: string) => {
-    const table = enrichedTables.find(t => t.id === tableId);
-    return table?.status || Status.DRAFT;
-  }, [enrichedTables]);
 
   const hasOrder = useCallback((tableId: string) => {
     const table = enrichedTables.find(t => t.id === tableId);
-    return !!table?.currentOrder;
+    return !!table?.orders?.length;
   }, [enrichedTables]);
 
   const getSelectedTableOrder = useCallback(() => {
     if (!selectedTableId) return null;
     const table = enrichedTables.find(t => t.id === selectedTableId);
-    return table?.currentOrder || null;
+    return table?.orders?.[0] || null;
   }, [selectedTableId, enrichedTables]);
 
   return {
@@ -142,7 +132,6 @@ export const useTables = () => {
     // Utilitaires
     getTableById,
     getTablesByRoom,
-    getTableStatus,
     hasOrder,
     getSelectedTableOrder,
   };

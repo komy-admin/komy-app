@@ -10,9 +10,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ItemType } from '~/types/item-type.types';
-import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
+import { OrderLine, OrderLineType } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText, getNextStatus, getPreviousStatus } from '~/lib/utils';
+import { getOrderLinesGlobalStatus, getStatusColor, getStatusText, getNextStatus, getPreviousStatus } from '~/lib/utils';
 import { Button } from '../ui';
 import StatusSelector from './StatusSelector';
 import { Order } from '~/types/order.types';
@@ -46,20 +46,8 @@ const OrderItemsGroup = ({ itemType, status, orderLines, isExpanded, onToggle, o
   const [showStatusSelector, setShowStatusSelector] = useState(false);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
-  
-  // Collecter tous les statuts des OrderLines
-  const allStatuses: Status[] = [];
-  orderLines.forEach(line => {
-    if (line.type === OrderLineType.ITEM && line.status) {
-      allStatuses.push(line.status);
-    } else if (line.type === OrderLineType.MENU && line.items) {
-      line.items.forEach(item => allStatuses.push(item.status));
-    }
-  });
-  
-  const itemStatus = getMostImportantStatus(allStatuses);
-  const nextStatus = itemStatus ? getNextStatus(itemStatus) : null;
-  const previousStatus = itemStatus ? getPreviousStatus(itemStatus) : null;
+  const nextStatus = status ? getNextStatus(status) : null;
+  const previousStatus = status ? getPreviousStatus(status) : null;
 
   const handleSwipeComplete = (direction: 'next' | 'previous') => {
     if (direction === 'next' && nextStatus) {
@@ -197,7 +185,7 @@ const OrderItemsGroup = ({ itemType, status, orderLines, isExpanded, onToggle, o
           <Animated.View
             style={[
               {
-                backgroundColor: `${getStatusColor(itemStatus)}80`,
+                backgroundColor: `${getStatusColor(status)}80`,
                 borderRadius: 12,
                 overflow: 'hidden',
                 zIndex: 1,
@@ -225,7 +213,7 @@ const OrderItemsGroup = ({ itemType, status, orderLines, isExpanded, onToggle, o
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 16, fontWeight: '600' }}>{itemType.name}</Text>
-                    <Text style={{ fontSize: 14, color: '#666666' }}>{itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}</Text>
+                    <Text style={{ fontSize: 14, color: '#666666' }}>{status ? getStatusText(status) : 'Aucun statut'}</Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -346,10 +334,10 @@ const OrderItemsGroup = ({ itemType, status, orderLines, isExpanded, onToggle, o
                     Modifier statut
                   </Text>
                 </Button>
-                {itemStatus && (
+                {status && (
                   <StatusSelector
                     visible={showStatusSelector}
-                    currentStatus={itemStatus}
+                    currentStatus={status}
                     onClose={() => setShowStatusSelector(false)}
                     onStatusSelect={onUpdateStatus}
                   />
@@ -408,7 +396,7 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
           return (line.item as any).itemTypeId === itemType.id;
         } else if (line.type === OrderLineType.MENU && line.items) {
           // Pour les menus, vérifier si des items du menu correspondent à ce type
-          return line.items.some(menuItem => 
+          return line.items.some(menuItem =>
             (menuItem.item as any).itemTypeId === itemType.id
           );
         }
@@ -417,22 +405,8 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
 
       if (linesOfType.length === 0) return;
 
-      // Calculer le statut global pour ce groupe
-      const allStatuses: Status[] = [];
-      linesOfType.forEach(line => {
-        if (line.type === OrderLineType.ITEM && line.status) {
-          allStatuses.push(line.status);
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          line.items.forEach(item => {
-            if ((item.item as any).itemTypeId === itemType.id) {
-              allStatuses.push(item.status);
-            }
-          });
-        }
-      });
-      
-      const globalStatus = getMostImportantStatus(allStatuses);
-      
+      const globalStatus = getOrderLinesGlobalStatus(linesOfType);
+
       groups.push({
         id: `${itemType.id}-${globalStatus}`,
         itemType,
@@ -446,7 +420,7 @@ export default function OrderDetailView({ order, itemTypes, onStatusUpdate }: Or
   };
 
   const groupedOrderLines = createGroupedOrderLines();
-  
+
   // Séparer les menus des autres items pour l'affichage
   const menuOrderLines = order.lines?.filter(line => line.type === OrderLineType.MENU) || [];
 

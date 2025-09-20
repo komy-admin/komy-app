@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
-import { DateFormat, formatDate, getItemTypeText, getStatusColor, getStatusText, getMostImportantStatus } from '~/lib/utils';
+import { DateFormat, formatDate, getItemTypeText, getOrderLinesGlobalStatus, getStatusColor, getStatusText } from '~/lib/utils';
 import { ItemTypes } from '~/types/item-type.enum';
 import { OrderLine, OrderLineType } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
@@ -23,29 +23,14 @@ export const TableItemsBox: React.FC<TableItemsBoxProps> = ({ orderLines, itemTy
       return (line.item as any).itemTypeId === itemType;
     } else if (line.type === OrderLineType.MENU && line.items) {
       // Pour les menus, vérifier si des items du menu correspondent à ce type
-      return line.items.some(menuItem => 
+      return line.items.some(menuItem =>
         (menuItem.item as any).itemTypeId === itemType
       );
     }
     return false;
   });
 
-  const calculateGlobalStatus = (orderLines: OrderLine[]): Status => {
-    if (orderLines.length === 0) return Status.DRAFT;
-    
-    const allStatuses: Status[] = [];
-    orderLines.forEach(line => {
-      if (line.type === OrderLineType.ITEM && line.status) {
-        allStatuses.push(line.status);
-      } else if (line.type === OrderLineType.MENU && line.items) {
-        line.items.forEach(menuItem => allStatuses.push(menuItem.status));
-      }
-    });
-    
-    return getMostImportantStatus(allStatuses);
-  };
-
-  const globalStatus = calculateGlobalStatus(filteredOrderLines);
+  const globalStatus = filteredOrderLines.length === 0 ? Status.DRAFT : getOrderLinesGlobalStatus(filteredOrderLines);
 
   style = {
     ...style,
@@ -80,11 +65,11 @@ export const TableItemsBox: React.FC<TableItemsBoxProps> = ({ orderLines, itemTy
               <View className="flex-row items-center justify-between py-2">
                 <View className="flex-1">
                   <Text className="font-medium">
-                    {orderLine.type === OrderLineType.ITEM && orderLine.item 
+                    {orderLine.type === OrderLineType.ITEM && orderLine.item
                       ? `${orderLine.item.name} (x${orderLine.quantity})`
                       : orderLine.type === OrderLineType.MENU && orderLine.menu
-                      ? `Menu: ${orderLine.menu.name} (x${orderLine.quantity})`
-                      : 'Article inconnu'
+                        ? `Menu: ${orderLine.menu.name} (x${orderLine.quantity})`
+                        : 'Article inconnu'
                     }
                   </Text>
                   {orderLine.note && (
@@ -100,8 +85,8 @@ export const TableItemsBox: React.FC<TableItemsBoxProps> = ({ orderLines, itemTy
                     {orderLine.type === OrderLineType.ITEM && orderLine.status
                       ? getStatusText(orderLine.status)
                       : orderLine.type === OrderLineType.MENU && orderLine.items
-                      ? `${orderLine.items.filter(item => item.status === Status.READY || item.status === Status.SERVED).length}/${orderLine.items.length}`
-                      : 'N/A'
+                        ? `${orderLine.items.filter(item => item.status === Status.READY || item.status === Status.SERVED).length}/${orderLine.items.length}`
+                        : 'N/A'
                     }
                   </Text>
                 </View>

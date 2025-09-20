@@ -11,24 +11,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const getTableStatus = (table: Table & { orders?: (Order & { lines?: OrderLine[] })[] }): Status => {
+export const getOrderLinesGlobalStatus = (orderLines: OrderLine[]): Status => {
   const allStatuses: Status[] = [];
   
-  table.orders?.forEach(order => {
-    if (order.lines) {
-      order.lines.forEach(line => {
-        if (line.type === OrderLineType.ITEM && line.status) {
-          allStatuses.push(line.status);
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          line.items.forEach(menuItem => {
-            allStatuses.push(menuItem.status);
-          });
-        }
+  orderLines.forEach(line => {
+    if (line.type === OrderLineType.ITEM && line.status) {
+      allStatuses.push(line.status);
+    } else if (line.type === OrderLineType.MENU && line.items) {
+      line.items.forEach(menuItem => {
+        allStatuses.push(menuItem.status);
       });
     }
   });
   
   return getMostImportantStatus(allStatuses);
+}
+
+export const getOrderGlobalStatus = (order: Order): Status => {
+  return getOrderLinesGlobalStatus(order.lines ?? []);
+}
+
+export const getTableStatus = (table: Table): Status | undefined => {
+  if (!table.orders || table.orders.length === 0) {
+    return undefined;
+  }
+
+  return getOrderGlobalStatus(table.orders[0]);
 }
 
 export const getMostImportantStatus = (statuses: Status[]): Status => {

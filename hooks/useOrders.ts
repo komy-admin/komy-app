@@ -91,26 +91,8 @@ export const useOrders = () => {
     try {
       const { data: orders } = await orderApiService.getAll();
       
-      // Corriger les orders qui n'ont pas de status
-      const ordersWithStatus = orders.map(order => {
-        if (!order.status && order.lines && order.lines.length > 0) {
-          // Prendre le status de priorité des lines
-          const hasReady = order.lines.some(line => line.status === Status.READY);
-          const hasInProgress = order.lines.some(line => line.status === Status.INPROGRESS);
-          const hasPending = order.lines.some(line => line.status === Status.PENDING);
-          
-          let status = Status.PENDING;
-          if (hasReady) status = Status.READY;
-          else if (hasInProgress) status = Status.INPROGRESS;
-          else if (hasPending) status = Status.PENDING;
-          
-          return { ...order, status };
-        }
-        return order;
-      });
-      
-      dispatch(entitiesActions.setOrders({ orders: ordersWithStatus }));
-      return ordersWithStatus;
+      dispatch(entitiesActions.setOrders({ orders }));
+      return orders;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des commandes';
       console.error('Erreur lors du chargement de toutes les commandes:', errorMessage);

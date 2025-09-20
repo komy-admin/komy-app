@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Table } from '~/types/table.types';
@@ -7,7 +7,7 @@ import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
 import { Order } from '~/types/order.types';
 import TableActionPanel from '~/components/Room/TableActionPanel';
-import { getMostImportantStatus, getTableStatus } from '@/lib/utils';
+import { getTableStatus } from '~/lib/utils';
 import { Toast } from '~/components/ui/toast';
 
 const CELL_SIZE = 50;
@@ -55,7 +55,7 @@ const Room: React.FC<RoomProps> = ({
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
   const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  
+
   // Synchroniser selectedTable avec editingTableId
   useEffect(() => {
     if (editingTableId) {
@@ -65,10 +65,10 @@ const Room: React.FC<RoomProps> = ({
       setSelectedTable(null);
     }
   }, [editingTableId, tables]);
-  
+
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [lastValidPositions, setLastValidPositions] = useState<Map<string, {x: number, y: number}>>(new Map());
+  const [lastValidPositions, setLastValidPositions] = useState<Map<string, { x: number, y: number }>>(new Map());
 
   const getInitialPanelPosition = () => {
     const screenWidth = Dimensions.get('window').width;
@@ -178,7 +178,7 @@ const Room: React.FC<RoomProps> = ({
           createdAt: '',
           updatedAt: ''
         };
-        
+
         if (isTableWithinRoom(testTable) && !hasTableCollision(testTable, tables)) {
           return { x, y };
         }
@@ -274,10 +274,10 @@ const Room: React.FC<RoomProps> = ({
 
   const handleTableSelect = useCallback((table: Table) => {
     if (editingTableId === table.id) return;
-    
+
     // Sauvegarder la position valide lors de la sélection
     saveLastValidPosition(table);
-    
+
     setSelectedTable(table);
     onTablePress(table);
   }, [editingTableId, onTablePress, saveLastValidPosition]);
