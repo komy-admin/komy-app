@@ -1,5 +1,6 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { User } from '~/types/user.types';
+import { storageService } from '~/lib/storageService';
 
 /**
  * État de session : authentification, navigation et contexte utilisateur
@@ -38,6 +39,22 @@ export interface SessionState {
   lastAlertCheck: number;
   triggerAlertCheck: number;
 }
+
+/**
+ * Thunk asynchrone pour la déconnexion complète
+ * Nettoie le store ET le localStorage
+ */
+export const logout = createAsyncThunk(
+  'session/logout',
+  async () => {
+    try {
+      await storageService.removeItem('token');
+      await storageService.removeItem('userProfile');
+    } catch (error) {
+      console.error('Erreur lors du nettoyage du localStorage:', error);
+    }
+  }
+);
 
 // État initial
 const initialState: SessionState = {
@@ -101,23 +118,6 @@ const sessionSlice = createSlice({
       state.isLoggingIn = false;
       state.authError = action.payload;
       state.isAuthenticated = false;
-    },
-    
-    logout: (state) => {
-      // Reset auth
-      state.user = null;
-      state.token = null;
-      state.refreshToken = null;
-      state.isAuthenticated = false;
-      state.authError = null;
-      
-      // Reset navigation
-      state.currentRoomId = null;
-      state.selectedTableId = null;
-      
-      // Reset WebSocket
-      state.isWebSocketConnected = false;
-      state.lastSyncTime = null;
     },
     
     updateToken: (state, action: PayloadAction<{ 
@@ -224,6 +224,12 @@ const sessionSlice = createSlice({
     
     // === RESET ===
     resetSession: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(logout.fulfilled, () => {
+        return initialState;
+      });
   },
 });
 

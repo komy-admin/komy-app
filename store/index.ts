@@ -28,5 +28,5 @@ export type AppDispatch = typeof store.dispatch;
 
 // Export des actions pour faciliter l'import
 export { entitiesActions } from './slices/entities.slice';
-export { sessionActions } from './slices/session.slice';
+export { sessionActions, logout } from './slices/session.slice';
 export { uiActions } from './slices/ui.slice';

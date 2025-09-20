@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform, Alert, Dimensions } from 'react-native';
 import { User, ShieldCheck, Bell, LogOut, PenTool, Database, Settings } from 'lucide-react-native';
-import { sessionActions } from '~/store';
-import { useDispatch } from 'react-redux';
+import { sessionActions, logout } from '~/store';
+import { useAppDispatch } from '~/store/hooks';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,7 +24,7 @@ type ConfigSidebarProps = {
 
 export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebarProps) {
   const { user, isLoading, error, token } = useSelector((state: RootState) => state.session);
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   
   // État pour gérer les dimensions et les breakpoints
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
@@ -59,7 +59,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
   }, [error, dispatch]);
 
   const handleLogout = () => {
-    dispatch(sessionActions.logout());
+    dispatch(logout());
   };
 
   // Validation de taille d'image côté front

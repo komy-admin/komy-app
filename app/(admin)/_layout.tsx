@@ -5,10 +5,7 @@ import { Topbar } from '~/components/TopBar';
 import { ToastProvider } from '~/components/ToastProvider';
 import { Monitor, Smartphone } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui';
-import { router } from 'expo-router';
-import { authApiService } from '@/api/auth.api';
-import { sessionActions } from '~/store';
+import { logout } from '~/store';
 import { useAppDispatch } from '~/store/hooks';
 
 
@@ -19,7 +16,7 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const handleLogout = () => {
-      dispatch(sessionActions.logout());
+    dispatch(logout());
   };
 
   useEffect(() => {

@@ -1,9 +1,10 @@
-import React, { useEffect, useState }  from 'react'
-import { View, Image, Text, Pressable, TouchableWithoutFeedback} from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { View, Image, Text, Pressable, TouchableWithoutFeedback } from 'react-native'
 import { FileText, Calendar, LogOut } from 'lucide-react-native'
 import { Href, Link } from 'expo-router'
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, sessionActions } from '~/store';
+import { useSelector } from 'react-redux';
+import { RootState, sessionActions, logout } from '~/store';
+import { useAppDispatch } from '~/store/hooks';
 
 interface TopBarProps {
   showAdditions?: boolean;
@@ -12,10 +13,10 @@ interface TopBarProps {
 
 export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBarProps) {
   const { user } = useSelector((state: RootState) => state.session);
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  
+
   // Les managers ont accès à l'interface admin mais pas à la config
   const isManager = user?.profil === 'manager'
   const shouldEnableConfigClick = enableConfigClick && !isManager
@@ -28,7 +29,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
     const year = today.getFullYear()
     setCurrentDate(`${day}/${month}/${year}`)
   }
-  
+
   useEffect(() => {
     updateDate()
     const now = new Date()
@@ -51,7 +52,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   };
 
   const handleLogout = () => {
-    dispatch(sessionActions.logout());
+    dispatch(logout());
     setShowProfileMenu(false);
   };
 
@@ -60,7 +61,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   };
 
   const configUser = '/configs'
-  
+
   return (
     <>
       {/* Overlay invisible pour fermer le menu */}
@@ -76,7 +77,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
           }} />
         </TouchableWithoutFeedback>
       )}
-      
+
       <View
         style={{
           width: '100%',
@@ -96,29 +97,29 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
             style={{ width: 80, height: 80, resizeMode: 'contain' }}
           />
         </View>
-        
-        <View style={{ flexDirection: 'row', alignItems: 'center',  gap: 20 }}>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {showAdditions && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor:"#F3F3F3", borderWidth: 1}}>
-                <FileText size={24} color="#2A2E33" strokeWidth={1}/>
-                <Text style={{color: '#2A2E33', fontSize: 14, fontWeight: '300'}}>Additions</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor: "#F3F3F3", borderWidth: 1 }}>
+                <FileText size={24} color="#2A2E33" strokeWidth={1} />
+                <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '300' }}>Additions</Text>
               </View>
             )}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor:"#F3F3F3", borderWidth: 1}}>
-              <Calendar size={24} color="#2A2E33" strokeWidth={1}/>
-              <Text style={{color: '#2A2E33', fontSize: 14, fontWeight: '300'}}>{currentDate}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor: "#F3F3F3", borderWidth: 1 }}>
+              <Calendar size={24} color="#2A2E33" strokeWidth={1} />
+              <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '300' }}>{currentDate}</Text>
             </View>
           </View>
-          
+
           <View style={{ position: 'relative' }}>
             {shouldEnableConfigClick ? (
               <Link href={`/(admin)${configUser}` as Href} key={configUser} asChild>
                 <Pressable onPress={() => setShowProfileMenu(false)}>
-                  <View 
-                    style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
                       gap: 10,
                     }}
                   >
@@ -133,10 +134,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                       resizeMode="cover"
                     />
                     <View>
-                      <Text 
-                        style={{ 
+                      <Text
+                        style={{
                           color: '#2A2E33',
-                          fontSize: 15, 
+                          fontSize: 15,
                           fontWeight: '300'
                         }}
                       >
@@ -151,10 +152,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
               </Link>
             ) : (
               <Pressable onPress={toggleProfileMenu}>
-                <View 
-                  style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
                     gap: 10,
                     backgroundColor: showProfileMenu ? 'rgba(0,0,0,0.05)' : 'transparent',
                     padding: 8,
@@ -172,10 +173,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                     resizeMode="cover"
                   />
                   <View>
-                    <Text 
-                      style={{ 
+                    <Text
+                      style={{
                         color: '#2A2E33',
-                        fontSize: 15, 
+                        fontSize: 15,
                         fontWeight: '300'
                       }}
                     >
@@ -221,7 +222,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                   borderColor: 'rgba(0,0,0,0.08)',
                   transform: [{ rotate: '45deg' }],
                 }} />
-                
+
                 <View style={{ padding: 8 }}>
                   <Pressable
                     onPress={handleLogout}

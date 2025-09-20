@@ -10,7 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
-import { sessionActions } from '~/store';
+import { sessionActions, logout } from '~/store';
+import { useAppDispatch } from '~/store/hooks';
 import { authApiService } from '~/api/auth.api';
 import {
   configureReanimatedLogger,
@@ -57,7 +58,7 @@ const HOME_ROUTES = {
 function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { token, user: userProfile, isLoggingIn: isLoading } = useSelector((state: RootState) => state.session);
   const [isInitialized, setIsInitialized] = React.useState(false);
   const authInitializedRef = React.useRef(false);
@@ -75,7 +76,7 @@ function AuthenticationGate() {
         if (storedToken) {
           // Marquer comme initialisé avant les appels async
           authInitializedRef.current = true;
-          
+
           // D'abord, on indique qu'on est en train de se connecter
           dispatch(sessionActions.loginStart());
 
@@ -92,9 +93,7 @@ function AuthenticationGate() {
             // On met à jour le profil dans le localStorage pour la prochaine fois
             await storageService.setItem('userProfile', user.profil);
           } catch (error) {
-            await storageService.removeItem('token');
-            await storageService.removeItem('userProfile');
-            dispatch(sessionActions.logout());
+            dispatch(logout());
             // Reset le flag en cas d'erreur pour permettre une nouvelle tentative
             authInitializedRef.current = false;
           }
@@ -134,8 +133,10 @@ function AuthenticationGate() {
       if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login' || fullPath === '/') {
         const role = userProfile.profil as keyof typeof HOME_ROUTES;
         if (!role || !HOME_ROUTES[role]) {
-          console.error('Profil invalide:', role);
-          dispatch(sessionActions.logout());
+          console.error(
+            `Invalid or missing user profile detected. Logging out. userProfile.profil: ${userProfile.profil}, role: ${role}, HOME_ROUTES[role]: ${HOME_ROUTES[role]}, current path: ${fullPath}`
+          );
+          dispatch(logout());
           router.replace(LOGIN_ROUTE);
           return;
         }

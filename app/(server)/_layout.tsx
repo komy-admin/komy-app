@@ -1,18 +1,17 @@
 // app/(server)/_layout.tsx
 import { Stack } from 'expo-router';
 import { Platform, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useDispatch } from 'react-redux';
-import { sessionActions } from '~/store';
-import { Button, Text } from '~/components/ui';
+import { logout } from '~/store';
+import { useAppDispatch } from '~/store/hooks';
+import { Text } from '~/components/ui';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
-import { MoreVertical, LogOut } from 'lucide-react-native';
+import { LogOut } from 'lucide-react-native';
 
 function Header() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const handleLogout = () => {
-    dispatch(sessionActions.logout());
+    dispatch(logout());
   };
 
   const menuActions: ActionItem[] = [
