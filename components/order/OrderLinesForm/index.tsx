@@ -190,6 +190,39 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     emitChanges(newLines);
   }, [draftLines, itemTypes, emitChanges]);
 
+  // Fonction pour vérifier si un menu peut être auto-configuré
+  const isMenuAutoConfigurable = useCallback((menu: any): boolean => {
+    if (!menu?.categories || menu.categories.length === 0) return false;
+
+    // Vérifier que toutes les catégories sont obligatoires ET ont exactement 1 item
+    return menu.categories.every((category: any) => {
+      // Doit être obligatoire
+      if (!category.isRequired) return false;
+
+      // Doit avoir exactement 1 item
+      const categoryItems = category.items || [];
+      return categoryItems.length === 1;
+    });
+  }, []);
+
+  // Fonction pour auto-configurer un menu simple
+  const getAutoMenuConfiguration = useCallback((menu: any): Record<string, string> => {
+    if (!menu?.categories) return {};
+
+    const selectedItems: Record<string, string> = {};
+
+    menu.categories.forEach((category: any) => {
+      if (category.isRequired && category.items && category.items.length === 1) {
+        const singleItem = category.items[0];
+        if (singleItem.item?.id) {
+          selectedItems[category.id] = singleItem.item.id;
+        }
+      }
+    });
+
+    return selectedItems;
+  }, []);
+
   // Fonction de validation pour vérifier si toutes les catégories obligatoires sont sélectionnées
   const validateMenuSelections = useCallback((menu: any, selections: Record<string, string[]>): boolean => {
     if (!menu?.categories) return false;
@@ -246,13 +279,24 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, [isConfiguringMenu, menuBeingConfigured, tempMenuSelections, validateMenuSelections]);
 
   const startMenuConfiguration = useCallback((menu: any) => {
+    // Vérifier si le menu peut être auto-configuré
+    if (isMenuAutoConfigurable(menu)) {
+      // Auto-configuration : ajouter directement le menu
+      const autoSelectedItems = getAutoMenuConfiguration(menu);
+      if (Object.keys(autoSelectedItems).length > 0) {
+        addMenu(menu, autoSelectedItems);
+        return; // Pas besoin d'ouvrir la configuration
+      }
+    }
+
+    // Configuration manuelle : ouvrir l'interface de configuration
     setMenuBeingConfigured(menu);
     setTempMenuSelections({});
     tempMenuSelectionsRef.current = {};
     setIsConfiguringMenu(true);
     onConfigurationModeChange?.(true);
     // Les actions seront créées automatiquement par le useEffect
-  }, [onConfigurationModeChange]);
+  }, [isMenuAutoConfigurable, getAutoMenuConfiguration, addMenu, onConfigurationModeChange]);
 
   const removeMenu = useCallback((menuId: string) => {
     // Trouver la dernière ligne avec ce menu
