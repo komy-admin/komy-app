@@ -32,12 +32,12 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
   const [selectedItemTypeId, setSelectedItemTypeId] = useState<string>(
     item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : '')
   );
+
   const { showToast } = useToast();
 
   // Optimisation: callback stable
   const handleCategorySelect = React.useCallback((itemTypeId: string) => {
     setSelectedItemTypeId(itemTypeId);
-    setFormData(prev => ({ ...prev, itemTypeId }));
   }, []);
 
   // Optimisation: règles de validation mémorisées
@@ -57,18 +57,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     }
   }), []);
 
-  // Référence pour éviter les mises à jour pendant la fermeture
-  const isClosingRef = React.useRef(false);
-
-  // Réinitialiser la référence quand le formulaire s'ouvre
   useEffect(() => {
-    isClosingRef.current = false;
-  }, [item?.id]); // Se déclenche quand un nouvel item est passé ou quand on crée
-
-  useEffect(() => {
-    // Éviter la mise à jour si le formulaire est en train de se fermer
-    if (isClosingRef.current) return;
-
     if (item) {
       setFormData({
         name: item.name,
@@ -76,10 +65,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         itemTypeId: item.itemType?.id || '',
         isActive: item.isActive ?? true
       });
-
-      if (item.itemType) {
-        setSelectedItemTypeId(item.itemType.id);
-      }
+      setSelectedItemTypeId(item.itemType?.id || '');
     } else {
       setFormData({
         name: '',
@@ -87,14 +73,9 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
         isActive: true
       });
-
-      if (activeTab !== 'ALL') {
-        setSelectedItemTypeId(activeTab);
-      } else {
-        setSelectedItemTypeId('');
-      }
+      setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
     }
-  }, [item, activeTab, itemTypes]);
+  }, [item, activeTab]);
 
   // Expose l'interface AdminFormRef
   useImperativeHandle(ref, () => ({
