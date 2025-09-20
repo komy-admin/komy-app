@@ -41,7 +41,7 @@ export default function ServicePage() {
   } | null>(null);
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
-  const { createOrderWithLines, createOrderLines } = useOrderLines();
+  const { createOrderWithLines, createOrderLines, deleteOrderLine, deleteOrderLines } = useOrderLines();
   const { rooms, currentRoom, setCurrentRoom } = useRooms();
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
@@ -175,6 +175,7 @@ export default function ServicePage() {
     setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
     modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
     modalActions.setModalTitle(`Prendre la commande - ${selectedTable?.name}`); // Titre pour nouvelle commande
+    setOrderLines([]); // Réinitialiser les lignes pour une nouvelle commande
     setShowOrderModal(true); // Ouvrir la modal
   };
 
@@ -183,6 +184,7 @@ export default function ServicePage() {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
     modalActions.setCameFromOrderDetail(true); // Marquer qu'on vient de la modal détails
     modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Modifier la commande"); // Titre stable pour modification
+    setOrderLines([]); // Réinitialiser les lignes draft (les lignes existantes viendront de selectedTableOrder)
     // La commande courante est déjà disponible via selectedTableOrder
     setShowOrderModal(true); // Ouvrir la modal
   };
@@ -198,9 +200,10 @@ export default function ServicePage() {
       const wasSaving = !!isSavingOrderRef.current;
       const wasOrderCreatedFromStart = orderCreatedFromStart;
 
-      // Fermer le formulaire
+      // Fermer le formulaire et réinitialiser les lignes
       setShowOrderModal(false);
       setOrderCreatedFromStart(false);
+      setOrderLines([]);
 
 
 
@@ -662,175 +665,157 @@ export default function ServicePage() {
               <AdminOrderDetailView
                 order={selectedTableOrder}
                 itemTypes={allItemTypes}
-                onDeleteOrderItem={async (orderItemId) => {
-                  // Fonction de suppression désactivée - à implémenter si nécessaire
-                  showToast('Fonction de suppression temporairement désactivée', 'info');
-                }}
-                onDeleteManyOrderItems={async (orderItemIds) => {
-                  // Fonction de suppression désactivée - à implémenter si nécessaire
-                  showToast('Fonction de suppression temporairement désactivée', 'info');
-                  return { deletedCount: 0, deletedIds: [] };
+                onDeleteOrderLines={async (orderLineIds) => {
+                  try {
+                    if (orderLineIds.length === 1) {
+                      await deleteOrderLine(orderLineIds[0]);
+                      showToast('Article supprimé avec succès', 'success');
+                    } else {
+                      await deleteOrderLines(orderLineIds);
+                      showToast(`${orderLineIds.length} articles supprimés avec succès`, 'success');
+                    }
+                  } catch (error) {
+                    showToast('Erreur lors de la suppression', 'error');
+                    console.error('Erreur suppression:', error);
+                  }
                 }}
                 onUpdateOrderItemStatus={handleStatusUpdate}
               />
               <View style={{ padding: 16 }}>
                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
                   <Button
-                    variant="outline"
-                    style={{ flex: 1 }}
-                    onPress={modalActions.openReassign}
+                    onPress={() => {
+                      // Ne pas fermer la modal de détails, juste ouvrir la modal d'édition par-dessus
+                      handleOpenOrderModal();
+                    }}
+                    className="w-full h-[50px] flex items-center justify-center"
+                    style={{ backgroundColor: '#2A2E33' }}
                   >
-                    <Text>Assigner une autre table</Text>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    style={{ flex: 1 }}
-                    onPress={modalActions.openPayment}
-                    disabled={true}
-                  >
-                    <Text>Régler la note</Text>
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    style={{ flex: 1 }}
-                    onPress={modalActions.openDeleteDialog}
-                  >
-                    <Text>Supprimer</Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        color: '#FBFBFB',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Modifier la commande
+                    </Text>
                   </Button>
                 </View>
-                <Button
-                  onPress={() => {
-                    // Ne pas fermer la modal de détails, juste ouvrir la modal d'édition par-dessus
-                    handleOpenOrderModal();
+              </View>
+          )}
+            </CustomModal>
+          )}
+
+
+          {selectedTableOrder && modals.showDeleteOrderDialog && (
+            <DeleteConfirmationModal
+              isVisible={modals.showDeleteOrderDialog}
+              onClose={() => {
+                modalActions.closeDeleteDialog();
+                modalActions.openOrderDetail(); // Rouvrir la modal de détails si annulation
+              }}
+              onConfirm={() => {
+                modalActions.closeDeleteDialog();
+                modalActions.closeOrderDetail();
+                deleteOrder(selectedTableOrder.id);
+                setSelectedTable(null);
+              }}
+              entityName={`de la table ${selectedTableOrder.table?.name || selectedTableOrder.table?.id || 'N/A'}`}
+              entityType="la commande"
+            />
+          )}
+          <CustomModal
+            isVisible={modals.showReassignModal}
+            onClose={() => {
+              modalActions.closeReassign();
+              modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
+            }}
+            width={width * 0.8}
+            height={height * 0.8}
+            title={modals.isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
+          >
+            <View style={{ flex: 1, padding: 20 }}>
+              <View style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                height: '100%'
+              }}>
+                <RoomComponent
+                  tables={currentRoomTables.filter(table => !table.currentOrder)}
+                  width={currentRoom?.width}
+                  height={currentRoom?.height}
+                  editionMode={false}
+                  isLoading={loading || modals.isReassigning}
+                  containerDimensions={{
+                    width: width * 0.8 - 40,
+                    height: height * 0.7 - 40
+                  }} // Responsive dimensions minus padding
+                  onTablePress={async (pressedTable: Table | null) => {
+                    if (pressedTable && selectedTableOrder && !modals.isReassigning) {
+                      modalActions.setReassigning(true); // Bloquer les autres clics
+
+                      try {
+                        await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
+                        setSelectedTable(pressedTable.id);
+                        modalActions.closeReassign();
+                        modalActions.openOrderDetail();
+                        showToast('Table réassignée avec succès.', 'success');
+                      } catch (error) {
+                        showToast('Erreur lors de la réassignation.', 'error');
+                      } finally {
+                        modalActions.setReassigning(false); // Débloquer
+                      }
+                    }
                   }}
-                  className="w-full h-[50px] flex items-center justify-center"
-                  style={{ backgroundColor: '#2A2E33' }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: '#FBFBFB',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Modifier la commande
-                  </Text>
-                </Button>
+                  onTableLongPress={async (pressedTable: Table | null) => {
+                    if (pressedTable && selectedTableOrder && !modals.isReassigning) {
+                      modalActions.setReassigning(true); // Bloquer les autres clics
+
+                      try {
+                        await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
+                        setSelectedTable(pressedTable.id);
+                        modalActions.closeReassign();
+                        modalActions.openOrderDetail();
+                        showToast('Table réassignée avec succès.', 'success');
+                      } catch (error) {
+                        showToast('Erreur lors de la réassignation.', 'error');
+                      } finally {
+                        modalActions.setReassigning(false); // Débloquer
+                      }
+                    }
+                  }}
+                  onTableUpdate={() => { }}
+                />
               </View>
             </View>
-          )}
-        </CustomModal>
-      )}
+          </CustomModal>
 
-
-      {selectedTableOrder && modals.showDeleteOrderDialog && (
-        <DeleteConfirmationModal
-          isVisible={modals.showDeleteOrderDialog}
-          onClose={() => {
-            modalActions.closeDeleteDialog();
-            modalActions.openOrderDetail(); // Rouvrir la modal de détails si annulation
-          }}
-          onConfirm={() => {
-            modalActions.closeDeleteDialog();
-            modalActions.closeOrderDetail();
-            deleteOrder(selectedTableOrder.id);
-            setSelectedTable(null);
-          }}
-          entityName={`de la table ${selectedTableOrder.table?.name || selectedTableOrder.table?.id || 'N/A'}`}
-          entityType="la commande"
-        />
-      )}
-      <CustomModal
-        isVisible={modals.showReassignModal}
-        onClose={() => {
-          modalActions.closeReassign();
-          modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
-        }}
-        width={width * 0.8}
-        height={height * 0.8}
-        title={modals.isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
-      >
-        <View style={{ flex: 1, padding: 20 }}>
-          <View style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: '100%',
-            height: '100%'
-          }}>
-            <RoomComponent
-              tables={currentRoomTables.filter(table => !table.currentOrder)}
-              width={currentRoom?.width}
-              height={currentRoom?.height}
-              editionMode={false}
-              isLoading={loading || modals.isReassigning}
-              containerDimensions={{
-                width: width * 0.8 - 40,
-                height: height * 0.7 - 40
-              }} // Responsive dimensions minus padding
-              onTablePress={async (pressedTable: Table | null) => {
-                if (pressedTable && selectedTableOrder && !modals.isReassigning) {
-                  modalActions.setReassigning(true); // Bloquer les autres clics
-
-                  try {
-                    await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
-                    setSelectedTable(pressedTable.id);
-                    modalActions.closeReassign();
-                    modalActions.openOrderDetail();
-                    showToast('Table réassignée avec succès.', 'success');
-                  } catch (error) {
-                    showToast('Erreur lors de la réassignation.', 'error');
-                  } finally {
-                    modalActions.setReassigning(false); // Débloquer
-                  }
-                }
-              }}
-              onTableLongPress={async (pressedTable: Table | null) => {
-                if (pressedTable && selectedTableOrder && !modals.isReassigning) {
-                  modalActions.setReassigning(true); // Bloquer les autres clics
-
-                  try {
-                    await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
-                    setSelectedTable(pressedTable.id);
-                    modalActions.closeReassign();
-                    modalActions.openOrderDetail();
-                    showToast('Table réassignée avec succès.', 'success');
-                  } catch (error) {
-                    showToast('Erreur lors de la réassignation.', 'error');
-                  } finally {
-                    modalActions.setReassigning(false); // Débloquer
-                  }
-                }
-              }}
-              onTableUpdate={() => { }}
-            />
-          </View>
-        </View>
-      </CustomModal>
-
-      {/* Modal de paiement */}
-      <ForkModal
-        visible={modals.showPaymentModal}
-        onClose={() => {
-          modalActions.closePayment();
-          modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
-        }}
-        maxWidth={Math.min(1200, width * 0.95)}
-        title="Régler l'addition"
-      >
-        {selectedTableOrder && (
-          <PaymentView
-            order={selectedTableOrder}
+          {/* Modal de paiement */}
+          <ForkModal
+            visible={modals.showPaymentModal}
             onClose={() => {
               modalActions.closePayment();
-              modalActions.openOrderDetail(); // Rouvrir la modal de détails
+              modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
             }}
-            onPaymentComplete={handlePaymentComplete}
-          />
-        )}
-      </ForkModal>
-    </View>
-  );
+            maxWidth={Math.min(1200, width * 0.95)}
+            title="Régler l'addition"
+          >
+            {selectedTableOrder && (
+              <PaymentView
+                order={selectedTableOrder}
+                onClose={() => {
+                  modalActions.closePayment();
+                  modalActions.openOrderDetail(); // Rouvrir la modal de détails
+                }}
+                onPaymentComplete={handlePaymentComplete}
+              />
+            )}
+          </ForkModal>
+        </View>
+      );
 }

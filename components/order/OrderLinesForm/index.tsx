@@ -242,8 +242,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       onConfigurationModeChange?.(false);
       onConfigurationActionsChange?.(null);
     }
-    // Inclure tempMenuSelections pour recalculer isValid à chaque changement
-  }, [isConfiguringMenu, menuBeingConfigured, tempMenuSelections, validateMenuSelections, handleCancelMenuConfiguration, handleConfirmMenuConfiguration, onConfigurationModeChange, onConfigurationActionsChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConfiguringMenu, menuBeingConfigured, tempMenuSelections, validateMenuSelections]);
 
   const startMenuConfiguration = useCallback((menu: any) => {
     setMenuBeingConfigured(menu);

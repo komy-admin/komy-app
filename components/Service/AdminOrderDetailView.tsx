@@ -226,7 +226,7 @@ const AdminMenuOrderGroup = ({
   isExpanded,
   onToggle,
   onDelete,
-  onDeleteOrderItem,
+  onDeleteOrderLines,
   onUpdateOrderItemStatus,
   groupId,
   isMenuOpen,
@@ -238,7 +238,7 @@ const AdminMenuOrderGroup = ({
   isExpanded: boolean,
   onToggle: () => void,
   onDelete: () => void,
-  onDeleteOrderItem: (orderLineId: string) => void,
+  onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>,
   onUpdateOrderItemStatus?: (orderLines: any[], status: Status) => void,
   groupId: string,
   isMenuOpen: boolean,
@@ -450,7 +450,7 @@ const AdminMenuOrderGroup = ({
                     <AdminOrderLineItem
                       key={orderLineItem.id}
                       orderLineItem={orderLineItem}
-                      onDelete={() => onDeleteOrderItem(orderLineItem.id)}
+                      onDelete={() => onDeleteOrderLines([orderLineItem.id])}
                       onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLineItem], newStatus) : undefined}
                       isGroupMenuOpen={isMenuOpen}
                       isFirstInCategory={index === 0}
@@ -498,7 +498,7 @@ const AdminOrderItemsGroup = ({
   orderItems,
   isExpanded,
   onToggle,
-  onDeleteOrderItem,
+  onDeleteOrderLines,
   onUpdateOrderItemStatus,
   onDeleteGroup,
   groupId,
@@ -510,7 +510,7 @@ const AdminOrderItemsGroup = ({
   orderItems: OrderLine[];
   isExpanded: boolean;
   onToggle: () => void;
-  onDeleteOrderItem: (orderLineId: string) => void;
+  onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>;
   onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
   onDeleteGroup?: (orderLines: OrderLine[]) => void;
   groupId: string;
@@ -678,7 +678,7 @@ const AdminOrderItemsGroup = ({
               }}>
                 <AdminOrderLineItem
                   orderLine={orderLine}
-                  onDelete={() => onDeleteOrderItem(orderLine.id)}
+                  onDelete={() => onDeleteOrderLines([orderLine.id])}
                   onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLine], newStatus) : undefined}
                   isGroupMenuOpen={false}
                 />
@@ -720,12 +720,11 @@ const AdminOrderItemsGroup = ({
 interface AdminOrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
-  onDeleteOrderItem: (orderLineId: string) => void;
-  onDeleteManyOrderItems?: (orderLineIds: string[]) => Promise<{ deletedCount: number; deletedIds: string[] }>;
+  onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>;
   onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
 }
 
-export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderItem, onDeleteManyOrderItems, onUpdateOrderItemStatus }: AdminOrderDetailViewProps) {
+export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLines, onUpdateOrderItemStatus }: AdminOrderDetailViewProps) {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string | null>(null);
 
@@ -734,7 +733,6 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
   const { showToast } = useToast();
   const { activeMenus, loadAllMenus } = useMenus();
   const { updateOrderStatus } = useOrders();
-  const { deleteOrderLine } = useOrderLines();
 
   // Si les menus ne sont pas chargés, les charger
   useEffect(() => {
@@ -885,14 +883,14 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                       }}
                       onDelete={async () => {
                         try {
-                          await deleteOrderLine(menuLine.id);
+                          await onDeleteOrderLines([menuLine.id]);
                           showToast('Menu supprimé avec succès.', 'success');
                         } catch (error) {
                           console.error('Erreur lors de la suppression du menu:', error);
                           showToast('Erreur lors de la suppression du menu.', 'error');
                         }
                       }}
-                      onDeleteOrderItem={onDeleteOrderItem}
+                      onDeleteOrderLines={onDeleteOrderLines}
                       onUpdateOrderItemStatus={onUpdateOrderItemStatus ? async (orderLineItems: any[], newStatus: Status) => {
                         // Pour les items de menu, utiliser la nouvelle API spécialisée
                         try {
@@ -945,21 +943,11 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderIt
                     setOpenGroupMenuId(null);
                     toggleExpanded(group.id);
                   }}
-                  onDeleteOrderItem={onDeleteOrderItem}
+                  onDeleteOrderLines={onDeleteOrderLines}
                   onUpdateOrderItemStatus={onUpdateOrderItemStatus}
                   onDeleteGroup={async (orderLines: OrderLine[]) => {
-                    // Utiliser l'API de suppression en lot si disponible, sinon fallback vers les appels individuels
-                    if (onDeleteManyOrderItems) {
-                      const orderLineIds = orderLines.map((orderLine: OrderLine) => orderLine.id);
-                      await onDeleteManyOrderItems(orderLineIds);
-                    } else {
-                      // Fallback: supprimer tous les éléments du groupe en parallèle
-                      const deletePromises = orderLines.map((orderLine: OrderLine) =>
-                        Promise.resolve(onDeleteOrderItem(orderLine.id))
-                      );
-                      await Promise.all(deletePromises);
-                    }
-
+                    const orderLineIds = orderLines.map((orderLine: OrderLine) => orderLine.id);
+                    await onDeleteOrderLines(orderLineIds);
                   }}
                   groupId={group.id}
                   isMenuOpen={openGroupMenuId === group.id}
