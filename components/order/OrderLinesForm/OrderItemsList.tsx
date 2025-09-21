@@ -3,6 +3,7 @@ import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 're
 import { Text } from '~/components/ui';
 import { Plus, Minus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
+import { getContrastColor } from '~/lib/utils';
 
 /**
  * Props pour le composant OrderItemsList
@@ -45,20 +46,40 @@ const OrderItemCard = memo<OrderItemRowProps>(({
 
   const canRemove = draftQuantity > 0;
 
-
   return (
     <>
       {/* Info de l'item */}
       <View style={styles.itemInfo}>
-        <Text
-          style={styles.itemName}
-          numberOfLines={1}
-          adjustsFontSizeToFit={true}
-          minimumFontScale={0.75}
-        >
-          {item.name}
+        {/* Titre avec background coloré */}
+        {/* Note: Les marges négatives sont utilisées pour étendre le background sur toute la largeur de la carte
+            C'est une solution intentionnelle pour obtenir l'effet visuel désiré */}
+        <View style={[
+          styles.itemNameContainer,
+          item.color ? {
+            backgroundColor: item.color,
+            marginHorizontal: -12, // Compense le padding de la carte
+            marginTop: -12, // Aligne avec le haut de la carte
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+          } : {}
+        ]}>
+          <Text
+            style={[
+              styles.itemName,
+              item.color ? { color: getContrastColor(item.color) } : {}
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+            minimumFontScale={0.75}
+          >
+            {item.name}
+          </Text>
+        </View>
+        <Text style={[styles.itemPrice, item.color ? { marginTop: 8 } : {}]}>
+          {item.price.toFixed(2)}€
         </Text>
-        <Text style={styles.itemPrice}>{item.price.toFixed(2)}€</Text>
       </View>
 
       {/* Contrôles de quantité */}
@@ -116,13 +137,13 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
   // Détection taille écran pour optimiser tactile tablette
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  
+
   // Styles dynamiques pour boutons optimisés tablette
   const dynamicButtonSize = isTablet ? 38 : 32;
-  
+
   // Articles filtrés par type actif - mémorisé pour performance
   const filteredItems = useMemo(() => {
-    return items.filter(item => 
+    return items.filter(item =>
       item.itemTypeId === activeItemType && item.isActive
     );
   }, [items, activeItemType]);
@@ -237,6 +258,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     minHeight: 0,
   },
+  itemNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
 
   // Text styles
   emptyText: {
@@ -249,7 +276,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 4,
     lineHeight: 16,
     textAlign: 'center',
     flexShrink: 1,

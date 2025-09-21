@@ -14,3 +14,5 @@ export * from './loader';
 export * from './dialog';
 export * from './popover';
 export * from './modal';
+export * from './color-picker';
+export * from './select-button';

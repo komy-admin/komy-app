@@ -1,6 +1,6 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, Platform, Pressable } from 'react-native';
-import { Text, Button, TextInput } from '~/components/ui';
+import { Text, Button, TextInput, SelectButton } from '~/components/ui';
 import { User, UserProfile } from '~/types/user.types';
 import { getEnumValue, getUserProfileText } from '~/lib/utils';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
@@ -181,49 +181,13 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
                 {Object.values(UserProfile)
                   .filter(profile => !['superadmin', 'admin'].includes(profile))
                   .map((profile) => (
-                    Platform.OS === 'web' ? (
-                      <div
-                        key={profile}
-                        style={{
-                          ...styles.profileButton,
-                          ...(selectedProfileId === profile && {
-                            backgroundColor: '#2A2E33',
-                            borderColor: '#2A2E33',
-                            opacity: 1
-                          }),
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onClick={() => handleProfileSelect(profile)}
-                      >
-                        <span style={{
-                          ...styles.profileButtonText,
-                          ...(selectedProfileId === profile && {
-                            color: '#FFFFFF'
-                          })
-                        }}>
-                          {getUserProfileText(profile)}
-                        </span>
-                      </div>
-                    ) : (
-                      <Pressable
-                        key={profile}
-                        style={[
-                          styles.profileButton,
-                          selectedProfileId === profile && styles.profileButtonActive
-                        ]}
-                        onPress={() => handleProfileSelect(profile)}
-                      >
-                        <Text style={[
-                          styles.profileButtonText,
-                          selectedProfileId === profile && styles.profileButtonTextActive
-                        ]}>
-                          {getUserProfileText(profile)}
-                        </Text>
-                      </Pressable>
-                    )
+                    <SelectButton
+                      key={profile}
+                      label={getUserProfileText(profile)}
+                      isActive={selectedProfileId === profile}
+                      onPress={() => handleProfileSelect(profile)}
+                      variant="sub"
+                    />
                   ))}
               </View>
             </View>
@@ -432,54 +396,4 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  profileButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 90,
-    minHeight: 44,
-    flexShrink: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 1,
-    elevation: 1,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        borderColor: '#D1D5DB',
-        shadowOpacity: 0.08,
-        transform: 'translateY(-1px)',
-      }
-    }),
-  },
-
-  profileButtonActive: {
-    backgroundColor: '#2A2E33',
-    borderColor: '#2A2E33',
-    shadowColor: '#2A2E33',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  profileButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-
-  profileButtonTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
 });

@@ -106,6 +106,7 @@ export default function MenuPage() {
 
       const itemWithType = {
         ...item,
+        color: item.color || undefined,
         itemType: itemType
       };
 

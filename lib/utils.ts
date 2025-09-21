@@ -11,6 +11,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Détermine la couleur de contraste appropriée (noir ou blanc) pour un fond donné
+ * @param hexColor - La couleur de fond en format hexadécimal
+ * @returns '#000000' pour les fonds clairs, '#FFFFFF' pour les fonds foncés
+ */
+export function getContrastColor(hexColor: string): string {
+  // Gérer les cas où la couleur n'est pas valide
+  if (!hexColor || !hexColor.startsWith('#')) {
+    return '#FFFFFF';
+  }
+
+  // Convertir hex en RGB
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) || 0;
+  const g = parseInt(hex.substring(2, 4), 16) || 0;
+  const b = parseInt(hex.substring(4, 6), 16) || 0;
+
+  // Calculer la luminance relative (formule WCAG)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Retourner noir pour les couleurs claires, blanc pour les foncées
+  return luminance > 0.5 ? '#000000' : '#FFFFFF';
+}
+
 export const getOrderLinesGlobalStatus = (orderLines: OrderLine[]): Status => {
   const allStatuses: Status[] = [];
   

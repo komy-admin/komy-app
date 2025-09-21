@@ -1,6 +1,7 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, Platform, Pressable, Switch } from 'react-native';
-import { Text, Button, TextInput, NumberInput } from '~/components/ui';
+import { Text, Button, TextInput, NumberInput, SelectButton } from '~/components/ui';
+import { ColorPicker } from '~/components/ui/color-picker';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
@@ -26,6 +27,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     name: item?.name || '',
     price: item?.price ? (typeof item.price === 'string' ? parseFloat(item.price) : item.price) : null,
     itemTypeId: item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : ''),
+    color: item?.color || '',
     isActive: item?.isActive ?? true
   });
 
@@ -63,6 +65,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         name: item.name,
         price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
         itemTypeId: item.itemType?.id || '',
+        color: item.color || '',
         isActive: item.isActive ?? true
       });
       setSelectedItemTypeId(item.itemType?.id || '');
@@ -71,6 +74,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         name: '',
         price: null,
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
+        color: '',
         isActive: true
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
@@ -114,6 +118,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           id: item?.id || '',
           name: formData.name,
           price: numericPrice,
+          color: formData.color,
           itemTypeId: selectedItemTypeId,
           itemType: selectedItemType!,
           isActive: formData.isActive
@@ -132,6 +137,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         name: '',
         price: null,
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
+        color: '',
         isActive: true
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
@@ -194,98 +200,69 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
                   <View style={[styles.statusPulse, formData.isActive && styles.statusPulseActive]} />
                   <View style={[styles.statusCore, formData.isActive && styles.statusCoreActive]} />
                 </View>
-                <View style={styles.statusTextContainer}>
-                  {Platform.OS === 'web' ? (
-                    <>
-                      <span style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: formData.isActive ? '#047857' : '#374151',
-                        letterSpacing: '0.2px',
-                        lineHeight: '16px',
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
-                      }}>
-                        {formData.isActive ? 'Actif' : 'Inactif'}
-                      </span>
-                      <span style={{
-                        fontSize: '12px',
+                <View style={[styles.statusTextContainer, Platform.OS === 'web' && { paddingVertical: 0, gap: 2 }]}>
+                  <Text
+                    style={[
+                      styles.statusLabelV2,
+                      formData.isActive && styles.statusLabelV2Active,
+                      Platform.OS === 'web' && {
+                        fontSize: 13,
+                        fontWeight: formData.isActive ? '700' : '600',
+                        color: formData.isActive ? '#047857' : '#6B7280',
+                        lineHeight: 18,
+                        marginBottom: 0,
+                      }
+                    ]}
+                  >
+                    {formData.isActive ? 'Actif' : 'Inactif'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statusSubtext,
+                      formData.isActive && styles.statusSubtextActive,
+                      Platform.OS === 'web' && {
+                        fontSize: 11,
                         fontWeight: '500',
                         color: formData.isActive ? '#059669' : '#9CA3AF',
-                        letterSpacing: '0.1px',
-                        lineHeight: '14px',
-                        marginTop: '1px',
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
-                      }}>
-                        {formData.isActive ? 'Visible' : 'Masqué'}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={[styles.statusLabelV2, formData.isActive && styles.statusLabelV2Active]}>
-                        {formData.isActive ? 'Actif' : 'Inactif'}
-                      </Text>
-                      <Text style={[styles.statusSubtext, formData.isActive && styles.statusSubtextActive]}>
-                        {formData.isActive ? 'Visible' : 'Masqué'}
-                      </Text>
-                    </>
-                  )}
+                        marginTop: 0,
+                        lineHeight: 14,
+                      }
+                    ]}
+                  >
+                    {formData.isActive ? 'Visible' : 'Masqué'}
+                  </Text>
                 </View>
               </Pressable>
             </View>
           </View>
 
           {/* Ligne 2: Catégories (s'adapte dynamiquement) */}
-          <View style={[styles.row, { marginBottom: 0 }]}>
+          <View style={[styles.row, { marginBottom: 24 }]}>
             <View style={styles.categorySection}>
               <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Catégorie *</Text>
               <View style={styles.categoryButtons}>
                 {itemTypes.map((itemType) => (
-                  Platform.OS === 'web' ? (
-                    <div
-                      key={itemType.id}
-                      style={{
-                        ...styles.categoryButton,
-                        ...(selectedItemTypeId === itemType.id && {
-                          backgroundColor: '#2A2E33',
-                          borderColor: '#2A2E33',
-                          opacity: 1
-                        }),
-                        cursor: 'pointer',
-                        // Ajouter les propriétés de centrage CSS pour web
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      onClick={() => handleCategorySelect(itemType.id)}
-                    >
-                      <span style={{
-                        ...styles.categoryButtonText,
-                        ...(selectedItemTypeId === itemType.id && {
-                          color: '#FFFFFF'
-                        })
-                      }}>
-                        {itemType.name}
-                      </span>
-                    </div>
-                  ) : (
-                    <Pressable
-                      key={itemType.id}
-                      style={[
-                        styles.categoryButton,
-                        selectedItemTypeId === itemType.id && styles.categoryButtonActive
-                      ]}
-                      onPress={() => handleCategorySelect(itemType.id)}
-                    >
-                      <Text style={[
-                        styles.categoryButtonText,
-                        selectedItemTypeId === itemType.id && styles.categoryButtonTextActive
-                      ]}>
-                        {itemType.name}
-                      </Text>
-                    </Pressable>
-                  )
+                  <SelectButton
+                    key={itemType.id}
+                    label={itemType.name}
+                    isActive={selectedItemTypeId === itemType.id}
+                    onPress={() => handleCategorySelect(itemType.id)}
+                    variant="sub"
+                  />
                 ))}
               </View>
+            </View>
+          </View>
+
+          {/* Ligne 2: Couleur */}
+          <View style={[styles.row, { marginBottom: 0 }]}>
+            <View style={styles.field}>
+              <ColorPicker
+                label="Couleur de l'article"
+                value={formData.color}
+                onChange={(color) => setFormData(prev => ({ ...prev, color }))}
+                placeholder="Sélectionner une couleur"
+              />
             </View>
           </View>
         </View>
@@ -421,63 +398,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  categoryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 90,
-    minHeight: 44,
-    flexShrink: 0, // Empêche la compression
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 1,
-    elevation: 1,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        borderColor: '#D1D5DB',
-        shadowOpacity: 0.08,
-        transform: 'translateY(-1px)',
-      }
-    }),
-  },
-
-  categoryButtonActive: {
-    backgroundColor: '#2A2E33',
-    borderColor: '#2A2E33',
-    shadowColor: '#2A2E33',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  categoryButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-
-  categoryButtonTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
 
   // Version 2: Toggle premium avec animation pulsante et sous-texte
   statusToggleV2: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8, // Réduit de 10 à 8 pour parfait alignement
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: '#FAFAFA',
     borderWidth: 1,
@@ -491,12 +418,6 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      ':hover': {
-        borderColor: '#D1D5DB',
-        backgroundColor: '#F9FAFB',
-        transform: 'translateY(-1px)',
-        shadowOpacity: 0.08,
-      }
     })
   },
 
@@ -559,39 +480,52 @@ const styles = StyleSheet.create({
 
   statusTextContainer: {
     flex: 1,
+    flexDirection: 'column',
     justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingVertical: 2,
   },
 
   statusLabelV2: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: '#6B7280',
     letterSpacing: 0.2,
     lineHeight: 16,
-    ...(Platform.OS === 'web' && {
+    textAlign: 'left',
+    ...(Platform.OS === 'web' ? {
       fontFamily: 'system-ui, -apple-system, sans-serif',
-    })
+      fontWeight: 600,
+    } : {})
   },
 
   statusLabelV2Active: {
     color: '#047857',
     fontWeight: '700',
+    ...(Platform.OS === 'web' ? {
+      fontWeight: 700,
+    } : {})
   },
 
   statusSubtext: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     color: '#9CA3AF',
     letterSpacing: 0.1,
     marginTop: 1,
     lineHeight: 14,
-    ...(Platform.OS === 'web' && {
+    textAlign: 'left',
+    ...(Platform.OS === 'web' ? {
       fontFamily: 'system-ui, -apple-system, sans-serif',
-    })
+      fontWeight: 500,
+    } : {})
   },
 
   statusSubtextActive: {
     color: '#059669',
+    ...(Platform.OS === 'web' ? {
+      color: '#059669',
+    } : {})
   },
 
   // Actions

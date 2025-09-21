@@ -21,21 +21,21 @@ export interface OrderLinesFooterProps {
  * @returns Composant footer mémorisé
  */
 // Styles web constants
-const webValueStyle = {
-  fontSize: '16px',
+const webValueStyle: any = {
+  fontSize: 16,
   fontWeight: '700',
   textAlign: 'center' as const,
   fontFamily: 'system-ui, -apple-system, sans-serif'
 };
 
-const webLabelStyle = {
-  fontSize: '10px',
+const webLabelStyle: any = {
+  fontSize: 10,
   fontWeight: '500',
   color: '#6B7280',
   textAlign: 'center' as const,
-  marginTop: '1px',
+  marginTop: 1,
   textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
+  letterSpacing: 0.5,
   fontFamily: 'system-ui, -apple-system, sans-serif'
 };
 
@@ -53,8 +53,8 @@ export const OrderLinesFooter = memo<OrderLinesFooterProps>(({
   const renderValue = (value: string | number, label: string, color = '#2A2E33') =>
     Platform.OS === 'web' ? (
       <>
-        <span style={{ ...webValueStyle, color }}>{value}</span>
-        <span style={webLabelStyle}>{label}</span>
+        <Text style={{ ...webValueStyle, color }}>{value}</Text>
+        <Text style={webLabelStyle}>{label}</Text>
       </>
     ) : (
       <>

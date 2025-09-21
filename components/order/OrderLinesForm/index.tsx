@@ -422,11 +422,11 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             />
           )}
 
-          <OrderLinesFooter
+          {/* <OrderLinesFooter
             totalPrice={getTotalPrice()}
             getTotalItemsCount={getTotalItemsCount}
             getTotalMenusCount={getTotalMenusCount}
-          />
+          /> */}
         </View>
       )}
     </View>

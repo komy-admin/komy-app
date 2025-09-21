@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { View, Platform } from 'react-native';
+import { View, Platform, StyleSheet } from 'react-native';
+import { SelectButton } from '~/components/ui';
 import { ItemType } from '~/types/item-type.types';
 
 /**
@@ -24,62 +25,6 @@ export interface OrderLinesNavigationProps {
  * @returns Composant de navigation mémorisé
  */
 
-// Styles universels (web + mobile)
-const universalStyles = {
-  mainButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    minHeight: 48,
-    ...(Platform.OS === 'web' && {
-      display: 'flex',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease'
-    })
-  },
-  mainButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-    textAlign: 'center' as const,
-    letterSpacing: 0.3,
-    ...(Platform.OS === 'web' && {
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    })
-  },
-  subButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 6,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    minHeight: 36,
-    minWidth: 80,
-    ...(Platform.OS === 'web' && {
-      display: 'flex',
-      cursor: 'pointer'
-    })
-  },
-  subButtonText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: '#6b7280',
-    textAlign: 'center' as const,
-    ...(Platform.OS === 'web' && {
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    })
-  }
-};
-
 export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
   activeMainTab,
   onMainTabChange,
@@ -95,54 +40,25 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
     return null;
   }
 
-  // Helper universel pour tous les boutons
-  const renderButton = (
-    type: 'main' | 'sub',
-    isActive: boolean,
-    content: string,
-    onPress: () => void,
-    key?: string
-  ) => {
-    const isMain = type === 'main';
-    const baseButtonStyle = isMain ? universalStyles.mainButton : universalStyles.subButton;
-    const baseTextStyle = isMain ? universalStyles.mainButtonText : universalStyles.subButtonText;
-
-    const activeStyles = isActive ? {
-      backgroundColor: '#2A2E33',
-      borderColor: '#2A2E33'
-    } : {};
-
-    const activeTextStyles = isActive ? {
-      color: '#FFFFFF',
-      fontWeight: isMain ? '700' : '600'
-    } : {};
-
-    return (
-      <div
-        key={key}
-        style={{
-          ...baseButtonStyle,
-          ...activeStyles
-        }}
-        onClick={onPress}
-      >
-        <span style={{
-          ...baseTextStyle,
-          ...activeTextStyles
-        }}>
-          {content}
-        </span>
-      </div>
-    );
-  };
-
   return (
     <View style={styles.navigationContainer}>
       {/* Navigation principale ITEMS/MENUS */}
       <View style={styles.mainNavigation}>
         <View style={styles.tabsContainer}>
-          {renderButton('main', activeMainTab === 'MENUS', `Menus (${getTotalMenusCount()})`, () => onMainTabChange('MENUS'))}
-          {renderButton('main', activeMainTab === 'ITEMS', `Articles (${getTotalItemsCount()})`, () => onMainTabChange('ITEMS'))}
+          <SelectButton
+            label={`Menus (${getTotalMenusCount()})`}
+            isActive={activeMainTab === 'MENUS'}
+            onPress={() => onMainTabChange('MENUS')}
+            variant="main"
+            flex
+          />
+          <SelectButton
+            label={`Articles (${getTotalItemsCount()})`}
+            isActive={activeMainTab === 'ITEMS'}
+            onPress={() => onMainTabChange('ITEMS')}
+            variant="main"
+            flex
+          />
         </View>
       </View>
 
@@ -150,15 +66,15 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
       {activeMainTab === 'ITEMS' && (
         <View style={styles.subNavigation}>
           <View style={styles.categoryButtons}>
-            {itemTypes.map((itemType) =>
-              renderButton(
-                'sub',
-                activeItemType === itemType.id,
-                itemType.name,
-                () => onItemTypeChange(itemType.id),
-                itemType.id
-              )
-            )}
+            {itemTypes.map((itemType) => (
+              <SelectButton
+                key={itemType.id}
+                label={itemType.name}
+                isActive={activeItemType === itemType.id}
+                onPress={() => onItemTypeChange(itemType.id)}
+                variant="sub"
+              />
+            ))}
           </View>
         </View>
       )}

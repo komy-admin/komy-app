@@ -7,13 +7,34 @@ import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 
 /**
+ * Type pour une catégorie de menu
+ */
+interface MenuCategoryType {
+  id: string;
+  itemTypeId: string;
+  priceModifier?: number | string;
+  isRequired?: boolean;
+  maxSelections?: number;
+}
+
+/**
+ * Type pour un item de catégorie de menu
+ */
+interface MenuCategoryItem {
+  id: string;
+  item?: Item;
+  supplement?: number | string;
+  isAvailable?: boolean;
+}
+
+/**
  * Props pour le composant MenuConfiguration
  */
 export interface MenuConfigurationProps {
   menu: Menu;
   tempMenuSelections: Record<string, string[]>;
   onUpdateTempMenuSelection: (categoryId: string, itemId: string, isSelected: boolean) => void;
-  getMenuCategoryItems: (categoryId: string) => any[];
+  getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryNameFromItemTypeId?: (itemTypeId: string) => string;
   itemTypes: ItemType[];
 }
@@ -22,11 +43,11 @@ export interface MenuConfigurationProps {
  * Composant pour afficher une catégorie de menu en configuration
  */
 interface MenuCategoryProps {
-  category: any;
+  category: MenuCategoryType;
   index: number;
   selectedItems: string[];
   onToggleItem: (categoryId: string, itemId: string) => void;
-  getMenuCategoryItems: (categoryId: string) => any[];
+  getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryName: (itemTypeId: string) => string;
 }
 
@@ -71,94 +92,25 @@ const MenuCategory = memo<MenuCategoryProps>(({
       {/* Header de catégorie */}
       <View style={styles.categoryHeader}>
         <View style={styles.categoryHeaderContent}>
-          {Platform.OS === 'web' ? (
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              backgroundColor: '#2A2E33',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: '16px'
-            }}>
-              <span style={{
-                color: '#FFFFFF',
-                fontSize: '14px',
-                fontWeight: '700',
-                fontFamily: 'system-ui, -apple-system, sans-serif'
-              }}>
-                {index + 1}
-              </span>
-            </div>
-          ) : (
-            <View style={styles.categoryNumberBadge}>
-              <Text style={styles.categoryNumberText}>{index + 1}</Text>
-            </View>
-          )}
-          
-          <View style={styles.categoryHeaderInfo}>
-            {Platform.OS === 'web' ? (
-              <>
-                <span style={{
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#2A2E33',
-                  marginBottom: '1px',
-                  letterSpacing: '0.3px',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  display: 'block'
-                }}>
-                  {categoryName}
-                </span>
-                <span style={{
-                  fontSize: '13px',
-                  color: '#6B7280',
-                  fontWeight: '500',
-                  fontFamily: 'system-ui, -apple-system, sans-serif'
-                }}>
-                  {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItems.length} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
-                </span>
-              </>
-            ) : (
-              <>
-                <Text style={styles.categoryHeaderTitle}>
-                  {categoryName}
-                </Text>
-                <Text style={styles.categoryHeaderSubtitle}>
-                  {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItems.length} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
-                </Text>
-              </>
-            )}
+          <View style={styles.categoryNumberBadge}>
+            <Text style={styles.categoryNumberText}>{index + 1}</Text>
           </View>
-          
+
+          <View style={styles.categoryHeaderInfo}>
+            <Text style={styles.categoryHeaderTitle}>
+              {categoryName}
+            </Text>
+            <Text style={styles.categoryHeaderSubtitle}>
+              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItems.length} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
+            </Text>
+          </View>
+
           {hasSupplementPrice && (
-            Platform.OS === 'web' ? (
-              <div style={{
-                backgroundColor: '#EEF2FF',
-                paddingLeft: '8px',
-                paddingRight: '8px',
-                paddingTop: '4px',
-                paddingBottom: '4px',
-                borderRadius: '6px',
-                alignSelf: 'center'
-              }}>
-                <span style={{
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  color: '#4338CA',
-                  fontFamily: 'system-ui, -apple-system, sans-serif'
-                }}>
-                  + {category.priceModifier} € de Supplément
-                </span>
-              </div>
-            ) : (
-              <View style={styles.categorySupplementTag}>
-                <Text style={styles.categorySupplementTagText}>
-                  + {category.priceModifier} € de Supplément
-                </Text>
-              </View>
-            )
+            <View style={styles.categorySupplementTag}>
+              <Text style={styles.categorySupplementTagText}>
+                + {category.priceModifier} € de Supplément
+              </Text>
+            </View>
           )}
         </View>
       </View>
@@ -166,8 +118,8 @@ const MenuCategory = memo<MenuCategoryProps>(({
       {/* Articles de la catégorie */}
       <View style={styles.categoryItemsList}>
         {menuCategoryItems
-          .filter((item: any) => item.isAvailable)
-          .map((menuCategoryItem: any) => {
+          .filter((item: MenuCategoryItem) => item.isAvailable)
+          .map((menuCategoryItem: MenuCategoryItem) => {
             const item = menuCategoryItem?.item;
             if (!item) return null;
 
@@ -222,49 +174,16 @@ const MenuItemCard = memo<MenuItemCardProps>(({
       <View style={styles.menuItemContent}>
         <View style={styles.menuItemInfo}>
           <View style={styles.menuItemNameRow}>
-            {Platform.OS === 'web' ? (
-              <span style={{
-                fontSize: '15px',
-                fontWeight: '700',
-                color: '#1E293B',
-                letterSpacing: '0.2px',
-                flex: 1,
-                fontFamily: 'system-ui, -apple-system, sans-serif'
-              }}>
-                {item.name}
-              </span>
-            ) : (
-              <Text style={styles.menuItemName}>
-                {item.name}
-              </Text>
-            )}
-            
+            <Text style={styles.menuItemName}>
+              {item.name}
+            </Text>
+
             {hasSupplementPrice && (
-              Platform.OS === 'web' ? (
-                <div style={{
-                  backgroundColor: '#FEF3C7',
-                  paddingLeft: '8px',
-                  paddingRight: '8px',
-                  paddingTop: '4px',
-                  paddingBottom: '4px',
-                  borderRadius: '6px'
-                }}>
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    color: '#92400E',
-                    fontFamily: 'system-ui, -apple-system, sans-serif'
-                  }}>
-                    +{supplement.toFixed(2)}€
-                  </span>
-                </div>
-              ) : (
-                <View style={styles.menuItemSupplement}>
-                  <Text style={styles.menuItemSupplementText}>
-                    +{supplement.toFixed(2)}€
-                  </Text>
-                </View>
-              )
+              <View style={styles.menuItemSupplement}>
+                <Text style={styles.menuItemSupplementText}>
+                  +{supplement.toFixed(2)}€
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -289,7 +208,7 @@ MenuItemCard.displayName = 'MenuItemCard';
 /**
  * Composant principal de configuration de menu
  * Interface complète pour configurer un menu avec ses catégories et articles
- * 
+ *
  * @param props - Props du composant
  * @returns Composant de configuration de menu mémorisé
  */
@@ -301,13 +220,13 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
   getCategoryNameFromItemTypeId,
   itemTypes
 }) => {
-  
+
   // Fonction pour obtenir le nom d'une catégorie
   const getCategoryName = useCallback((itemTypeId: string): string => {
     if (getCategoryNameFromItemTypeId) {
       return getCategoryNameFromItemTypeId(itemTypeId);
     }
-    
+
     // Fallback: chercher dans itemTypes
     const itemType = itemTypes.find(type => type.id === itemTypeId);
     return itemType?.name || 'Catégorie inconnue';
@@ -330,63 +249,48 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
             <MenuIcon size={20} color="#2A2E33" />
           </View>
           <View style={styles.sectionHeaderText}>
-            {Platform.OS === 'web' ? (
-              <>
-                <span style={{
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  color: '#2A2E33',
-                  letterSpacing: '0.5px',
-                  marginBottom: '4px',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  display: 'block'
-                }}>
-                  Configuration "{menu.name}"
-                </span>
-                <span style={{
-                  fontSize: '14px',
-                  color: '#6B7280',
-                  fontWeight: '500',
-                  fontFamily: 'system-ui, -apple-system, sans-serif'
-                }}>
-                  Personnalisez votre sélection d'articles
-                </span>
-              </>
-            ) : (
-              <>
-                <Text style={styles.sectionHeaderTitle}>
-                  Configuration "{menu.name}"
-                </Text>
-                <Text style={styles.sectionHeaderSubtitle}>
-                  Personnalisez votre sélection d'articles
-                </Text>
-              </>
-            )}
+            <Text style={styles.sectionHeaderTitle}>
+              Configuration "{menu.name}"
+            </Text>
+            <Text style={styles.sectionHeaderSubtitle}>
+              Personnalisez votre sélection d'articles
+            </Text>
           </View>
         </View>
       </View>
 
-      {/* Sections de catégories avec scroll */}
+      {/* Configuration content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {menu.categories && menu.categories.map((category, index) => {
-          const selectedItems = tempMenuSelections[category.id] || [];
+        {menu.categories && menu.categories.length > 0 ? (
+          <View style={styles.categoriesContainer}>
+            {menu.categories.map((category: MenuCategoryType, index: number) => {
+              const selectedItems = tempMenuSelections[category.id] || [];
 
-          return (
-            <MenuCategory
-              key={category.id}
-              category={category}
-              index={index}
-              selectedItems={selectedItems}
-              onToggleItem={handleToggleItem}
-              getMenuCategoryItems={getMenuCategoryItems}
-              getCategoryName={getCategoryName}
-            />
-          );
-        })}
+              return (
+                <MenuCategory
+                  key={category.id}
+                  category={category}
+                  index={index}
+                  selectedItems={selectedItems}
+                  onToggleItem={handleToggleItem}
+                  getMenuCategoryItems={getMenuCategoryItems}
+                  getCategoryName={getCategoryName}
+                />
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyStateTitle}>Aucune catégorie disponible</Text>
+            <Text style={styles.emptyStateSubtitle}>
+              Ce menu n'a pas encore de catégories configurées
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -394,103 +298,141 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
 
 MenuConfiguration.displayName = 'MenuConfiguration';
 
+const COLORS = {
+  primary: '#2A2E33',
+  success: '#059669',
+  warning: '#F59E0B',
+  text: '#2A2E33',
+  textSecondary: '#6B7280',
+  background: '#FFFFFF',
+  border: '#E5E7EB',
+  backgroundGray: '#F3F4F6',
+  selectedBackground: '#FEF3C7',
+  selectedBorder: '#F59E0B'
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 100,
   },
+
+  // Configuration Header
   configHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: COLORS.border,
   },
+
   sectionHeaderInline: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   sectionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: COLORS.backgroundGray,
     justifyContent: 'center',
-    marginRight: 12,
+    alignItems: 'center',
+    marginRight: 16,
   },
+
   sectionHeaderText: {
     flex: 1,
   },
+
   sectionHeaderTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: COLORS.primary,
     letterSpacing: 0.5,
     marginBottom: 4,
   },
+
   sectionHeaderSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     fontWeight: '500',
   },
+
+  // Categories Container
+  categoriesContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+
+  // Category Styles
   categoryCard: {
-    marginVertical: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: COLORS.border,
+    marginBottom: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
   },
+
   categoryHeader: {
-    padding: 16,
+    backgroundColor: COLORS.backgroundGray,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: COLORS.border,
   },
+
   categoryHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   categoryNumberBadge: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
-    alignItems: 'center',
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
   },
+
   categoryNumberText: {
-    color: '#FFFFFF',
+    color: COLORS.background,
     fontSize: 14,
     fontWeight: '700',
   },
+
   categoryHeaderInfo: {
     flex: 1,
   },
+
   categoryHeaderTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: COLORS.primary,
     marginBottom: 1,
     letterSpacing: 0.3,
   },
+
   categoryHeaderSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     fontWeight: '500',
   },
+
   categorySupplementTag: {
     backgroundColor: '#EEF2FF',
     paddingHorizontal: 8,
@@ -498,39 +440,50 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignSelf: 'center',
   },
+
   categorySupplementTagText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#4338CA',
   },
+
   categoryItemsList: {
-    padding: 16,
-    gap: 12,
+    paddingVertical: 8,
   },
+
+  // Menu Item Card
   menuItemCard: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
+    marginHorizontal: 8,
+    marginVertical: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    padding: 12,
+    borderColor: COLORS.border,
   },
+
   menuItemCardSelected: {
-    backgroundColor: '#f0f9ff',
-    borderColor: '#0ea5e9',
-    borderWidth: 2,
+    backgroundColor: COLORS.selectedBackground,
+    borderColor: COLORS.selectedBorder,
   },
+
   menuItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  menuItemInfo: {
-    flex: 1,
-  },
-  menuItemNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+
+  menuItemInfo: {
+    flex: 1,
+  },
+
+  menuItemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
   menuItemName: {
     fontSize: 15,
     fontWeight: '700',
@@ -538,37 +491,63 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     flex: 1,
   },
+
   menuItemSupplement: {
     backgroundColor: '#FEF3C7',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
+
   menuItemSupplementText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#92400E',
   },
+
   menuItemActions: {
     marginLeft: 12,
   },
+
   menuItemCheckbox: {
     width: 24,
     height: 24,
-    borderRadius: 4,
+    borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#d1d5db',
-    alignItems: 'center',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    alignItems: 'center',
   },
+
   menuItemCheckboxSelected: {
-    backgroundColor: '#0ea5e9',
-    borderColor: '#0ea5e9',
+    backgroundColor: COLORS.success,
+    borderColor: COLORS.success,
   },
+
   menuItemCheckboxIcon: {
-    color: '#ffffff',
+    color: COLORS.background,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: 'bold',
+  },
+
+  // Empty State
+  emptyStateContainer: {
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 });
