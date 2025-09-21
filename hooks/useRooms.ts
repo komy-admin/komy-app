@@ -1,12 +1,13 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
 import { RootState, entitiesActions } from '~/store';
-import { 
+import {
   selectAllRooms,
   selectCurrentRoom,
   selectCurrentRoomId,
   sessionActions
 } from '~/store/slices/session.slice';
+import { selectRooms } from '~/store/selectors';
 import { roomApiService } from '~/api/room.api';
 import { Room } from '~/types/room.types';
 
@@ -17,7 +18,7 @@ export const useRooms = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const rooms = useSelector((state: RootState) => Object.values(state.entities.rooms));
+  const rooms = useSelector(selectRooms);
   const currentRoom = useSelector(selectCurrentRoom);
   const currentRoomId = useSelector(selectCurrentRoomId);
   const loading = false; // Géré globalement maintenant

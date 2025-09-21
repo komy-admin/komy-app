@@ -4,7 +4,7 @@ import { EntitiesState } from '../slices/entities.slice';
 import { Table } from '~/types/table.types';
 import { Order } from '~/types/order.types';
 import { OrderLine } from '~/types/order-line.types';
-import { Menu } from '~/types/menu.types';
+import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { getMostImportantStatus } from '~/lib/utils';
 
 /**
@@ -17,53 +17,104 @@ import { getMostImportantStatus } from '~/lib/utils';
 // Entities state
 const selectEntitiesState = (state: RootState) => state.entities;
 
-// Rooms
+// Rooms - Records (pas de transformation)
 export const selectRoomsRecord = (state: RootState) => state.entities.rooms;
-export const selectRooms = (state: RootState) => Object.values(state.entities.rooms);
-export const selectRoomById = (roomId: string) => (state: RootState) => 
+export const selectRoomById = (roomId: string) => (state: RootState) =>
   state.entities.rooms[roomId] || null;
 
-// Tables
+// Rooms - Array (mémorisé)
+export const selectRooms = createSelector(
+  [selectRoomsRecord],
+  (rooms) => Object.values(rooms)
+);
+
+// Tables - Records (pas de transformation)
 export const selectTablesRecord = (state: RootState) => state.entities.tables;
-export const selectTables = (state: RootState) => Object.values(state.entities.tables);
-export const selectTableById = (tableId: string) => (state: RootState) => 
+export const selectTableById = (tableId: string) => (state: RootState) =>
   state.entities.tables[tableId] || null;
 
-// Orders
+// Tables - Array (mémorisé)
+export const selectTables = createSelector(
+  [selectTablesRecord],
+  (tables) => Object.values(tables)
+);
+
+// Orders - Records (pas de transformation)
 export const selectOrdersRecord = (state: RootState) => state.entities.orders;
-export const selectOrders = (state: RootState) => Object.values(state.entities.orders);
-export const selectOrderById = (orderId: string) => (state: RootState) => 
+export const selectOrderById = (orderId: string) => (state: RootState) =>
   state.entities.orders[orderId] || null;
 
-// OrderLines
+// Orders - Array (mémorisé)
+export const selectOrders = createSelector(
+  [selectOrdersRecord],
+  (orders) => Object.values(orders)
+);
+
+// OrderLines - Records (pas de transformation)
 export const selectOrderLinesRecord = (state: RootState) => state.entities.orderLines;
-export const selectOrderLines = (state: RootState) => Object.values(state.entities.orderLines);
-export const selectOrderLineById = (lineId: string) => (state: RootState) => 
+export const selectOrderLineById = (lineId: string) => (state: RootState) =>
   state.entities.orderLines[lineId] || null;
 
-// Menus
+// OrderLines - Array (mémorisé)
+export const selectOrderLines = createSelector(
+  [selectOrderLinesRecord],
+  (orderLines) => Object.values(orderLines)
+);
+
+// Menus - Records (pas de transformation)
 export const selectMenusRecord = (state: RootState) => state.entities.menus;
-export const selectMenus = (state: RootState) => Object.values(state.entities.menus);
-export const selectMenuById = (menuId: string) => (state: RootState) => 
+export const selectMenuById = (menuId: string) => (state: RootState) =>
   state.entities.menus[menuId] || null;
 
-// Items
+// Menus - Array (mémorisé)
+export const selectMenus = createSelector(
+  [selectMenusRecord],
+  (menus) => Object.values(menus)
+);
+
+// Items - Records (pas de transformation)
 export const selectItemsRecord = (state: RootState) => state.entities.items;
-export const selectItems = (state: RootState) => Object.values(state.entities.items);
-export const selectItemById = (itemId: string) => (state: RootState) => 
+export const selectItemById = (itemId: string) => (state: RootState) =>
   state.entities.items[itemId] || null;
 
-// ItemTypes
+// Items - Array (mémorisé)
+export const selectItems = createSelector(
+  [selectItemsRecord],
+  (items) => Object.values(items)
+);
+
+// ItemTypes - Records (pas de transformation)
 export const selectItemTypesRecord = (state: RootState) => state.entities.itemTypes;
-export const selectItemTypes = (state: RootState) => Object.values(state.entities.itemTypes);
-export const selectItemTypeById = (typeId: string) => (state: RootState) => 
+export const selectItemTypeById = (typeId: string) => (state: RootState) =>
   state.entities.itemTypes[typeId] || null;
 
-// Users
+// ItemTypes - Array (mémorisé)
+export const selectItemTypes = createSelector(
+  [selectItemTypesRecord],
+  (itemTypes) => Object.values(itemTypes)
+);
+
+// Users - Records (pas de transformation)
 export const selectUsersRecord = (state: RootState) => state.entities.users;
-export const selectUsers = (state: RootState) => Object.values(state.entities.users);
-export const selectUserById = (userId: string) => (state: RootState) => 
+export const selectUserById = (userId: string) => (state: RootState) =>
   state.entities.users[userId] || null;
+
+// Users - Array (mémorisé)
+export const selectUsers = createSelector(
+  [selectUsersRecord],
+  (users) => Object.values(users)
+);
+
+// OrderLineItems - Records (pas de transformation)
+export const selectOrderLineItemsRecord = (state: RootState) => state.entities.orderLineItems;
+export const selectOrderLineItemById = (orderLineItemId: string) => (state: RootState) =>
+  state.entities.orderLineItems[orderLineItemId] || null;
+
+// OrderLineItems - Array (mémorisé)
+export const selectOrderLineItems = createSelector(
+  [selectOrderLineItemsRecord],
+  (orderLineItems) => Object.values(orderLineItems)
+);
 
 // Init state
 export const selectIsInitialized = (state: RootState) => state.entities.isInitialized;
@@ -238,6 +289,25 @@ export const selectOrdersWithLines = createSelector(
       ...order,
       lines: linesByOrderId.get(order.id) || [],
     }));
+  }
+);
+
+/**
+ * Tous les MenuCategoryItems indexés par categoryId
+ * Utilisé pour éviter de recalculer dans les hooks
+ */
+export const selectAllMenuCategoryItems = createSelector(
+  [selectMenus],
+  (menus) => {
+    const items: Record<string, MenuCategoryItem[]> = {};
+    menus.forEach(menu => {
+      menu.categories?.forEach(category => {
+        if (category.items) {
+          items[category.id] = category.items;
+        }
+      });
+    });
+    return items;
   }
 );
 

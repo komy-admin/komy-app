@@ -2,6 +2,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useCallback, useMemo } from 'react';
 import { RootState, entitiesActions, sessionActions } from '~/store';
 import { selectCurrentRoomId, selectSelectedTableId } from '~/store/slices/session.slice';
+import { selectTables } from '~/store/selectors';
 import { tableApiService } from '~/api/table.api';
 import { Table } from '~/types/table.types';
 
@@ -12,7 +13,7 @@ export const useTables = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const tables = useSelector((state: RootState) => Object.values(state.entities.tables));
+  const tables = useSelector(selectTables);
   const orders = useSelector((state: RootState) => state.entities.orders);
   const currentRoomId = useSelector(selectCurrentRoomId);
   const selectedTableId = useSelector(selectSelectedTableId);

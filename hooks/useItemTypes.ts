@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
 import { RootState, entitiesActions } from '~/store';
+import { selectItemTypes } from '~/store/selectors';
 import { itemTypeApiService } from '~/api/item-type.api';
 import { ItemType } from '~/types/item-type.types';
 
@@ -8,7 +9,7 @@ export const useItemTypes = () => {
   const dispatch = useDispatch();
   
   // Récupérer les données depuis le store
-  const itemTypes = useSelector((state: RootState) => Object.values(state.entities.itemTypes));
+  const itemTypes = useSelector(selectItemTypes);
   const loading = false; // Géré globalement maintenant
   const error = null; // Géré globalement maintenant
 

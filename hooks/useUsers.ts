@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
 import { RootState, entitiesActions } from '~/store';
+import { selectUsers } from '~/store/selectors';
 import { userApiService } from '~/api/user.api';
 import { User, UserProfile } from '~/types/user.types';
 import { FilterQueryBuilder } from './useFilter/query-builder';
@@ -12,7 +13,7 @@ export const useUsers = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const users = useSelector((state: RootState) => Object.values(state.entities.users));
+  const users = useSelector(selectUsers);
   const loading = false; // Géré globalement maintenant
   const error = null; // Géré globalement maintenant
 

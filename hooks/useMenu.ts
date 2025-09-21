@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
 import { RootState, entitiesActions } from '~/store';
+import { selectItems, selectItemTypes } from '~/store/selectors';
 import { itemApiService } from '~/api/item.api';
 import { itemTypeApiService } from '~/api/item-type.api';
 import { Item } from '~/types/item.types';
@@ -13,8 +14,8 @@ export const useMenu = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const items = useSelector((state: RootState) => Object.values(state.entities.items));
-  const itemTypes = useSelector((state: RootState) => Object.values(state.entities.itemTypes));
+  const items = useSelector(selectItems);
+  const itemTypes = useSelector(selectItemTypes);
   const loading = false; // Géré globalement maintenant
   const error = null; // Géré globalement maintenant
 

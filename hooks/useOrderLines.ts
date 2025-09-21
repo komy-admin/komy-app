@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
 import { RootState, entitiesActions } from '~/store';
+import { selectOrderLines, selectOrderLineItems } from '~/store/selectors';
 import { orderLineApiService } from '~/api/order-line.api';
 import { orderApiService } from '~/api/order.api';
 import { 
@@ -21,8 +22,8 @@ export const useOrderLines = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs de base
-  const allOrderLines = useSelector((state: RootState) => Object.values(state.entities.orderLines));
-  const allOrderLineItems = useSelector((state: RootState) => Object.values(state.entities.orderLineItems));
+  const allOrderLines = useSelector(selectOrderLines);
+  const allOrderLineItems = useSelector(selectOrderLineItems);
 
   // Sélecteurs spécifiques
   const getOrderLineById = useCallback((orderLineId: string) => {

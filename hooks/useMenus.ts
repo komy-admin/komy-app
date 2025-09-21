@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
 import { RootState, entitiesActions } from '~/store';
+import { selectMenus, selectActiveMenus, selectItems, selectAllMenuCategoryItems } from '~/store/selectors';
 import { menuApiService } from '~/api/menu.api';
 import { menuCategoryApiService } from '~/api/menu-category.api';
 import { menuCategoryItemApiService } from '~/api/menu-category-item.api';
@@ -13,25 +14,15 @@ export const useMenus = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const allMenus = useSelector((state: RootState) => Object.values(state.entities.menus));
-  const activeMenus = useSelector((state: RootState) => Object.values(state.entities.menus).filter(menu => menu.isActive));
-  const items = useSelector((state: RootState) => Object.values(state.entities.items));
+  const allMenus = useSelector(selectMenus);
+  const activeMenus = useSelector(selectActiveMenus);
+  const items = useSelector(selectItems);
   const loading = false; // Géré globalement maintenant
   const error = null; // Géré globalement maintenant
   
   // Sélecteur pour tous les MenuCategoryItems (pour éviter useSelector dans callbacks)
   // Note: MenuCategoryItems are nested within menu.categories[].items, not stored separately
-  const allMenuCategoryItems = useSelector((state: RootState) => {
-    const items: Record<string, MenuCategoryItem[]> = {};
-    Object.values(state.entities.menus).forEach(menu => {
-      menu.categories?.forEach(category => {
-        if (category.items) {
-          items[category.id] = category.items;
-        }
-      });
-    });
-    return items;
-  });
+  const allMenuCategoryItems = useSelector(selectAllMenuCategoryItems);
 
   // Actions asynchrones pour charger les données
   const loadAllMenus = useCallback(async () => {

@@ -2,6 +2,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useCallback, useMemo } from 'react';
 import { RootState, entitiesActions } from '~/store';
 import { selectCurrentRoomId, selectSelectedTableId } from '~/store/slices/session.slice';
+import { selectOrders } from '~/store/selectors';
 import { orderApiService, UpdateOrderStatusPayload } from '~/api/order.api';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
@@ -19,7 +20,7 @@ export const useOrders = () => {
   } = useOrderLines();
 
   // Sélecteurs
-  const orders = useSelector((state: RootState) => Object.values(state.entities.orders));
+  const orders = useSelector(selectOrders);
   const tables = useSelector((state: RootState) => state.entities.tables);
   const currentRoomId = useSelector(selectCurrentRoomId);
   const selectedTableId = useSelector(selectSelectedTableId);
