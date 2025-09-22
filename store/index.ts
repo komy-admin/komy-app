@@ -28,5 +28,27 @@ export type AppDispatch = typeof store.dispatch;
 
 // Export des actions pour faciliter l'import
 export { entitiesActions } from './slices/entities.slice';
-export { sessionActions, logout } from './slices/session.slice';
+export {
+  sessionActions,
+  logout,
+  // PIN selectors
+  selectRequiresPin,
+  selectRequiresPinSetup,
+  selectTemporaryToken,
+  selectIsPinVerified,
+  // Auth selectors
+  selectCurrentUser,
+  selectAuthToken,
+  selectIsAuthenticated,
+  selectIsLoggingIn,
+  selectAuthError,
+  // Navigation selectors
+  selectCurrentRoomId,
+  selectSelectedTableId,
+  selectCurrentRoom,
+  // WebSocket selectors
+  selectIsWebSocketConnected,
+  selectLastSyncTime,
+  selectIsConnected,
+} from './slices/session.slice';
 export { uiActions } from './slices/ui.slice';

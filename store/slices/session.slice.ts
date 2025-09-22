@@ -28,11 +28,20 @@ const getCurrentTimestamp = () => Date.now();
  * Remplace auth.slice.ts et parties navigation de ui.slice.ts
  */
 export interface SessionState {
-  // Authentification
+  // Dual Token System
+  authToken: string | null;       // Long-lived token (1 year) - stored in AsyncStorage
+  sessionToken: string | null;    // Short-lived token (4h) - memory only
+  sessionExpiresAt: string | null; // ISO string - When sessionToken expires
+
+  // User
   user: User | null;
-  token: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
+  isAuthenticated: boolean;       // true when sessionToken is valid
+
+  // PIN Authentication
+  requiresPin: boolean;
+  requiresPinSetup: boolean;
+  temporaryToken: string | null;
+  isPinVerified: boolean;
 
   // Navigation
   currentRoomId: string | null;
@@ -73,21 +82,34 @@ export const logout = createAsyncThunk(
   'session/logout',
   async () => {
     try {
+      // Remove authToken from storage (dual token system)
+      await storageService.removeItem('authToken');
+      // TODO [legacy]: Remove the following legacy cleanup once dual token migration is complete (Q1 2025)
       await storageService.removeItem('token');
       await storageService.removeItem('userProfile');
     } catch (error) {
-      console.error('Erreur lors du nettoyage du localStorage:', error);
+      // Storage cleanup errors are non-critical, but log for debugging purposes
+      console.error('Error during storage cleanup in logout:', error);
     }
   }
 );
 
 // État initial
 const initialState: SessionState = {
-  // Auth
+  // Dual Token System
+  authToken: null,
+  sessionToken: null,
+  sessionExpiresAt: null,
+
+  // User
   user: null,
-  token: null,
-  refreshToken: null,
   isAuthenticated: false,
+
+  // PIN
+  requiresPin: false,
+  requiresPinSetup: false,
+  temporaryToken: null,
+  isPinVerified: false,
 
   // Navigation
   currentRoomId: null,
@@ -129,14 +151,72 @@ const sessionSlice = createSlice({
       state.authError = null;
     },
     
-    loginSuccess: (state, action: PayloadAction<LoginSuccessPayload>) => {
-      const { user, token, refreshToken } = action.payload;
+    // Called after successful email/password login
+    setAuthToken: (state, action: PayloadAction<{
+      authToken: string;
+      requirePin: boolean;
+    }>) => {
+      state.authToken = action.payload.authToken;
+      state.requiresPin = action.payload.requirePin;
+      state.isLoggingIn = false;
+      state.authError = null;
+      // Don't set authenticated yet - need PIN verification
+      state.isAuthenticated = false;
+      state.isPinVerified = false;
+    },
+
+    // Called after successful PIN verification
+    setSessionToken: (state, action: PayloadAction<{
+      sessionToken: string;
+      expiresIn: number;
+      user: User;
+    }>) => {
+      const { sessionToken, expiresIn, user } = action.payload;
+      state.sessionToken = sessionToken;
+      state.sessionExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
       state.user = user;
-      state.token = token;
-      state.refreshToken = refreshToken || null;
+      state.isAuthenticated = true;
+      state.requiresPin = false;
+      state.isPinVerified = true;
+    },
+
+    // Clear session token (but keep authToken)
+    clearSessionToken: (state) => {
+      state.sessionToken = null;
+      state.sessionExpiresAt = null;
+      state.isAuthenticated = false;
+      state.isPinVerified = false;
+      state.requiresPin = true;  // Need PIN again
+    },
+
+    // Legacy - kept for compatibility, will be removed
+    loginSuccess: (state, action: PayloadAction<{
+      user: User;
+      token: string;
+      refreshToken?: string;
+    }>) => {
+      // For now, map to sessionToken for backward compatibility
+      const { user, token } = action.payload;
+      state.user = user;
+      state.sessionToken = token;
       state.isAuthenticated = true;
       state.isLoggingIn = false;
       state.authError = null;
+      state.requiresPin = false;
+      state.requiresPinSetup = false;
+      state.isPinVerified = true;
+      state.temporaryToken = null;
+    },
+
+    // Called when app starts with stored authToken
+    setStoredAuthToken: (state, action: PayloadAction<{
+      authToken: string;
+    }>) => {
+      state.authToken = action.payload.authToken;
+      state.requiresPin = true;
+      state.isAuthenticated = false;
+      state.isPinVerified = false;
+      state.isLoggingIn = false;
     },
     
     loginFailure: (state, action: PayloadAction<string>) => {
@@ -145,11 +225,9 @@ const sessionSlice = createSlice({
       state.isAuthenticated = false;
     },
     
-    updateToken: (state, action: PayloadAction<TokenUpdatePayload>) => {
-      state.token = action.payload.token;
-      if (action.payload.refreshToken) {
-        state.refreshToken = action.payload.refreshToken;
-      }
+    // Update session expiration
+    updateSessionExpiration: (state, action: PayloadAction<number>) => {
+      state.sessionExpiresAt = new Date(Date.now() + action.payload * 1000).toISOString();
     },
     
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
@@ -157,7 +235,37 @@ const sessionSlice = createSlice({
         state.user = { ...state.user, ...action.payload };
       }
     },
-    
+
+    // === PIN AUTHENTICATION ===
+    setPinRequired: (state, action: PayloadAction<{
+      requirePin?: boolean;
+      requirePinSetup?: boolean;
+      temporaryToken?: string;
+    }>) => {
+      state.requiresPin = action.payload.requirePin || false;
+      state.requiresPinSetup = action.payload.requirePinSetup || false;
+      state.temporaryToken = action.payload.temporaryToken || null;
+      state.isPinVerified = false;
+    },
+
+    setPinVerified: (state, action: PayloadAction<boolean>) => {
+      state.isPinVerified = action.payload;
+      if (action.payload) {
+        state.requiresPin = false;
+        state.requiresPinSetup = false;
+        state.temporaryToken = null;
+        // Mark as authenticated when PIN is verified and we have a sessionToken
+        state.isAuthenticated = !!state.sessionToken && !!state.user;
+      }
+    },
+
+    clearPinState: (state) => {
+      state.requiresPin = false;
+      state.requiresPinSetup = false;
+      state.temporaryToken = null;
+      state.isPinVerified = false;
+    },
+
     // === NAVIGATION ===
     setCurrentRoom: (state, action: PayloadAction<string | null>) => {
       state.currentRoomId = action.payload;
@@ -250,7 +358,15 @@ const sessionSlice = createSlice({
     },
 
     // === RESET ===
-    resetSession: () => initialState,
+    resetSession: () => {
+      // Clear all session state
+      return initialState;
+    },
+
+    // Logout - clear everything including authToken
+    logout: () => {
+      return initialState;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -272,7 +388,9 @@ import { createSelector } from '@reduxjs/toolkit';
 
 // Auth selectors
 export const selectCurrentUser = (state: RootState) => state.session.user;
-export const selectAuthToken = (state: RootState) => state.session.token;
+export const selectAuthToken = (state: RootState) => state.session.authToken;
+export const selectSessionToken = (state: RootState) => state.session.sessionToken;
+export const selectSessionExpiresAt = (state: RootState) => state.session.sessionExpiresAt;
 export const selectIsAuthenticated = (state: RootState) => state.session.isAuthenticated;
 export const selectIsLoggingIn = (state: RootState) => state.session.isLoggingIn;
 export const selectAuthError = (state: RootState) => state.session.authError;
@@ -294,6 +412,11 @@ export const selectLastSyncTime = (state: RootState) => state.session.lastSyncTi
 // Initialization selectors
 export const selectAuthInitialized = (state: RootState) => state.session.authInitialized;
 export const selectAppInitialized = (state: RootState) => state.session.appInitialized;
+// PIN selectors
+export const selectRequiresPin = (state: RootState) => state.session.requiresPin;
+export const selectRequiresPinSetup = (state: RootState) => state.session.requiresPinSetup;
+export const selectTemporaryToken = (state: RootState) => state.session.temporaryToken;
+export const selectIsPinVerified = (state: RootState) => state.session.isPinVerified;
 
 // Alias pour compatibilité
 export const selectIsConnected = selectIsWebSocketConnected;

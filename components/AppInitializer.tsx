@@ -100,8 +100,9 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
   children,
   fallback
 }) => {
-  const { token, user } = useSelector((state: RootState) => state.session);
-  const isAuthenticated = !!(token && user?.profil);
+  const { sessionToken, user, isAuthenticated } = useSelector((state: RootState) => state.session);
+  // Simple check: we need sessionToken and user to initialize
+  const shouldInitialize = !!(sessionToken && user);
 
   const {
     isInitialized,
@@ -117,7 +118,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
   useAlertMonitor();
 
   // Si pas authentifié, passer directement au contenu (pages de login)
-  if (!isAuthenticated) {
+  if (!shouldInitialize) {
     return <>{children}</>;
   }
 
@@ -162,8 +163,8 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
     );
   }
 
-  // Si pas encore initialisé, afficher l'écran de chargement
-  if (!isInitialized) {
+  // Si pas encore initialisé OU en cours de chargement, afficher l'écran de chargement
+  if (!isInitialized || isLoading) {
     return fallback || (
       <View style={styles.container}>
         {/* Logo avec effet d'onde ripple */}

@@ -15,7 +15,7 @@ interface WebSocketProviderProps {
  */
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }) => {
   const dispatch = useDispatch();
-  const token = useSelector((state: RootState) => state.session.token);
+  const token = useSelector((state: RootState) => state.session.sessionToken);
   const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
   // Initialisation de la connexion WebSocket

@@ -13,7 +13,7 @@ import { storageService } from '~/lib/storageService';
 import { sessionActions, logout } from '~/store';
 import { selectAuthInitialized } from '~/store/slices/session.slice';
 import { useAppDispatch } from '~/store/hooks';
-import { authApiService } from '~/api/auth.api';
+import { sessionService } from '~/services/SessionService';
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
@@ -28,35 +28,14 @@ configureReanimatedLogger({
 
 export { ErrorBoundary } from 'expo-router';
 
-type ProtectedRoutes = {
-  server: string[];
-  admin: string[];
-  superadmin: string[];
-  chef: string[];
-  manager: string[];
-  barman: string[];
-};
-
-const PROTECTED_ROUTES: ProtectedRoutes = {
-  server: ['(server)'],
-  admin: ['(admin)'],
-  superadmin: ['(admin)'],
-  chef: ['(cook)'],
-  manager: ['(admin)'],
-  barman: ['(barman)'],
-};
-
-const LOGIN_ROUTE = '/login';
-const HOME_ROUTES = {
-  server: '/(server)',
-  admin: '/(admin)',
-  superadmin: '/(admin)',
-  chef: '/(cook)',
-  manager: '/(admin)',
-  barman: '/(barman)',
-} as const;
-
-const EXCLUDED_ROUTES = ['/(auth)/forgot-password', '/(auth)/reset-password'] as const;
+import { HOME_ROUTES, PROTECTED_ROUTES, LOGIN_ROUTE, getHomeRoute, ProtectedRoutes } from '~/constants/routes';
+const EXCLUDED_ROUTES = [
+  '/(auth)/forgot-password',
+  '/(auth)/reset-password',
+  '/(auth)/setup-account',
+  '/(auth)/reset-pin',
+  '/(auth)/forgot-credentials'
+] as const;
 
 const isLoginRoute = (path: string) => path === LOGIN_ROUTE || path === '/(auth)/login' || path === '/';
 
@@ -69,18 +48,20 @@ function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
   const dispatch = useAppDispatch();
-  const { token, user: userProfile, isLoggingIn: isLoading } = useSelector((state: RootState) => state.session);
   const authInitialized = useSelector(selectAuthInitialized);
+  const {
+    authToken,
+    sessionToken,
+    user: userProfile,
+    isAuthenticated,
+    isLoggingIn: isLoading,
+    requiresPin,
+    requiresPinSetup,
+    isPinVerified
+  } = useSelector((state: RootState) => state.session);
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   React.useEffect(() => {
-    console.log('🔍 [AuthGate] Effect déclenché:', {
-      authInitialized,
-      isInitialized,
-      token: !!token,
-      userProfile: !!userProfile
-    });
-
     // Protection simple avec Redux state
     if (authInitialized) {
       console.log('🚫 [AuthGate] Initialisation bloquée - déjà fait');
@@ -89,47 +70,20 @@ function AuthenticationGate() {
 
     const initializeAuth = async () => {
       try {
-        const storedToken = await storageService.getItem('token');
+        // Initialize session to check for stored authToken
+        const sessionStatus = await sessionService.initialize();
 
-        if (storedToken) {
+        if (!sessionStatus.requireLogin) {
           // Marquer comme initialisé IMMÉDIATEMENT
           dispatch(sessionActions.setAuthInitialized(true));
-
-          console.log('🔑 [AuthGate] Initialisation auth avec token stocké...');
-          // D'abord, on indique qu'on est en train de se connecter
-          dispatch(sessionActions.loginStart());
-
-          try {
-            // Ensuite on charge le vrai user depuis l'API
-            const user = await authApiService.getUserWithToken();
-            console.log('✅ [AuthGate] Utilisateur récupéré:', user.id);
-
-            // Maintenant on peut faire le loginSuccess avec le vrai user
-            dispatch(sessionActions.loginSuccess({
-              token: storedToken,
-              user: user
-            }));
-
-            // On met à jour le profil dans le localStorage pour la prochaine fois
-            await storageService.setItem('userProfile', user.profil);
-          } catch (error) {
-            console.error('❌ [AuthGate] Erreur lors de la récupération utilisateur:', error);
-            dispatch(logout());
-            // Reset le flag en cas d'erreur pour permettre une nouvelle tentative
-            dispatch(sessionActions.setAuthInitialized(false));
-          }
-        } else {
-          console.log('🔑 [AuthGate] Aucun token stocké, utilisateur non connecté');
         }
       } catch (error) {
         console.error('❌ [AuthGate] Erreur lors de l\'initialisation auth:', error);
       } finally {
-        // Plus besoin de setLoginLoading ici car loginSuccess/logout le gère
         setIsInitialized(true);
       }
     };
 
-    console.log('🚀 [AuthGate] Lancement initializeAuth...');
     initializeAuth();
   }, [dispatch, authInitialized]);
 
@@ -141,17 +95,55 @@ function AuthenticationGate() {
     const fullPath = segments.length ? `/${segments.join('/')}` : '/';
     if (EXCLUDED_ROUTES.includes(fullPath as any)) return;
 
-    // Si pas de token, rediriger vers login
-    if (!token) {
-      if (isLoginRoute(fullPath)) {
+    // Allow setup-account route without authentication (it has its own token validation)
+    if (fullPath === '/(auth)/setup-account') {
+      // If already authenticated, redirect to home
+      if (sessionToken && userProfile && userProfile.profil) {
+        const targetRoute = getHomeRoute(userProfile.profil);
+        router.replace(targetRoute as any);
+        return;
+      }
+      // Otherwise allow access to setup-account
+      return;
+    }
+
+    // Allow PIN verification route when authToken exists but no sessionToken
+    if (fullPath === '/(auth)/pin-verification') {
+      if (authToken && !sessionToken) {
+        return; // Allow access to PIN verification
+      } else if (sessionToken && userProfile && userProfile.profil) {
+        // If already authenticated, redirect to home
+        const targetRoute = getHomeRoute(userProfile.profil);
+        router.replace(targetRoute as any);
+        return;
+      } else {
+        // No authToken, redirect to login
+        router.replace(LOGIN_ROUTE);
+        return;
+      }
+    }
+
+    // If no authToken at all, redirect to login
+    if (!authToken) {
+      if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
         return;
       }
       router.replace(LOGIN_ROUTE);
       return;
     }
 
-    // Si on a un token et un user complet avec profil
-    if (token && userProfile && userProfile.profil) {
+    // Check if PIN verification is required
+    // User has authToken but no sessionToken
+    if (authToken && !sessionToken && !isAuthenticated) {
+      if (fullPath !== '/(auth)/pin-verification') {
+        router.replace('/pin-verification');
+        return;
+      }
+      return;
+    }
+
+    // If we have both tokens and user is authenticated
+    if (sessionToken && userProfile && userProfile.profil && isAuthenticated) {
       // Si on est sur la page de login, rediriger vers la home du profil
       if (isLoginRoute(fullPath)) {
         const homeRoute = getHomeRouteForRole(userProfile.profil);
@@ -178,7 +170,7 @@ function AuthenticationGate() {
         return;
       }
     }
-  }, [isInitialized, isLoading, token, userProfile, segments, router, dispatch]);
+  }, [isInitialized, isLoading, authToken, sessionToken, isAuthenticated, userProfile, segments, router, dispatch, requiresPin, requiresPinSetup, isPinVerified]);
 
   return null;
 }
@@ -203,10 +195,11 @@ function RootLayoutNav() {
       <AuthenticationGate />
       <AppInitializer>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)/login" />
+          <Stack.Screen name="(auth)" />
           <Stack.Screen name="(server)" />
           <Stack.Screen name="(admin)" />
           <Stack.Screen name="(cook)" />
+          <Stack.Screen name="(barman)" />
         </Stack>
       </AppInitializer>
       <PortalHost />

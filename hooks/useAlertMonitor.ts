@@ -31,8 +31,8 @@ export const useAlertMonitor = () => {
   const reminderMinutes = accountConfig?.reminderMinutes || 15;
   const reminderNotificationsEnabled = accountConfig?.reminderNotificationsEnabled || false;
   
-  const { token, user } = useSelector((state: RootState) => state.session);
-  const isAuthenticated = !!(token && user);
+  const { sessionToken, user } = useSelector((state: RootState) => state.session);
+  const isAuthenticated = !!(sessionToken && user);
   
   // Utiliser le sélecteur mémorisé
   const orders = useSelector(selectOrdersArray);

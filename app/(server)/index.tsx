@@ -150,8 +150,7 @@ export default function ServerHome() {
 
       // Utiliser la nouvelle API PATCH
       if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
-        await updateOrderStatus({
-          orderId: order.id,
+        await updateOrderStatus(order.id, {
           status: newStatus,
           orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
           orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
@@ -216,8 +215,8 @@ export default function ServerHome() {
                 </View>
               </View>
               {currentRoomTables.map((table) => {
-                if (!table.currentOrder) return null;
-                const tableOrder = table.currentOrder;
+                if (!table.orders?.[0]) return null;
+                const tableOrder = table.orders?.[0];
                 const status = tableOrder.status;
 
                 const getStatusActions = (order: Order | undefined): ActionItem[] => {
@@ -393,7 +392,7 @@ export default function ServerHome() {
         height: screenHeight * 0.85 - 88,
       }}>
         <RoomComponent
-          tables={currentRoomTables.map(t => ({ ...t, orders: t.currentOrder ? [t.currentOrder] : [] }))}
+          tables={currentRoomTables.map(t => ({ ...t, orders: t.orders?.[0] ? [t.orders?.[0]] : [] }))}
           orders={currentRoomOrders}
           editingTableId={selectedTable?.id}
           editionMode={false}

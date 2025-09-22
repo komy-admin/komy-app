@@ -75,10 +75,11 @@ const createCompletedState = (): InitializationState => ({
  */
 export const useAppInit = () => {
   const dispatch = useDispatch();
-  const { token, user } = useSelector((state: RootState) => state.session);
+  const { sessionToken, user } = useSelector((state: RootState) => state.session);
   const appInitialized = useSelector(selectAppInitialized);
-  const isAuthenticated = !!(token && user);
-  
+  // Simple check: need sessionToken and user
+  const canInitialize = !!(sessionToken && user);
+
   // Hooks spécialisés
   const { loadRooms } = useRooms();
   const { loadAllOrders, loadOrdersForRoom } = useOrders();
@@ -101,7 +102,7 @@ export const useAppInit = () => {
 
   const initializeApp = useCallback(async () => {
     // Vérifications préliminaires synchrones
-    if (!isAuthenticated) {
+    if (!canInitialize) {
       console.log('❌ Utilisateur non authentifié, initialisation annulée');
       return;
     }
@@ -119,6 +120,7 @@ export const useAppInit = () => {
 
     setState(prev => ({
       ...prev,
+      isInitialized: false,  // Force false to display the loader
       isLoading: true,
       error: null
     }));
@@ -299,7 +301,7 @@ export const useAppInit = () => {
       throw error;
     }
   }, [
-    isAuthenticated,
+    canInitialize,
     loadRooms, 
     loadItemTypes, 
     loadItems,
@@ -314,31 +316,31 @@ export const useAppInit = () => {
   // Initialisation automatique quand l'utilisateur se connecte
   useEffect(() => {
     console.log(`🔍 [useAppInit] Effect déclenché:`, {
-      isAuthenticated,
+      isAuthenticated: canInitialize,
       userProfil: user?.profil,
       userId: user?.id,
       appInitialized,
       stateIsInitialized: state.isInitialized
     });
 
-    if (isAuthenticated && user?.profil && !appInitialized) {
+    if (canInitialize && user?.profil && !appInitialized) {
       console.log('🔄 Démarrage initialisation app (première fois seulement)');
       initializeApp();
-    } else if (!isAuthenticated) {
+    } else if (!canInitialize) {
       console.log('🔄 Reset état - utilisateur déconnecté');
       dispatch(sessionActions.setAppInitialized(false));
       setState(createInitialState());
-    } else if (isAuthenticated && user?.profil && appInitialized && !state.isInitialized) {
+    } else if (canInitialize && user?.profil && appInitialized && !state.isInitialized) {
       console.log('🔄 App déjà initialisée dans Redux, synchronisation du state local');
       setState(createCompletedState());
     } else {
       console.log('🚫 Conditions non remplies pour initialisation:', {
-        isAuthenticated,
+        isAuthenticated: canInitialize,
         hasProfil: !!user?.profil,
         alreadyInitialized: appInitialized
       });
     }
-  }, [isAuthenticated, user?.profil, user?.id, appInitialized, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [canInitialize, user?.profil, user?.id, appInitialized, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fonction pour réinitialiser manuellement
   const reinitializeApp = useCallback(async () => {

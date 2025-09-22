@@ -1,8 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
-import { RootState, entitiesActions } from '~/store';
+import { entitiesActions } from '~/store';
 import {
-  selectAllRooms,
   selectCurrentRoom,
   selectCurrentRoomId,
   sessionActions

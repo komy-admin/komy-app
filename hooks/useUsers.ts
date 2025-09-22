@@ -44,7 +44,7 @@ export const useUsers = () => {
   // Actions CRUD pour gérer les utilisateurs
   const createUser = useCallback(async (userData: Omit<User, 'id'>) => {
     try {
-      const newUser = await userApiService.create(userData);
+      const newUser = await userApiService.create({ ...userData, isPasswordSet: false });
       dispatch(entitiesActions.createUser({ user: newUser }));
       return newUser;
     } catch (error: any) {

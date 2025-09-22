@@ -4,8 +4,9 @@ import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { sessionActions } from '~/store';
+import { sessionService } from '~/services/SessionService';
 import { authApiService } from "~/api/auth.api";
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
@@ -16,43 +17,43 @@ export default function LoginScreen() {
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [qrResult, setQrResult] = useState<string | null>(null);
   const dispatch = useDispatch();
+  const router = useRouter();
   const { showToast } = useToast();
 
   const handleLogin = async () => {
     try {
-      const { token, ...user } = await authApiService.login({ loginId, password });
-      showToast('Login successful!', 'success');
-      dispatch(sessionActions.loginSuccess({
-        token: token.token,
-        refreshToken: token.refreshToken,
-        user
-      }));
+      // Use SessionService to handle login with dual token system
+      const response = await sessionService.login(loginId, password);
 
-      // Laisser _layout.tsx gérer la redirection automatiquement
-      // router.replace(`/${user.profil}/` as any);
-    } catch (error) {
-      console.error(error);
-      showToast(`Login failed: ${error}`, 'error');
+      // New dual token system: login returns authToken and requirePin or requirePinSetup
+      if (response.requirePin || response.requirePinSetup) {
+        // authToken is already stored by SessionService
+        // Navigate to PIN screen (will handle both verification and setup)
+        router.push('/pin-verification');
+        return;
+      }
+
+      // This shouldn't happen according to the new spec
+      // All users should have PIN requirement
+      showToast('Erreur de configuration. Contactez un administrateur.', 'error');
+    } catch (error: any) {
+      showToast(`Échec de connexion: ${error.message || error}`, 'error');
     }
   };
 
   const handleQrScan = async (data: string) => {
     setQrResult(data);
     setShowQrScanner(false);
-    const qrLogin = await authApiService.qrLogin(data);
-    if (!qrLogin.token.token) {
-      return;
-    }
-    // qrLogin.user contient déjà les données utilisateur - pas besoin d'un 2ème appel /me
-    console.log('QR login response:', qrLogin);
-    dispatch(sessionActions.loginSuccess({
-      token: qrLogin.token.token,
-      refreshToken: qrLogin.token.refreshToken,
-      user: qrLogin.user
-    }));
+    try {
+      // Use SessionService for QR login - handles all state management
+      const response = await sessionService.qrLogin(data);
 
-    // Laisser _layout.tsx gérer la redirection automatiquement
-    // router.replace(`/${currentUser.profil}/` as any);
+      // Navigate to PIN verification/setup based on response
+      router.push('/pin-verification');
+    } catch (error) {
+      console.error('QR scan error:', error);
+      showToast('Erreur lors de la connexion QR', 'error');
+    }
   };
 
   return (
@@ -83,6 +84,41 @@ export default function LoginScreen() {
                 <QrCode size={20} color="#1F2937" strokeWidth={2} />
                 <Text style={styles.qrButtonText}>Connexion via QR code</Text>
               </View>
+            </Button>
+
+            <TextInput
+              id="LoginId"
+              value={loginId}
+              onChangeText={setLoginId}
+              placeholder="Identifiant"
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <TextInput
+              id="LoginPassword"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Mot de passe"
+              secureTextEntry
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={styles.forgotPasswordContainer}>
+              <Link href="/forgot-credentials?type=password" asChild>
+                <Text style={styles.forgotPasswordText}>
+                  Mot de passe oublié ?
+                </Text>
+              </Link>
+            </View>
+
+            <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
+              <Text style={styles.loginButtonText}>Se connecter</Text>
             </Button>
           </View>
 

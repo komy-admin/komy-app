@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { View, Image, Text, Pressable, TouchableWithoutFeedback } from 'react-native'
 import { FileText, Calendar, LogOut } from 'lucide-react-native'
-import { Href, Link } from 'expo-router'
+import { Href, Link, useRouter } from 'expo-router'
 import { useSelector } from 'react-redux';
-import { RootState, sessionActions, logout } from '~/store';
-import { useAppDispatch } from '~/store/hooks';
+import { RootState } from '~/store';
+import { sessionService } from '~/services/SessionService';
 
 interface TopBarProps {
   showAdditions?: boolean;
@@ -13,7 +13,7 @@ interface TopBarProps {
 
 export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBarProps) {
   const { user } = useSelector((state: RootState) => state.session);
-  const dispatch = useAppDispatch();
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
@@ -51,9 +51,18 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
     return require('~/assets/images/userprofiledefault.jpg');
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    setShowProfileMenu(false);
+  const handleLogout = async () => {
+    try {
+      setShowProfileMenu(false);
+      // Use SessionService to properly clear authToken and sessionToken
+      await sessionService.logout();
+      // Navigate to login page
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if logout fails, navigate to login
+      router.replace('/login');
+    }
   };
 
   const toggleProfileMenu = () => {

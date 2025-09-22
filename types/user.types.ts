@@ -18,4 +18,5 @@ export type User = {
   profileImage?: string | null;
   password: string;
   loginId: string;
+  isPasswordSet: boolean;
 };
