@@ -1,10 +1,20 @@
-import React, { memo, useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { Plus, Package } from 'lucide-react-native';
 import { Select } from '~/components/ui/select';
 import { LocalMenuCategoryItem, CategoryItemFormData } from './MenuEditor.types';
 import { Item } from '~/types/item.types';
 import { IconButton } from '~/components/ui/IconButton';
+
+// Helper pour z-index négatifs sur web
+const getWebNegativeZIndex = (zIndex: number) =>
+  Platform.OS === 'web' ? { zIndex, position: 'relative' as const } : {};
+
+// Styles précalculés pour éviter la recréation d'objets
+const WEB_STYLES = {
+  ARTICLES: getWebNegativeZIndex(-5),
+  BUTTONS: getWebNegativeZIndex(-10),
+} as const;
 
 interface CategoryItemAssignmentProps {
   categoryIndex: number;
@@ -118,7 +128,6 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
                     id: itemFormData.itemId
                   } : undefined}
                   placeholder="Sélectionner un article"
-                  style={styles.addItemSelect}
                   maxHeight={200}
                   onValueChange={handleSelectChange}
                 />
@@ -137,7 +146,7 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
               </View>
             </View>
 
-            <View style={styles.addItemFormActions}>
+            <View style={[styles.addItemFormActions, WEB_STYLES.BUTTONS]}>
               <Pressable onPress={handleAddItem} style={styles.addItemFormButtonPrimary}>
                 <Text style={styles.addItemFormButtonTextPrimary}>Confirmer</Text>
               </Pressable>
@@ -150,7 +159,10 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
       )}
 
       {visibleItems.length === 0 ? (
-        <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+        <View style={[
+          { alignItems: 'center', paddingVertical: 16 },
+          WEB_STYLES.ARTICLES
+        ]}>
           <Package size={24} color="#D1D5DB" />
           <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 4 }}>
             {availableItems.length === 0 ?
@@ -160,7 +172,7 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
           </Text>
         </View>
       ) : (
-        <View style={styles.assignedItemsListNew}>
+        <View style={[styles.assignedItemsListNew, WEB_STYLES.ARTICLES]}>
           {visibleItems.map((localItem: LocalMenuCategoryItem) => {
             const isEditing = isEditingCurrentCategory && editingItem?.tempId === localItem.tempId;
 
@@ -201,8 +213,7 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
                           </Pressable>
                         </View>
                       </View>
-
-                      <View style={styles.editItemFormActions}>
+                      <View style={[styles.editItemFormActions, WEB_STYLES.BUTTONS]}>
                         <Pressable onPress={onSaveEditedItem} style={styles.addItemFormButtonPrimary}>
                           <Text style={styles.addItemFormButtonTextPrimary}>Confirmer</Text>
                         </Pressable>
@@ -396,18 +407,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
-    padding: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
     fontSize: 14,
     backgroundColor: '#fff',
     color: '#111827',
+    height: 47,
   },
 
-  addItemSelect: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-  },
 
   addItemFormActions: {
     flexDirection: 'row',

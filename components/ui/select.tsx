@@ -244,12 +244,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D7D7D7',
+    borderColor: '#D1D5DB',
+    height: 47,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
     }),
   },
   selectedText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#2A2E33',
   },
   placeholderText: {
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#2A2E33',
   },
   selectedOptionText: {
