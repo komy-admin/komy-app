@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { sessionActions } from '~/store/slices/session.slice';
+import { sessionActions, selectAppInitialized } from '~/store/slices/session.slice';
 import { useRooms } from './useRooms';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
@@ -9,23 +9,65 @@ import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
 import { accountConfigApiService } from '~/api/account-config.api';
 
+interface InitializationProgress {
+  rooms: boolean;
+  tables: boolean;
+  itemTypes: boolean;
+  items: boolean;
+  menus: boolean;
+  orders: boolean;
+  users: boolean;
+  accountConfig: boolean;
+}
+
 interface InitializationState {
   isInitialized: boolean;
   isLoading: boolean;
   error: string | null;
-  progress: {
-    rooms: boolean;
-    tables: boolean;
-    itemTypes: boolean;
-    items: boolean;
-    menus: boolean;
-    orders: boolean;
-    users: boolean;
-    accountConfig: boolean;
-  };
-  finalizationProgress: number; // 0 à 100 pour la phase finale
+  progress: InitializationProgress;
+  finalizationProgress: number;
   isFinalizingStage: boolean;
 }
+
+const INITIAL_PROGRESS: InitializationProgress = {
+  rooms: false,
+  tables: false,
+  itemTypes: false,
+  items: false,
+  menus: false,
+  orders: false,
+  users: false,
+  accountConfig: false,
+};
+
+const COMPLETED_PROGRESS: InitializationProgress = {
+  rooms: true,
+  tables: true,
+  itemTypes: true,
+  items: true,
+  menus: true,
+  orders: true,
+  users: true,
+  accountConfig: true,
+};
+
+const createInitialState = (): InitializationState => ({
+  isInitialized: false,
+  isLoading: false,
+  error: null,
+  progress: INITIAL_PROGRESS,
+  finalizationProgress: 0,
+  isFinalizingStage: false
+});
+
+const createCompletedState = (): InitializationState => ({
+  isInitialized: true,
+  isLoading: false,
+  error: null,
+  progress: COMPLETED_PROGRESS,
+  finalizationProgress: 100,
+  isFinalizingStage: false
+});
 
 /**
  * Hook pour l'initialisation globale de l'application
@@ -34,6 +76,7 @@ interface InitializationState {
 export const useAppInit = () => {
   const dispatch = useDispatch();
   const { token, user } = useSelector((state: RootState) => state.session);
+  const appInitialized = useSelector(selectAppInitialized);
   const isAuthenticated = !!(token && user);
   
   // Hooks spécialisés
@@ -44,23 +87,7 @@ export const useAppInit = () => {
   const { loadUsers } = useUsers();
 
   // État d'initialisation
-  const [state, setState] = useState<InitializationState>({
-    isInitialized: false,
-    isLoading: false,
-    error: null,
-    progress: {
-      rooms: false,
-      tables: false,
-      itemTypes: false,
-      items: false,
-      menus: false,
-      orders: false,
-      users: false,
-      accountConfig: false,
-    },
-    finalizationProgress: 0,
-    isFinalizingStage: false
-  });
+  const [state, setState] = useState<InitializationState>(createInitialState);
 
   const updateProgress = (key: keyof InitializationState['progress'], value: boolean) => {
     setState(prev => ({
@@ -82,6 +109,8 @@ export const useAppInit = () => {
     if (state.isInitialized || state.isLoading || state.error) {
       return; // Éviter les doubles initialisations et les re-tentatives automatiques après erreur
     }
+    // Marquer immédiatement comme en cours d'initialisation dans Redux pour éviter la double initialisation
+    dispatch(sessionActions.setAppInitialized(true));
 
     console.log('🚀 Début de l\'initialisation de l\'application...');
 
@@ -236,10 +265,11 @@ export const useAppInit = () => {
           accountConfig: true,
         }
       }));
+      setState(createCompletedState());
 
       // Déclencher la synchronisation WebSocket
       dispatch(sessionActions.setWebSocketConnected(true));
-      
+
       console.log('🎉 Initialisation terminée avec succès !');
 
       return {
@@ -254,7 +284,10 @@ export const useAppInit = () => {
 
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation:', error);
-      
+
+      // Remettre le flag à false en cas d'erreur pour permettre une nouvelle tentative
+      dispatch(sessionActions.setAppInitialized(false));
+
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       setState(prev => ({
         ...prev,
@@ -262,7 +295,7 @@ export const useAppInit = () => {
         isInitialized: false,
         error: errorMessage
       }));
-      
+
       throw error;
     }
   }, [
@@ -280,39 +313,40 @@ export const useAppInit = () => {
 
   // Initialisation automatique quand l'utilisateur se connecte
   useEffect(() => {
-    if (isAuthenticated && user?.profil) {
-      // Simple appel, les protections sont dans initializeApp
+    console.log(`🔍 [useAppInit] Effect déclenché:`, {
+      isAuthenticated,
+      userProfil: user?.profil,
+      userId: user?.id,
+      appInitialized,
+      stateIsInitialized: state.isInitialized
+    });
+
+    if (isAuthenticated && user?.profil && !appInitialized) {
+      console.log('🔄 Démarrage initialisation app (première fois seulement)');
       initializeApp();
     } else if (!isAuthenticated) {
-      setState({
-        isInitialized: false,
-        isLoading: false,
-        error: null,
-        progress: {
-          rooms: false,
-          tables: false,
-          itemTypes: false,
-          items: false,
-          menus: false,
-          orders: false,
-          users: false,
-          accountConfig: false,
-        },
-        finalizationProgress: 0,
-        isFinalizingStage: false
+      console.log('🔄 Reset état - utilisateur déconnecté');
+      dispatch(sessionActions.setAppInitialized(false));
+      setState(createInitialState());
+    } else if (isAuthenticated && user?.profil && appInitialized && !state.isInitialized) {
+      console.log('🔄 App déjà initialisée dans Redux, synchronisation du state local');
+      setState(createCompletedState());
+    } else {
+      console.log('🚫 Conditions non remplies pour initialisation:', {
+        isAuthenticated,
+        hasProfil: !!user?.profil,
+        alreadyInitialized: appInitialized
       });
     }
-  }, [isAuthenticated, user?.profil]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.profil, user?.id, appInitialized, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fonction pour réinitialiser manuellement
   const reinitializeApp = useCallback(async () => {
     console.log('🔄 Réinitialisation manuelle de l\'application...');
-    setState(prev => ({
-      ...prev,
-      isInitialized: false
-    }));
+    dispatch(sessionActions.setAppInitialized(false));
+    setState(createInitialState());
     return initializeApp();
-  }, [initializeApp]);
+  }, [initializeApp, dispatch]);
 
   // Fonction pour changer de salle
   const switchRoom = useCallback(async (roomId: string) => {

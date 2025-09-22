@@ -11,6 +11,7 @@ import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
 import { sessionActions, logout } from '~/store';
+import { selectAuthInitialized } from '~/store/slices/session.slice';
 import { useAppDispatch } from '~/store/hooks';
 import { authApiService } from '~/api/auth.api';
 import {
@@ -53,19 +54,36 @@ const HOME_ROUTES = {
   chef: '/(cook)',
   manager: '/(admin)',
   barman: '/(barman)',
-};
+} as const;
+
+const EXCLUDED_ROUTES = ['/(auth)/forgot-password', '/(auth)/reset-password'] as const;
+
+const isLoginRoute = (path: string) => path === LOGIN_ROUTE || path === '/(auth)/login' || path === '/';
+
+const getHomeRouteForRole = (role: string) => HOME_ROUTES[role as keyof typeof HOME_ROUTES];
+
+const hasAccessToRoute = (userRole: string, currentSegment: string) =>
+  PROTECTED_ROUTES[userRole as keyof ProtectedRoutes]?.includes(currentSegment);
 
 function AuthenticationGate() {
   const router = useRouter();
   const segments = useSegments();
   const dispatch = useAppDispatch();
   const { token, user: userProfile, isLoggingIn: isLoading } = useSelector((state: RootState) => state.session);
+  const authInitialized = useSelector(selectAuthInitialized);
   const [isInitialized, setIsInitialized] = React.useState(false);
-  const authInitializedRef = React.useRef(false);
 
   React.useEffect(() => {
-    // Protection contre la double exécution (React StrictMode)
-    if (authInitializedRef.current) {
+    console.log('🔍 [AuthGate] Effect déclenché:', {
+      authInitialized,
+      isInitialized,
+      token: !!token,
+      userProfile: !!userProfile
+    });
+
+    // Protection simple avec Redux state
+    if (authInitialized) {
+      console.log('🚫 [AuthGate] Initialisation bloquée - déjà fait');
       return;
     }
 
@@ -74,15 +92,17 @@ function AuthenticationGate() {
         const storedToken = await storageService.getItem('token');
 
         if (storedToken) {
-          // Marquer comme initialisé avant les appels async
-          authInitializedRef.current = true;
+          // Marquer comme initialisé IMMÉDIATEMENT
+          dispatch(sessionActions.setAuthInitialized(true));
 
+          console.log('🔑 [AuthGate] Initialisation auth avec token stocké...');
           // D'abord, on indique qu'on est en train de se connecter
           dispatch(sessionActions.loginStart());
 
           try {
             // Ensuite on charge le vrai user depuis l'API
             const user = await authApiService.getUserWithToken();
+            console.log('✅ [AuthGate] Utilisateur récupéré:', user.id);
 
             // Maintenant on peut faire le loginSuccess avec le vrai user
             dispatch(sessionActions.loginSuccess({
@@ -93,21 +113,25 @@ function AuthenticationGate() {
             // On met à jour le profil dans le localStorage pour la prochaine fois
             await storageService.setItem('userProfile', user.profil);
           } catch (error) {
+            console.error('❌ [AuthGate] Erreur lors de la récupération utilisateur:', error);
             dispatch(logout());
             // Reset le flag en cas d'erreur pour permettre une nouvelle tentative
-            authInitializedRef.current = false;
+            dispatch(sessionActions.setAuthInitialized(false));
           }
+        } else {
+          console.log('🔑 [AuthGate] Aucun token stocké, utilisateur non connecté');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('❌ [AuthGate] Erreur lors de l\'initialisation auth:', error);
       } finally {
         // Plus besoin de setLoginLoading ici car loginSuccess/logout le gère
         setIsInitialized(true);
       }
     };
 
+    console.log('🚀 [AuthGate] Lancement initializeAuth...');
     initializeAuth();
-  }, [dispatch]);
+  }, [dispatch, authInitialized]);
 
   React.useEffect(() => {
     if (!isInitialized || isLoading) {
@@ -115,12 +139,11 @@ function AuthenticationGate() {
     }
 
     const fullPath = segments.length ? `/${segments.join('/')}` : '/';
-    if (fullPath === '/(auth)/forgot-password') return
-    if (fullPath === '/(auth)/reset-password') return
+    if (EXCLUDED_ROUTES.includes(fullPath as any)) return;
 
     // Si pas de token, rediriger vers login
     if (!token) {
-      if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
+      if (isLoginRoute(fullPath)) {
         return;
       }
       router.replace(LOGIN_ROUTE);
@@ -130,28 +153,28 @@ function AuthenticationGate() {
     // Si on a un token et un user complet avec profil
     if (token && userProfile && userProfile.profil) {
       // Si on est sur la page de login, rediriger vers la home du profil
-      if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login' || fullPath === '/') {
-        const role = userProfile.profil as keyof typeof HOME_ROUTES;
-        if (!role || !HOME_ROUTES[role]) {
+      if (isLoginRoute(fullPath)) {
+        const homeRoute = getHomeRouteForRole(userProfile.profil);
+        if (!homeRoute) {
           console.error(
-            `Invalid or missing user profile detected. Logging out. userProfile.profil: ${userProfile.profil}, role: ${role}, HOME_ROUTES[role]: ${HOME_ROUTES[role]}, current path: ${fullPath}`
+            `Invalid or missing user profile detected. Logging out. userProfile.profil: ${userProfile.profil}, current path: ${fullPath}`
           );
           dispatch(logout());
           router.replace(LOGIN_ROUTE);
           return;
         }
 
-        console.log('Redirection vers:', HOME_ROUTES[role]);
-        router.replace(HOME_ROUTES[role] as any);
+        console.log('🔄 [AuthGate] Redirection vers:', homeRoute);
+        router.replace(homeRoute as any);
         return;
       }
 
       // Vérifier si l'utilisateur a accès à la route actuelle
       const firstSegment = segments[0];
-      if (firstSegment && !PROTECTED_ROUTES[userProfile.profil as keyof ProtectedRoutes]?.includes(firstSegment)) {
-        const role = userProfile.profil as keyof typeof HOME_ROUTES;
-        console.log('Accès refusé, redirection vers:', HOME_ROUTES[role]);
-        router.replace(HOME_ROUTES[role] as any);
+      if (firstSegment && !hasAccessToRoute(userProfile.profil, firstSegment)) {
+        const homeRoute = getHomeRouteForRole(userProfile.profil);
+        console.log('Accès refusé, redirection vers:', homeRoute);
+        router.replace(homeRoute as any);
         return;
       }
     }

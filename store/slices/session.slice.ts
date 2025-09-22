@@ -2,6 +2,27 @@ import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { User } from '~/types/user.types';
 import { storageService } from '~/lib/storageService';
 
+// Types pour les payloads des actions
+interface LoginSuccessPayload {
+  user: User;
+  token: string;
+  refreshToken?: string;
+}
+
+interface TokenUpdatePayload {
+  token: string;
+  refreshToken?: string;
+}
+
+interface AccountConfigPayload {
+  id: string;
+  reminderMinutes: number;
+  reminderNotificationsEnabled: boolean;
+}
+
+// Utilitaire pour les timestamps
+const getCurrentTimestamp = () => Date.now();
+
 /**
  * État de session : authentification, navigation et contexte utilisateur
  * Remplace auth.slice.ts et parties navigation de ui.slice.ts
@@ -12,22 +33,26 @@ export interface SessionState {
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
-  
+
   // Navigation
   currentRoomId: string | null;
   selectedTableId: string | null;
-  
+
   // Connexion WebSocket
   isWebSocketConnected: boolean;
   lastSyncTime: number | null;
-  
+
   // État de chargement
   isLoggingIn: boolean;
   isLoggingOut: boolean;
   authError: string | null;
   isLoading: boolean;
   error: string | null;
-  
+
+  // Flags d'initialisation
+  authInitialized: boolean;
+  appInitialized: boolean;
+
   // Account Config
   accountConfig: {
     id: string;
@@ -63,27 +88,31 @@ const initialState: SessionState = {
   token: null,
   refreshToken: null,
   isAuthenticated: false,
-  
+
   // Navigation
   currentRoomId: null,
   selectedTableId: null,
-  
+
   // WebSocket
   isWebSocketConnected: false,
   lastSyncTime: null,
-  
+
   // Loading states
   isLoggingIn: false,
   isLoggingOut: false,
   authError: null,
   isLoading: false,
   error: null,
-  
+
+  // Initialization flags
+  authInitialized: false,
+  appInitialized: false,
+
   // Account Config
   accountConfig: null,
   overdueOrderIds: [],
   overdueOrderItemIds: [],
-  lastAlertCheck: Date.now(),
+  lastAlertCheck: getCurrentTimestamp(),
   triggerAlertCheck: 0,
 };
 
@@ -100,11 +129,7 @@ const sessionSlice = createSlice({
       state.authError = null;
     },
     
-    loginSuccess: (state, action: PayloadAction<{
-      user: User;
-      token: string;
-      refreshToken?: string;
-    }>) => {
+    loginSuccess: (state, action: PayloadAction<LoginSuccessPayload>) => {
       const { user, token, refreshToken } = action.payload;
       state.user = user;
       state.token = token;
@@ -120,10 +145,7 @@ const sessionSlice = createSlice({
       state.isAuthenticated = false;
     },
     
-    updateToken: (state, action: PayloadAction<{ 
-      token: string; 
-      refreshToken?: string 
-    }>) => {
+    updateToken: (state, action: PayloadAction<TokenUpdatePayload>) => {
       state.token = action.payload.token;
       if (action.payload.refreshToken) {
         state.refreshToken = action.payload.refreshToken;
@@ -158,28 +180,24 @@ const sessionSlice = createSlice({
     setWebSocketConnected: (state, action: PayloadAction<boolean>) => {
       state.isWebSocketConnected = action.payload;
       if (action.payload) {
-        state.lastSyncTime = Date.now();
+        state.lastSyncTime = getCurrentTimestamp();
       }
     },
-    
+
     updateLastSyncTime: (state) => {
-      state.lastSyncTime = Date.now();
+      state.lastSyncTime = getCurrentTimestamp();
     },
-    
+
+    // Alias pour compatibilité
     setConnected: (state, action: PayloadAction<boolean>) => {
-      // Alias pour compatibilité
       state.isWebSocketConnected = action.payload;
       if (action.payload) {
-        state.lastSyncTime = Date.now();
+        state.lastSyncTime = getCurrentTimestamp();
       }
     },
     
     // === ACCOUNT CONFIG ===
-    setAccountConfig: (state, action: PayloadAction<{
-      id: string;
-      reminderMinutes: number;
-      reminderNotificationsEnabled: boolean;
-    }>) => {
+    setAccountConfig: (state, action: PayloadAction<AccountConfigPayload>) => {
       state.accountConfig = action.payload;
     },
     
@@ -202,26 +220,35 @@ const sessionSlice = createSlice({
     },
     
     updateLastAlertCheck: (state) => {
-      state.lastAlertCheck = Date.now();
+      state.lastAlertCheck = getCurrentTimestamp();
     },
     
     triggerAlertCheck: (state) => {
-      state.triggerAlertCheck = Date.now();
+      state.triggerAlertCheck = getCurrentTimestamp();
     },
-    
+
+    // === INITIALIZATION FLAGS ===
+    setAuthInitialized: (state, action: PayloadAction<boolean>) => {
+      state.authInitialized = action.payload;
+    },
+
+    setAppInitialized: (state, action: PayloadAction<boolean>) => {
+      state.appInitialized = action.payload;
+    },
+
     // === ERROR HANDLING ===
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
     },
-    
+
     clearError: (state) => {
       state.error = null;
     },
-    
+
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
-    
+
     // === RESET ===
     resetSession: () => initialState,
   },
@@ -263,6 +290,10 @@ export const selectCurrentRoom = createSelector(
 // WebSocket selectors
 export const selectIsWebSocketConnected = (state: RootState) => state.session.isWebSocketConnected;
 export const selectLastSyncTime = (state: RootState) => state.session.lastSyncTime;
+
+// Initialization selectors
+export const selectAuthInitialized = (state: RootState) => state.session.authInitialized;
+export const selectAppInitialized = (state: RootState) => state.session.appInitialized;
 
 // Alias pour compatibilité
 export const selectIsConnected = selectIsWebSocketConnected;

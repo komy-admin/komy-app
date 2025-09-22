@@ -43,12 +43,12 @@ export default function LoginScreen() {
     if (!qrLogin.token.token) {
       return;
     }
-    const currentUser = await authApiService.getUserWithToken();
+    // qrLogin.user contient déjà les données utilisateur - pas besoin d'un 2ème appel /me
     console.log('QR login response:', qrLogin);
     dispatch(sessionActions.loginSuccess({
       token: qrLogin.token.token,
       refreshToken: qrLogin.token.refreshToken,
-      user: currentUser
+      user: qrLogin.user
     }));
 
     // Laisser _layout.tsx gérer la redirection automatiquement
