@@ -18,11 +18,11 @@ import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import {
   useRestaurant,
-  useRooms,
   useMenu,
   useTables,
   useOrders
 } from '~/hooks/useRestaurant';
+import { useAppInit } from '~/hooks/useAppInit';
 import { CustomModal } from '@/components/CustomModal';
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { Order } from '@/types/order.types';
@@ -43,7 +43,8 @@ export default function ServicePage() {
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
   const { createOrderWithLines, createOrderLines, deleteOrderLine, deleteOrderLines } = useOrderLines();
-  const { rooms, currentRoom, setCurrentRoom } = useRooms();
+  const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
+  const { isInitialized: appInitialized, isLoading: appLoading } = useAppInit();
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
     currentRoomOrders,
@@ -633,8 +634,8 @@ export default function ServicePage() {
               </View>
             )}
 
-            {rooms.length === 0 ? (
-              // État vide - Aucune room disponible
+            {appInitialized && !appLoading && rooms.length === 0 ? (
+              // État vide - Aucune room disponible (seulement quand l'initialisation est vraiment terminée)
               <View style={{
                 backgroundColor: '#FAFBFC',
                 padding: 48,
@@ -694,6 +695,15 @@ export default function ServicePage() {
                     Créer ma première salle
                   </Text>
                 </Pressable>
+              </View>
+            ) : appLoading || !appInitialized ? (
+              // État de chargement
+              <View style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Text>Chargement des salles...</Text>
               </View>
             ) : (
               // Layout normal avec room existante

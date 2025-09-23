@@ -269,6 +269,9 @@ export const useAppInit = () => {
       }));
       setState(createCompletedState());
 
+      // Marquer l'app comme initialisée APRÈS le chargement complet des données
+      dispatch(sessionActions.setAppInitialized(true));
+
       // Déclencher la synchronisation WebSocket
       dispatch(sessionActions.setWebSocketConnected(true));
 
