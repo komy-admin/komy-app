@@ -29,6 +29,7 @@ import { Order } from '@/types/order.types';
 import { OrderLine, CreateOrderLineRequest, OrderLineType } from '~/types/order-line.types';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useMenus } from '~/hooks/useMenus';
+import { Plus, LayoutDashboard } from 'lucide-react-native';
 
 export default function ServicePage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -465,6 +466,10 @@ export default function ServicePage() {
   };
 
   const { width, height } = useWindowDimensions();
+  // Fonction pour rediriger vers room_list avec création automatique
+  const handleCreateFirstRoom = () => {
+    router.push('/(admin)/room_list?action=create');
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -581,69 +586,139 @@ export default function ServicePage() {
           </SidePanel>
 
           <View style={{ flex: 1, height: '100%', position: 'relative' }}>
-            <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{
-                  alignItems: 'center',
-                  height: '100%'
-                }}
-                className='flex-row p-2 flex-1'
-              >
-                {rooms.map((room, index) => (
-                  <Pressable
-                    key={`${room.name}-badge-${index}`}
-                    onPress={() => handleChangeRoom(room)}>
-                    <Badge
-                      variant="outline"
-                      className='mx-1'
-                      active={room.id === currentRoom?.id}
-                      size='lg'
-                    >
-                      <Text>{room.name}</Text>
-                    </Badge>
-                  </Pressable>
-                ))}
-              </ScrollView>
-              <Button
-                onPress={() => navigateToRoomEdit()}
-                className="w-[200px] h-[50px] flex items-center justify-center"
-                style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: '#FBFBFB',
-                    fontWeight: '500',
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
+            {/* Header avec tabs des rooms - seulement si il y a des rooms */}
+            {rooms.length > 0 && (
+              <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
+                    alignItems: 'center',
+                    height: '100%'
                   }}
+                  className='flex-row p-2 flex-1'
                 >
-                  Mode édition
-                </Text>
-              </Button>
-            </View>
-
-            {selectedTable && !selectedTableOrder && (
-              <StartOrderCard
-                table={selectedTable}
-                onStartPress={handleCreateOrder}
-              />
+                  {rooms.map((room, index) => (
+                    <Pressable
+                      key={`${room.name}-badge-${index}`}
+                      onPress={() => handleChangeRoom(room)}>
+                      <Badge
+                        variant="outline"
+                        className='mx-1'
+                        active={room.id === currentRoom?.id}
+                        size='lg'
+                      >
+                        <Text>{room.name}</Text>
+                      </Badge>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                <Button
+                  onPress={() => navigateToRoomEdit()}
+                  className="w-[200px] h-[50px] flex items-center justify-center"
+                  style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#FBFBFB',
+                      fontWeight: '500',
+                      textAlign: 'center',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Mode édition
+                  </Text>
+                </Button>
+              </View>
             )}
 
-            <RoomComponent
-              tables={currentRoomTables}
-              orders={currentRoomOrders}
-              editingTableId={selectedTableId ?? undefined}
-              editionMode={false}
-              isLoading={loading}
-              width={currentRoom?.width}
-              height={currentRoom?.height}
-              onTablePress={handleTablePress}
-              onTableLongPress={handleTablePress}
-              onTableUpdate={() => { }}
-            />
+            {rooms.length === 0 ? (
+              // État vide - Aucune room disponible
+              <View style={{
+                backgroundColor: '#FAFBFC',
+                padding: 48,
+                alignItems: 'center',
+                flex: 1,
+                justifyContent: 'center',
+              }}>
+                <View style={{ marginBottom: 20 }}>
+                  <LayoutDashboard size={48} color="#D1D5DB" />
+                </View>
+                <Text style={{
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: '#2A2E33',
+                  marginBottom: 12,
+                  textAlign: 'center',
+                  letterSpacing: 0.3,
+                }}>
+                  Aucune salle configurée
+                </Text>
+                <Text style={{
+                  fontSize: 15,
+                  color: '#6B7280',
+                  textAlign: 'center',
+                  lineHeight: 22,
+                  marginBottom: 32,
+                  maxWidth: 320,
+                }}>
+                  Pour commencer à utiliser le service, vous devez d'abord créer une salle avec des tables.
+                </Text>
+                <Pressable
+                  onPress={handleCreateFirstRoom}
+                  style={{
+                    backgroundColor: '#2A2E33',
+                    paddingHorizontal: 28,
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    shadowColor: '#2A2E33',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 8,
+                    elevation: 6,
+                    ...(Platform.OS === 'web' && {
+                      cursor: 'pointer',
+                    })
+                  }}
+                >
+                  <Plus size={20} color="white" style={{ marginRight: 8 }} />
+                  <Text style={{
+                    color: '#FFFFFF',
+                    fontSize: 16,
+                    fontWeight: '700',
+                    letterSpacing: 0.4,
+                  }}>
+                    Créer ma première salle
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              // Layout normal avec room existante
+              <>
+                {selectedTable && !selectedTableOrder && (
+                  <StartOrderCard
+                    table={selectedTable}
+                    onStartPress={handleCreateOrder}
+                  />
+                )}
+
+                <RoomComponent
+                  tables={currentRoomTables}
+                  orders={currentRoomOrders}
+                  editingTableId={selectedTableId ?? undefined}
+                  editionMode={false}
+                  isLoading={loading}
+                  width={currentRoom?.width}
+                  height={currentRoom?.height}
+                  onTablePress={handleTablePress}
+                  onTableLongPress={handleTablePress}
+                  onTableUpdate={() => { }}
+                />
+              </>
+            )}
           </View>
         </View>
       )}
