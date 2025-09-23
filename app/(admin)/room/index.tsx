@@ -4,30 +4,26 @@ import { useRouter } from 'expo-router';
 import { Button, ForkTable } from '~/components/ui';
 import { CreditCard as Edit2, UtensilsCrossed, Trash } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
-import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
 import { ActionItem } from '~/components/ActionMenu';
-import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
+import { useRooms, useTables } from '~/hooks/useRestaurant';
 import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
 import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
-import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 export default function RoomListPage() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
-  const roomFormView = useAdminFormView();
   const { showToast } = useToast();
   const router = useRouter();
   const { width } = useWindowDimensions();
 
 
   // Utilisation des hooks Redux
-  const { rooms, loading, error, createRoom, updateRoom, deleteRoom, getRoomById } = useRooms();
+  const { rooms, loading, error, deleteRoom } = useRooms();
   const { tables } = useTables();
 
   // State pour le filtrage
@@ -36,48 +32,13 @@ export default function RoomListPage() {
   // Filtrage des salles
   const filteredRooms = filterRooms(rooms, filters);
 
+
   const handleCreateRoom = () => {
-    setCurrentRoom(null);
-    roomFormView.openCreate();
+    router.push('/(admin)/room/create');
   };
 
   const handleEditRoom = (id: string) => {
-    const room = rooms.find(room => room.id === id);
-    if (!room) return;
-    setCurrentRoom(room);
-    roomFormView.openEdit();
-  };
-
-  const handleCloseModal = () => {
-    roomFormView.close();
-    setCurrentRoom(null);
-  };
-
-  const handleSaveRoom = async (getFormData: () => any) => {
-    try {
-      const formResult = getFormData();
-      if (!formResult.isValid) {
-        return false;
-      }
-
-      const room = formResult.data;
-      if (room.id) {
-        await updateRoom(room.id, room);
-        showToast('Salle modifiée avec succès', 'success');
-      } else {
-        await createRoom(room);
-        showToast('Salle créée avec succès', 'success');
-      }
-      handleCloseModal();
-      return true;
-    } catch (err: any) {
-      console.error('Error saving room:', err);
-
-      // Afficher le message d'erreur spécifique si disponible
-      const errorMessage = err?.message || 'Erreur lors de la sauvegarde de la salle';
-      showToast(errorMessage, 'error');
-      return false;
-    }
+    router.push(`/(admin)/room/${id}`);
   };
 
   const handleDeleteRoom = (id: string) => {
@@ -248,19 +209,6 @@ export default function RoomListPage() {
           />
         )}
       </View>
-
-      <AdminFormView
-        visible={roomFormView.isVisible}
-        mode={roomFormView.mode}
-        title={roomFormView.mode === 'create' ? "Création d'une salle" : `Modification de "${currentRoom?.name}"`}
-        onClose={roomFormView.close}
-        onCancel={roomFormView.close}
-        onSave={handleSaveRoom}
-      >
-        <RoomForm
-          room={currentRoom}
-        />
-      </AdminFormView>
 
       <DeleteConfirmationModal
         isVisible={isDeleteModalVisible}
