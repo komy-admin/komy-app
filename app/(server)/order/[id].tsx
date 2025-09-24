@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button } from '~/components/ui';
-import { OrderLine, OrderItem } from '~/types/order-line.types';
+import { OrderLine, OrderItem, OrderLineType } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { useToast } from '~/components/ToastProvider';
 import OrderDetailView from '~/components/Service/OrderDetailView';
@@ -20,6 +20,20 @@ export default function OrderDetailPage() {
 
   // Récupération de la commande depuis le store
   const order = getOrderById(id as string);
+
+  // Vérifier si la commande est terminée (toutes les lignes sont TERMINATED)
+  const isOrderTerminated = React.useMemo(() => {
+    if (!order?.lines || order.lines.length === 0) return false;
+
+    return order.lines.every(line => {
+      if (line.type === OrderLineType.ITEM) {
+        return line.status === Status.TERMINATED;
+      } else if (line.type === OrderLineType.MENU && line.items) {
+        return line.items.every(item => item.status === Status.TERMINATED);
+      }
+      return false;
+    });
+  }, [order]);
 
   // Les données sont maintenant gérées par Redux via les hooks
   // La synchronisation temps réel est gérée par useRestaurantSocket automatiquement
@@ -84,10 +98,12 @@ export default function OrderDetailPage() {
     );
   }
 
-  if (error || !order) {
+  if (error || !order || isOrderTerminated) {
     return (
       <View className="flex-1 bg-background items-center justify-center p-4">
-        <Text className="text-destructive text-center mb-4">{error || 'Commande introuvable'}</Text>
+        <Text className="text-destructive text-center mb-4">
+          {error || (isOrderTerminated ? 'Cette commande est terminée' : 'Commande introuvable')}
+        </Text>
         <Button onPress={() => router.back()}>
           <Text className="text-primary-foreground">Retour</Text>
         </Button>

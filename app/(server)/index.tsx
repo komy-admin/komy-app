@@ -8,6 +8,7 @@ import { Order } from '~/types/order.types';
 import { OrderLineType } from '~/types/order-line.types';
 import { Card, CardContent, Text, Badge, Button } from '~/components/ui';
 import { StatusPill } from '~/components/ui/StatusPill';
+import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { getStatusColor, getStatusText, getMostImportantStatus, getNextStatus } from '~/lib/utils';
 import { router } from 'expo-router';
 import RoomComponent from '~/components/Room/Room';
@@ -33,6 +34,7 @@ export default function ServerHome() {
   const { items, itemTypes } = useMenu();
 
   const [bottomSheetMode, setBottomSheetMode] = useState<BottomSheetMode>('tables');
+  const [orderToTerminate, setOrderToTerminate] = useState<Order | null>(null);
 
   const { showToast } = useToast();
 
@@ -254,7 +256,7 @@ export default function ServerHome() {
                     const dominantStatus = getMostImportantStatus(statuses);
                     const nextStatus = getNextStatus(dominantStatus);
 
-                    if (nextStatus && dominantStatus !== Status.SERVED) {
+                    if (nextStatus && dominantStatus !== Status.TERMINATED) {
                       const count = items.length;
 
                       actions.push({
@@ -284,6 +286,34 @@ export default function ServerHome() {
                       });
                     }
                   });
+
+                  // Ajouter une action globale pour terminer toute la commande si elle est servie
+                  const orderStatus = order.status || getMostImportantStatus(
+                    (order.lines || []).map(line =>
+                      line.type === OrderLineType.ITEM ? line.status : Status.PENDING
+                    ).filter(s => s !== undefined) as Status[]
+                  );
+
+                  if (orderStatus === Status.SERVED) {
+                    actions.push({
+                      content: (
+                        <View className="flex-1">
+                          <View className="flex-row items-center justify-between">
+                            <Text className="font-semibold text-gray-900 text-base">
+                              Terminer toute la commande
+                            </Text>
+                          </View>
+                          <View className="flex-row items-center mt-2">
+                            <StatusPill status={Status.SERVED} size="md" />
+                            <View className="mx-3 h-px bg-gray-300 flex-1" />
+                            <StatusPill status={Status.TERMINATED} size="md" />
+                          </View>
+                        </View>
+                      ),
+                      icon: getStatusIcon(Status.TERMINATED),
+                      onPress: () => setOrderToTerminate(order) // Ouvrir la modal de confirmation
+                    });
+                  }
 
                   return actions;
                 };
@@ -438,6 +468,49 @@ export default function ServerHome() {
       >
         {renderBottomSheetContent()}
       </BottomSheet>
+
+      {/* Modal de confirmation pour terminer la commande */}
+      {orderToTerminate && (
+        <ConfirmationModal
+          isVisible={!!orderToTerminate}
+          onClose={() => setOrderToTerminate(null)}
+          onConfirm={async () => {
+            try {
+              // Collecter tous les IDs des OrderLines et OrderLineItems
+              const orderLineIds: string[] = [];
+              const orderLineItemIds: string[] = [];
+
+              orderToTerminate.lines?.forEach(line => {
+                if (line.type === OrderLineType.ITEM) {
+                  orderLineIds.push(line.id);
+                } else if (line.type === OrderLineType.MENU && line.items) {
+                  line.items.forEach(item => {
+                    orderLineItemIds.push(item.id);
+                  });
+                }
+              });
+
+              // Mettre à jour toutes les lignes en TERMINATED
+              await updateOrderStatus(orderToTerminate.id, {
+                status: Status.TERMINATED,
+                orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+                orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+              });
+
+              showToast('Commande terminée avec succès', 'success');
+              setOrderToTerminate(null);
+            } catch (error) {
+              showToast('Erreur lors de la terminaison de la commande', 'error');
+              setOrderToTerminate(null);
+            }
+          }}
+          title="Terminer la commande"
+          message={`Voulez-vous vraiment terminer la commande de la table ${orderToTerminate.table?.name || 'N/A'} ?`}
+          description="Cette action marquera tous les articles de la commande comme terminés. La commande disparaîtra de la vue service."
+          confirmText="Confirmer"
+          confirmVariant="default"
+        />
+      )}
     </View>
   );
 }
