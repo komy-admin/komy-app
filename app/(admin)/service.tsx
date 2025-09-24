@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View, useWindowDimensions, Platform } from "reac
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Button, ForkModal, Text } from "~/components/ui";
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
+import { ConfirmationModal } from "~/components/ui/ConfirmationModal";
 import RoomComponent from '~/components/Room/Room';
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
@@ -66,6 +67,7 @@ export default function ServicePage() {
       showReassignModal: false,
       isReassigning: false,
       showDeleteOrderDialog: false,
+      showTerminateOrderDialog: false,
       showPaymentModal: false,
       showOrderDetailModal: false,
       cameFromOrderDetailModal: false,
@@ -83,6 +85,9 @@ export default function ServicePage() {
 
       openDeleteDialog: () => updateModal({ showDeleteOrderDialog: true }),
       closeDeleteDialog: () => updateModal({ showDeleteOrderDialog: false }),
+
+      openTerminateDialog: () => updateModal({ showTerminateOrderDialog: true }),
+      closeTerminateDialog: () => updateModal({ showTerminateOrderDialog: false }),
 
       openPayment: () => updateModal({ showPaymentModal: true }),
       closePayment: () => updateModal({ showPaymentModal: false }),
@@ -779,6 +784,17 @@ export default function ServicePage() {
                   >
                     <Text>Régler la note</Text>
                   </Button>
+                  {selectedTableOrder && selectedTableOrder.status !== Status.TERMINATED && (
+                    <Button
+                      variant="outline"
+                      style={{ flex: 1 }}
+                      onPress={() => {
+                        modalActions.openTerminateDialog(); // Ouvrir directement la modal de confirmation sans fermer la modal de détail
+                      }}
+                    >
+                      <Text>Terminer</Text>
+                    </Button>
+                  )}
                   <Button
                     variant="destructive"
                     style={{ flex: 1 }}
@@ -818,12 +834,12 @@ export default function ServicePage() {
         <DeleteConfirmationModal
           isVisible={modals.showDeleteOrderDialog}
           onClose={() => {
-            modalActions.closeDeleteDialog();
-            modalActions.openOrderDetail(); // Rouvrir la modal de détails si annulation
+            modalActions.closeDeleteDialog(); // Fermer seulement la modal de confirmation
+            // La modal de détail reste ouverte
           }}
           onConfirm={() => {
             modalActions.closeDeleteDialog();
-            modalActions.closeOrderDetail();
+            modalActions.closeOrderDetail(); // Fermer les deux modals après confirmation
             deleteOrder(selectedTableOrder.id);
             setSelectedTable(null);
           }}
@@ -831,11 +847,58 @@ export default function ServicePage() {
           entityType="la commande"
         />
       )}
+
+      {selectedTableOrder && modals.showTerminateOrderDialog && (
+        <ConfirmationModal
+          isVisible={modals.showTerminateOrderDialog}
+          onClose={() => {
+            modalActions.closeTerminateDialog(); // Fermer seulement la modal de confirmation
+            // La modal de détail reste ouverte
+          }}
+          onConfirm={async () => {
+            try {
+              // Collecter tous les IDs des OrderLines et OrderLineItems
+              const orderLineIds: string[] = [];
+              const orderLineItemIds: string[] = [];
+
+              selectedTableOrder.lines?.forEach(line => {
+                if (line.type === OrderLineType.ITEM) {
+                  orderLineIds.push(line.id);
+                } else if (line.type === OrderLineType.MENU && line.items) {
+                  line.items.forEach(item => {
+                    orderLineItemIds.push(item.id);
+                  });
+                }
+              });
+
+              // Mettre à jour toutes les lignes en TERMINATED
+              await updateOrderStatus(selectedTableOrder.id, {
+                status: Status.TERMINATED,
+                orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+                orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+              });
+
+              showToast('Commande terminée avec succès', 'success');
+              modalActions.closeTerminateDialog();
+              modalActions.closeOrderDetail(); // Fermer les deux modals après confirmation
+              setSelectedTable(null);
+            } catch (error) {
+              showToast('Erreur lors de la terminaison de la commande', 'error');
+              modalActions.closeTerminateDialog(); // Fermer seulement la modal de confirmation en cas d'erreur
+            }
+          }}
+          title="Terminer la commande"
+          message={`Voulez-vous vraiment terminer la commande de la table ${selectedTableOrder.table?.name || 'N/A'} ?`}
+          description="Cette action marquera tous les articles de la commande comme terminés. La commande disparaîtra de la vue service."
+          confirmText="Confirmer"
+          confirmVariant="default"
+        />
+      )}
       <CustomModal
         isVisible={modals.showReassignModal}
         onClose={() => {
-          modalActions.closeReassign();
-          modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
+          modalActions.closeReassign(); // Fermer seulement la modal de réassignation
+          // La modal de détail reste ouverte
         }}
         width={800}
         height={600}
@@ -867,7 +930,7 @@ export default function ServicePage() {
                     await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
-                    modalActions.openOrderDetail();
+                    // La modal de détail reste ouverte avec les nouvelles infos
                     showToast('Table réassignée avec succès.', 'success');
                   } catch (error) {
                     showToast('Erreur lors de la réassignation.', 'error');
@@ -884,7 +947,7 @@ export default function ServicePage() {
                     await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
-                    modalActions.openOrderDetail();
+                    // La modal de détail reste ouverte avec les nouvelles infos
                     showToast('Table réassignée avec succès.', 'success');
                   } catch (error) {
                     showToast('Erreur lors de la réassignation.', 'error');

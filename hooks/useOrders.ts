@@ -7,7 +7,7 @@ import { orderApiService, UpdateOrderStatusPayload } from '~/api/order.api';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
-import { OrderLine } from '~/types/order-line.types';
+import { OrderLine, OrderLineType } from '~/types/order-line.types';
 
 /**
  * Hook spécialisé pour la gestion des commandes
@@ -25,29 +25,58 @@ export const useOrders = () => {
   const currentRoomId = useSelector(selectCurrentRoomId);
   const selectedTableId = useSelector(selectSelectedTableId);
   
-  // Commandes de la salle courante
+  // Commandes de la salle courante (excluant les commandes terminées)
   const currentRoomOrders = useMemo(() => {
     if (!currentRoomId) return [];
     return orders.filter(order => {
-      // Si la table a un roomId directement, l'utiliser
+      // Vérifier d'abord si l'ordre appartient à la salle
+      let belongsToRoom = false;
       if (order.table?.roomId) {
-        return order.table.roomId === currentRoomId;
+        belongsToRoom = order.table.roomId === currentRoomId;
+      } else if (order.tableId && tables[order.tableId]) {
+        belongsToRoom = tables[order.tableId].roomId === currentRoomId;
       }
-      // Sinon, chercher la table dans le store pour obtenir son roomId
-      if (order.tableId && tables[order.tableId]) {
-        return tables[order.tableId].roomId === currentRoomId;
-      }
-      return false;
+
+      if (!belongsToRoom) return false;
+
+      // Exclure si toutes les lignes sont terminées
+      if (!order.lines || order.lines.length === 0) return true; // Commande vide, la garder
+
+      const allTerminated = order.lines.every(line => {
+        if (line.type === OrderLineType.ITEM) {
+          return line.status === Status.TERMINATED;
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          return line.items.every(item => item.status === Status.TERMINATED);
+        }
+        return false;
+      });
+
+      return !allTerminated; // Exclure si tout est terminé
     });
   }, [orders, currentRoomId, tables]);
   
-  // Commande de la table sélectionnée
+  // Commande de la table sélectionnée (excluant les terminées)
   const selectedTableOrder = useMemo(() => {
     if (!selectedTableId) return null;
-    return orders.find(order => 
-      order.tableId === selectedTableId && 
-      order.status !== Status.TERMINATED
-    ) || null;
+    return orders.find(order => {
+      if (order.tableId !== selectedTableId) return false;
+
+      // Calculer le statut réel basé sur les OrderLines
+      if (!order.lines || order.lines.length === 0) return true; // Commande vide
+
+      // Vérifier si toutes les lignes sont terminées
+      const allTerminated = order.lines.every(line => {
+        if (line.type === OrderLineType.ITEM) {
+          return line.status === Status.TERMINATED;
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          return line.items.every(item => item.status === Status.TERMINATED);
+        }
+        return false;
+      });
+
+      // Exclure si toutes les lignes sont terminées
+      return !allTerminated;
+    }) || null;
   }, [orders, selectedTableId]);
   
   const loading = false; // Géré globalement maintenant

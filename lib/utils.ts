@@ -37,17 +37,19 @@ export function getContrastColor(hexColor: string): string {
 
 export const getOrderLinesGlobalStatus = (orderLines: OrderLine[]): Status => {
   const allStatuses: Status[] = [];
-  
+
   orderLines.forEach(line => {
-    if (line.type === OrderLineType.ITEM && line.status) {
-      allStatuses.push(line.status);
+    if (line.type === OrderLineType.ITEM) {
+      // Utiliser PENDING par défaut si pas de statut défini
+      allStatuses.push(line.status || Status.PENDING);
     } else if (line.type === OrderLineType.MENU && line.items) {
       line.items.forEach(menuItem => {
-        allStatuses.push(menuItem.status);
+        // Utiliser PENDING par défaut si pas de statut défini
+        allStatuses.push(menuItem.status || Status.PENDING);
       });
     }
   });
-  
+
   return getMostImportantStatus(allStatuses);
 }
 
@@ -202,6 +204,7 @@ export const getNextStatus = (currentStatus: Status): Status | null => {
     [Status.PENDING]: Status.INPROGRESS,
     [Status.INPROGRESS]: Status.READY,
     [Status.READY]: Status.SERVED,
+    [Status.SERVED]: Status.TERMINATED,
   };
   return statusProgression[currentStatus] || null;
 };
@@ -212,6 +215,7 @@ export const getPreviousStatus = (currentStatus: Status): Status | null => {
     [Status.INPROGRESS]: Status.PENDING,
     [Status.READY]: Status.INPROGRESS,
     [Status.SERVED]: Status.READY,
+    [Status.TERMINATED]: Status.SERVED,
   };
   return statusRegression[currentStatus] || null;
 };

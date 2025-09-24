@@ -5,6 +5,8 @@ import { selectCurrentRoomId, selectSelectedTableId } from '~/store/slices/sessi
 import { selectTables } from '~/store/selectors';
 import { tableApiService } from '~/api/table.api';
 import { Table } from '~/types/table.types';
+import { OrderLineType } from '~/types/order-line.types';
+import { Status } from '~/types/status.enum';
 
 /**
  * Hook spécialisé pour la gestion des tables
@@ -18,11 +20,27 @@ export const useTables = () => {
   const currentRoomId = useSelector(selectCurrentRoomId);
   const selectedTableId = useSelector(selectSelectedTableId);
 
-  // Tables enrichies avec leurs commandes
+  // Tables enrichies avec leurs commandes (excluant les commandes terminées)
   const enrichedTables = useMemo(() => {
     return tables.map(table => ({
       ...table,
-      orders: Object.values(orders).filter(order => order.tableId === table.id)
+      orders: Object.values(orders).filter(order => {
+        if (order.tableId !== table.id) return false;
+
+        // Exclure les commandes terminées (toutes les lignes sont TERMINATED)
+        if (!order.lines || order.lines.length === 0) return true; // Commande vide, la garder
+
+        const allTerminated = order.lines.every(line => {
+          if (line.type === OrderLineType.ITEM) {
+            return line.status === Status.TERMINATED;
+          } else if (line.type === OrderLineType.MENU && line.items) {
+            return line.items.every(item => item.status === Status.TERMINATED);
+          }
+          return false;
+        });
+
+        return !allTerminated; // Exclure si tout est terminé
+      })
     }));
   }, [tables, orders]);
 
