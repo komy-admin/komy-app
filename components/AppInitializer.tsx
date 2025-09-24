@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Platform, Image, Animated } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { useAppInit } from '~/hooks/useAppInit';
+import { InitializationProgress, useAppInit } from '~/hooks/useAppInit';
 import { useAlertMonitor } from '~/hooks/useAlertMonitor';
 import { WebSocketListener } from './WebSocketListener';
 
@@ -204,7 +204,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
   );
 };
 
-function getCurrentStepLabel(progress: Record<string, boolean>): string {
+function getCurrentStepLabel(progress: InitializationProgress): string {
   const steps = [
     { key: 'rooms', label: 'Chargement des salles...' },
     { key: 'tables', label: 'Chargement des tables...' },

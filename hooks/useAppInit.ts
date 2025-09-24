@@ -9,7 +9,7 @@ import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
 import { accountConfigApiService } from '~/api/account-config.api';
 
-interface InitializationProgress {
+export interface InitializationProgress {
   rooms: boolean;
   tables: boolean;
   itemTypes: boolean;
@@ -110,8 +110,6 @@ export const useAppInit = () => {
     if (state.isInitialized || state.isLoading || state.error) {
       return; // Éviter les doubles initialisations et les re-tentatives automatiques après erreur
     }
-    // Marquer immédiatement comme en cours d'initialisation dans Redux pour éviter la double initialisation
-    dispatch(sessionActions.setAppInitialized(true));
 
     console.log('🚀 Début de l\'initialisation de l\'application...');
 
@@ -251,25 +249,9 @@ export const useAppInit = () => {
       }
 
       // Marquer comme terminé
-      setState(prev => ({
-        ...prev,
-        isInitialized: true,
-        isLoading: false,
-        error: null,
-        progress: {
-          rooms: true,
-          tables: true,
-          itemTypes: true,
-          items: true,
-          menus: true,
-          orders: true,
-          users: true,
-          accountConfig: true,
-        }
-      }));
       setState(createCompletedState());
 
-      // Marquer l'app comme initialisée APRÈS le chargement complet des données
+      // Marquer immédiatement comme en cours d'initialisation pour éviter les doubles appels
       dispatch(sessionActions.setAppInitialized(true));
 
       // Déclencher la synchronisation WebSocket
@@ -386,7 +368,6 @@ export const useAppInit = () => {
     progress: state.progress,
     progressPercentage: getProgressPercentage(),
     isFinalizingStage: state.isFinalizingStage,
-
     // Actions
     initializeApp,
     reinitializeApp,

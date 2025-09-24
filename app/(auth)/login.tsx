@@ -2,10 +2,7 @@ import { View, StyleSheet, Platform, Text as RNText, Modal } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { sessionActions } from '~/store';
 import { sessionService } from '~/services/SessionService';
-import { authApiService } from "~/api/auth.api";
 import { Link, useRouter } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
@@ -15,8 +12,6 @@ export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showQrScanner, setShowQrScanner] = useState(false);
-  const [qrResult, setQrResult] = useState<string | null>(null);
-  const dispatch = useDispatch();
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -42,7 +37,6 @@ export default function LoginScreen() {
   };
 
   const handleQrScan = async (data: string) => {
-    setQrResult(data);
     setShowQrScanner(false);
     try {
       // Use SessionService for QR login - handles all state management
@@ -85,57 +79,10 @@ export default function LoginScreen() {
                 <Text style={styles.qrButtonText}>Connexion via QR code</Text>
               </View>
             </Button>
-
-            <TextInput
-              id="LoginId"
-              value={loginId}
-              onChangeText={setLoginId}
-              placeholder="Identifiant"
-              style={styles.input}
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <TextInput
-              id="LoginPassword"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mot de passe"
-              secureTextEntry
-              style={styles.input}
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <View style={styles.forgotPasswordContainer}>
-              <Link href="/forgot-credentials?type=password" asChild>
-                <Text style={styles.forgotPasswordText}>
-                  Mot de passe oublié ?
-                </Text>
-              </Link>
-            </View>
-
-            <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>Se connecter</Text>
-            </Button>
           </View>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {qrResult && (
-            <View style={styles.qrResultContainer}>
-              <Text style={styles.qrResultLabel}>QR scanné :</Text>
-              <Text style={styles.qrResultText} selectable>{qrResult}</Text>
-            </View>
-          )}
 
           <TextInput
+            id="LoginId"
             value={loginId}
             onChangeText={setLoginId}
             placeholder="Identifiant"
@@ -143,28 +90,22 @@ export default function LoginScreen() {
             placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
             autoCorrect={false}
-            keyboardType="ascii-capable"
-            returnKeyType="next"
-            textContentType="username"
           />
 
           <TextInput
+            id="LoginPassword"
             value={password}
             onChangeText={setPassword}
-            onSubmitEditing={handleLogin}
             placeholder="Mot de passe"
             secureTextEntry
             style={styles.input}
             placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
             autoCorrect={false}
-            keyboardType="ascii-capable"
-            returnKeyType="done"
-            textContentType="password"
           />
 
           <View style={styles.forgotPasswordContainer}>
-            <Link href="/forgot-password" asChild>
+            <Link href="/forgot-credentials?type=password" asChild>
               <Text style={styles.forgotPasswordText}>
                 Mot de passe oublié ?
               </Text>
