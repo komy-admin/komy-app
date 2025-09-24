@@ -78,19 +78,24 @@ const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
   onDelete
 }) => {
   const [editedName, setEditedName] = useState(itemType.name);
-  const [selectedDepartment, setSelectedDepartment] = useState<'kitchen' | 'bar'>('kitchen'); // État temporaire pour le design
+  const [selectedDepartment, setSelectedDepartment] = useState<'kitchen' | 'bar'>(
+    itemType.type === 'bar' ? 'bar' : 'kitchen'
+  );
 
   React.useEffect(() => {
     setEditedName(itemType.name);
-  }, [itemType.name, isEditing]);
+    setSelectedDepartment(itemType.type === 'bar' ? 'bar' : 'kitchen');
+  }, [itemType.name, itemType.type, isEditing]);
 
   const handleSave = () => {
-    if (editedName.trim() && editedName.trim() !== itemType.name) {
-      onSave({ name: editedName.trim() });
+    if (editedName.trim() && (editedName.trim() !== itemType.name || selectedDepartment !== itemType.type)) {
+      onSave({ name: editedName.trim(), type: selectedDepartment });
     } else {
       onCancel(); // Si pas de changement, juste annuler
     }
   };
+
+  const hasChanges = editedName.trim() !== itemType.name || selectedDepartment !== itemType.type;
 
   const handleCancel = () => {
     setEditedName(itemType.name);
@@ -122,9 +127,9 @@ const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
             
             <View style={styles.cardActions}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.validateButton, (!editedName.trim() || editedName.trim() === itemType.name) && styles.disabledButton]}
+                style={[styles.actionButton, styles.validateButton, (!editedName.trim() || !hasChanges) && styles.disabledButton]}
                 onPress={handleSave}
-                disabled={!editedName.trim()}
+                disabled={!editedName.trim() || !hasChanges}
               >
                 <Check size={16} color="#FFFFFF" strokeWidth={2} />
               </TouchableOpacity>
@@ -239,7 +244,8 @@ export default function ConfigurationRestoPage() {
     
     const newItemType: ItemType = {
       id: `temp-${Date.now()}`, // ID temporaire
-      name: newItemName.trim()
+      name: newItemName.trim(),
+      type: newItemDepartment
     };
     
     console.log('🆕 Création local itemType:', newItemType);
@@ -258,7 +264,7 @@ export default function ConfigurationRestoPage() {
   const handleUpdateItemType = (id: string, data: Partial<ItemType>) => {
     // Vérifier si il y a vraiment un changement
     const currentItem = localItemTypes.find(item => item.id === id);
-    if (!currentItem || !data.name || currentItem.name === data.name.trim()) {
+    if (!currentItem || !data.name || (currentItem.name === data.name.trim() && currentItem.type === data.type)) {
       setLocalEditingItemId(null);
       return;
     }
@@ -287,7 +293,7 @@ export default function ConfigurationRestoPage() {
       const newItems = localItemTypes.filter(item => item.id.startsWith('temp-'));
       for (const item of newItems) {
         if (!isMountedRef.current) return;
-        await createItemType({ name: item.name });
+        await createItemType({ name: item.name, type: item.type });
       }
       
       // Mettre à jour les items existants qui ont été modifiés
@@ -295,8 +301,8 @@ export default function ConfigurationRestoPage() {
       for (const item of existingItems) {
         if (!isMountedRef.current) return;
         const originalItem = itemTypes.find(original => original.id === item.id);
-        if (originalItem && originalItem.name !== item.name) {
-          await updateItemType(item.id, { name: item.name });
+        if (originalItem && (originalItem.name !== item.name || originalItem.type !== item.type)) {
+          await updateItemType(item.id, { name: item.name, type: item.type });
         }
       }
       
