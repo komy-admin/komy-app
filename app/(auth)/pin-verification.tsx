@@ -15,7 +15,6 @@ import { sessionService } from '~/services/SessionService';
 import { useRouter, Link } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
-import { getHomeRoute } from '~/constants/routes';
 import { Lock } from 'lucide-react-native';
 
 export default function PinVerificationScreen() {
@@ -106,15 +105,13 @@ export default function PinVerificationScreen() {
     setAttemptsRemaining(null); // Reset attempts before each call
 
     try {
-      let response;
-
       if (isSetupMode) {
         // Setting up PIN for the first time
-        response = await sessionService.setPin(pinValue);
+        await sessionService.setPin(pinValue);
         showToast('PIN configuré avec succès!', 'success');
       } else {
         // Verifying existing PIN - uses authToken to get sessionToken
-        response = await sessionService.verifyPin(pinValue);
+        await sessionService.verifyPin(pinValue);
       }
 
       // Reset attempts on success
@@ -122,10 +119,8 @@ export default function PinVerificationScreen() {
       setIsLocked(false);
 
       // SessionService has already stored sessionToken and user in Redux
-      // Navigate to appropriate screen based on user role
-      const userProfile = response.user?.profil || 'server';
-      const targetRoute = getHomeRoute(userProfile);
-      router.replace(targetRoute as any);
+      // Let AuthenticationGate handle the navigation to allow AppInitializer to show
+      // No immediate redirect - the authentication flow will handle it
 
     } catch (error: any) {
       setError(true);

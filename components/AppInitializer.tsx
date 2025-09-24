@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Platform, Image, Animated } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useRouter, useSegments } from 'expo-router';
 import { RootState } from '~/store';
 import { InitializationProgress, useAppInit } from '~/hooks/useAppInit';
 import { useAlertMonitor } from '~/hooks/useAlertMonitor';
 import { WebSocketListener } from './WebSocketListener';
+import { getHomeRoute } from '~/constants/routes';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -100,71 +102,50 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
   children,
   fallback
 }) => {
-  const { sessionToken, user, isAuthenticated } = useSelector((state: RootState) => state.session);
-  // Simple check: we need sessionToken and user to initialize
-  const shouldInitialize = !!(sessionToken && user);
-
+  const router = useRouter();
+  const segments = useSegments();
   const {
-    isInitialized,
-    isLoading,
-    error,
-    progress,
-    progressPercentage,
-    isFinalizingStage,
-    reinitializeApp
-  } = useAppInit();
+    sessionToken,
+    user,
+    isPinVerified,
+    authToken,
+    appInitialized,
+    isAppInitializing
+  } = useSelector((state: RootState) => state.session);
+
+  // Check if user is properly authenticated
+  const isFullyAuthenticated = !!(
+    (sessionToken && user) ||
+    (authToken && user && isPinVerified)
+  );
 
   // Le hook useAlertMonitor gère automatiquement l'initialisation et les conditions
   useAlertMonitor();
 
+  // Hook simplifié uniquement pour charger les données
+  const { progress, progressPercentage, isFinalizingStage } = useAppInit();
+
+
+  // Redirection après initialisation complète
+  useEffect(() => {
+    if (isFullyAuthenticated && appInitialized && !isAppInitializing && user?.profil) {
+      const fullPath = segments.length ? `/${segments.join('/')}` : '/';
+
+      // Si on est encore sur PIN verification après initialisation complète, rediriger
+      if (fullPath === '/(auth)/pin-verification') {
+        const homeRoute = getHomeRoute(user.profil);
+        router.replace(homeRoute as any);
+      }
+    }
+  }, [isFullyAuthenticated, appInitialized, isAppInitializing, user?.profil, segments, router]);
+
   // Si pas authentifié, passer directement au contenu (pages de login)
-  if (!shouldInitialize) {
+  if (!isFullyAuthenticated) {
     return <>{children}</>;
   }
 
-  // Si erreur, afficher l'écran d'erreur
-  if (error && !isLoading) {
-    return fallback || (
-      <View style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#f8f9fa'
-      }}>
-        <Text style={{
-          fontSize: 24,
-          fontWeight: 'bold',
-          color: '#dc3545',
-          marginBottom: 16,
-          textAlign: 'center'
-        }}>
-          Erreur d'initialisation
-        </Text>
-        <Text style={{
-          fontSize: 16,
-          color: '#6c757d',
-          marginBottom: 24,
-          textAlign: 'center'
-        }}>
-          {error}
-        </Text>
-        <Text
-          style={{
-            fontSize: 16,
-            color: '#007bff',
-            textDecorationLine: 'underline'
-          }}
-          onPress={reinitializeApp}
-        >
-          Réessayer
-        </Text>
-      </View>
-    );
-  }
-
-  // Si pas encore initialisé OU en cours de chargement, afficher l'écran de chargement
-  if (!isInitialized || isLoading) {
+  // Si authentifié mais app pas encore initialisée ou en cours d'initialisation → afficher loader
+  if (!appInitialized || isAppInitializing) {
     return fallback || (
       <View style={styles.container}>
         {/* Logo avec effet d'onde ripple */}
@@ -186,12 +167,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
           </Text>
         </View>
 
-        {/* Message d'erreur */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error.replace('simulation pour test', 'veuillez contacter le support')}</Text>
-          </View>
-        )}
       </View>
     );
   }
@@ -206,12 +181,13 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
 
 function getCurrentStepLabel(progress: InitializationProgress): string {
   const steps = [
+    { key: 'accountConfig', label: 'Configuration du compte...' },
     { key: 'rooms', label: 'Chargement des salles...' },
     { key: 'tables', label: 'Chargement des tables...' },
     { key: 'itemTypes', label: 'Chargement des types d\'articles...' },
     { key: 'items', label: 'Chargement des articles...' },
     { key: 'menus', label: 'Chargement des menus...' },
-    { key: 'menuOrderGroups', label: 'Chargement des groupes de menus...' },
+    { key: 'users', label: 'Chargement des utilisateurs...' },
     { key: 'orders', label: 'Chargement des commandes...' }
   ];
 

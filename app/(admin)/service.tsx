@@ -23,7 +23,9 @@ import {
   useTables,
   useOrders
 } from '~/hooks/useRestaurant';
-import { useAppInit } from '~/hooks/useAppInit';
+import { useSelector } from 'react-redux';
+import { RootState } from '~/store';
+import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
 import { CustomModal } from '@/components/CustomModal';
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { Order } from '@/types/order.types';
@@ -45,7 +47,8 @@ export default function ServicePage() {
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
   const { createOrderWithLines, createOrderLines, deleteOrderLine, deleteOrderLines } = useOrderLines();
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
-  const { isInitialized: appInitialized, isLoading: appLoading } = useAppInit();
+  const appInitialized = useSelector(selectAppInitialized);
+  const appLoading = useSelector(selectIsAppInitializing);
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
     currentRoomOrders,
