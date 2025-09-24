@@ -1,10 +1,10 @@
 import React from 'react';
-import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, View, useWindowDimensions, Platform } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Button, ForkModal, Text } from "~/components/ui";
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import RoomComponent from '~/components/Room/Room';
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
 import OrderList from "~/components/Service/OrderList";
@@ -14,49 +14,51 @@ import StartOrderCard from "~/components/Service/StartOrderCard";
 import { Status } from "~/types/status.enum";
 import AdminOrderDetailView from "~/components/Service/AdminOrderDetailView";
 import PaymentView from "~/components/Service/PaymentView";
-import { OrderLine } from '~/types/order-line.types';
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import {
   useRestaurant,
-  useRooms,
   useMenu,
   useTables,
   useOrders
 } from '~/hooks/useRestaurant';
+import { useAppInit } from '~/hooks/useAppInit';
 import { CustomModal } from '@/components/CustomModal';
-import OrderItemsForm from '@/components/form/OrderItemsForm';
+import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { Order } from '@/types/order.types';
-import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
+import { OrderLine, CreateOrderLineRequest, OrderLineType } from '~/types/order-line.types';
+import { useOrderLines } from '~/hooks/useOrderLines';
+import { useMenus } from '~/hooks/useMenus';
+import { Plus, LayoutDashboard } from 'lucide-react-native';
 
 export default function ServicePage() {
-  // AdminFormView pour la modal de commande
-  const orderFormView = useAdminFormView();
+  const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderCreatedFromStart, setOrderCreatedFromStart] = useState<boolean>(false);
   const [isConfiguringMenu, setIsConfiguringMenu] = useState<boolean>(false);
   const [menuConfigActions, setMenuConfigActions] = useState<{
     onCancel: () => void;
     onConfirm: () => void;
+    isValid?: boolean;
   } | null>(null);
-  // Hooks spécialisés pour chaque domaine
-  const { rooms, currentRoom, setCurrentRoom } = useRooms();
+
+  const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
+  const { createOrderWithLines, createOrderLines, deleteOrderLine, deleteOrderLines } = useOrderLines();
+  const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
+  const { isInitialized: appInitialized, isLoading: appLoading } = useAppInit();
   const { currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
     currentRoomOrders,
     selectedTableOrder,
+    loading,
     // createOrder, // Non utilisé
     updateOrder,
-    deleteOrder,
-    deleteOrderItem,
-    deleteManyOrderItems,
-    // updateOrderItemStatus, // Non utilisé (remplacé par updateOrderLinesStatus)
-    updateOrderLinesStatus
+    updateOrderStatus,
+    deleteOrder
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
+  const { activeMenus: allMenus } = useMenus();
 
 
-  // État global
-  const { isLoading } = useRestaurant();
 
   // ✅ Hook personnalisé pour centraliser la gestion des modals
   const useOrderModals = () => {
@@ -86,31 +88,20 @@ export default function ServicePage() {
       closePayment: () => updateModal({ showPaymentModal: false }),
 
       openOrderDetail: (order?: Order) => {
-        console.log('🚀 [DEBUG] openOrderDetail called:', {
-          orderId: order?.id,
-          tableId: order?.tableId,
-          isSaving: !!isSavingOrderRef.current,
-          currentModalState: modals.showOrderDetailModal
-        });
-
         if (!order) {
-          console.warn('⚠️ [DEBUG] Cannot open order detail modal: no order provided');
           return;
         }
 
         // 🔧 CORRECTION: Vérifier si une autre modal n'est pas déjà ouverte
         if (modals.showOrderDetailModal) {
-          console.log('🛡️ [DEBUG] Modal already open - skipping duplicate opening');
           return;
         }
 
         if (order?.tableId) setSelectedTable(order.tableId);
         updateModal({ showOrderDetailModal: true });
 
-        console.log('✅ [DEBUG] Modal opening requested:', { showOrderDetailModal: true });
       },
       closeOrderDetail: () => {
-        console.log('🚪 [DEBUG] closeOrderDetail called - closing modal and clearing table selection');
         updateModal({ showOrderDetailModal: false });
         setSelectedTable(null);
       },
@@ -127,7 +118,6 @@ export default function ServicePage() {
 
   const { showToast } = useToast();
 
-  // Hook pour la gestion des filtres et recherche
   const {
     searchQuery,
     filters,
@@ -139,7 +129,6 @@ export default function ServicePage() {
   } = useOrderFilters(currentRoomOrders.filter(order => order.lines && order.lines.length > 0));
 
 
-  // Désélectionner la table lors de la navigation
   useFocusEffect(
     useCallback(() => {
       return () => {
@@ -167,10 +156,8 @@ export default function ServicePage() {
 
     // Si la table a une commande, ouvrir directement la modal de détails
     if (tableOrder) {
-      console.log('✅ [DEBUG] Opening modal for table order:', { orderId: tableOrder.id });
       modalActions.openOrderDetail(tableOrder);
     } else {
-      console.log('ℹ️ [DEBUG] No order found for table:', table.id);
     }
   }, [currentRoomOrders, selectedTableId, selectedTableOrder, deleteOrder, setSelectedTable, modalActions.openOrderDetail]);
 
@@ -190,8 +177,8 @@ export default function ServicePage() {
     setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
     modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
     modalActions.setModalTitle(`Prendre la commande - ${selectedTable?.name}`); // Titre pour nouvelle commande
-    orderFormView.openCreate(); // Ouvrir la AdminFormView
-    showToast('Commande en cours de préparation.', 'info');
+    setOrderLines([]); // Réinitialiser les lignes pour une nouvelle commande
+    setShowOrderModal(true); // Ouvrir la modal
   };
 
 
@@ -199,15 +186,14 @@ export default function ServicePage() {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
     modalActions.setCameFromOrderDetail(true); // Marquer qu'on vient de la modal détails
     modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Modifier la commande"); // Titre stable pour modification
+    setOrderLines([]); // Réinitialiser les lignes draft (les lignes existantes viendront de selectedTableOrder)
     // La commande courante est déjà disponible via selectedTableOrder
-    orderFormView.openEdit(); // Ouvrir en mode édition
+    setShowOrderModal(true); // Ouvrir la modal
   };
 
-  // Utiliser directement modalActions.openOrderDetail au lieu d'une référence séparée
   const handleCloseOrderDetailModal = modalActions.closeOrderDetail;
 
 
-  // Ref pour tracker les sauvegardes en cours (persiste entre les renders)
   const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
 
   // ✅ Hook personnalisé pour la logique de fermeture intelligente
@@ -216,25 +202,19 @@ export default function ServicePage() {
       const wasSaving = !!isSavingOrderRef.current;
       const wasOrderCreatedFromStart = orderCreatedFromStart;
 
-      // Fermer le formulaire
-      orderFormView.close();
+      // Fermer le formulaire et réinitialiser les lignes
+      setShowOrderModal(false);
       setOrderCreatedFromStart(false);
+      setOrderLines([]);
 
 
 
       // 🔧 CORRECTION: Réouverture conditionnelle de la modal détails avec délai
       // Utiliser l'ordre sauvegardé stocké dans isSavingOrderRef au lieu de selectedTableOrder
       if (wasSaving) {
-        console.log('🔄 [DEBUG] useSmartOrderClose - planning modal reopening after save');
 
         // Récupérer l'ordre sauvegardé depuis la ref
         const savedOrderData = typeof isSavingOrderRef.current === 'object' ? isSavingOrderRef.current.savedOrder : null;
-
-        console.log('📦 [DEBUG] Saved order data:', {
-          savedOrderData: savedOrderData?.id,
-          wasOrderCreatedFromStart,
-          cameFromOrderDetailModal: modals.cameFromOrderDetailModal
-        });
 
         // Délai pour permettre aux WebSocket de se stabiliser
         setTimeout(() => {
@@ -243,14 +223,8 @@ export default function ServicePage() {
             (savedOrderData && savedOrderData.lines && savedOrderData.lines.length > 0 && modals.cameFromOrderDetailModal)
           );
 
-          if (shouldReopen && savedOrderData) {
-            console.log('🚀 [DEBUG] Reopening AdminOrderDetailView with saved order:', savedOrderData.id);
+          if (shouldReopen) {
             modalActions.openOrderDetail(savedOrderData);
-          } else {
-            console.log('📝 [DEBUG] Conditions not met for reopening - skipping', {
-              shouldReopen,
-              hasSavedOrder: !!savedOrderData
-            });
           }
         }, 300); // Délai augmenté pour plus de stabilité
       }
@@ -261,7 +235,6 @@ export default function ServicePage() {
         modalActions.setCameFromOrderDetail(false);
       }, 400); // Délai plus long que la réouverture (300ms)
     }, [
-      orderFormView,
       orderCreatedFromStart,
       selectedTableOrder,
       modals.cameFromOrderDetailModal,
@@ -277,22 +250,18 @@ export default function ServicePage() {
   useEffect(() => {
     // 🔧 CORRECTION: Ajouter un délai pour éviter les fermetures prématurées pendant les transitions d'état
     if (modals.showOrderDetailModal && !selectedTableOrder) {
-      console.log('⚠️ [DEBUG] Modal auto-close triggered - selectedTableOrder is null');
 
       // 🔴 NOUVEAU: Vérifier si on est en train de sauvegarder pour éviter les fermetures intempestives
-      if (isSavingOrderRef.current) {
-        console.log('🛡️ [DEBUG] Skipping auto-close - save in progress');
+      // Vérifier si c'est un boolean true (en cours de sauvegarde) et non un objet savedOrder
+      if (isSavingOrderRef.current === true) {
         return;
       }
 
       // Délai de 300ms pour permettre aux états de se stabiliser (augmenté)
       const timeoutId = setTimeout(() => {
         // Double vérification après le délai
-        if (modals.showOrderDetailModal && !selectedTableOrder && !isSavingOrderRef.current) {
-          console.log('🚪 [DEBUG] Closing modal after timeout - order still null');
+        if (modals.showOrderDetailModal && !selectedTableOrder && isSavingOrderRef.current !== true) {
           modalActions.closeOrderDetail();
-        } else {
-          console.log('✅ [DEBUG] Modal stay open - order found after timeout or save in progress');
         }
       }, 300);
 
@@ -300,7 +269,6 @@ export default function ServicePage() {
     }
   }, [selectedTableOrder, modals.showOrderDetailModal, modalActions]);
 
-  // Optimisation des callbacks pour performances mobiles - batching des re-renders
   const handleConfigurationModeChange = useCallback((configuring: boolean) => {
     React.startTransition(() => {
       setIsConfiguringMenu(configuring);
@@ -310,48 +278,133 @@ export default function ServicePage() {
     });
   }, []);
 
-  const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void } | null) => {
+  const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void; isValid?: boolean } | null) => {
     React.startTransition(() => {
       setMenuConfigActions(actions);
     });
   }, []);
 
-  const handleSaveOrder = async (getFormData: () => any) => {
-    try {
-      const formResult = getFormData();
+  const handleLinesChange = useCallback((newLines: OrderLine[]) => {
+    // Si on est en mode modification, filtrer les lignes déjà existantes
+    let linesToSave = newLines;
 
-      if (!formResult.isValid) {
-        return false;
+    if (selectedTableOrder && selectedTableOrder.lines) {
+      const existingLineIds = new Set(selectedTableOrder.lines.map(l => l.id));
+      // Ne garder que les lignes qui n'ont pas d'ID ou dont l'ID commence par "draft-"
+      linesToSave = newLines.filter(line =>
+        !line.id ||
+        line.id.startsWith('draft-') ||
+        !existingLineIds.has(line.id)
+      );
+    }
+
+    setOrderLines(linesToSave);
+  }, [selectedTableOrder]);
+
+  const getCurrentLines = useCallback((): OrderLine[] => {
+    if (orderCreatedFromStart) {
+      return orderLines; // Mode création : utiliser les lignes draft
+    } else if (selectedTableOrder) {
+      return selectedTableOrder.lines || []; // Mode modification : utiliser les lignes existantes
+    }
+    return [];
+  }, [orderCreatedFromStart, orderLines, selectedTableOrder]);
+
+
+  const convertOrderLinesToApiFormat = useCallback((lines: OrderLine[]): CreateOrderLineRequest[] => {
+    return lines.map(line => {
+      if (line.type === OrderLineType.ITEM) {
+        return {
+          type: line.type,
+          quantity: line.quantity,
+          itemId: line.item!.id,
+          note: line.note || ''
+        };
+      } else if (line.type === OrderLineType.MENU) {
+        // Pour les menus, reconstruire selectedItems à partir des orderLine.items
+        const selectedItems: Record<string, string> = {};
+
+        line.items?.forEach(orderLineItem => {
+          // Trouver la catégorie correspondante dans le menu original
+          const menu = allMenus.find((m: any) => m.id === line.menu?.id);
+          if (menu?.categories) {
+            const category = menu.categories.find((cat: any) => {
+              const categoryName = allItemTypes.find(type => type.id === cat.itemTypeId)?.name;
+              return categoryName === orderLineItem.categoryName;
+            });
+
+            if (category) {
+              selectedItems[category.id] = orderLineItem.item.id;
+            }
+          }
+        });
+
+        return {
+          type: line.type,
+          quantity: line.quantity,
+          menuId: line.menu!.id,
+          selectedItems,
+          note: line.note || ''
+        };
       }
 
-      // Indiquer qu'on est en train de sauvegarder pour que handleSmartCloseOrderModal le sache
+      // Fallback - ne devrait pas arriver
+      throw new Error(`Type de ligne non supporté: ${line.type}`);
+    });
+  }, [allMenus, allItemTypes]);
+
+  const handleSaveOrder = async () => {
+    try {
+      if (!orderLines || orderLines.length === 0) {
+        showToast('Aucune ligne à sauvegarder', 'info');
+        setOrderCreatedFromStart(false);
+        return true;
+      }
+
+      // Indiquer qu'on est en train de sauvegarder
       isSavingOrderRef.current = true;
 
-      // Utiliser la fonction de sauvegarde complexe fournie par OrderItemsForm
-      if (formResult.data.processComplexSave && formResult.hasChanges) {
-        const updatedOrder = await formResult.data.processComplexSave();
+      // Convertir les OrderLine vers le format API
+      const apiData = convertOrderLinesToApiFormat(orderLines);
 
+      let updatedOrder;
+      if (orderCreatedFromStart) {
+        // Mode création : créer order + lignes ensemble
+        updatedOrder = await createOrderWithLines(selectedTableId!, apiData);
+      } else if (selectedTableOrder?.id) {
+        // Mode modification : ajouter lignes à l'order existant
+        updatedOrder = await createOrderLines(selectedTableOrder.id, apiData);
+      }
+
+      if (updatedOrder) {
         // Stocker le résultat pour useSmartOrderClose
         isSavingOrderRef.current = { savedOrder: updatedOrder };
-
-        // Désactiver le flag orderCreatedFromStart seulement
-        // Ne pas toucher à cameFromOrderDetailModal - laisser useSmartOrderClose gérer la réouverture
-        setOrderCreatedFromStart(false);
-
         showToast('Commande mise à jour avec succès.', 'success');
-        return true;
-      } else {
-        // Pas de modifications, AdminFormView va fermer automatiquement
-        setOrderCreatedFromStart(false);
-        return true;
+        // Réinitialiser l'état
+        setOrderLines([]);
+
+        // Fermer la modal de création/modification
+        setShowOrderModal(false);
+
+        // Ouvrir la modal de détails avec la commande mise à jour
+        modalActions.openOrderDetail(updatedOrder);
+
+        // Réinitialiser le flag de sauvegarde après un court délai
+        setTimeout(() => {
+          isSavingOrderRef.current = false;
+        }, 500);
       }
+
+      // Désactiver le flag orderCreatedFromStart
+      setOrderCreatedFromStart(false);
+      return true;
     } catch (error) {
-      console.error('Erreur dans handleSaveOrder:', error);
       showToast('Erreur lors de la mise à jour de la commande.', 'error');
       isSavingOrderRef.current = false;
       return false;
     }
   };
+
 
   const handleStatusUpdate = async (orderLines: OrderLine[], status: Status) => {
     if (!selectedTableOrder) {
@@ -362,17 +415,13 @@ export default function ServicePage() {
     try {
       const orderLinesIds = orderLines.map(orderLine => orderLine.id);
 
-      console.log('🔄 [DEBUG] Service handleStatusUpdate:', {
-        orderId: selectedTableOrder.id,
-        status,
-        orderLinesIds: orderLinesIds.length
+      // Utiliser updateOrderStatus pour mettre à jour le statut des OrderLines
+      await updateOrderStatus(selectedTableOrder.id, {
+        status: status,
+        orderLineIds: orderLinesIds
       });
-
-      // 🆕 Utiliser la nouvelle API PATCH avec OrderLines
-      await updateOrderLinesStatus(selectedTableOrder.id, orderLinesIds, status);
       showToast('Statut mis à jour avec succès.', 'success');
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
       showToast('Erreur lors de la mise à jour du statut.', 'error');
     }
   };
@@ -385,7 +434,6 @@ export default function ServicePage() {
       setSelectedTable(null);
       showToast('Commande supprimée avec succès.', 'success');
     } catch (error) {
-      console.error('Erreur lors de la suppression de la commande:', error);
       showToast('Erreur lors de la suppression de la commande.', 'error');
     }
   };
@@ -402,7 +450,6 @@ export default function ServicePage() {
       // Optionnel : fermer la commande ou changer son statut
       // await updateOrder({ ...selectedTableOrder, status: Status.PAID });
     } catch (error) {
-      console.error('Erreur lors du traitement du paiement:', error);
       showToast('Erreur lors du traitement du paiement.', 'error');
     }
   };
@@ -415,240 +462,357 @@ export default function ServicePage() {
     });
   };
 
-  // Fonction pour gérer la déselection de table
   const handleDeselectTable = () => {
     setSelectedTable(null);
   };
 
   const { width, height } = useWindowDimensions();
+  // Fonction pour rediriger vers room_list avec création automatique
+  const handleCreateFirstRoom = () => {
+    router.push('/(admin)/room/create');
+  };
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel
-        style={{ flex: 1 }}
-        hideCloseButton={true}
-        width={width / 4}
-        title="Service"
-        onBack={handleDeselectTable}
-      >
-        <View style={{ padding: 16, flex: 1 }}>
-          {isLoading || !filtersLoaded ? (
-            <Text>Chargement...</Text>
-          ) : (
-            <>
-              <SearchBar
-                searchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                onClearFilters={handleClearFilters}
-              />
-              <OrderList
-                orders={filteredOrders}
-                onOrderPress={(order) => {
-                  modalActions.openOrderDetail(order);
-                }}
-                onOrderDelete={handleDeleteOrder}
-              />
-            </>
+    <View style={{ flex: 1 }}>
+      {/* OrderLinesForm en pleine page - remplace tout le layout */}
+      {showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
+        <View style={{ flex: 1, flexDirection: 'column' }}>
+          {/* Header avec titre et bouton retour - masqué pendant la configuration de menu */}
+          <OrderLinesHeader
+            title={modals.modalTitle}
+            onClose={handleSmartCloseOrderModal}
+            isVisible={!isConfiguringMenu}
+          />
+
+          {/* OrderLinesForm */}
+          <View style={{ flex: 1 }}>
+            <OrderLinesForm
+              lines={getCurrentLines()}
+              items={allItems.filter(item => item.isActive)}
+              itemTypes={allItemTypes}
+              onLinesChange={handleLinesChange}
+              onConfigurationModeChange={handleConfigurationModeChange}
+              onConfigurationActionsChange={handleConfigurationActionsChange}
+            />
+          </View>
+
+          {/* Boutons d'action */}
+          {!isConfiguringMenu && (
+            <View style={{
+              backgroundColor: '#ffffff',
+              borderTopWidth: 1,
+              borderTopColor: '#e5e7eb',
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              padding: 16,
+              gap: 12
+            }}>
+              <OrderLinesButton
+                variant="secondary"
+                onPress={handleSmartCloseOrderModal}
+              >
+                Annuler
+              </OrderLinesButton>
+              <OrderLinesButton
+                variant="primary"
+                onPress={handleSaveOrder}
+                disabled={!orderLines || orderLines.length === 0}
+                flex={2}
+              >
+                Sauvegarder
+              </OrderLinesButton>
+            </View>
+          )}
+
+          {/* Boutons de configuration de menu */}
+          {isConfiguringMenu && menuConfigActions && (
+            <View style={{
+              backgroundColor: '#ffffff',
+              borderTopWidth: 1,
+              borderTopColor: '#e5e7eb',
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              padding: 16,
+              gap: 12
+            }}>
+              <OrderLinesButton
+                variant="configCancel"
+                onPress={menuConfigActions.onCancel}
+              >
+                Annuler
+              </OrderLinesButton>
+              <OrderLinesButton
+                variant="config"
+                onPress={menuConfigActions.onConfirm}
+                disabled={!menuConfigActions.isValid}
+                flex={2}
+              >
+                Confirmer la sélection
+              </OrderLinesButton>
+            </View>
           )}
         </View>
-      </SidePanel>
-
-      <View style={{ flex: 1, height: '100%', position: 'relative' }}>
-        <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              alignItems: 'center',
-              height: '100%'
-            }}
-            className='flex-row p-2 flex-1'
+      ) : (
+        // Layout normal service avec SidePanel + Room
+        <View style={{ flexDirection: 'row', flex: 1 }}>
+          <SidePanel
+            style={{ flex: 1 }}
+            hideCloseButton={true}
+            width={width / 4}
+            title="Service"
+            onBack={handleDeselectTable}
           >
-            {rooms.map((room, index) => (
-              <Pressable
-                key={`${room.name}-badge-${index}`}
-                onPress={() => handleChangeRoom(room)}>
-                <Badge
-                  variant="outline"
-                  className='mx-1'
-                  active={room.id === currentRoom?.id}
-                  size='lg'
+            <View style={{ padding: 16, flex: 1 }}>
+              {loading || !filtersLoaded ? (
+                <Text>Chargement...</Text>
+              ) : (
+                <>
+                  <SearchBar
+                    searchQuery={searchQuery}
+                    onSearchChange={handleSearchChange}
+                    filters={filters}
+                    onFiltersChange={handleFiltersChange}
+                    onClearFilters={handleClearFilters}
+                  />
+                  <OrderList
+                    orders={filteredOrders}
+                    onOrderPress={(order) => {
+                      modalActions.openOrderDetail(order);
+                    }}
+                    onOrderDelete={handleDeleteOrder}
+                  />
+                </>
+              )}
+            </View>
+          </SidePanel>
+
+          <View style={{ flex: 1, height: '100%', position: 'relative' }}>
+            {/* Header avec tabs des rooms - seulement si il y a des rooms */}
+            {rooms.length > 0 && (
+              <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
+                    alignItems: 'center',
+                    height: '100%'
+                  }}
+                  className='flex-row p-2 flex-1'
                 >
-                  <Text>{room.name}</Text>
-                </Badge>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Button
-            onPress={() => navigateToRoomEdit()}
-            className="w-[200px] h-[50px] flex items-center justify-center"
-            style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
-          >
-            <Text
-              style={{
-                fontSize: 14,
-                color: '#FBFBFB',
-                fontWeight: '500',
-                textAlign: 'center',
-                textTransform: 'uppercase',
-              }}
-            >
-              Mode édition
-            </Text>
-          </Button>
-        </View>
-
-        {selectedTable && !selectedTableOrder && (
-          <StartOrderCard
-            table={selectedTable}
-            onStartPress={handleCreateOrder}
-          />
-        )}
-
-        <RoomComponent
-          tables={currentRoomTables.map(t => ({
-            ...t,
-            orders: t.currentOrder ? [t.currentOrder] : []
-          }))}
-          orders={currentRoomOrders}
-          editingTableId={selectedTableId ?? undefined}
-          editionMode={false}
-          isLoading={isLoading}
-          width={currentRoom?.width}
-          height={currentRoom?.height}
-          onTablePress={handleTablePress}
-          onTableLongPress={handleTablePress}
-          onTableUpdate={() => { }}
-        />
-      </View>
-
-      {/* Modal pour les détails et actions de la commande */}
-      <CustomModal
-        isVisible={modals.showOrderDetailModal}
-        onClose={handleCloseOrderDetailModal}
-        width={width * 0.8}
-        height={height * 0.8}
-        title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Détails de la commande"}
-      >
-        {selectedTableOrder && (
-          <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
-            <AdminOrderDetailView
-              order={selectedTableOrder}
-              itemTypes={allItemTypes}
-              onDeleteOrderItem={async (orderItemId) => {
-                try {
-                  await deleteOrderItem(orderItemId);
-                  showToast('Élément supprimé avec succès.', 'success');
-
-                } catch (error) {
-                  console.error('Erreur lors de la suppression:', error);
-                  showToast('Erreur lors de la suppression de l\'élément.', 'error');
-                }
-              }}
-              onDeleteManyOrderItems={async (orderItemIds) => {
-                try {
-                  const result = await deleteManyOrderItems(orderItemIds);
-                  showToast(`${result.deletedCount} éléments supprimés avec succès.`, 'success');
-
-
-                  return result;
-                } catch (error) {
-                  console.error('Erreur lors de la suppression multiple:', error);
-                  showToast('Erreur lors de la suppression des éléments.', 'error');
-                  throw error;
-                }
-              }}
-              onUpdateOrderItemStatus={handleStatusUpdate}
-            />
-            <View style={{ padding: 16 }}>
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                  {rooms.map((room, index) => (
+                    <Pressable
+                      key={`${room.name}-badge-${index}`}
+                      onPress={() => handleChangeRoom(room)}>
+                      <Badge
+                        variant="outline"
+                        className='mx-1'
+                        active={room.id === currentRoom?.id}
+                        size='lg'
+                      >
+                        <Text>{room.name}</Text>
+                      </Badge>
+                    </Pressable>
+                  ))}
+                </ScrollView>
                 <Button
-                  variant="outline"
-                  style={{ flex: 1 }}
-                  onPress={modalActions.openReassign}
+                  onPress={() => navigateToRoomEdit()}
+                  className="w-[200px] h-[50px] flex items-center justify-center"
+                  style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
                 >
-                  <Text>Assigner une autre table</Text>
-                </Button>
-                <Button
-                  variant="outline"
-                  style={{ flex: 1 }}
-                  onPress={modalActions.openPayment}
-                  disabled={true}
-                >
-                  <Text>Régler la note</Text>
-                </Button>
-                <Button
-                  variant="destructive"
-                  style={{ flex: 1 }}
-                  onPress={modalActions.openDeleteDialog}
-                >
-                  <Text>Supprimer</Text>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#FBFBFB',
+                      fontWeight: '500',
+                      textAlign: 'center',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Mode édition
+                  </Text>
                 </Button>
               </View>
-              <Button
-                onPress={() => {
-                  // Ne pas fermer la modal de détails, juste ouvrir la modal d'édition par-dessus
-                  handleOpenOrderModal();
-                }}
-                className="w-full h-[50px] flex items-center justify-center"
-                style={{ backgroundColor: '#2A2E33' }}
-              >
-                <Text
+            )}
+
+            {appInitialized && !appLoading && rooms.length === 0 ? (
+              // État vide - Aucune room disponible (seulement quand l'initialisation est vraiment terminée)
+              <View style={{
+                backgroundColor: '#FAFBFC',
+                padding: 48,
+                alignItems: 'center',
+                flex: 1,
+                justifyContent: 'center',
+              }}>
+                <View style={{ marginBottom: 20 }}>
+                  <LayoutDashboard size={48} color="#D1D5DB" />
+                </View>
+                <Text style={{
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: '#2A2E33',
+                  marginBottom: 12,
+                  textAlign: 'center',
+                  letterSpacing: 0.3,
+                }}>
+                  Aucune salle configurée
+                </Text>
+                <Text style={{
+                  fontSize: 15,
+                  color: '#6B7280',
+                  textAlign: 'center',
+                  lineHeight: 22,
+                  marginBottom: 32,
+                  maxWidth: 320,
+                }}>
+                  Pour commencer à utiliser le service, vous devez d'abord créer une salle avec des tables.
+                </Text>
+                <Pressable
+                  onPress={handleCreateFirstRoom}
                   style={{
-                    fontSize: 14,
-                    color: '#FBFBFB',
-                    fontWeight: '500',
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
+                    backgroundColor: '#2A2E33',
+                    paddingHorizontal: 28,
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    shadowColor: '#2A2E33',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 8,
+                    elevation: 6,
+                    ...(Platform.OS === 'web' && {
+                      cursor: 'pointer',
+                    })
                   }}
                 >
-                  Modifier la commande
-                </Text>
-              </Button>
-            </View>
-          </View>
-        )}
-      </CustomModal>
+                  <Plus size={20} color="white" style={{ marginRight: 8 }} />
+                  <Text style={{
+                    color: '#FFFFFF',
+                    fontSize: 16,
+                    fontWeight: '700',
+                    letterSpacing: 0.4,
+                  }}>
+                    Créer ma première salle
+                  </Text>
+                </Pressable>
+              </View>
+            ) : appLoading || !appInitialized ? (
+              // État de chargement
+              <View style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Text>Chargement des salles...</Text>
+              </View>
+            ) : (
+              // Layout normal avec room existante
+              <>
+                {selectedTable && !selectedTableOrder && (
+                  <StartOrderCard
+                    table={selectedTable}
+                    onStartPress={handleCreateOrder}
+                  />
+                )}
 
-      {/* AdminFormView pour l'ajout/modification de commande */}
-      <AdminFormView
-        visible={orderFormView.isVisible}
-        mode={orderFormView.mode}
-        title={modals.modalTitle}
-        onClose={handleSmartCloseOrderModal}
-        onCancel={handleSmartCloseOrderModal}
-        onSave={handleSaveOrder}
-        hideHeaderAndActions={isConfiguringMenu}
-        disableGlobalScroll={true} // Désactiver le scroll global pour permettre le layout custom d'OrderItemsForm
-        configurationActions={menuConfigActions ? {
-          onCancel: menuConfigActions.onCancel,
-          onConfirm: menuConfigActions.onConfirm,
-          cancelLabel: 'Annuler',
-          confirmLabel: 'Confirmer la sélection',
-          confirmButtonColor: '#059669' // Vert pour différencier de l'enregistrement normal
-        } : undefined}
-      >
-        {(selectedTableOrder || orderCreatedFromStart) && (
-          <OrderItemsForm
-            order={selectedTableOrder || {
-              id: 'new-order-' + selectedTableId,
-              tableId: selectedTableId!,
-              table: selectedTable!,
-              lines: [],
-              status: Status.DRAFT,
-              account: '',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }}
-            items={allItems.filter(item => item.isActive)}
-            itemTypes={allItemTypes}
-            onConfigurationModeChange={handleConfigurationModeChange}
-            onConfigurationActionsChange={handleConfigurationActionsChange}
-          />
-        )}
-      </AdminFormView>
+                <RoomComponent
+                  tables={currentRoomTables}
+                  orders={currentRoomOrders}
+                  editingTableId={selectedTableId ?? undefined}
+                  editionMode={false}
+                  isLoading={loading}
+                  width={currentRoom?.width}
+                  height={currentRoom?.height}
+                  onTablePress={handleTablePress}
+                  onTableLongPress={handleTablePress}
+                  onTableUpdate={() => { }}
+                />
+              </>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Modal pour les détails et actions de la commande - masquée si OrderLinesForm est active */}
+      {!showOrderModal && (
+        <CustomModal
+          isVisible={modals.showOrderDetailModal}
+          onClose={handleCloseOrderDetailModal}
+          width={900}
+          height={700}
+          title={selectedTableOrder ? `Détails de la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Détails de la commande"}
+        >
+          {selectedTableOrder && (
+            <View style={{ flex: 1, flexDirection: 'column', justifyContent: 'space-between' }}>
+              <AdminOrderDetailView
+                order={selectedTableOrder}
+                itemTypes={allItemTypes}
+                onDeleteOrderLines={async (orderLineIds) => {
+                  try {
+                    if (orderLineIds.length === 1) {
+                      await deleteOrderLine(orderLineIds[0]);
+                      showToast('Article supprimé avec succès', 'success');
+                    } else {
+                      await deleteOrderLines(orderLineIds);
+                      showToast(`${orderLineIds.length} articles supprimés avec succès`, 'success');
+                    }
+                  } catch (error) {
+                    showToast('Erreur lors de la suppression', 'error');
+                    console.error('Erreur suppression:', error);
+                  }
+                }}
+                onUpdateOrderItemStatus={handleStatusUpdate}
+              />
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                  <Button
+                    variant="outline"
+                    style={{ flex: 1 }}
+                    onPress={modalActions.openReassign}
+                  >
+                    <Text>Assigner une autre table</Text>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    style={{ flex: 1 }}
+                    onPress={modalActions.openPayment}
+                  >
+                    <Text>Régler la note</Text>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    style={{ flex: 1 }}
+                    onPress={modalActions.openDeleteDialog}
+                  >
+                    <Text>Supprimer</Text>
+                  </Button>
+                </View>
+                <Button
+                  onPress={() => {
+                    // Ne pas fermer la modal de détails, juste ouvrir la modal d'édition par-dessus
+                    handleOpenOrderModal();
+                  }}
+                  className="w-full h-[50px] flex items-center justify-center"
+                  style={{ backgroundColor: '#2A2E33' }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#FBFBFB',
+                      fontWeight: '500',
+                      textAlign: 'center',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Modifier la commande
+                  </Text>
+                </Button>
+              </View>
+            </View>
+          )}
+        </CustomModal>
+      )}
+
 
       {selectedTableOrder && modals.showDeleteOrderDialog && (
         <DeleteConfirmationModal
@@ -673,8 +837,8 @@ export default function ServicePage() {
           modalActions.closeReassign();
           modalActions.openOrderDetail(); // Rouvrir la modal de détails si fermeture
         }}
-        width={width * 0.8}
-        height={height * 0.8}
+        width={800}
+        height={600}
         title={modals.isReassigning ? "Assignation en cours..." : "Sélectionner une table"}
       >
         <View style={{ flex: 1, padding: 20 }}>
@@ -686,27 +850,26 @@ export default function ServicePage() {
             height: '100%'
           }}>
             <RoomComponent
-              tables={currentRoomTables.filter(table => !table.currentOrder)}
+              tables={currentRoomTables.filter(table => {
+                const tableOrder = table.orders?.[0];
+                return tableOrder?.id !== selectedTableOrder?.id;
+              })}
               width={currentRoom?.width}
               height={currentRoom?.height}
               editionMode={false}
-              isLoading={isLoading || modals.isReassigning}
-              containerDimensions={{ 
-                width: width * 0.8 - 40, 
-                height: height * 0.7 - 40 
-              }} // Responsive dimensions minus padding
+              isLoading={loading || modals.isReassigning}
+              containerDimensions={{ width: 760, height: 560 }} // 800-40 et 600-40 pour les paddings
               onTablePress={async (pressedTable: Table | null) => {
                 if (pressedTable && selectedTableOrder && !modals.isReassigning) {
                   modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
-                    await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
+                    await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
                     modalActions.openOrderDetail();
                     showToast('Table réassignée avec succès.', 'success');
                   } catch (error) {
-                    console.error('Erreur lors de la réassignation:', error);
                     showToast('Erreur lors de la réassignation.', 'error');
                   } finally {
                     modalActions.setReassigning(false); // Débloquer
@@ -718,13 +881,12 @@ export default function ServicePage() {
                   modalActions.setReassigning(true); // Bloquer les autres clics
 
                   try {
-                    await updateOrder({ ...selectedTableOrder, tableId: pressedTable.id });
+                    await updateOrder(selectedTableOrder.id, { tableId: pressedTable.id });
                     setSelectedTable(pressedTable.id);
                     modalActions.closeReassign();
                     modalActions.openOrderDetail();
                     showToast('Table réassignée avec succès.', 'success');
                   } catch (error) {
-                    console.error('Erreur lors de la réassignation:', error);
                     showToast('Erreur lors de la réassignation.', 'error');
                   } finally {
                     modalActions.setReassigning(false); // Débloquer

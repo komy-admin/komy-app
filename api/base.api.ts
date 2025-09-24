@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import { Platform } from "react-native";
 import { StorageInterface, storageService } from "~/lib/storageService";
+import { store } from "~/store";
 
 const DEV_API_URL = Platform.select({
   android: `${process.env.EXPO_PUBLIC_API_URL}/api`,
@@ -24,10 +25,68 @@ export abstract class BaseApiService<T> {
 
     this.axiosInstance.interceptors.request.use(
       async (config) => {
-        const token = await this.storage.getItem('token');
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Define endpoint whitelists for robust matching
+        const AUTH_ENDPOINTS = [
+          '/auth/login',
+          '/auth/register',
+          '/auth/forgot-password',
+          '/auth/reset-password',
+          '/auth/qr-login',
+          '/auth/setup-account'
+        ];
+
+        const PIN_ENDPOINTS = [
+          '/auth/verify-pin',
+          '/auth/set-pin'
+        ];
+
+        // Helper to extract path from config.url
+        const getEndpointPath = (url: string | undefined): string => {
+          if (!url) return '';
+          // Remove query params and base URL if present
+          const path = url.split('?')[0];
+          // Handle both relative and absolute URLs
+          if (path.startsWith('http')) {
+            try {
+              const urlObj = new URL(path);
+              return urlObj.pathname;
+            } catch {
+              return path;
+            }
+          }
+          return path;
+        };
+
+        const endpointPath = getEndpointPath(config.url);
+
+        // Check if this is an auth endpoint (no token needed)
+        const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => endpointPath.endsWith(endpoint));
+        if (isAuthEndpoint) {
+          return config;
         }
+
+        // Check if this is a PIN endpoint (authToken handled in specific methods)
+        const isPinEndpoint = PIN_ENDPOINTS.some(endpoint => endpointPath.endsWith(endpoint));
+        if (isPinEndpoint) {
+          // Token is already set in the specific method call
+          return config;
+        }
+
+        // For all other endpoints, use sessionToken from Redux store
+        const state = store.getState();
+        const sessionToken = state.session.sessionToken;
+        const sessionExpiresAt = state.session.sessionExpiresAt;
+
+        if (sessionToken && sessionExpiresAt) {
+          // Check if session is still valid
+          if (new Date() < new Date(sessionExpiresAt)) {
+            if (config.headers) {
+              config.headers.Authorization = `Bearer ${sessionToken}`;
+            }
+          }
+          // If expired, don't set header - let 401 handler deal with it
+        }
+
         return config;
       },
       (error) => {

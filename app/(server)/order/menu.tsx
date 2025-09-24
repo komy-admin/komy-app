@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
-import { orderItemApiService } from '~/api/order-item.api';
 import { useToast } from '~/components/ToastProvider';
 import { ArrowLeft, Plus, Minus, UtensilsCrossed } from 'lucide-react-native';
 import { useOrders, useMenu, useRestaurant } from '~/hooks/useRestaurant';
@@ -18,8 +17,6 @@ export default function OrderMenuPage() {
   const [isMenuSelectorVisible, setIsMenuSelectorVisible] = useState(false);
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
   const { getOrderById, loading, error } = useOrders();

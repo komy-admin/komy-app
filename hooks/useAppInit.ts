@@ -1,32 +1,73 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '~/store';
+import { sessionActions, selectAppInitialized } from '~/store/slices/session.slice';
 import { useRooms } from './useRooms';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
-import { restaurantActions } from '~/store/restaurant';
-import { setAccountConfig } from '@/store/account-config.slice';
 import { accountConfigApiService } from '~/api/account-config.api';
+
+export interface InitializationProgress {
+  rooms: boolean;
+  tables: boolean;
+  itemTypes: boolean;
+  items: boolean;
+  menus: boolean;
+  orders: boolean;
+  users: boolean;
+  accountConfig: boolean;
+}
 
 interface InitializationState {
   isInitialized: boolean;
   isLoading: boolean;
   error: string | null;
-  progress: {
-    rooms: boolean;
-    tables: boolean;
-    itemTypes: boolean;
-    items: boolean;
-    menus: boolean;
-    orders: boolean;
-    users: boolean;
-    accountConfig: boolean;
-  };
-  finalizationProgress: number; // 0 à 100 pour la phase finale
+  progress: InitializationProgress;
+  finalizationProgress: number;
   isFinalizingStage: boolean;
 }
+
+const INITIAL_PROGRESS: InitializationProgress = {
+  rooms: false,
+  tables: false,
+  itemTypes: false,
+  items: false,
+  menus: false,
+  orders: false,
+  users: false,
+  accountConfig: false,
+};
+
+const COMPLETED_PROGRESS: InitializationProgress = {
+  rooms: true,
+  tables: true,
+  itemTypes: true,
+  items: true,
+  menus: true,
+  orders: true,
+  users: true,
+  accountConfig: true,
+};
+
+const createInitialState = (): InitializationState => ({
+  isInitialized: false,
+  isLoading: false,
+  error: null,
+  progress: INITIAL_PROGRESS,
+  finalizationProgress: 0,
+  isFinalizingStage: false
+});
+
+const createCompletedState = (): InitializationState => ({
+  isInitialized: true,
+  isLoading: false,
+  error: null,
+  progress: COMPLETED_PROGRESS,
+  finalizationProgress: 100,
+  isFinalizingStage: false
+});
 
 /**
  * Hook pour l'initialisation globale de l'application
@@ -34,9 +75,11 @@ interface InitializationState {
  */
 export const useAppInit = () => {
   const dispatch = useDispatch();
-  const { token, userProfile } = useSelector((state: RootState) => state.auth);
-  const isAuthenticated = !!(token && userProfile);
-  
+  const { sessionToken, user } = useSelector((state: RootState) => state.session);
+  const appInitialized = useSelector(selectAppInitialized);
+  // Simple check: need sessionToken and user
+  const canInitialize = !!(sessionToken && user);
+
   // Hooks spécialisés
   const { loadRooms } = useRooms();
   const { loadAllOrders, loadOrdersForRoom } = useOrders();
@@ -45,23 +88,7 @@ export const useAppInit = () => {
   const { loadUsers } = useUsers();
 
   // État d'initialisation
-  const [state, setState] = useState<InitializationState>({
-    isInitialized: false,
-    isLoading: false,
-    error: null,
-    progress: {
-      rooms: false,
-      tables: false,
-      itemTypes: false,
-      items: false,
-      menus: false,
-      orders: false,
-      users: false,
-      accountConfig: false,
-    },
-    finalizationProgress: 0,
-    isFinalizingStage: false
-  });
+  const [state, setState] = useState<InitializationState>(createInitialState);
 
   const updateProgress = (key: keyof InitializationState['progress'], value: boolean) => {
     setState(prev => ({
@@ -74,9 +101,10 @@ export const useAppInit = () => {
   };
 
   const initializeApp = useCallback(async () => {
-    if (!isAuthenticated) {
+    // Vérifications préliminaires synchrones
+    if (!canInitialize) {
       console.log('❌ Utilisateur non authentifié, initialisation annulée');
-      return; // Ne pas initialiser si pas connecté
+      return;
     }
 
     if (state.isInitialized || state.isLoading || state.error) {
@@ -90,6 +118,7 @@ export const useAppInit = () => {
 
     setState(prev => ({
       ...prev,
+      isInitialized: false,  // Force false to display the loader
       isLoading: true,
       error: null
     }));
@@ -100,7 +129,7 @@ export const useAppInit = () => {
       try {
         // Charger la configuration depuis l'API backend
         const accountConfig = await accountConfigApiService.getAccountConfig();
-        dispatch(setAccountConfig({
+        dispatch(sessionActions.setAccountConfig({
           id: accountConfig.id,
           reminderMinutes: accountConfig.reminderMinutes,
           reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
@@ -109,14 +138,14 @@ export const useAppInit = () => {
         console.log('✅ Configuration chargée');
       } catch (error) {
         console.error('⚠️ Erreur lors du chargement de la configuration:', error);
-        updateProgress('accountConfig', true); // Continue même si erreur
+        updateProgress('accountConfig', true);
       }
 
       // Étape 1: Charger les données de base en parallèle
       console.log('📦 Chargement des données de base...');
       
       // Vérifier les droits utilisateur pour charger les users
-      const canLoadUsers = userProfile && ['superadmin', 'admin', 'manager'].includes(userProfile);
+      const canLoadUsers = user?.profil && ['superadmin', 'admin', 'manager'].includes(user.profil);
       
       const promises: Promise<any>[] = [
         loadRooms().then(result => {
@@ -142,7 +171,7 @@ export const useAppInit = () => {
         );
       } else {
         updateProgress('users', true);
-        console.log('⚠️ Pas de droits pour charger les utilisateurs (profil:', userProfile, ')');
+        console.log('⚠️ Pas de droits pour charger les utilisateurs (profil:', user?.profil, ')');
       }
       
       const results = await Promise.all(promises);
@@ -166,7 +195,7 @@ export const useAppInit = () => {
           return result;
         }).catch(error => {
           console.error('⚠️ Erreur lors du chargement des menus:', error);
-          updateProgress('menus', true); // Continuer même si erreur
+          updateProgress('menus', true);
           return [];
         })
       ]);
@@ -179,7 +208,7 @@ export const useAppInit = () => {
         return result;
       }).catch(error => {
         console.error('⚠️ Erreur lors du chargement des commandes:', error);
-        updateProgress('orders', true); // Continuer même si erreur
+        updateProgress('orders', true);
         return [];
       });
 
@@ -220,15 +249,13 @@ export const useAppInit = () => {
       }
 
       // Marquer comme terminé
-      setState(prev => ({
-        ...prev,
-        isInitialized: true,
-        isLoading: false,
-        error: null
-      }));
+      setState(createCompletedState());
+
+      // Marquer immédiatement comme en cours d'initialisation pour éviter les doubles appels
+      dispatch(sessionActions.setAppInitialized(true));
 
       // Déclencher la synchronisation WebSocket
-      dispatch(restaurantActions.setConnected(true));
+      dispatch(sessionActions.setWebSocketConnected(true));
 
       console.log('🎉 Initialisation terminée avec succès !');
 
@@ -238,25 +265,28 @@ export const useAppInit = () => {
         items,
         menus,
         users,
+        orders,
         success: true
       };
 
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation:', error);
-      
+
+      // Remettre le flag à false en cas d'erreur pour permettre une nouvelle tentative
+      dispatch(sessionActions.setAppInitialized(false));
+
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       setState(prev => ({
         ...prev,
         isLoading: false,
+        isInitialized: false,
         error: errorMessage
       }));
-      
+
       throw error;
     }
   }, [
-    isAuthenticated,
-    state.isInitialized, 
-    state.isLoading, 
+    canInitialize,
     loadRooms, 
     loadItemTypes, 
     loadItems,
@@ -264,50 +294,52 @@ export const useAppInit = () => {
     loadAllOrders,
     loadOrdersForRoom,
     loadUsers,
-    dispatch
+    dispatch,
+    user?.profil
   ]);
 
   // Initialisation automatique quand l'utilisateur se connecte
   useEffect(() => {
-    if (isAuthenticated) {
+    console.log(`🔍 [useAppInit] Effect déclenché:`, {
+      isAuthenticated: canInitialize,
+      userProfil: user?.profil,
+      userId: user?.id,
+      appInitialized,
+      stateIsInitialized: state.isInitialized
+    });
+
+    if (canInitialize && user?.profil && !appInitialized) {
+      console.log('🔄 Démarrage initialisation app (première fois seulement)');
       initializeApp();
+    } else if (!canInitialize) {
+      console.log('🔄 Reset état - utilisateur déconnecté');
+      dispatch(sessionActions.setAppInitialized(false));
+      setState(createInitialState());
+    } else if (canInitialize && user?.profil && appInitialized && !state.isInitialized) {
+      console.log('🔄 App déjà initialisée dans Redux, synchronisation du state local');
+      setState(createCompletedState());
     } else {
-      // Reset de l'état quand l'utilisateur se déconnecte
-      setState({
-        isInitialized: false,
-        isLoading: false,
-        error: null,
-        progress: {
-          rooms: false,
-          tables: false,
-          itemTypes: false,
-          items: false,
-          menus: false,
-          orders: false,
-          users: false,
-          accountConfig: false,
-        },
-        finalizationProgress: 0,
-        isFinalizingStage: false
+      console.log('🚫 Conditions non remplies pour initialisation:', {
+        isAuthenticated: canInitialize,
+        hasProfil: !!user?.profil,
+        alreadyInitialized: appInitialized
       });
     }
-  }, [isAuthenticated, initializeApp]);
+  }, [canInitialize, user?.profil, user?.id, appInitialized, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fonction pour réinitialiser manuellement
   const reinitializeApp = useCallback(async () => {
     console.log('🔄 Réinitialisation manuelle de l\'application...');
-    setState(prev => ({
-      ...prev,
-      isInitialized: false
-    }));
+    dispatch(sessionActions.setAppInitialized(false));
+    setState(createInitialState());
     return initializeApp();
-  }, [initializeApp]);
+  }, [initializeApp, dispatch]);
 
   // Fonction pour changer de salle
   const switchRoom = useCallback(async (roomId: string) => {
     try {
       console.log(`🔄 Changement de salle vers: ${roomId}`);
-      await loadOrdersForRoom(roomId);
+      await loadOrdersForRoom();
       console.log('✅ Commandes de la nouvelle salle chargées');
     } catch (error) {
       console.error('❌ Erreur lors du changement de salle:', error);
@@ -336,7 +368,6 @@ export const useAppInit = () => {
     progress: state.progress,
     progressPercentage: getProgressPercentage(),
     isFinalizingStage: state.isFinalizingStage,
-
     // Actions
     initializeApp,
     reinitializeApp,

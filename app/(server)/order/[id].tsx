@@ -2,20 +2,17 @@ import React from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button } from '~/components/ui';
-import { OrderItem } from '~/types/order-item.types';
+import { OrderLine, OrderItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { useToast } from '~/components/ToastProvider';
 import OrderDetailView from '~/components/Service/OrderDetailView';
 import { ArrowLeft, Plus } from 'lucide-react-native';
 import { useOrders, useMenu, useRestaurant } from '~/hooks/useRestaurant';
-import { orderItemApiService } from '~/api/order-item.api';
 
 export default function OrderDetailPage() {
   const { id } = useLocalSearchParams();
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
   const { getOrderById, deleteOrder, updateOrderLinesStatus, loading, error } = useOrders();
@@ -73,7 +70,7 @@ export default function OrderDetailPage() {
   };
 
   const handleBackPress = () => {
-    if (order?.orderItems.length === 0) {
+    if (order?.lines?.length === 0) {
       handleDeleteOrder();
     }
     router.back();

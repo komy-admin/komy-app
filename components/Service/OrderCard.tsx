@@ -1,5 +1,5 @@
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
-import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from "~/lib/utils";
+import { DateFormat, formatDate, getOrderGlobalStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
 import { OrderLine, OrderLineType } from "~/types/order-line.types";
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
@@ -18,48 +18,31 @@ const ACTIVATION_DISTANCE = 15;
 const getOrderType = (order: Order): string => {
   if (!order.lines || order.lines.length === 0) return '';
 
-  // Collecter tous les statuts des OrderLines
-  let allStatuses = [];
   let itemTypeName = '';
 
   for (const line of order.lines) {
-    if (line.type === OrderLineType.ITEM && line.status) {
-      allStatuses.push(line.status);
+    if (line.type === OrderLineType.ITEM) {
       // Prendre le nom du premier item type trouvé
       if (!itemTypeName && line.item) {
         itemTypeName = (line.item as any).itemType?.name || 'Article';
       }
     } else if (line.type === OrderLineType.MENU && line.items) {
       line.items.forEach(menuItem => {
-        allStatuses.push(menuItem.status);
         // Prendre le nom du premier item type trouvé
         if (!itemTypeName && menuItem.item) {
           itemTypeName = (menuItem.item as any).itemType?.name || 'Article';
         }
       });
     }
+    
+    if (itemTypeName) break; // Arrêter dès qu'on a trouvé un type
   }
 
   return itemTypeName;
 };
 
 export default function OrderCard({ order, onDelete }: OrderCardProps) {
-  // Collecter tous les statuts des OrderLines
-  let allStatuses = [];
-  
-  if (order.lines) {
-    for (const line of order.lines) {
-      if (line.type === OrderLineType.ITEM && line.status) {
-        allStatuses.push(line.status);
-      } else if (line.type === OrderLineType.MENU && line.items) {
-        line.items.forEach(menuItem => {
-          allStatuses.push(menuItem.status);
-        });
-      }
-    }
-  }
-
-  const mostImportantStatus = getMostImportantStatus(allStatuses);
+  const mostImportantStatus = getOrderGlobalStatus(order);
   const statusColor = getStatusColor(mostImportantStatus);
   const statusText = getStatusText(mostImportantStatus);
   const orderType = getOrderType(order);

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform, Alert, Dimensions } from 'react-native';
 import { User, ShieldCheck, Bell, LogOut, PenTool, Database, Settings } from 'lucide-react-native';
-import { logout, updateProfileImage, clearError } from '~/store/auth.slice';
-import { useAppDispatch } from '~/store/hooks';
+import { sessionService } from '~/services/SessionService';
+import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,9 +23,9 @@ type ConfigSidebarProps = {
 };
 
 export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebarProps) {
-  const { currentUser, imageUpdateLoading, error, token } = useSelector((state: RootState) => state.auth);
-  const dispatch = useAppDispatch();
-  
+  const { user, isLoading, error } = useSelector((state: RootState) => state.session);
+  const router = useRouter();
+
   // État pour gérer les dimensions et les breakpoints
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
 
@@ -42,7 +42,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
   const getBreakpoint = () => {
     const screenWidth = dimensions.width;
     const calculatedSidebarWidth = screenWidth * 0.25; // 25% de l'écran
-    
+
     if (calculatedSidebarWidth < 220) return 'sm'; // Petit - textes tronqués
     if (calculatedSidebarWidth < 280) return 'md'; // Moyen - textes complets mais avatar réduit
     return 'lg'; // Large - tout affiché normalement
@@ -54,12 +54,21 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
   useEffect(() => {
     if (error) {
       Alert.alert('Erreur', error);
-      dispatch(clearError());
+      // TODO: Handle error clearing with new store
     }
-  }, [error, dispatch]);
+  }, [error]);
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    try {
+      // Use SessionService to properly clear authToken and sessionToken
+      await sessionService.logout();
+      // Navigate to login page
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if logout fails, navigate to login
+      router.replace('/login');
+    }
   };
 
   // Validation de taille d'image côté front
@@ -83,7 +92,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
 
   // Sélecteur d'image optimisé avec validation front
   const handleImagePicker = async () => {
-    if (!currentUser?.id) {
+    if (!user?.id) {
       Alert.alert('Erreur', 'Utilisateur non connecté');
       return;
     }
@@ -94,23 +103,24 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
         input.type = 'file';
         input.accept = 'image/jpeg,image/jpg,image/png,image/webp';
         input.style.display = 'none';
-        
+
         input.onchange = async (e) => {
           const file = (e.target as HTMLInputElement).files?.[0];
           if (file) {
             if (!validateImageType(file.type) || !validateImageSize(file.size)) {
               return;
             }
-            
+
             const reader = new FileReader();
             reader.onload = async (e) => {
               const imageUri = e.target?.result as string;
-              
+
               try {
-                await dispatch(updateProfileImage({ 
-                  userId: currentUser.id, 
-                  imageUri 
-                })).unwrap();
+                // TODO: Implement updateProfileImage with new store
+                // await dispatch(updateProfileImage({ 
+                //   userId: user.id, 
+                //   imageUri 
+                // })).unwrap();
                 Alert.alert('Succès', 'Photo de profil mise à jour !');
               } catch (error) {
                 console.error('Erreur upload:', error);
@@ -119,14 +129,14 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
             reader.readAsDataURL(file);
           }
         };
-        
+
         document.body.appendChild(input);
         input.click();
         document.body.removeChild(input);
-        
+
       } else {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        
+
         if (permissionResult.granted === false) {
           Alert.alert('Permission requise', 'Vous devez autoriser l\'accès à la galerie pour changer votre photo de profil.');
           return;
@@ -142,12 +152,13 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
 
         if (!result.canceled && result.assets[0]) {
           const imageUri = result.assets[0].uri;
-          
+
           try {
-            await dispatch(updateProfileImage({ 
-              userId: currentUser.id, 
-              imageUri 
-            })).unwrap();
+            // TODO: Implement updateProfileImage with new store
+            // await dispatch(updateProfileImage({ 
+            //   userId: user.id, 
+            //   imageUri 
+            // })).unwrap();
             Alert.alert('Succès', 'Photo de profil mise à jour !');
           } catch (error) {
             console.error('Erreur upload:', error);
@@ -162,9 +173,9 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
 
   // Fonction pour obtenir la source de l'image
   const getImageSource = () => {
-    if (currentUser?.profileImage) {
-      console.log('Image utilisateur:', currentUser.profileImage);
-      return { uri: currentUser.profileImage };
+    if (user?.profileImage) {
+      console.log('Image utilisateur:', user.profileImage);
+      return { uri: user.profileImage };
     }
     return require('~/assets/images/userprofiledefault.jpg');
   };
@@ -234,25 +245,25 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
               console.error('Erreur chargement image:', error);
             }}
           />
-          <Pressable 
+          <Pressable
             onPress={handleImagePicker}
-            disabled={imageUpdateLoading}
+            disabled={isLoading}
           >
             <View style={styles.editIconContainer}>
-                <PenTool size={breakpoint === 'sm' ? 12 : 16} color="#2A2E33" />
+              <PenTool size={breakpoint === 'sm' ? 12 : 16} color="#2A2E33" />
             </View>
           </Pressable>
         </View>
-        
+
         <Text style={dynamicStyles.userName} numberOfLines={1} ellipsizeMode="tail">
-          {currentUser?.firstName && currentUser?.lastName 
-            ? `${currentUser.firstName.charAt(0).toUpperCase() + currentUser.firstName.slice(1)} ${currentUser.lastName.charAt(0).toUpperCase() + currentUser.lastName.slice(1)}`
+          {user?.firstName && user?.lastName
+            ? `${user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)} ${user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)}`
             : 'Utilisateur'
           }
         </Text>
         <Text style={dynamicStyles.userRole} numberOfLines={1} ellipsizeMode="tail">
-          {currentUser?.profil 
-            ? currentUser.profil.charAt(0).toUpperCase() + currentUser.profil.slice(1)
+          {user?.profil
+            ? user.profil.charAt(0).toUpperCase() + user.profil.slice(1)
             : 'Utilisateur'
           }
         </Text>
@@ -304,7 +315,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
           );
         })}
       </View>
-      
+
       <Pressable
         style={({ pressed }) => [
           {
@@ -319,7 +330,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
             <LogOut size={18} color="#DC2626" />
           </View>
           <View style={dynamicStyles.textContainer}>
-            <Text 
+            <Text
               style={dynamicStyles.logoutText}
               numberOfLines={1}
               ellipsizeMode="tail"

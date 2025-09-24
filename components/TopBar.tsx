@@ -1,10 +1,10 @@
-import React, { useEffect, useState }  from 'react'
-import { View, Image, Text, Pressable, TouchableWithoutFeedback} from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { View, Image, Text, Pressable, TouchableWithoutFeedback } from 'react-native'
 import { FileText, Calendar, LogOut } from 'lucide-react-native'
-import { Href, Link } from 'expo-router'
-import { useSelector, useDispatch } from 'react-redux';
+import { Href, Link, useRouter } from 'expo-router'
+import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { logout } from '~/store/auth.slice';
+import { sessionService } from '~/services/SessionService';
 
 interface TopBarProps {
   showAdditions?: boolean;
@@ -12,13 +12,13 @@ interface TopBarProps {
 }
 
 export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBarProps) {
-  const { currentUser } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.session);
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  
+
   // Les managers ont accès à l'interface admin mais pas à la config
-  const isManager = currentUser?.profil === 'manager'
+  const isManager = user?.profil === 'manager'
   const shouldEnableConfigClick = enableConfigClick && !isManager
 
   // Fonction pour formater la date
@@ -29,7 +29,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
     const year = today.getFullYear()
     setCurrentDate(`${day}/${month}/${year}`)
   }
-  
+
   useEffect(() => {
     updateDate()
     const now = new Date()
@@ -45,15 +45,24 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   }, [])
 
   const getImageSource = () => {
-    if (currentUser?.profileImage) {
-      return { uri: currentUser.profileImage };
+    if (user?.profileImage) {
+      return { uri: user.profileImage };
     }
     return require('~/assets/images/userprofiledefault.jpg');
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    setShowProfileMenu(false);
+  const handleLogout = async () => {
+    try {
+      setShowProfileMenu(false);
+      // Use SessionService to properly clear authToken and sessionToken
+      await sessionService.logout();
+      // Navigate to login page
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if logout fails, navigate to login
+      router.replace('/login');
+    }
   };
 
   const toggleProfileMenu = () => {
@@ -61,7 +70,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   };
 
   const configUser = '/configs'
-  
+
   return (
     <>
       {/* Overlay invisible pour fermer le menu */}
@@ -77,7 +86,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
           }} />
         </TouchableWithoutFeedback>
       )}
-      
+
       <View
         style={{
           width: '100%',
@@ -97,29 +106,29 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
             style={{ width: 80, height: 80, resizeMode: 'contain' }}
           />
         </View>
-        
-        <View style={{ flexDirection: 'row', alignItems: 'center',  gap: 20 }}>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {showAdditions && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor:"#F3F3F3", borderWidth: 1}}>
-                <FileText size={24} color="#2A2E33" strokeWidth={1}/>
-                <Text style={{color: '#2A2E33', fontSize: 14, fontWeight: '300'}}>Additions</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor: "#F3F3F3", borderWidth: 1 }}>
+                <FileText size={24} color="#2A2E33" strokeWidth={1} />
+                <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '300' }}>Additions</Text>
               </View>
             )}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor:"#F3F3F3", borderWidth: 1}}>
-              <Calendar size={24} color="#2A2E33" strokeWidth={1}/>
-              <Text style={{color: '#2A2E33', fontSize: 14, fontWeight: '300'}}>{currentDate}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor: "#F3F3F3", borderWidth: 1 }}>
+              <Calendar size={24} color="#2A2E33" strokeWidth={1} />
+              <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '300' }}>{currentDate}</Text>
             </View>
           </View>
-          
+
           <View style={{ position: 'relative' }}>
             {shouldEnableConfigClick ? (
               <Link href={`/(admin)${configUser}` as Href} key={configUser} asChild>
                 <Pressable onPress={() => setShowProfileMenu(false)}>
-                  <View 
-                    style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
                       gap: 10,
                     }}
                   >
@@ -134,17 +143,17 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                       resizeMode="cover"
                     />
                     <View>
-                      <Text 
-                        style={{ 
+                      <Text
+                        style={{
                           color: '#2A2E33',
-                          fontSize: 15, 
+                          fontSize: 15,
                           fontWeight: '300'
                         }}
                       >
-                        {`${(currentUser?.firstName ?? '').charAt(0).toUpperCase() + (currentUser?.firstName ?? '').slice(1)} ${(currentUser?.lastName ?? '').charAt(0).toUpperCase() + (currentUser?.lastName ?? '').slice(1)}`}
+                        {`${(user?.firstName ?? '').charAt(0).toUpperCase() + (user?.firstName ?? '').slice(1)} ${(user?.lastName ?? '').charAt(0).toUpperCase() + (user?.lastName ?? '').slice(1)}`}
                       </Text>
                       <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                        {(currentUser?.profil ?? '').charAt(0).toUpperCase() + (currentUser?.profil ?? '').slice(1)}
+                        {(user?.profil ?? '').charAt(0).toUpperCase() + (user?.profil ?? '').slice(1)}
                       </Text>
                     </View>
                   </View>
@@ -152,10 +161,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
               </Link>
             ) : (
               <Pressable onPress={toggleProfileMenu}>
-                <View 
-                  style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
                     gap: 10,
                     backgroundColor: showProfileMenu ? 'rgba(0,0,0,0.05)' : 'transparent',
                     padding: 8,
@@ -173,17 +182,17 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                     resizeMode="cover"
                   />
                   <View>
-                    <Text 
-                      style={{ 
+                    <Text
+                      style={{
                         color: '#2A2E33',
-                        fontSize: 15, 
+                        fontSize: 15,
                         fontWeight: '300'
                       }}
                     >
-                      {`${(currentUser?.firstName ?? '').charAt(0).toUpperCase() + (currentUser?.firstName ?? '').slice(1)} ${(currentUser?.lastName ?? '').charAt(0).toUpperCase() + (currentUser?.lastName ?? '').slice(1)}`}
+                      {`${(user?.firstName ?? '').charAt(0).toUpperCase() + (user?.firstName ?? '').slice(1)} ${(user?.lastName ?? '').charAt(0).toUpperCase() + (user?.lastName ?? '').slice(1)}`}
                     </Text>
                     <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                      {(currentUser?.profil ?? '').charAt(0).toUpperCase() + (currentUser?.profil ?? '').slice(1)}
+                      {(user?.profil ?? '').charAt(0).toUpperCase() + (user?.profil ?? '').slice(1)}
                     </Text>
                   </View>
                 </View>
@@ -222,7 +231,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
                   borderColor: 'rgba(0,0,0,0.08)',
                   transform: [{ rotate: '45deg' }],
                 }} />
-                
+
                 <View style={{ padding: 8 }}>
                   <Pressable
                     onPress={handleLogout}

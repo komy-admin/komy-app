@@ -1,11 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
-import { 
-  restaurantActions,
-  selectAllItemTypes,
-  selectMenuLoading,
-  selectMenuError,
-} from '~/store/restaurant';
+import { RootState, entitiesActions } from '~/store';
+import { selectItemTypes } from '~/store/selectors';
 import { itemTypeApiService } from '~/api/item-type.api';
 import { ItemType } from '~/types/item-type.types';
 
@@ -13,27 +9,27 @@ export const useItemTypes = () => {
   const dispatch = useDispatch();
   
   // Récupérer les données depuis le store
-  const itemTypes = useSelector((state: any) => selectAllItemTypes({ menu: state.restaurant.menu }));
-  const loading = useSelector((state: any) => selectMenuLoading({ menu: state.restaurant.menu }));
-  const error = useSelector((state: any) => selectMenuError({ menu: state.restaurant.menu }));
+  const itemTypes = useSelector(selectItemTypes);
+  const loading = false; // Géré globalement maintenant
+  const error = null; // Géré globalement maintenant
 
   const clearError = useCallback(() => {
-    dispatch(restaurantActions.setErrorMenu(''));
+    // Error géré globalement maintenant
   }, [dispatch]);
 
   const createItemType = useCallback(async (data: Partial<ItemType>): Promise<ItemType> => {
     try {
-      dispatch(restaurantActions.setLoadingMenu(true));
+      // Loading géré globalement maintenant
       const newItemType = await itemTypeApiService.create(data);
       
       // Ajouter au store
-      dispatch(restaurantActions.createItemType({ itemType: newItemType }));
-      dispatch(restaurantActions.setLoadingMenu(false));
+      dispatch(entitiesActions.createItemType({ itemType: newItemType }));
+      // Loading géré globalement maintenant
       
       return newItemType;
     } catch (err) {
       const errorMessage = 'Erreur lors de la création du type d\'article';
-      dispatch(restaurantActions.setErrorMenu(errorMessage));
+      console.error(errorMessage, err);
       console.error('Error creating item type:', err);
       throw err;
     }
@@ -41,17 +37,17 @@ export const useItemTypes = () => {
 
   const updateItemType = useCallback(async (id: string, data: Partial<ItemType>): Promise<ItemType> => {
     try {
-      dispatch(restaurantActions.setLoadingMenu(true));
+      // Loading géré globalement maintenant
       const updatedItemType = await itemTypeApiService.update(id, data);
       
       // Mettre à jour dans le store
-      dispatch(restaurantActions.updateItemType({ itemType: updatedItemType }));
-      dispatch(restaurantActions.setLoadingMenu(false));
+      dispatch(entitiesActions.updateItemType({ itemType: updatedItemType }));
+      // Loading géré globalement maintenant
       
       return updatedItemType;
     } catch (err) {
       const errorMessage = 'Erreur lors de la modification du type d\'article';
-      dispatch(restaurantActions.setErrorMenu(errorMessage));
+      console.error(errorMessage, err);
       console.error('Error updating item type:', err);
       throw err;
     }
@@ -59,15 +55,15 @@ export const useItemTypes = () => {
 
   const deleteItemType = useCallback(async (id: string): Promise<void> => {
     try {
-      dispatch(restaurantActions.setLoadingMenu(true));
+      // Loading géré globalement maintenant
       await itemTypeApiService.delete(id);
       
       // Supprimer du store (utilise itemTypeId selon le slice)
-      dispatch(restaurantActions.deleteItemType({ itemTypeId: id }));
-      dispatch(restaurantActions.setLoadingMenu(false));
+      dispatch(entitiesActions.deleteItemType({ itemTypeId: id }));
+      // Loading géré globalement maintenant
     } catch (err) {
       const errorMessage = 'Erreur lors de la suppression du type d\'article';
-      dispatch(restaurantActions.setErrorMenu(errorMessage));
+      console.error(errorMessage, err);
       console.error('Error deleting item type:', err);
       throw err;
     }

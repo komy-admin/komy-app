@@ -14,18 +14,18 @@ type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications' | '
 
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
-  const { currentUser } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.session);
   const router = useRouter();
   
   // Bloquer l'accès aux managers
   useEffect(() => {
-    if (currentUser?.profil === 'manager') {
+    if (user?.profil === 'manager') {
       router.replace('/(admin)');
     }
-  }, [currentUser, router]);
+  }, [user, router]);
 
   // Si c'est un manager, on affiche un message d'erreur temporaire
-  if (currentUser?.profil === 'manager') {
+  if (user?.profil === 'manager') {
     return (
       <View style={styles.blockedContainer}>
         <Text style={styles.blockedText}>

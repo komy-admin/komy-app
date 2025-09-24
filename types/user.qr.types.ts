@@ -16,12 +16,23 @@ export interface UserQrTokenResponse {
   createdAt: string;
 }
 
+// New QR Login Response aligned with standard login flow
 export interface QRLoginResponse {
-  qrTokenId: string;
-  token: AuthToken;
-  user: User;
+  requirePinSetup?: boolean;        // True if user needs to create PIN for first time
+  requirePinVerification?: boolean;  // True if user needs to verify existing PIN
+  authToken: string;                 // JWT 1 year for PIN verification only
+  message: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    profil: UserProfile;
+    accountId: string;
+  };
 }
 
+// Legacy - can be removed after migration
 export interface AuthToken {
   abilities: string[];
   expiresAt: string; // ISO date string

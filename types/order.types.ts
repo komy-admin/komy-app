@@ -14,4 +14,8 @@ export type Order = {
   account: string;
   createdAt: string;
   updatedAt: string;
+  
+  // Propriétés optionnelles pour compatibilité
+  orderNumber?: string;
+  orderItems?: OrderLine[]; // Alias temporaire pour migration
 }

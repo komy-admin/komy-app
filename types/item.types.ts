@@ -4,6 +4,7 @@ export type Item = {
   id: string;
   name: string;
   price: number;
+  color?: string;
   allergens?: string[];
   description?: string;
   itemType: ItemType;

@@ -1,6 +1,17 @@
 import { QRLoginResponse } from '@/types/user.qr.types';
 import { BaseApiService } from './base.api';
-import type { LoginCredentials, RegisterCredentials, ForgotCredentials, ResetCredentials, AuthResponse } from '~/types/auth.types';
+import type {
+  LoginCredentials,
+  RegisterCredentials,
+  ForgotCredentials,
+  ResetCredentials,
+  AuthResponse,
+  SetupAccountCredentials,
+  VerifyPinCredentials,
+  LoginResponse,
+  PinVerificationResponse,
+  PinErrorResponse,
+} from '~/types/auth.types';
 import { User, UserProfile } from '~/types/user.types';
 
 export class AuthApiService extends BaseApiService<AuthResponse> {
@@ -40,55 +51,29 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       const { data } = await this.axiosInstance.get<User>(`${this.endpoint}/me`);
       return data;
     } catch (err) {
-      console.error('Error in getUserWithToken:', err);
       throw err;
     }
   }
 
   async qrLogin(token: string): Promise<QRLoginResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<QRLoginResponse>(
-        `${this.endpoint}/qr-login`,
-        { token }
-      );
-      await this.setToken(data.token.token);
-      await this.setUserProfile(data.user.profil);
-      return data;
-    } catch (err) {
-      console.error('Error in qrLogin:', err);
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<QRLoginResponse>(
+      `${this.endpoint}/qr-login`,
+      { token }
+    );
+    return data;
   }
 
-  async login(credentials: LoginCredentials, showToast?: (message: string, type: 'success' | 'error') => void): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
+      const { data } = await this.axiosInstance.post<LoginResponse>(
         `${this.endpoint}/login`,
         credentials
       );
-      await this.setToken(data.token.token);
-      await this.setUserProfile(data.profil);  
+
+      // New dual token system - login returns authToken
       return data;
-    } catch (error: any) {
-      if (showToast) {
-        // Log temporaire pour debug
-        console.log('Error status:', error?.response?.status);
-        console.log('Error data:', error?.response?.data);
-        
-        let errorMessage = 'Identifiants incorrects';
-        
-        if (error?.response?.status === 400 || error?.response?.status === 422) {
-          errorMessage = 'Identifiant ou mot de passe incorrect';
-        } else if (error?.response?.status === 500) {
-          errorMessage = 'Erreur serveur, veuillez réessayer';
-        } else if (!error?.response) {
-          errorMessage = 'Problème de connexion réseau';
-        }
-        
-        showToast(errorMessage, 'error');
-      }
-      
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -102,7 +87,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       await this.setUserProfile(data.profil);
       return data;
     } catch (err) {
-      console.error('Error in register:', err);
       throw err;
     }
   }
@@ -116,7 +100,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       await this.setUserProfile(data.profil);
       return data;
     } catch (err) {
-      console.error('Error in refreshToken:', err);
       throw err;
     }
   }
@@ -129,7 +112,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       );
       return data;
     } catch (err) {
-      console.error('Error in login:', err);
       throw err;
     }
   }
@@ -142,7 +124,126 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       );
       return data;
     } catch (err) {
-      console.error('Error in login:', err);
+      throw err;
+    }
+  }
+
+  async setupAccount(credentials: SetupAccountCredentials): Promise<AuthResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/setup-account`,
+        credentials
+      );
+      await this.setToken(data.token.token);
+      await this.setUserProfile(data.profil);
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async setPin(pin: string, temporaryToken: string): Promise<AuthResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/set-pin`,
+        { pin },
+        {
+          headers: {
+            Authorization: `Bearer ${temporaryToken}`
+          }
+        }
+      );
+      await this.setToken(data.token.token);
+      await this.setUserProfile(data.profil);
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // Legacy method - kept for compatibility
+  async verifyPin(credentials: VerifyPinCredentials): Promise<AuthResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<AuthResponse>(
+        `${this.endpoint}/verify-pin`,
+        credentials
+      );
+      await this.setToken(data.token.token);
+      await this.setUserProfile(data.profil);
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // New method for dual token system - verify PIN with authToken
+  async verifyPinWithAuthToken(pin: string, authToken: string): Promise<PinVerificationResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<PinVerificationResponse>(
+        `${this.endpoint}/verify-pin`,
+        { pin },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      );
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // New method for dual token system - set PIN with authToken
+  async setPinWithAuthToken(pin: string, authToken: string): Promise<PinVerificationResponse> {
+    try {
+      const { data } = await this.axiosInstance.post<PinVerificationResponse>(
+        `${this.endpoint}/set-pin`,
+        { pin },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      );
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // Forgot PIN - sends email with reset link
+  async forgotPin(email: string): Promise<{ message: string }> {
+    try {
+      const { data } = await this.axiosInstance.post<{ message: string }>(
+        `${this.endpoint}/forgot-pin`,
+        { email }
+      );
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // Reset PIN with token from email
+  async resetPin(token: string, pin: string): Promise<{
+    message: string;
+    authToken: string;
+    requirePinVerification: boolean;
+    user: User;
+  }> {
+    try {
+      const { data } = await this.axiosInstance.post<{
+        message: string;
+        authToken: string;
+        requirePinVerification: boolean;
+        user: User;
+      }>(
+        `${this.endpoint}/reset-pin`,
+        { token, pin }
+      );
+      return data;
+    } catch (err) {
       throw err;
     }
   }
@@ -157,23 +258,61 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
+        const errorCode = error.response?.data?.code;
 
+        // Don't try to refresh on PIN-related endpoints or PIN errors
+        const isPinEndpoint = originalRequest.url?.includes('/verify-pin') ||
+                              originalRequest.url?.includes('/set-pin');
+
+        // Don't refresh on PIN errors (401 with attemptsRemaining or PIN in message)
+        const isPinError = error.response?.status === 401 &&
+                          (error.response?.data?.message?.includes('PIN') ||
+                           error.response?.data?.attemptsRemaining !== undefined ||
+                           error.response?.data?.error === 'INVALID_PIN');
+
+        if (isPinEndpoint || isPinError) {
+          return Promise.reject(error);
+        }
+
+        // Handle different 401 scenarios
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
+
+          // Session token expired - need PIN verification
+          if (errorCode === 'SESSION_TOKEN_INVALID' || errorCode === 'SESSION_TOKEN_MISSING') {
+            // The UI will handle redirecting to PIN verification
+            return Promise.reject(error);
+          }
+
+          // Auth token invalid - need full re-login
+          if (errorCode === 'AUTH_TOKEN_INVALID' || errorCode === 'AUTH_TOKEN_MISSING') {
+            // The UI will handle redirecting to login
+            return Promise.reject(error);
+          }
+
+          // Legacy token refresh attempt (for backward compatibility)
           try {
             const response = await this.refreshToken();
             const newToken = response.token.token;
-            
+
             if (originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${newToken}`;
             }
-            
+
             return this.axiosInstance(originalRequest);
           } catch (refreshError) {
+            // Let the UI handle logout
             this.logout();
             return Promise.reject(refreshError);
           }
         }
+
+        // Handle rate limiting (429)
+        if (error.response?.status === 429) {
+          // Rate limit exceeded - handled by UI
+          return Promise.reject(error);
+        }
+
         return Promise.reject(error);
       }
     );

@@ -5,7 +5,7 @@ import { Status } from "~/types/status.enum";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
 import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
-import { selectAllKitchenItems } from '~/store/restaurant';
+import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 
@@ -98,9 +98,10 @@ function useBarItemGrouping(orders: Order[], kitchenItems: any[], overdueOrderIt
 export default function BarmanPage() {
   const { orders, loading, error, updateOrderStatus } = useOrders();
 
-  const { isLoading: globalLoading } = useRestaurant();
   const kitchenItems = useSelector(selectAllKitchenItems);
-  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
+  // Récupérer les commandes en retard depuis le store
+  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
+  const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
   // Filtrer les items selon les statuts disponibles au bar
@@ -138,8 +139,7 @@ export default function BarmanPage() {
       });
 
       if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
-        await updateOrderStatus({
-          orderId: itemGroup.orderId,
+        await updateOrderStatus(itemGroup.orderId, {
           status: newStatus,
           orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
           orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
@@ -192,8 +192,7 @@ export default function BarmanPage() {
         return;
       }
 
-      await updateOrderStatus({
-        orderId: parentGroup.orderId,
+      await updateOrderStatus(parentGroup.orderId, {
         status: newStatus,
         orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
         orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,

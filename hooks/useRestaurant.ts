@@ -1,18 +1,14 @@
 import { useSelector } from 'react-redux';
-import { 
-  selectIsLoading,
-  selectLoadingState,
-  selectErrors,
-  selectIsConnected,
-  selectLastSyncTime,
-} from '~/store/restaurant';
+import { RootState } from '~/store';
+import { selectIsWebSocketConnected, selectLastSyncTime } from '~/store/slices/session.slice';
+import { selectIsInitialized, selectInitError } from '~/store/slices/entities.slice';
 import { useRestaurantSocket } from './useRestaurantSocket';
 import { useRooms } from './useRooms';
 import { useTables } from './useTables';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useUsers } from './useUsers';
-import { useRestaurantInit } from './useRestaurantInit';
+import { useMenus } from './useMenus';
 
 /**
  * Hook principal simplifié qui combine tous les hooks spécialisés
@@ -23,10 +19,9 @@ export const useRestaurant = () => {
   const { isConnected: socketConnected } = useRestaurantSocket();
 
   // État global
-  const isLoading = useSelector(selectIsLoading);
-  const loadingState = useSelector(selectLoadingState);
-  const errors = useSelector(selectErrors);
-  const isConnected = useSelector(selectIsConnected);
+  const isInitialized = useSelector(selectIsInitialized);
+  const initError = useSelector(selectInitError);
+  const isConnected = useSelector(selectIsWebSocketConnected);
   const lastSyncTime = useSelector(selectLastSyncTime);
 
   // Hooks spécialisés
@@ -34,6 +29,7 @@ export const useRestaurant = () => {
   const tablesHook = useTables();
   const ordersHook = useOrders();
   const menuHook = useMenu();
+  const menusHook = useMenus();
   const usersHook = useUsers();
 
   return {
@@ -54,6 +50,7 @@ export const useRestaurant = () => {
     currentRoomOrders: ordersHook.currentRoomOrders,
     
     // Menu
+    menus: menusHook.allMenus,
     items: menuHook.items,
     itemTypes: menuHook.itemTypes,
     
@@ -61,9 +58,10 @@ export const useRestaurant = () => {
     users: usersHook.users,
     
     // === ÉTAT GLOBAL ===
-    isLoading,
-    loadingState,
-    errors,
+    isLoading: !isInitialized,
+    isInitialized,
+    initError,
+    errors: initError ? { init: initError } : {},
     isConnected,
     socketConnected,
     lastSyncTime,
@@ -122,4 +120,3 @@ export { useTables } from './useTables';
 export { useOrders } from './useOrders';
 export { useMenu } from './useMenu';
 export { useUsers } from './useUsers';
-export { useRestaurantInit } from './useRestaurantInit';

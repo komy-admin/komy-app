@@ -12,7 +12,7 @@ import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
 import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
-import { MenuEditor } from '~/components/admin/MenuEditor';
+import { MenuEditor } from '~/components/Menu/MenuEditor';
 import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
@@ -41,12 +41,10 @@ export default function MenuPage() {
 
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
 
   // Utilisation des hooks Redux
   const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
-  const { allMenus, loading: menusLoading, error: menusError, createMenuBulk, updateMenuBulk, deleteMenu, createMenuCategoryItem, updateMenuCategoryItem, deleteMenuCategoryItem, loadMenuCategoryItems } = useMenus();
+  const { allMenus, loading: menusLoading, error: menusError, createMenuBulk, updateMenuBulk, deleteMenu, createMenuCategoryItem, loadMenuCategoryItems } = useMenus();
 
   // Filtrer les articles avec les filtres appliqués et trier par statut
   const filteredItems = useMemo(() => {
@@ -108,6 +106,7 @@ export default function MenuPage() {
 
       const itemWithType = {
         ...item,
+        color: item.color || undefined,
         itemType: itemType
       };
 
@@ -186,7 +185,7 @@ export default function MenuPage() {
   const handleBulkMenuSave = async (menuData: any) => {
     try {
       const isUpdate = Boolean(menuData.id);
-      
+
       if (isUpdate) {
         // ✅ Utiliser l'API bulk pour les mises à jour
         const bulkUpdateData = {
@@ -213,7 +212,6 @@ export default function MenuPage() {
           })) || []
         };
 
-        console.log('🚀 Sauvegarde bulk menu update:', bulkUpdateData);
         await updateMenuBulk(menuData.id, bulkUpdateData);
       } else {
         // ✅ Utiliser l'API bulk pour la création aussi
@@ -241,7 +239,6 @@ export default function MenuPage() {
           })) || []
         };
 
-        console.log('🚀 Sauvegarde bulk menu create:', bulkCreateData);
         await createMenuBulk(bulkCreateData);
       }
 
@@ -364,7 +361,7 @@ export default function MenuPage() {
       key: 'basePrice',
       width: '15%',
       render: (menu: Menu) => (
-        <Text>{menu.basePrice.toFixed(2)}€</Text>
+        <Text>{Number(menu.basePrice).toFixed(2)}€</Text>
       )
     },
     {
@@ -514,10 +511,10 @@ export default function MenuPage() {
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             {activeTab === 'menus' ? (
               // Affichage des menus
-              menusLoading || globalLoading || menusError ? (
+              menusLoading || menusError ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                   <Text style={{ color: menusError ? '#ef4444' : '#666', fontSize: 16 }}>
-                    {menusLoading || globalLoading ? 'Chargement...' : menusError || 'Erreur lors du chargement'}
+                    {menusLoading ? 'Chargement...' : menusError || 'Erreur lors du chargement'}
                   </Text>
                 </View>
               ) : (
@@ -536,10 +533,10 @@ export default function MenuPage() {
               )
             ) : (
               // Affichage des items (articles)
-              loading || globalLoading || error ? (
+              loading || error ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                   <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
-                    {loading || globalLoading ? 'Chargement...' : error || 'Erreur lors du chargement'}
+                    {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
                   </Text>
                 </View>
               ) : (
@@ -625,8 +622,6 @@ export default function MenuPage() {
           items={items}
           itemTypes={itemTypes}
           onCreateMenuCategoryItem={createMenuCategoryItem}
-          onUpdateMenuCategoryItem={updateMenuCategoryItem}
-          onDeleteMenuCategoryItem={deleteMenuCategoryItem}
           onLoadMenuCategoryItems={loadMenuCategoryItems}
           scrollViewRef={menuScrollViewRef}
         />

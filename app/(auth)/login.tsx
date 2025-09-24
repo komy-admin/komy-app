@@ -2,10 +2,8 @@ import { View, StyleSheet, Platform, Text as RNText, Modal } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
-import { useAppDispatch } from '~/store/hooks';
-import { setCredentials, setCurrentUser } from '~/store/auth.slice';
-import { authApiService } from "~/api/auth.api";
-import { Link } from 'expo-router';
+import { sessionService } from '~/services/SessionService';
+import { Link, useRouter } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
@@ -14,30 +12,42 @@ export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showQrScanner, setShowQrScanner] = useState(false);
-  const [qrResult, setQrResult] = useState<string | null>(null);
-  const dispatch = useAppDispatch();
+  const router = useRouter();
   const { showToast } = useToast();
 
   const handleLogin = async () => {
     try {
-      const { token, ...user } = await authApiService.login({ loginId, password }, showToast);
-      dispatch(setCredentials({ token: token.token, userProfile: user.profil }));
-      dispatch(setCurrentUser(user));
-    } catch {
-      // La gestion d'erreur est maintenant faite dans l'API service
+      // Use SessionService to handle login with dual token system
+      const response = await sessionService.login(loginId, password);
+
+      // New dual token system: login returns authToken and requirePin or requirePinSetup
+      if (response.requirePin || response.requirePinSetup) {
+        // authToken is already stored by SessionService
+        // Navigate to PIN screen (will handle both verification and setup)
+        router.push('/pin-verification');
+        return;
+      }
+
+      // This shouldn't happen according to the new spec
+      // All users should have PIN requirement
+      showToast('Erreur de configuration. Contactez un administrateur.', 'error');
+    } catch (error: any) {
+      showToast(`Échec de connexion: ${error.message || error}`, 'error');
     }
   };
 
   const handleQrScan = async (data: string) => {
-    setQrResult(data);
     setShowQrScanner(false);
-    const qrLogin = await authApiService.qrLogin(data);
-    if (!qrLogin.token.token) {
-      return;
+    try {
+      // Use SessionService for QR login - handles all state management
+      const response = await sessionService.qrLogin(data);
+
+      // Navigate to PIN verification/setup based on response
+      router.push('/pin-verification');
+    } catch (error) {
+      console.error('QR scan error:', error);
+      showToast('Erreur lors de la connexion QR', 'error');
     }
-    const currentUser = await authApiService.getUserWithToken();
-    dispatch(setCredentials({ token: qrLogin.token.token, userProfile: currentUser.profil }));
-    dispatch(setCurrentUser(currentUser));
   };
 
   return (
@@ -54,75 +64,57 @@ export default function LoginScreen() {
         enableResetScrollToCoords={false}
       >
         <View style={styles.contentContainer}>
-            <RNText style={styles.title}>
-              Fork'it
-            </RNText>
+          <RNText style={styles.title}>
+            Fork'it
+          </RNText>
 
-            <View style={styles.qrButtonContainer}>
-              <Button
-                variant="outline"
-                style={styles.qrButton}
-                onPress={() => setShowQrScanner(true)}
-              >
-                <View style={styles.qrButtonContent}>
-                  <QrCode size={20} color="#1F2937" strokeWidth={2} />
-                  <Text style={styles.qrButtonText}>Connexion via QR code</Text>
-                </View>
-              </Button>
-            </View>
-
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {qrResult && (
-              <View style={styles.qrResultContainer}>
-                <Text style={styles.qrResultLabel}>QR scanné :</Text>
-                <Text style={styles.qrResultText} selectable>{qrResult}</Text>
+          <View style={styles.qrButtonContainer}>
+            <Button
+              variant="outline"
+              style={styles.qrButton}
+              onPress={() => setShowQrScanner(true)}
+            >
+              <View style={styles.qrButtonContent}>
+                <QrCode size={20} color="#1F2937" strokeWidth={2} />
+                <Text style={styles.qrButtonText}>Connexion via QR code</Text>
               </View>
-            )}
-
-            <TextInput
-              value={loginId}
-              onChangeText={setLoginId}
-              placeholder="Identifiant"
-              style={styles.input}
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="ascii-capable"
-              returnKeyType="next"
-              textContentType="username"
-            />
-
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              onSubmitEditing={handleLogin}
-              placeholder="Mot de passe"
-              secureTextEntry
-              style={styles.input}
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="ascii-capable"
-              returnKeyType="done"
-              textContentType="password"
-            />
-
-            <View style={styles.forgotPasswordContainer}>
-              <Link href="/forgot-password" asChild>
-                <Text style={styles.forgotPasswordText}>
-                  Mot de passe oublié ?
-                </Text>
-              </Link>
-            </View>
-
-            <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>Se connecter</Text>
             </Button>
+          </View>
+
+          <TextInput
+            id="LoginId"
+            value={loginId}
+            onChangeText={setLoginId}
+            placeholder="Identifiant"
+            style={styles.input}
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <TextInput
+            id="LoginPassword"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Mot de passe"
+            secureTextEntry
+            style={styles.input}
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <View style={styles.forgotPasswordContainer}>
+            <Link href="/forgot-credentials?type=password" asChild>
+              <Text style={styles.forgotPasswordText}>
+                Mot de passe oublié ?
+              </Text>
+            </Link>
+          </View>
+
+          <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
+            <Text style={styles.loginButtonText}>Se connecter</Text>
+          </Button>
         </View>
       </KeyboardAwareScrollView>
       <Modal

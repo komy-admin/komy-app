@@ -7,7 +7,7 @@ import { Text } from '../ui';
 
 const NAV_ITEMS = [
   { href: '/service', icon: Grid3X3Icon, label: 'Service' },
-  { href: '/room_list', icon: LayoutDashboard, label: 'Salles' },
+  { href: '/room', icon: LayoutDashboard, label: 'Salles' },
   { href: '/menu', icon: NotebookText, label: 'Menu' },
   { href: '/team', icon: Users, label: 'Équipe' },
   { href: '/kitchen', icon: ChefHat, label: 'Cuisine' },

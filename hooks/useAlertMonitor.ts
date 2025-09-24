@@ -1,16 +1,16 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { createSelector } from '@reduxjs/toolkit';
-import { useAppDispatch } from '~/store/hooks';
 import { RootState } from '~/store';
-import { setOverdueOrders, setOverdueOrderItems, updateLastAlertCheck } from '@/store/account-config.slice';
 import { Order } from '~/types/order.types';
+import { Status } from '~/types/status.enum';
+import { sessionActions } from '~/store/slices/session.slice';
 
 const CHECK_INTERVAL = 60000; // 1 minute - interval fixe et simple
 
 // Sélecteur mémorisé pour éviter les re-renders
 const selectOrdersArray = createSelector(
-  [(state: RootState) => state.restaurant?.orders?.orders],
+  [(state: RootState) => state.entities?.orders],
   (ordersState) => {
     if (ordersState) {
       return Object.values(ordersState);
@@ -19,13 +19,20 @@ const selectOrdersArray = createSelector(
   }
 );
 
+/**
+ * Hook pour monitorer les commandes en retard et déclencher des alertes
+ */
 export const useAlertMonitor = () => {
-  const dispatch = useAppDispatch();
+  const dispatch = useDispatch();
   const intervalRef = useRef<number | null>(null);
   
-  const { reminderMinutes, reminderNotificationsEnabled } = useSelector((state: RootState) => state.accountConfig);
-  const { token, userProfile } = useSelector((state: RootState) => state.auth);
-  const isAuthenticated = !!(token && userProfile);
+  // Récupérer la configuration depuis le store
+  const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+  const reminderMinutes = accountConfig?.reminderMinutes || 15;
+  const reminderNotificationsEnabled = accountConfig?.reminderNotificationsEnabled || false;
+  
+  const { sessionToken, user } = useSelector((state: RootState) => state.session);
+  const isAuthenticated = !!(sessionToken && user);
   
   // Utiliser le sélecteur mémorisé
   const orders = useSelector(selectOrdersArray);
@@ -48,110 +55,94 @@ export const useAlertMonitor = () => {
         overdueOrderItemIds: []
       };
       setAlertResults(emptyResults);
-      dispatch(setOverdueOrders([]));
-      dispatch(setOverdueOrderItems([]));
+      dispatch(sessionActions.setOverdueOrders([]));
+      dispatch(sessionActions.setOverdueOrderItems([]));
       return;
     }
 
-    const currentTime = Date.now();
-    const alertTimeMs = reminderMinutes * 60 * 1000;
-    // Plus besoin de warningTimeMs car pas d'interval adaptatif
-    
+    const now = new Date();
     const overdueOrderIds: string[] = [];
     const overdueOrderItemIds: string[] = [];
-    for (let i = 0; i < orders.length; i++) {
-      const order = orders[i];
-      
-      let hasOverdueItems = false;
-      
-      if (order.lines?.length) {
-        for (let j = 0; j < order.lines.length; j++) {
-          const orderLine = order.lines[j];
-          // Pour les OrderLines, on utilise createdAt/updatedAt de la commande
-          const itemUpdateTime = new Date(order.updatedAt || order.createdAt).getTime();
+
+    orders.forEach((order: Order) => {
+      // Vérifier si la commande est en retard
+      if ([Status.PENDING, Status.INPROGRESS, Status.READY].includes(order.status)) {
+        // Utiliser updatedAt si disponible, sinon createdAt
+        const dateToCheck = order.updatedAt || order.createdAt;
+        if (dateToCheck) {
+          const orderDate = new Date(dateToCheck);
+          const diffMinutes = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60));
           
-          const timeDiff = currentTime - itemUpdateTime;
-          
-          // Vérifier si en retard (optimisé sans calcul inutile de minutes)
-          if (timeDiff > alertTimeMs) {
-            overdueOrderItemIds.push(orderLine.id);
-            hasOverdueItems = true;
-            
+          if (diffMinutes >= reminderMinutes) {
+            overdueOrderIds.push(order.id);
           }
         }
       }
-      
-      if (hasOverdueItems) {
-        overdueOrderIds.push(order.id);
-      }
-    }
 
-    const newResults = {
+      // Vérifier les items de la commande (OrderLines)
+      if (order.lines && order.lines.length > 0) {
+        order.lines.forEach(line => {
+          if (line.status && [Status.PENDING, Status.INPROGRESS, Status.READY].includes(line.status)) {
+            // Utiliser updatedAt si disponible, sinon createdAt
+            const dateToCheck = line.updatedAt || line.createdAt;
+            if (dateToCheck) {
+              const lineDate = new Date(dateToCheck);
+              const diffMinutes = Math.floor((now.getTime() - lineDate.getTime()) / (1000 * 60));
+              
+              if (diffMinutes >= reminderMinutes) {
+                overdueOrderItemIds.push(line.id);
+              }
+            }
+          }
+        });
+      }
+    });
+
+    const results = {
       overdueOrderIds,
       overdueOrderItemIds
     };
+
+    setAlertResults(results);
     
-    setAlertResults(newResults);
-    dispatch(setOverdueOrders(overdueOrderIds));
-    dispatch(setOverdueOrderItems(overdueOrderItemIds));
-    dispatch(updateLastAlertCheck());
-  }, [isAuthenticated, reminderMinutes, reminderNotificationsEnabled, orders, dispatch]);
+    // Mettre à jour le store avec les commandes en retard
+    dispatch(sessionActions.setOverdueOrders(overdueOrderIds));
+    dispatch(sessionActions.setOverdueOrderItems(overdueOrderItemIds));
+    dispatch(sessionActions.updateLastAlertCheck());
+  }, [orders, reminderMinutes, reminderNotificationsEnabled, isAuthenticated]);
 
-  // Initialisation des alertes au démarrage et nettoyage quand désactivées
+  // Configuration de l'intervalle
   useEffect(() => {
-    if (isAuthenticated && orders?.length && reminderNotificationsEnabled) {
-      updateAlertState();
-    } else if (!reminderNotificationsEnabled) {
-      // Nettoyer immédiatement les alertes visuelles quand désactivées
-      const emptyResults = {
-        overdueOrderIds: [],
-        overdueOrderItemIds: []
-      };
-      setAlertResults(emptyResults);
-      dispatch(setOverdueOrders([]));
-      dispatch(setOverdueOrderItems([]));
-    }
-  }, [isAuthenticated, orders, reminderNotificationsEnabled, updateAlertState, dispatch]);
-
-  // Effet pour gérer l'intervalle de vérification
-  useEffect(() => {
-    // Ne démarrer que si authentifié, qu'il y a des orders et que les alertes sont activées
-    if (!isAuthenticated || !orders?.length || !reminderNotificationsEnabled) {
-      // Nettoyer l'intervalle si les conditions ne sont plus remplies
+    // Ne pas démarrer le monitoring si désactivé ou pas authentifié
+    if (!reminderNotificationsEnabled || !isAuthenticated) {
       if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
+        clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
       return;
     }
 
-    // Démarrer l'intervalle de vérification fixe (60s)
+    // Vérification initiale
+    updateAlertState();
+
+    // Configuration de l'intervalle
     intervalRef.current = window.setInterval(() => {
-      console.log(`🔄 TICK - Seuil: ${reminderMinutes}min, Orders: ${orders?.length || 0}`);
       updateAlertState();
     }, CHECK_INTERVAL);
 
+    // Cleanup
     return () => {
       if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
+        clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     };
-  }, [isAuthenticated, orders, reminderNotificationsEnabled, updateAlertState]);
+  }, [updateAlertState, reminderNotificationsEnabled, isAuthenticated]);
 
-
-  // Fonction pour forcer une vérification manuelle
-  const forceCheck = useCallback(() => {
-    if (reminderNotificationsEnabled) {
-      updateAlertState();
-    }
-  }, [reminderNotificationsEnabled, updateAlertState]);
-
-  return { 
-    forceCheck,
-    // Exposer les résultats calculés
-    alertResults,
-    // Statut des alertes
-    isEnabled: reminderNotificationsEnabled
+  return {
+    overdueOrderIds: alertResults.overdueOrderIds,
+    overdueOrderItemIds: alertResults.overdueOrderItemIds,
+    isMonitoring: reminderNotificationsEnabled && isAuthenticated,
+    checkNow: updateAlertState
   };
 };

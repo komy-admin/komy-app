@@ -1,12 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
-import { 
-  restaurantActions,
-  selectUsers,
-  selectUserByIdFromUsers,
-  selectUsersLoading,
-  selectUsersError,
-} from '~/store/restaurant';
+import { RootState, entitiesActions } from '~/store';
+import { selectUsers } from '~/store/selectors';
 import { userApiService } from '~/api/user.api';
 import { User, UserProfile } from '~/types/user.types';
 import { FilterQueryBuilder } from './useFilter/query-builder';
@@ -18,14 +13,14 @@ export const useUsers = () => {
   const dispatch = useDispatch();
 
   // Sélecteurs
-  const users = useSelector((state: any) => selectUsers({ users: state.restaurant.users }));
-  const loading = useSelector((state: any) => selectUsersLoading({ users: state.restaurant.users }));
-  const error = useSelector((state: any) => selectUsersError({ users: state.restaurant.users }));
+  const users = useSelector(selectUsers);
+  const loading = false; // Géré globalement maintenant
+  const error = null; // Géré globalement maintenant
 
   // Actions asynchrones pour charger les données
   const loadUsers = useCallback(async (filters?: any) => {
     try {
-      dispatch(restaurantActions.setLoadingUsers(true));
+      // Loading géré globalement maintenant
       
       let queryString = '';
       if (filters) {
@@ -37,11 +32,11 @@ export const useUsers = () => {
       }
       
       const { data: users } = await userApiService.getAll(queryString);
-      dispatch(restaurantActions.setUsers({ users }));
+      dispatch(entitiesActions.setUsers({ users }));
       return users;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des utilisateurs';
-      dispatch(restaurantActions.setErrorUsers(errorMessage));
+      console.error('Erreur lors du chargement des utilisateurs:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -49,8 +44,8 @@ export const useUsers = () => {
   // Actions CRUD pour gérer les utilisateurs
   const createUser = useCallback(async (userData: Omit<User, 'id'>) => {
     try {
-      const newUser = await userApiService.create(userData);
-      dispatch(restaurantActions.createUser({ user: newUser }));
+      const newUser = await userApiService.create({ ...userData, isPasswordSet: false });
+      dispatch(entitiesActions.createUser({ user: newUser }));
       return newUser;
     } catch (error: any) {
       console.error('Erreur lors de la création de l\'utilisateur:', error);
@@ -87,7 +82,7 @@ export const useUsers = () => {
   const updateUser = useCallback(async (userId: string, userData: Partial<User>) => {
     try {
       const updatedUser = await userApiService.update(userId, userData);
-      dispatch(restaurantActions.updateUser({ user: updatedUser }));
+      dispatch(entitiesActions.updateUser({ user: updatedUser }));
       return updatedUser;
     } catch (error: any) {
       console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
@@ -124,7 +119,7 @@ export const useUsers = () => {
   const deleteUser = useCallback(async (userId: string) => {
     try {
       await userApiService.delete(userId);
-      dispatch(restaurantActions.deleteUser({ userId }));
+      dispatch(entitiesActions.deleteUser({ userId }));
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'utilisateur:', error);
       throw error;

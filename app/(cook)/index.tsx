@@ -10,7 +10,7 @@ import { useSelector } from 'react-redux';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 import { getMostImportantStatus } from '~/lib/utils';
-import { selectAllKitchenItems } from '~/store/restaurant';
+import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -99,11 +99,11 @@ export default function CookKitchenPage() {
   // Utilisation des hooks Redux uniquement  
   const { orders, loading, error, updateOrderStatus } = useOrders();
   const { updateOrderLineItemStatus } = useOrderLines();
-  const { overdueOrderIds, overdueOrderItemIds } = useSelector((state: RootState) => state.accountConfig);
+  // Récupérer les commandes en retard depuis le store
+  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
+  const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
-  // Initialiser la connexion WebSocket via useRestaurant
-  const { isLoading: globalLoading } = useRestaurant();
   
   const kitchenItems = useSelector(selectAllKitchenItems);
 
@@ -149,8 +149,7 @@ export default function CookKitchenPage() {
 
       // 🆕 Utiliser la nouvelle API PATCH qui gère tout en une seule requête
       if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
-        await updateOrderStatus({
-          orderId: itemGroup.orderId,
+        await updateOrderStatus(itemGroup.orderId, {
           status: newStatus,
           orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
           orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
@@ -205,8 +204,7 @@ export default function CookKitchenPage() {
       }
 
       // Utiliser la nouvelle API PATCH pour un seul item
-      await updateOrderStatus({
-        orderId: parentGroup.orderId,
+      await updateOrderStatus(parentGroup.orderId, {
         status: newStatus,
         orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
         orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
@@ -229,7 +227,7 @@ export default function CookKitchenPage() {
     }
   };
 
-  if (loading || error || globalLoading) {
+  if (loading || error) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>
