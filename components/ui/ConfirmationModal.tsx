@@ -65,7 +65,7 @@ export function ConfirmationModal({
             disabled={isLoading}
             style={{ flex: 1, marginLeft: 8 }}
           >
-            <Text style={confirmVariant === 'destructive' ? { color: 'white' } : { color: 'white' }}>
+            <Text style={{ color: 'white' }}>
               {isLoading ? 'Chargement...' : confirmText}
             </Text>
           </Button>

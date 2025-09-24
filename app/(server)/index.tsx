@@ -289,9 +289,14 @@ export default function ServerHome() {
 
                   // Ajouter une action globale pour terminer toute la commande si elle est servie
                   const orderStatus = order.status || getMostImportantStatus(
-                    (order.lines || []).map(line =>
-                      line.type === OrderLineType.ITEM ? line.status : Status.PENDING
-                    ).filter(s => s !== undefined) as Status[]
+                    (order.lines || []).flatMap(line => {
+                      if (line.type === OrderLineType.ITEM) {
+                        return [line.status];
+                      } else if (line.type === OrderLineType.MENU && line.items) {
+                        return line.items.map(item => item.status);
+                      }
+                      return [];
+                    }).filter(s => s !== undefined) as Status[]
                   );
 
                   if (orderStatus === Status.SERVED) {
