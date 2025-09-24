@@ -64,7 +64,6 @@ function AuthenticationGate() {
   React.useEffect(() => {
     // Protection simple avec Redux state
     if (authInitialized) {
-      console.log('🚫 [AuthGate] Initialisation bloquée - déjà fait');
       return;
     }
 
@@ -144,7 +143,8 @@ function AuthenticationGate() {
 
     // If we have both tokens and user is authenticated
     if (sessionToken && userProfile && userProfile.profil && isAuthenticated) {
-      // Si on est sur la page de login, rediriger vers la home du profil
+      // Ne pas rediriger depuis PIN verification - laisser AppInitializer gérer
+      // Seulement rediriger depuis login
       if (isLoginRoute(fullPath)) {
         const homeRoute = getHomeRouteForRole(userProfile.profil);
         if (!homeRoute) {
@@ -156,7 +156,6 @@ function AuthenticationGate() {
           return;
         }
 
-        console.log('🔄 [AuthGate] Redirection vers:', homeRoute);
         router.replace(homeRoute as any);
         return;
       }
@@ -165,7 +164,6 @@ function AuthenticationGate() {
       const firstSegment = segments[0];
       if (firstSegment && !hasAccessToRoute(userProfile.profil, firstSegment)) {
         const homeRoute = getHomeRouteForRole(userProfile.profil);
-        console.log('Accès refusé, redirection vers:', homeRoute);
         router.replace(homeRoute as any);
         return;
       }

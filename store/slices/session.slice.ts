@@ -3,17 +3,6 @@ import { User } from '~/types/user.types';
 import { storageService } from '~/lib/storageService';
 
 // Types pour les payloads des actions
-interface LoginSuccessPayload {
-  user: User;
-  token: string;
-  refreshToken?: string;
-}
-
-interface TokenUpdatePayload {
-  token: string;
-  refreshToken?: string;
-}
-
 interface AccountConfigPayload {
   id: string;
   reminderMinutes: number;
@@ -61,6 +50,10 @@ export interface SessionState {
   // Flags d'initialisation
   authInitialized: boolean;
   appInitialized: boolean;
+  isAppInitializing: boolean; // Flag pour l'état de chargement
+  initializationProgress: Record<string, boolean>; // Progression de l'initialisation
+  isFinalizingStage: boolean; // Phase de finalisation
+  finalizationProgress: number; // Progression de finalisation (0-100)
 
   // Account Config
   accountConfig: {
@@ -129,6 +122,10 @@ const initialState: SessionState = {
   // Initialization flags
   authInitialized: false,
   appInitialized: false,
+  isAppInitializing: false,
+  initializationProgress: {},
+  isFinalizingStage: false,
+  finalizationProgress: 0,
 
   // Account Config
   accountConfig: null,
@@ -344,6 +341,28 @@ const sessionSlice = createSlice({
       state.appInitialized = action.payload;
     },
 
+    setAppInitializing: (state, action: PayloadAction<boolean>) => {
+      state.isAppInitializing = action.payload;
+      // Reset progression quand on commence/arrête
+      if (action.payload) {
+        state.initializationProgress = {};
+        state.isFinalizingStage = false;
+        state.finalizationProgress = 0;
+      }
+    },
+
+    setInitializationProgress: (state, action: PayloadAction<{ key: string; value: boolean }>) => {
+      state.initializationProgress[action.payload.key] = action.payload.value;
+    },
+
+    setFinalizingStage: (state, action: PayloadAction<boolean>) => {
+      state.isFinalizingStage = action.payload;
+    },
+
+    setFinalizationProgress: (state, action: PayloadAction<number>) => {
+      state.finalizationProgress = action.payload;
+    },
+
     // === ERROR HANDLING ===
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
@@ -412,6 +431,26 @@ export const selectLastSyncTime = (state: RootState) => state.session.lastSyncTi
 // Initialization selectors
 export const selectAuthInitialized = (state: RootState) => state.session.authInitialized;
 export const selectAppInitialized = (state: RootState) => state.session.appInitialized;
+export const selectIsAppInitializing = (state: RootState) => state.session.isAppInitializing;
+export const selectInitializationProgress = (state: RootState) => state.session.initializationProgress;
+export const selectIsFinalizingStage = (state: RootState) => state.session.isFinalizingStage;
+export const selectFinalizationProgress = (state: RootState) => state.session.finalizationProgress;
+
+// Sélecteur mémorisé pour le pourcentage de progression total
+export const selectProgressPercentage = createSelector(
+  [selectInitializationProgress, selectIsFinalizingStage, selectFinalizationProgress],
+  (progress, isFinalizingStage, finalizationProgress) => {
+    const totalSteps = 8; // nombre d'étapes définies
+    const completed = Object.values(progress).filter(Boolean).length;
+    const baseProgress = Math.round((completed / totalSteps) * 90);
+
+    if (isFinalizingStage) {
+      return Math.min(90 + Math.round(finalizationProgress * 0.1), 100);
+    }
+
+    return baseProgress;
+  }
+);
 // PIN selectors
 export const selectRequiresPin = (state: RootState) => state.session.requiresPin;
 export const selectRequiresPinSetup = (state: RootState) => state.session.requiresPinSetup;
