@@ -645,7 +645,7 @@ export default function ServicePage() {
             {appInitialized && !appLoading && rooms.length === 0 ? (
               // État vide - Aucune room disponible (seulement quand l'initialisation est vraiment terminée)
               <View style={{
-                backgroundColor: '#FAFBFC',
+                backgroundColor: '#F4F5F7',
                 padding: 48,
                 alignItems: 'center',
                 flex: 1,
