@@ -2,26 +2,18 @@ import * as TablePrimitive from '@rn-primitives/table';
 import * as React from 'react';
 import { cn } from '~/lib/utils';
 import { Text } from '~/components/ui/text';
-import { 
-  DimensionValue, 
-  Pressable, 
-  View, 
-  StyleSheet, 
+import {
+  DimensionValue,
+  Pressable,
+  View,
+  StyleSheet,
   FlatList,
   LayoutAnimation,
-  Platform,
-  UIManager,
   TouchableWithoutFeedback
 } from 'react-native';
 import { Trash2, CreditCard as Edit2 } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { TableLoader } from '~/components/TableLoader';
-
-if (Platform.OS === 'android') {
-  if (UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
 
 interface ColumnData {
   label?: string;

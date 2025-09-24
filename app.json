@@ -3,13 +3,13 @@
     "name": "Fork-it",
     "slug": "Fork-it-app",
     "version": "1.0.0",
-    "newArchEnabled": false,
-    "orientation": "unspecified",
-    "icon": "./assets/images/icon_fork_it.png",
+    "newArchEnabled": true,
+    "orientation": "default",
+    "icon": "./assets/images/icone_fork_it.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/icon_fork_it.png",
+      "image": "./assets/images/icone_fork_it.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -22,18 +22,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon_fork_it.png",
+        "foregroundImage": "./assets/images/icone_fork_it.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.forkit",
-      "usesCleartextTraffic": true,
-      "networkSecurityConfig": "./android/network_security_config.xml",
       "softwareKeyboardLayoutMode": "adjustPan"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/icon_fork_it.png"
+      "favicon": "./assets/images/icone_fork_it.png"
     },
     "plugins": [
       "expo-router",
