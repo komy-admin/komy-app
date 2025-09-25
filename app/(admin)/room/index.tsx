@@ -23,7 +23,7 @@ export default function RoomListPage() {
 
 
   // Utilisation des hooks Redux
-  const { rooms, loading, error, deleteRoom } = useRooms();
+  const { rooms, loading, error, deleteRoom, setCurrentRoom } = useRooms();
   const { tables } = useTables();
 
   // State pour le filtrage
@@ -55,9 +55,10 @@ export default function RoomListPage() {
     try {
       await deleteRoom(roomToDelete.id);
       showToast('Salle supprimée avec succès', 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting room:', err);
-      showToast('Erreur lors de la suppression de la salle', 'error');
+      const errorMessage = err.response?.data?.message || 'Erreur lors de la suppression de la salle';
+      showToast(errorMessage, 'error');
     } finally {
       setIsDeleting(false);
       setIsDeleteModalVisible(false);
@@ -70,9 +71,12 @@ export default function RoomListPage() {
     setRoomToDelete(null);
   };
 
-  const navigateToRoomEdit = (roomId: string) => {
+  const navigateToRoomEditionMode = (roomId: string) => {
+    const room = rooms.find(room => room.id === roomId);
+    if (!room) return;
+    setCurrentRoom(roomId);
     router.push({
-      pathname: "/(admin)/room_edition",
+      pathname: "/(admin)/room/edition-mode",
       params: { roomId }
     });
   };
@@ -87,7 +91,7 @@ export default function RoomListPage() {
       {
         label: 'Mode édition',
         icon: <Edit2 size={16} color="#4F46E5" />,
-        onPress: () => navigateToRoomEdit(room.id ? room.id : '')
+        onPress: () => navigateToRoomEditionMode(room.id ? room.id : '')
       },
       {
         label: 'Supprimer',

@@ -1,9 +1,10 @@
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { DateFormat, formatDate, getOrderGlobalStatus, getStatusColor, getStatusText } from "~/lib/utils";
 import { Order } from "~/types/order.types";
 import { OrderLine, OrderLineType } from "~/types/order-line.types";
-import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
-import React, { useCallback, useRef, useState } from 'react';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 'react-native-reanimated';
+import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react-native';
 import { ConfirmDialog } from '~/components/ui';
 
@@ -48,52 +49,53 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
   const orderType = getOrderType(order);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const translateX = useRef(new Animated.Value(0)).current;
-  const swipeRef = useRef(0);
-  const isSwipeActive = useRef(false);
+  const translateX = useSharedValue(0);
+  const isSwipeActive = useSharedValue(false);
 
-  const resetPosition = useCallback(() => {
-    isSwipeActive.current = false;
-    Animated.spring(translateX, {
-      toValue: 0,
-      useNativeDriver: true,
-    }).start();
-  }, [translateX]);
+  const resetPosition = () => {
+    'worklet';
+    translateX.value = withSpring(0);
+    isSwipeActive.value = false;
+  };
 
-  const onGestureEvent = useCallback(
-    (event: PanGestureHandlerGestureEvent) => {
-      const { translationX, velocityX } = event.nativeEvent;
-      swipeRef.current = translationX;
+  const openDialog = () => {
+    setShowDeleteDialog(true);
+  };
 
+  const pan = Gesture.Pan()
+    .activeOffsetX([-ACTIVATION_DISTANCE, ACTIVATION_DISTANCE])
+    .failOffsetY([-20, 20])
+    .onUpdate((event) => {
+      'worklet';
       // Activer le swipe seulement si le mouvement est principalement horizontal
-      // et dépasse la distance d'activation
-      if (Math.abs(translationX) > ACTIVATION_DISTANCE && Math.abs(velocityX) > Math.abs(event.nativeEvent.velocityY)) {
-        isSwipeActive.current = true;
+      if (Math.abs(event.translationX) > ACTIVATION_DISTANCE && Math.abs(event.velocityX) > Math.abs(event.velocityY)) {
+        isSwipeActive.value = true;
       }
 
       // Appliquer la transformation seulement si le swipe est actif
-      if (isSwipeActive.current && translationX <= 0 && translationX >= (SWIPE_THRESHOLD - 10)) {
-        translateX.setValue(translationX);
+      if (isSwipeActive.value && event.translationX <= 0 && event.translationX >= (SWIPE_THRESHOLD - 10)) {
+        translateX.value = event.translationX;
       }
-    },
-    [translateX]
-  );
-
-  const onHandlerStateChange = useCallback((event: any) => {
-    if (event.nativeEvent.state === State.END) {
-      if (isSwipeActive.current && swipeRef.current <= SWIPE_THRESHOLD) {
-        setShowDeleteDialog(true);
-      } else {
-        resetPosition();
+    })
+    .onEnd(() => {
+      'worklet';
+      if (isSwipeActive.value && translateX.value <= SWIPE_THRESHOLD) {
+        runOnJS(openDialog)();
       }
-    } else if (event.nativeEvent.state === State.FAILED || event.nativeEvent.state === State.CANCELLED) {
       resetPosition();
-    }
-  }, [resetPosition]);
+    });
 
-  const deleteIconOpacity = translateX.interpolate({
-    inputRange: [SWIPE_THRESHOLD, 0],
-    outputRange: [1, 0],
+  const animatedStyles = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+    };
+  });
+
+  const deleteIconStyles = useAnimatedStyle(() => {
+    const opacity = translateX.value / SWIPE_THRESHOLD;
+    return {
+      opacity: Math.min(1, Math.max(0, opacity)),
+    };
   });
 
   if (Platform.OS === 'web') {
@@ -143,33 +145,18 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
       <Animated.View
         style={[
           styles.deleteBackground,
-          {
-            opacity: deleteIconOpacity,
-          },
+          deleteIconStyles,
         ]}
       >
         <Trash2 color="white" size={24} />
       </Animated.View>
       {/* Les conditions sont importante => scroll vertical sur le parent */}
-      <PanGestureHandler
-        onGestureEvent={onGestureEvent}
-        onHandlerStateChange={onHandlerStateChange}
-        // CRITIQUE: Configurations pour réduire la priorité du PanGestureHandler
-        activeOffsetX={[-ACTIVATION_DISTANCE, ACTIVATION_DISTANCE]} // Seuil d'activation horizontal
-        failOffsetY={[-20, 20]} // Échouer si mouvement vertical trop important
-        shouldCancelWhenOutside={true} // Annuler si on sort de la zone
-        // Réduire la priorité par rapport au scroll parent
-        simultaneousHandlers={undefined}
-        waitFor={undefined}
-        // Améliorer la détection des gestes intentionnels
-        minPointers={1}
-        maxPointers={1}
-      >
+      <GestureDetector gesture={pan}>
         <Animated.View
           style={[
             styles.container,
             { backgroundColor: `${statusColor}80` },
-            { transform: [{ translateX }] },
+            animatedStyles,
           ]}
         >
           <View style={[styles.tableCode, { backgroundColor: statusColor }]}>
@@ -190,19 +177,25 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
             <Text style={styles.arrow}>›</Text>
           </View>
         </Animated.View>
-      </PanGestureHandler>
+      </GestureDetector>
 
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={(value) => {
           setShowDeleteDialog(value);
-          if (!value) resetPosition();
+          if (!value) {
+            translateX.value = withSpring(0);
+          }
         }}
         title="Supprimer la commande"
         content="Êtes-vous sûr de vouloir supprimer cette commande ?"
-        onCancel={resetPosition}
+        onCancel={() => {
+          setShowDeleteDialog(false);
+          translateX.value = withSpring(0);
+        }}
         onConfirm={() => {
-          resetPosition();
+          setShowDeleteDialog(false);
+          translateX.value = withSpring(0);
           onDelete?.(order);
         }}
         confirmText="Supprimer"

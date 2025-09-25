@@ -84,11 +84,20 @@ export const useRooms = () => {
     try {
       await roomApiService.delete(roomId);
       dispatch(entitiesActions.deleteRoom({ roomId }));
+
+      if (currentRoomId === roomId) {
+        const remainingRooms = rooms.filter(room => room.id !== roomId);
+        if (remainingRooms.length > 0) {
+          dispatch(sessionActions.setCurrentRoom(remainingRooms[0].id));
+        } else {
+          dispatch(sessionActions.setCurrentRoom(null));
+        }
+      }
     } catch (error) {
       console.error('Erreur lors de la suppression de la salle:', error);
       throw error;
     }
-  }, [dispatch]);
+  }, [dispatch, currentRoomId, rooms]);
 
   // Utilitaires
   const getRoomById = useCallback((roomId: string) => {

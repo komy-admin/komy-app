@@ -464,10 +464,7 @@ export default function ServicePage() {
 
   const navigateToRoomEdit = () => {
     if (!currentRoom) return;
-    router.push({
-      pathname: "/(admin)/room_edition",
-      params: { roomId: currentRoom.id }
-    });
+    router.push('/(admin)/room/edition-mode');
   };
 
   const handleDeselectTable = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable } from "react-native";
-import { useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
 import { Badge, Button } from "~/components/ui";
@@ -12,10 +12,10 @@ import TableForm from '~/components/form/TableForm';
 import { useToast } from '~/components/ToastProvider';
 import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
 import { useTableEditor } from '~/hooks/useTableEditor';
+import { ArrowLeftToLine } from 'lucide-react-native';
 
-export default function RoomPage() {
-  const params = useLocalSearchParams();
-  const roomId = params.roomId as string;
+export default function RoomEditionMode() {
+  const router = useRouter();
   const { showToast } = useToast();
 
 
@@ -31,15 +31,12 @@ export default function RoomPage() {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
-  // Définir la salle courante basée sur le roomId des paramètres
+  // Définir la première room comme currentRoom si aucune n'est sélectionnée
   useEffect(() => {
-    if (roomId && rooms.length > 0) {
-      const room = rooms.find(r => r.id === roomId);
-      if (room) {
-        setCurrentRoom(roomId);
-      }
+    if (!currentRoom && rooms.length > 0) {
+      setCurrentRoom(rooms[0].id);
     }
-  }, [roomId, rooms, setCurrentRoom]);
+  }, [currentRoom, rooms, setCurrentRoom]);
 
   // Désélectionner la table lors de la navigation
   useFocusEffect(
@@ -200,9 +197,19 @@ export default function RoomPage() {
     setSelectedTable(null);
   }, [setCurrentRoom, setSelectedTable]);
 
+  const handleGoBack = () => {
+    router.back();
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
+        <Pressable
+          onPress={handleGoBack}
+          style={styles.backButton}
+        >
+          <ArrowLeftToLine size={20} color="#2A2E33" />
+        </Pressable>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -318,7 +325,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#EFEFEF',
-    paddingHorizontal: 15,
+  },
+  backButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRightWidth: 1,
+    borderRightColor: '#EFEFEF',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   headerTitle: {
     fontSize: 16,

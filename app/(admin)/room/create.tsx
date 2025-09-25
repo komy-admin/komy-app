@@ -1,10 +1,11 @@
-import { View, StyleSheet, Text } from 'react-native';
-import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import React from 'react';
 import { useRouter } from 'expo-router';
 import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
 import { useRooms } from '~/hooks/useRestaurant';
 import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
+import { FormHeader } from '~/components/admin/FormHeader';
 
 export default function RoomCreatePage() {
   const roomFormView = useAdminFormView();
@@ -38,19 +39,19 @@ export default function RoomCreatePage() {
   };
 
   const handleClose = () => {
-    router.back();
+    router.replace('/(admin)/room');
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Création d'une nouvelle salle</Text>
-      </View>
+      <FormHeader
+        title="Création d'une nouvelle salle"
+        onBack={handleClose}
+      />
 
       <AdminFormView
         visible={roomFormView.isVisible}
         mode="create"
-        title="Création d'une salle"
         onClose={handleClose}
         onCancel={handleClose}
         onSave={handleSaveRoom}
@@ -65,18 +66,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  header: {
-    backgroundColor: '#FBFBFB',
-    height: 50,
-    justifyContent: 'center',
-    paddingLeft: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EFEFEF',
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2A2E33',
   },
 });

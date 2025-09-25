@@ -251,7 +251,6 @@ export interface AdminConfirmationModal {
 export interface AdminFormViewProps {
   visible: boolean;
   mode: AdminFormViewMode;
-  title: string;
   onClose: () => void;
   onCancel?: () => void;
   onSave?: (getFormData: () => AdminFormData) => Promise<boolean>;
@@ -274,7 +273,6 @@ export interface AdminFormViewProps {
 export function AdminFormView({
   visible,
   mode,
-  title,
   onClose,
   onCancel,
   onSave,
@@ -342,29 +340,6 @@ export function AdminFormView({
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Header moderne et professionnel - Toujours dans le DOM, masqué par display */}
-      <View style={[
-        styles.header,
-        {
-          display: hideHeaderAndActions ? 'none' : 'flex'
-        }
-      ]}>
-        {/* Section Bouton retour */}
-        <Pressable
-          onPress={onCancel || onClose}
-          style={styles.backButton}
-        >
-          <ArrowLeftToLine size={20} color={COMMON_STYLES.colors.primary} />
-        </Pressable>
-
-        {/* Section Titre */}
-        <View style={styles.titleContainer}>
-          <Text style={[styles.titleText, COMMON_STYLES.typography.title]}>
-            {title}
-          </Text>
-        </View>
-      </View>
-
       {/* Contenu du formulaire - ScrollView conditionnel */}
       {disableGlobalScroll ? (
         <View style={[
@@ -488,58 +463,7 @@ export function useAdminFormView() {
 // ✅ Styles simplifiés avec consolidation des constantes
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
     flex: 1,
-  },
-
-  header: {
-    backgroundColor: COMMON_STYLES.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COMMON_STYLES.colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 60,
-    paddingHorizontal: COMMON_STYLES.spacing.xs,
-    ...COMMON_STYLES.shadow,
-    ...(Platform.OS === 'web' && {
-      backdropFilter: 'blur(8px)',
-    })
-  },
-
-  backButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: COMMON_STYLES.spacing.lg,
-    paddingVertical: COMMON_STYLES.spacing.md,
-    borderRightWidth: 1,
-    borderRightColor: COMMON_STYLES.colors.border,
-    height: '100%',
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
-      }
-    })
-  },
-
-  titleContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingLeft: COMMON_STYLES.spacing.lg,
-    paddingRight: COMMON_STYLES.spacing.lg,
-  },
-
-  titleText: {
-    textAlign: 'left',
-    ...(Platform.OS === 'web' && {
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-    })
   },
 
   scrollView: {
@@ -550,7 +474,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: COMMON_STYLES.spacing.xl,
-    paddingTop: COMMON_STYLES.spacing.lg,
     paddingBottom: 100, // Espace pour les boutons sticky réduit
   },
   

@@ -161,12 +161,7 @@ export const useTableEditor = () => {
         tableId,
         timestamp: new Date().toISOString()
       });
-
-      if (error instanceof Error) {
-        throw new Error(`Erreur lors de la suppression: ${error.message}`);
-      } else {
-        throw new Error('Erreur inconnue lors de la suppression');
-      }
+      throw error;
     } finally {
       // Reset immédiat du verrou pour éviter les blocages
       deleteOperationInProgress.current = false;

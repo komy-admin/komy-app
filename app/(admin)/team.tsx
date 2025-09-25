@@ -1,10 +1,11 @@
-import { View, ScrollView, useWindowDimensions, Text, StyleSheet } from "react-native";
+import { View, ScrollView, useWindowDimensions, Text, StyleSheet, Pressable } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import React, { useEffect, useState, useMemo } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
 import { AdminFormView, useAdminFormView } from "~/components/admin/AdminFormView";
+import { FormHeader } from '~/components/admin/FormHeader';
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
@@ -397,20 +398,34 @@ export default function TeamPage() {
       </View>
 
       {/* Modal de modification - cachée pour les managers */}
-      {canModifyUsers && (
-        <AdminFormView
-          visible={teamFormView.isVisible}
-          mode={teamFormView.mode}
-          title={teamFormView.mode === 'create' ? "Création d'un utilisateur" : `Modification de "${User?.firstName} ${User?.lastName}"`}
-          onClose={teamFormView.close}
-          onCancel={teamFormView.close}
-          onSave={handleSaveUser}
-        >
-          <TeamForm
-            user={User}
-            activeTab={activeTab}
+      {canModifyUsers && teamFormView.isVisible && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1000,
+          backgroundColor: '#FFFFFF'
+        }}>
+          <FormHeader
+            title={teamFormView.mode === 'create' ? "Création d'un utilisateur" : `Modification de "${User?.firstName} ${User?.lastName}"`}
+            onBack={teamFormView.close}
           />
-        </AdminFormView>
+
+          <AdminFormView
+            visible={true}
+            mode={teamFormView.mode}
+            onClose={teamFormView.close}
+            onCancel={teamFormView.close}
+            onSave={handleSaveUser}
+          >
+            <TeamForm
+              user={User}
+              activeTab={activeTab}
+            />
+          </AdminFormView>
+        </View>
       )}
 
       {/* Modal de suppression - cachée pour les managers */}

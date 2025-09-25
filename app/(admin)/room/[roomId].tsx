@@ -1,6 +1,8 @@
 import { View, StyleSheet, Text } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Button } from '~/components/ui';
+import { FormHeader } from '~/components/admin/FormHeader';
 import { RoomForm } from '~/components/form/RoomForm';
 import { useToast } from '~/components/ToastProvider';
 import { useRooms } from '~/hooks/useRestaurant';
@@ -9,22 +11,23 @@ import { Room } from '~/types/room.types';
 
 export default function RoomEditPage() {
   const { roomId } = useLocalSearchParams();
-  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [currentRoom, setCurrentRoomState] = useState<Room | null>(null);
   const roomFormView = useAdminFormView();
   const { showToast } = useToast();
   const router = useRouter();
-  const { rooms, updateRoom, getRoomById } = useRooms();
+  const { rooms, updateRoom, getRoomById, setCurrentRoom } = useRooms();
 
   // Charger la salle et ouvrir le formulaire
   useEffect(() => {
     if (roomId && typeof roomId === 'string') {
       const room = rooms.find(r => r.id === roomId);
       if (room) {
-        setCurrentRoom(room);
+        setCurrentRoomState(room);
         roomFormView.openEdit();
-      } else {
+      } else if (rooms.length > 0) {
+        // Ne montrer l'erreur et naviguer que si les rooms sont chargées
         showToast('Salle non trouvée', 'error');
-        router.back();
+        router.replace('/(admin)/room');
       }
     }
   }, [roomId, rooms]);
@@ -53,22 +56,72 @@ export default function RoomEditPage() {
   };
 
   const handleClose = () => {
-    router.back();
+    router.replace('/(admin)/room');
+  };
+
+  const navigateToEditionMode = () => {
+    // Définir la currentRoom avant de naviguer
+    if (roomId && typeof roomId === 'string') {
+      const room = rooms.find(r => r.id === roomId);
+      if (room) {
+        setCurrentRoom(roomId);
+      }
+    }
+    router.push('/(admin)/room/edition-mode');
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          {currentRoom ? `Modification de "${currentRoom.name}"` : 'Chargement...'}
-        </Text>
-      </View>
+      <FormHeader
+        title={currentRoom ? `Modification de "${currentRoom.name}"` : 'Chargement...'}
+        onBack={handleClose}
+        rightElement={
+          <View
+            style={{
+              width: 200,
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              backgroundColor: '#FBFBFB',
+              zIndex: 10,
+              shadowColor: '#000',
+              shadowOffset: { width: -4, height: 0 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+            }}
+          >
+            <Button
+              onPress={navigateToEditionMode}
+              className="w-[200px] h-[50px] flex items-center justify-center"
+              style={{
+                backgroundColor: '#2A2E33',
+                borderRadius: 0,
+                height: 50,
+                width: 200,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: '#FBFBFB',
+                  fontWeight: '500',
+                  textAlign: 'center',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Mode édition
+              </Text>
+            </Button>
+          </View>
+        }
+      />
 
+      {/* AdminFormView sans header */}
       {currentRoom && (
         <AdminFormView
           visible={roomFormView.isVisible}
           mode="edit"
-          title={`Modification de "${currentRoom.name}"`}
           onClose={handleClose}
           onCancel={handleClose}
           onSave={handleSaveRoom}
@@ -84,18 +137,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  header: {
-    backgroundColor: '#FBFBFB',
-    height: 50,
-    justifyContent: 'center',
-    paddingLeft: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EFEFEF',
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2A2E33',
   },
 });
