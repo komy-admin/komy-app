@@ -33,86 +33,92 @@ export function SidePanel({
   const [isAnimating, setIsAnimating] = useState(false);
   const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
 
-  // Animations refs
-  const animatedWidth = useRef(new Animated.Value(isCollapsed ? collapsedWidth : width)).current;
-  const collapsedOpacity = useRef(new Animated.Value(isCollapsed ? 1 : 0)).current;
-  const contentOpacity = useRef(new Animated.Value(isCollapsed ? 0 : 1)).current;
+  // Animations refs - recréées à chaque changement d'état pour éviter les conflits native/JS
+  const animatedWidth = useRef(new Animated.Value(collapsedWidth)).current;
+  const collapsedOpacity = useRef(new Animated.Value(1)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
   const rotationValue = useRef(new Animated.Value(1)).current;
 
-  // Initialisation optimisée pour iOS
+  // Réinitialiser les valeurs animées quand l'état change
   useEffect(() => {
+    // Reset des valeurs pour éviter les conflits native/JS
+    animatedWidth.setValue(isCollapsed ? collapsedWidth : width);
+    collapsedOpacity.setValue(isCollapsed ? 1 : 0);
+    contentOpacity.setValue(isCollapsed ? 0 : 1);
+  }, [isCollapsed]);
+
+  // Initialisation avec synchronisation des valeurs animées
+  useEffect(() => {
+    // Synchroniser les valeurs animées avec l'état initial
+    animatedWidth.setValue(isCollapsed ? collapsedWidth : width);
+    collapsedOpacity.setValue(isCollapsed ? 1 : 0);
+    contentOpacity.setValue(isCollapsed ? 0 : 1);
+    rotationValue.setValue(1);
+
     const timer = setTimeout(() => {
       setIsInitialized(true);
-      // Forcer l'animation de rotation initiale
-      if (isCollapsed) {
-        Animated.timing(rotationValue, {
-          toValue: 1,
-          duration: 0,
-          useNativeDriver: true,
-        }).start();
-      }
     }, Platform.OS === 'ios' ? 0 : 10);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, []); // Une seule fois au montage
 
   useEffect(() => {
     if (!isInitialized) return;
 
-    // Animation séquentielle légèrement optimisée pour éviter la latence des inputs
     if (isCollapsed) {
-      // Fermeture : cacher le contenu puis réduire la largeur
+      // Fermeture optimisée : masquer contenu rapidement puis réduire largeur
       Animated.sequence([
         Animated.timing(contentOpacity, {
           toValue: 0,
-          duration: 80, // Légèrement plus rapide
-          useNativeDriver: true,
+          duration: 80,
+          useNativeDriver: false,
         }),
         Animated.parallel([
           Animated.timing(animatedWidth, {
             toValue: collapsedWidth,
-            duration: Platform.OS === 'ios' ? 180 : 200, // Légèrement optimisé
+            duration: 200,
             useNativeDriver: false,
           }),
           Animated.timing(collapsedOpacity, {
             toValue: 1,
-            duration: Platform.OS === 'ios' ? 120 : 150, // Légèrement optimisé
-            useNativeDriver: true,
+            duration: 150,
+            useNativeDriver: false,
           })
         ])
       ]).start(() => {
-        setIsAnimating(false); // Réactiver les clics après l'animation
+        setIsAnimating(false);
       });
     } else {
-      // Ouverture : élargir d'abord puis afficher le contenu
+      // Ouverture optimisée : élargir puis afficher contenu
       Animated.sequence([
         Animated.timing(collapsedOpacity, {
           toValue: 0,
           duration: 50,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(animatedWidth, {
           toValue: width,
-          duration: Platform.OS === 'ios' ? 180 : 200, // Légèrement optimisé
+          duration: 200,
           useNativeDriver: false,
         }),
         Animated.timing(contentOpacity, {
           toValue: 1,
-          duration: 80, // Légèrement plus rapide
-          useNativeDriver: true,
+          duration: 100,
+          useNativeDriver: false,
         })
       ]).start(() => {
-        setIsAnimating(false); // Réactiver les clics après l'animation
+        setIsAnimating(false);
       });
     }
   }, [isCollapsed, collapsedWidth, width, isInitialized]);
 
   const toggleCollapse = () => {
     if (hideCloseButton && !showCloseButtonWhenTableSelected) return;
-    if (isAnimating) return; // Bloquer les clics multiples pendant l'animation
+    if (isAnimating) return;
 
     setIsAnimating(true);
     const newCollapsedState = !isCollapsed;
+
     if (onCollapsedChange) {
       onCollapsedChange(newCollapsedState);
     } else {
@@ -159,8 +165,6 @@ export function SidePanel({
         { width: animatedWidth, maxWidth: animatedWidth },
       ]}
       pointerEvents={isCollapsed ? 'auto' : 'box-none'}
-      shouldRasterizeIOS={Platform.OS === 'ios'}
-      renderToHardwareTextureAndroid={Platform.OS === 'android'}
     >
       {/* Barre latérale collapsed */}
       {isCollapsed && (
