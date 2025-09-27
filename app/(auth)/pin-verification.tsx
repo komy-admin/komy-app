@@ -9,6 +9,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Button, Text, PinInput } from '~/components/ui';
+import type { PinInputRef } from '~/components/ui';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions, selectRequiresPin, selectRequiresPinSetup, selectCurrentUser, selectAuthToken } from '~/store';
 import { sessionService } from '~/services/SessionService';
@@ -28,6 +29,7 @@ export default function PinVerificationScreen() {
   const [isLocked, setIsLocked] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
+  const pinInputRef = useRef<PinInputRef>(null);
 
   const dispatch = useDispatch();
   const router = useRouter();
@@ -133,6 +135,8 @@ export default function PinVerificationScreen() {
       // Clear PIN on error but keep attempts visible
       setTimeout(() => {
         setPin('');
+        // Force focus back on the input after clearing
+        pinInputRef.current?.focus();
         // Don't reset error here - let user see the attempts remaining
       }, 300);
 
@@ -231,6 +235,7 @@ export default function PinVerificationScreen() {
 
           <View style={styles.pinContainer}>
             <PinInput
+              ref={pinInputRef}
               value={pin}
               onChange={setPin}
               onComplete={handlePinComplete}
