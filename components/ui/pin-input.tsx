@@ -1,13 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   TextInput,
   StyleSheet,
   Platform,
-  Pressable,
   Text,
-  Keyboard,
-  KeyboardAvoidingView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -24,7 +21,12 @@ interface PinInputProps {
   keyboardType?: 'numeric' | 'number-pad';
 }
 
-export function PinInput({
+export interface PinInputRef {
+  focus: () => void;
+  blur: () => void;
+}
+
+const PinInput = forwardRef<PinInputRef, PinInputProps>(({
   length = 4,
   value,
   onChange,
@@ -35,37 +37,54 @@ export function PinInput({
   autoFocus = true,
   secure = true,
   keyboardType = 'number-pad',
-}: PinInputProps) {
+}, ref) => {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const lastCompletedValueRef = useRef<string>('');
 
+  // Expose methods to parent
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      inputRef.current?.focus();
+    },
+    blur: () => {
+      inputRef.current?.blur();
+    }
+  }), []);
+
+  // Auto-focus on mount
   useEffect(() => {
-    if (autoFocus && inputRef.current) {
+    if (autoFocus) {
       const timer = setTimeout(() => {
         inputRef.current?.focus();
-      }, 100);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [autoFocus]);
 
+  // Handle completion
   useEffect(() => {
-    // Only call onComplete if value is complete and different from last completed value
     if (value.length === length && value !== lastCompletedValueRef.current && onComplete) {
       lastCompletedValueRef.current = value;
       onComplete(value);
     }
-
-    // Reset lastCompletedValue when PIN is cleared
     if (value.length === 0) {
       lastCompletedValueRef.current = '';
     }
   }, [value, length, onComplete]);
 
-  const handleChange = (text: string) => {
-    // Only allow digits and limit to length
-    const filtered = text.replace(/[^0-9]/g, '').slice(0, length);
+  // Re-focus after error
+  useEffect(() => {
+    if (error && value === '' && !disabled) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [error, value, disabled]);
 
+  const handleChange = (text: string) => {
+    const filtered = text.replace(/[^0-9]/g, '').slice(0, length);
     if (filtered !== value) {
       if (Platform.OS === 'ios') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -74,25 +93,13 @@ export function PinInput({
     }
   };
 
-  const handlePress = () => {
-    if (!disabled && inputRef.current) {
-      inputRef.current.focus();
-    }
-  };
-
-  const handleKeyPress = ({ nativeEvent }: any) => {
-    if (nativeEvent.key === 'Backspace' && value.length > 0) {
-      onChange(value.slice(0, -1));
-    }
-  };
-
   return (
-    <Pressable onPress={handlePress} style={styles.container}>
+    <View style={styles.container}>
+      {/* Visual boxes */}
       <View style={styles.boxContainer}>
         {Array.from({ length }, (_, index) => {
           const isActive = index === value.length && focused;
           const hasValue = index < value.length;
-          const isError = error;
 
           return (
             <View
@@ -100,12 +107,13 @@ export function PinInput({
               style={[
                 styles.box,
                 isActive && styles.boxActive,
-                isError && styles.boxError,
+                error && styles.boxError,
                 hasValue && styles.boxFilled,
+                disabled && styles.boxDisabled,
               ]}
             >
               {hasValue && (
-                <Text style={styles.digit}>
+                <Text style={[styles.digit, disabled && styles.digitDisabled]}>
                   {secure ? '•' : value[index]}
                 </Text>
               )}
@@ -113,35 +121,40 @@ export function PinInput({
           );
         })}
       </View>
+
+      {/* Real input - visible but styled to be on top */}
       <TextInput
         ref={inputRef}
         value={value}
         onChangeText={handleChange}
-        onKeyPress={handleKeyPress}
-        keyboardType={keyboardType}
-        maxLength={length}
-        style={styles.hiddenInput}
         onFocus={() => setFocused(true)}
         onBlur={() => {
           setFocused(false);
           onBlur?.();
         }}
+        keyboardType={keyboardType}
+        maxLength={length}
+        style={styles.realInput}
         editable={!disabled}
         autoFocus={autoFocus}
-        caretHidden
         selectTextOnFocus={false}
         autoCorrect={false}
         autoCapitalize="none"
         contextMenuHidden
-        secureTextEntry={false} // We handle masking ourselves
+        secureTextEntry={false}
+        textContentType="oneTimeCode"
+        returnKeyType="done"
+        blurOnSubmit={false}
+        caretHidden
       />
-    </Pressable>
+    </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    position: 'relative',
   },
   boxContainer: {
     flexDirection: 'row',
@@ -161,6 +174,11 @@ const styles = StyleSheet.create({
   boxActive: {
     borderColor: '#6366F1',
     backgroundColor: '#F0F9FF',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   boxError: {
     borderColor: '#EF4444',
@@ -169,16 +187,31 @@ const styles = StyleSheet.create({
   boxFilled: {
     borderColor: '#1F2937',
   },
+  boxDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#F9FAFB',
+  },
   digit: {
     fontSize: 28,
     fontWeight: '600',
     color: '#1F2937',
   },
-  hiddenInput: {
+  digitDisabled: {
+    color: '#9CA3AF',
+  },
+  // The real input - positioned over the boxes but transparent
+  realInput: {
     position: 'absolute',
-    width: 0,
-    height: 0,
-    opacity: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    color: 'rgba(0, 0, 0, 0.01)', // Almost invisible but not fully transparent
+    backgroundColor: 'transparent',
+    fontSize: 1, // Tiny font size
+    textAlign: 'center',
+    letterSpacing: 50, // Space out the invisible characters
+    opacity: 0.01, // Additional opacity layer
   },
 });
 
