@@ -5,10 +5,20 @@ import { storageService } from '~/lib/storageService';
 export class SocketService {
     private socket: Socket | null = null;
 
-    async connect(url: string) {
-      const token = await storageService.getItem('token');
+    async connect(url: string, sessionToken?: string) {
+      // Use provided sessionToken or try to get from storage
+      const token = sessionToken || await storageService.getItem('sessionToken');
+
+      if (!token) {
+        console.error('[SocketService] No session token available for WebSocket connection');
+        return;
+      }
+
+      console.log('[SocketService] Connecting to WebSocket with session token');
       this.socket = io(url, {
-        auth: { token }
+        auth: {
+          token  // Pass sessionToken in auth object as expected by backend
+        }
       });
 
       this.socket.on('connect', () => {
