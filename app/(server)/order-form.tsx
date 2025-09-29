@@ -18,7 +18,7 @@ export default function OrderFormPage() {
   // Hooks pour les données
   const { getOrderById } = useOrders();
   const { getTableById } = useTables();
-  const { items, itemTypes } = useMenu();
+  const { items, itemTypes, menus: allMenus } = useMenu();
   const { createOrderWithLines, createOrderLines } = useOrderLines();
 
   // Récupération de la commande existante si modification
@@ -35,6 +35,24 @@ export default function OrderFormPage() {
   const isCreatingNew = !existingOrder;
   const isAddingItems = addMode === 'true';
 
+  // Gestionnaire pour les changements de lignes (comme dans admin)
+  const handleLinesChange = useCallback((newLines: OrderLine[]) => {
+    let linesToSave = newLines;
+
+    if (existingOrder && !isCreatingNew) {
+      // En mode modification, filtrer les lignes existantes
+      const existingLineIds = new Set(existingOrder.lines.map(l => l.id));
+      // Ne garder que les lignes qui n'ont pas d'ID ou dont l'ID commence par "draft-"
+      linesToSave = newLines.filter(line =>
+        !line.id ||
+        line.id.startsWith('draft-') ||
+        !existingLineIds.has(line.id)
+      );
+    }
+
+    setOrderLines(linesToSave);
+  }, [existingOrder, isCreatingNew]);
+
   // Titre de la page
   const getPageTitle = () => {
     if (isCreatingNew) {
@@ -46,7 +64,7 @@ export default function OrderFormPage() {
     }
   };
 
-  // Conversion des OrderLine vers le format API
+  // Conversion des OrderLine vers le format API (comme dans admin)
   const convertOrderLinesToApiFormat = useCallback((lines: OrderLine[]): CreateOrderLineRequest[] => {
     return lines.map(line => {
       if (line.type === OrderLineType.ITEM) {
@@ -57,17 +75,20 @@ export default function OrderFormPage() {
           note: line.note || ''
         };
       } else if (line.type === OrderLineType.MENU) {
-        // Pour les menus, reconstruire selectedItems
+        // Pour les menus, reconstruire selectedItems à partir des orderLine.items
         const selectedItems: Record<string, string> = {};
 
-        line.items?.forEach(item => {
-          // Trouver la catégorie dans le menu original
-          if (line.menu?.categories) {
-            const category = line.menu.categories.find(cat =>
-              cat.items?.some(catItem => catItem.item?.id === item.item.id)
-            );
+        line.items?.forEach(orderLineItem => {
+          // Trouver la catégorie correspondante dans le menu original
+          const menu = allMenus.find((m: any) => m.id === line.menu?.id);
+          if (menu?.categories) {
+            const category = menu.categories.find((cat: any) => {
+              const categoryName = itemTypes.find(type => type.id === cat.itemTypeId)?.name;
+              return categoryName === orderLineItem.categoryName;
+            });
+
             if (category) {
-              selectedItems[category.id] = item.item.id;
+              selectedItems[category.id] = orderLineItem.item.id;
             }
           }
         });
@@ -81,9 +102,10 @@ export default function OrderFormPage() {
         };
       }
 
+      // Fallback - ne devrait pas arriver
       throw new Error(`Type de ligne non supporté: ${line.type}`);
     });
-  }, []);
+  }, [allMenus, itemTypes]);
 
   // Sauvegarde de la commande
   const handleSaveOrder = useCallback(async () => {
@@ -126,7 +148,7 @@ export default function OrderFormPage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [orderLines, isCreatingNew, tableId, existingOrder, createOrderWithLines, createOrderLines, convertOrderLinesToApiFormat, showToast]);
+  }, [orderLines, isCreatingNew, tableId, existingOrder, createOrderWithLines, createOrderLines, convertOrderLinesToApiFormat, showToast, router]);
 
   // Annulation
   const handleCancel = useCallback(() => {
@@ -207,7 +229,7 @@ export default function OrderFormPage() {
           lines={!isAddingItems ? (existingOrder?.lines || []) : []}
           items={items.filter(item => item.isActive)}
           itemTypes={itemTypes}
-          onLinesChange={setOrderLines}
+          onLinesChange={handleLinesChange}
           onConfigurationModeChange={setIsConfiguringMenu}
           onConfigurationActionsChange={setMenuConfigActions}
         />
