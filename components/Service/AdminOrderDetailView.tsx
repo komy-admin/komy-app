@@ -227,7 +227,7 @@ const AdminMenuOrderGroup = ({
   onToggle,
   onDelete,
   onDeleteOrderLines,
-  onUpdateOrderItemStatus,
+  onUpdateOrderLinesStatus,
   groupId,
   isMenuOpen,
   onMenuOpenChange
@@ -239,7 +239,7 @@ const AdminMenuOrderGroup = ({
   onToggle: () => void,
   onDelete: () => void,
   onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>,
-  onUpdateOrderItemStatus?: (orderLines: any[], status: Status) => void,
+  onUpdateOrderLinesStatus?: (orderLines: any[], status: Status) => void,
   groupId: string,
   isMenuOpen: boolean,
   onMenuOpenChange: (groupId: string | null) => void
@@ -256,7 +256,7 @@ const AdminMenuOrderGroup = ({
   };
 
   const handleGroupStatusClick = () => {
-    if (onUpdateOrderItemStatus) {
+    if (onUpdateOrderLinesStatus) {
       setShowGroupStatusSelector(true);
     }
   };
@@ -379,7 +379,7 @@ const AdminMenuOrderGroup = ({
           {!isExpanded && (
             <View style={{ flexDirection: 'row', alignSelf: 'stretch', height: '100%' }}>
               {/* Bouton modification statut du groupe */}
-              {onUpdateOrderItemStatus && (
+              {onUpdateOrderLinesStatus && (
                 <Pressable
                   onPress={handleGroupStatusClick}
                   style={{
@@ -451,7 +451,7 @@ const AdminMenuOrderGroup = ({
                       key={orderLineItem.id}
                       orderLineItem={orderLineItem}
                       onDelete={() => onDeleteOrderLines([orderLineItem.id])}
-                      onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLineItem], newStatus) : undefined}
+                      onUpdateStatus={onUpdateOrderLinesStatus ? (newStatus) => onUpdateOrderLinesStatus([orderLineItem], newStatus) : undefined}
                       isGroupMenuOpen={isMenuOpen}
                       isFirstInCategory={index === 0}
                       isMenuItem={true}
@@ -477,14 +477,14 @@ const AdminMenuOrderGroup = ({
       />
 
       {/* StatusSelector pour le groupe */}
-      {onUpdateOrderItemStatus && itemStatus && (
+      {onUpdateOrderLinesStatus && itemStatus && (
         <StatusSelector
           visible={showGroupStatusSelector}
           currentStatus={itemStatus}
           onClose={() => setShowGroupStatusSelector(false)}
           onStatusSelect={(newStatus) => {
             setShowGroupStatusSelector(false);
-            onUpdateOrderItemStatus(orderItems, newStatus);
+            onUpdateOrderLinesStatus(orderItems, newStatus);
           }}
         />
       )}
@@ -499,7 +499,7 @@ const AdminOrderItemsGroup = ({
   isExpanded,
   onToggle,
   onDeleteOrderLines,
-  onUpdateOrderItemStatus,
+  onUpdateOrderLinesStatus,
   onDeleteGroup,
   groupId,
   isMenuOpen,
@@ -511,7 +511,7 @@ const AdminOrderItemsGroup = ({
   isExpanded: boolean;
   onToggle: () => void;
   onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>;
-  onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
+  onUpdateOrderLinesStatus?: (orderLines: OrderLine[], status: Status) => void;
   onDeleteGroup?: (orderLines: OrderLine[]) => void;
   groupId: string;
   isMenuOpen: boolean;
@@ -528,7 +528,7 @@ const AdminOrderItemsGroup = ({
   };
 
   const handleGroupStatusClick = () => {
-    if (onUpdateOrderItemStatus) {
+    if (onUpdateOrderLinesStatus) {
       setShowGroupStatusSelector(true);
     }
   };
@@ -634,7 +634,7 @@ const AdminOrderItemsGroup = ({
           {!isExpanded && (
             <View style={{ flexDirection: 'row', alignSelf: 'stretch', height: '100%' }}>
               {/* Bouton modification statut du groupe */}
-              {onUpdateOrderItemStatus && (
+              {onUpdateOrderLinesStatus && (
                 <Pressable
                   onPress={handleGroupStatusClick}
                   style={{
@@ -679,7 +679,7 @@ const AdminOrderItemsGroup = ({
                 <AdminOrderLineItem
                   orderLine={orderLine}
                   onDelete={() => onDeleteOrderLines([orderLine.id])}
-                  onUpdateStatus={onUpdateOrderItemStatus ? (newStatus) => onUpdateOrderItemStatus([orderLine], newStatus) : undefined}
+                  onUpdateStatus={onUpdateOrderLinesStatus ? (newStatus) => onUpdateOrderLinesStatus([orderLine], newStatus) : undefined}
                   isGroupMenuOpen={false}
                 />
               </View>
@@ -701,14 +701,14 @@ const AdminOrderItemsGroup = ({
         usePortal={true}
       />
 
-      {onUpdateOrderItemStatus && itemStatus && (
+      {onUpdateOrderLinesStatus && itemStatus && (
         <StatusSelector
           visible={showGroupStatusSelector}
           currentStatus={itemStatus}
           onClose={() => setShowGroupStatusSelector(false)}
           onStatusSelect={(newStatus) => {
             setShowGroupStatusSelector(false);
-            onUpdateOrderItemStatus(orderItems, newStatus);
+            onUpdateOrderLinesStatus(orderItems, newStatus);
           }}
         />
       )}
@@ -721,10 +721,10 @@ interface AdminOrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
   onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>;
-  onUpdateOrderItemStatus?: (orderLines: OrderLine[], status: Status) => void;
+  onUpdateOrderLinesStatus?: (orderLines: OrderLine[], status: Status) => void;
 }
 
-export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLines, onUpdateOrderItemStatus }: AdminOrderDetailViewProps) {
+export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLines, onUpdateOrderLinesStatus }: AdminOrderDetailViewProps) {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string | null>(null);
 
@@ -891,7 +891,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                         }
                       }}
                       onDeleteOrderLines={onDeleteOrderLines}
-                      onUpdateOrderItemStatus={onUpdateOrderItemStatus ? async (orderLineItems: any[], newStatus: Status) => {
+                      onUpdateOrderLinesStatus={onUpdateOrderLinesStatus ? async (orderLineItems: any[], newStatus: Status) => {
                         // Pour les items de menu, utiliser la nouvelle API spécialisée
                         try {
                           const orderLineItemIds = orderLineItems.map(oli => oli.id);
@@ -944,7 +944,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                     toggleExpanded(group.id);
                   }}
                   onDeleteOrderLines={onDeleteOrderLines}
-                  onUpdateOrderItemStatus={onUpdateOrderItemStatus}
+                  onUpdateOrderLinesStatus={onUpdateOrderLinesStatus}
                   onDeleteGroup={async (orderLines: OrderLine[]) => {
                     const orderLineIds = orderLines.map((orderLine: OrderLine) => orderLine.id);
                     await onDeleteOrderLines(orderLineIds);

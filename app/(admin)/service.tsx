@@ -766,7 +766,7 @@ export default function ServicePage() {
                     console.error('Erreur suppression:', error);
                   }
                 }}
-                onUpdateOrderItemStatus={handleStatusUpdate}
+                onUpdateOrderLinesStatus={handleStatusUpdate}
               />
               <View style={{ padding: 16 }}>
                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
