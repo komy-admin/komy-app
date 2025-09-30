@@ -33,27 +33,19 @@ export function SidePanel({
   const [isAnimating, setIsAnimating] = useState(false);
   const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
 
-  // Animations refs - recréées à chaque changement d'état pour éviter les conflits native/JS
-  const animatedWidth = useRef(new Animated.Value(collapsedWidth)).current;
-  const collapsedOpacity = useRef(new Animated.Value(1)).current;
-  const contentOpacity = useRef(new Animated.Value(0)).current;
+  // Animations refs - initialisées avec les valeurs de l'état ouvert par défaut
+  const animatedWidth = useRef(new Animated.Value(width)).current;
+  const collapsedOpacity = useRef(new Animated.Value(0)).current;
+  const contentOpacity = useRef(new Animated.Value(1)).current;
   const rotationValue = useRef(new Animated.Value(1)).current;
 
-  // Réinitialiser les valeurs animées quand l'état change
+  // Initialisation au montage - synchroniser avec l'état collapsed si contrôlé
   useEffect(() => {
-    // Reset des valeurs pour éviter les conflits native/JS
-    animatedWidth.setValue(isCollapsed ? collapsedWidth : width);
-    collapsedOpacity.setValue(isCollapsed ? 1 : 0);
-    contentOpacity.setValue(isCollapsed ? 0 : 1);
-  }, [isCollapsed]);
-
-  // Initialisation avec synchronisation des valeurs animées
-  useEffect(() => {
-    // Synchroniser les valeurs animées avec l'état initial
-    animatedWidth.setValue(isCollapsed ? collapsedWidth : width);
-    collapsedOpacity.setValue(isCollapsed ? 1 : 0);
-    contentOpacity.setValue(isCollapsed ? 0 : 1);
-    rotationValue.setValue(1);
+    if (controlledIsCollapsed !== undefined) {
+      animatedWidth.setValue(controlledIsCollapsed ? collapsedWidth : width);
+      collapsedOpacity.setValue(controlledIsCollapsed ? 1 : 0);
+      contentOpacity.setValue(controlledIsCollapsed ? 0 : 1);
+    }
 
     const timer = setTimeout(() => {
       setIsInitialized(true);
