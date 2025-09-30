@@ -183,7 +183,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         basePrice: menu.basePrice,
         snapshotAt: new Date().toISOString()
       },
-      items: menuItems
+      items: menuItems,
+      // Stocker les selectedItems originaux pour l'API
+      selectedItems
     };
 
     const newLines = [...draftLines, newLine as OrderLine];

@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus, Minus } from 'lucide-react-native';
@@ -131,14 +131,32 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
   // Détection taille écran pour optimiser tactile tablette
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  
+
   // Styles dynamiques pour boutons optimisés tablette
   const dynamicButtonSize = isTablet ? 38 : 32;
-  
+
   // Menus filtrés - seulement les actifs
   const filteredMenus = useMemo(() => {
     return activeMenus.filter(menu => menu.isActive);
   }, [activeMenus]);
+
+  // Render item function for FlatList - défini après tous les hooks
+  const renderMenu = useCallback(({ item: menu, index }: { item: Menu; index: number }) => (
+    <View
+      style={[
+        styles.menuRow,
+      ]}
+    >
+      <OrderMenuRow
+        menu={menu}
+        totalQuantity={getTotalMenuQuantity(menu.id)}
+        draftQuantity={getDraftMenuQuantity(menu.id)}
+        onMenuAdd={handleMenuAdd}
+        onUpdateQuantity={updateMenuQuantity}
+        dynamicButtonSize={dynamicButtonSize}
+      />
+    </View>
+  ), [getTotalMenuQuantity, getDraftMenuQuantity, handleMenuAdd, updateMenuQuantity, dynamicButtonSize]);
 
   // Si aucun menu disponible
   if (filteredMenus.length === 0) {
@@ -156,26 +174,14 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      scrollEnabled={true}
+      nestedScrollEnabled={true}
+      bounces={false}
     >
-      {filteredMenus.map((menu, index) => (
-        <View
-          key={menu.id}
-          style={[
-            styles.menuRow,
-            // Supprime marginRight pour les 2ème cartes de chaque ligne
-            (index + 1) % 2 === 0 && { marginRight: 0 }
-          ]}
-        >
-          <OrderMenuRow
-            menu={menu}
-            totalQuantity={getTotalMenuQuantity(menu.id)}
-            draftQuantity={getDraftMenuQuantity(menu.id)}
-            onMenuAdd={handleMenuAdd}
-            onUpdateQuantity={updateMenuQuantity}
-            dynamicButtonSize={dynamicButtonSize}
-          />
-        </View>
-      ))}
+      {filteredMenus.map((menu, index) => {
+        const menuElement = renderMenu({ item: menu, index });
+        return React.cloneElement(menuElement, { key: menu.id });
+      })}
     </ScrollView>
   );
 });
@@ -211,8 +217,7 @@ const styles = StyleSheet.create({
     maxWidth: '49%',
     height: 180, // Hauteur augmentée
     padding: 16,
-    marginBottom: 12,
-    marginRight: 8,
+    margin: 4,
     backgroundColor: '#F8F9FA', // Style ISO OrderItemsList
     borderRadius: 12,
     borderWidth: 1,

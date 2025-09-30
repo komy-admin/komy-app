@@ -134,12 +134,23 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
   getDraftItemQuantity,
   updateItemQuantity
 }) => {
-  // Détection taille écran pour optimiser tactile tablette
+  // Détection taille écran pour adapter la disposition
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const isMobile = width < 480;
+  const isSmallTablet = width >= 480 && width < 768;
 
   // Styles dynamiques pour boutons optimisés tablette
   const dynamicButtonSize = isTablet ? 38 : 32;
+
+  // Calculer le nombre de colonnes en fonction de la largeur
+  const getColumnsPerRow = () => {
+    if (isMobile) return 2; // Mobile: 2 colonnes
+    if (isSmallTablet) return 3; // Petite tablette: 3 colonnes
+    return 4; // Grande tablette: 4 colonnes
+  };
+
+  const columnsPerRow = getColumnsPerRow();
 
   // Articles filtrés par type actif - mémorisé pour performance
   const filteredItems = useMemo(() => {
@@ -147,6 +158,43 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
       item.itemTypeId === activeItemType && item.isActive
     );
   }, [items, activeItemType]);
+
+  // Styles dynamiques pour les cartes - mémorisé pour éviter recalcul
+  const getCardStyle = useCallback((index: number) => {
+    const gap = 8;
+    const padding = 16;
+    const availableWidth = width - (padding * 2) - (gap * (columnsPerRow - 1));
+    const cardWidth = availableWidth / columnsPerRow;
+
+    return {
+      width: cardWidth,
+      minWidth: Math.max(140, cardWidth), // Minimum 140px de largeur
+      maxWidth: 250, // Maximum 250px de largeur
+      height: isMobile ? 110 : 130,
+      //marginRight: (index + 1) % columnsPerRow === 0 ? 0 : gap,
+      marginBottom: 12,
+    };
+  }, [width, columnsPerRow, isMobile]);
+
+  // Render item function for FlatList
+  const renderItem = useCallback(({ item, index }: { item: Item; index: number }) => (
+    <View
+      key={item.id}
+      style={[
+        styles.itemCard,
+        getCardStyle(index)
+      ]}
+    >
+      <OrderItemCard
+        item={item}
+        totalQuantity={getTotalItemQuantity(item.id)}
+        draftQuantity={getDraftItemQuantity(item.id)}
+        onUpdateQuantity={updateItemQuantity}
+        isTablet={isTablet}
+        dynamicButtonSize={dynamicButtonSize}
+      />
+    </View>
+  ), [getTotalItemQuantity, getDraftItemQuantity, updateItemQuantity, isTablet, dynamicButtonSize, getCardStyle]);
 
   // Si aucun article disponible
   if (filteredItems.length === 0) {
@@ -163,28 +211,18 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.gridContainer}
+        contentContainerStyle={[
+          styles.gridContainer,
+          { paddingHorizontal: isMobile ? 12 : 16 }
+        ]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+        bounces={false}
       >
-        {filteredItems.map((item, index) => (
-          <View
-            key={item.id}
-            style={[
-              styles.itemCard,
-              // Supprime marginRight pour les 3ème cartes de chaque ligne
-              (index + 1) % 3 === 0 && { marginRight: 0 }
-            ]}
-          >
-            <OrderItemCard
-              item={item}
-              totalQuantity={getTotalItemQuantity(item.id)}
-              draftQuantity={getDraftItemQuantity(item.id)}
-              onUpdateQuantity={updateItemQuantity}
-              isTablet={isTablet}
-              dynamicButtonSize={dynamicButtonSize}
-            />
-          </View>
-        ))}
+        <View style={styles.itemsGrid}>
+          {filteredItems.map((item, index) => renderItem({ item, index }))}
+        </View>
       </ScrollView>
     </View>
   );
@@ -225,11 +263,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
     paddingVertical: 16,
-    justifyContent: 'flex-start',
+  },
+  itemsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
   },
   emptyContainer: {
     flex: 1,
@@ -238,11 +277,8 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
 
-  // Card styles
+  // Card styles - styles de base sans dimensions fixes
   itemCard: {
-    flexBasis: '32.5%',
-    maxWidth: '32.5%',
-    height: 130,
     backgroundColor: COLORS.background,
     borderRadius: 12,
     borderWidth: 1,
@@ -250,8 +286,6 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
     padding: 12,
     justifyContent: 'space-between',
-    marginBottom: 12,
-    marginRight: 8,
   },
   itemInfo: {
     flex: 1,

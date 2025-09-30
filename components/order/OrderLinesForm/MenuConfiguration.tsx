@@ -123,7 +123,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
             const item = menuCategoryItem?.item;
             if (!item) return null;
 
-            const supplement = parseFloat(menuCategoryItem.supplement || '0');
+            const supplement = parseFloat(String(menuCategoryItem.supplement || '0'));
             const isSelected = selectedItems.includes(item.id);
             const hasSupplementPrice = supplement > 0;
 
@@ -264,12 +264,14 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+        bounces={false}
       >
         {menu.categories && menu.categories.length > 0 ? (
           <View style={styles.categoriesContainer}>
             {menu.categories.map((category: MenuCategoryType, index: number) => {
               const selectedItems = tempMenuSelections[category.id] || [];
-
               return (
                 <MenuCategory
                   key={category.id}

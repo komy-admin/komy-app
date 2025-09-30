@@ -278,18 +278,14 @@ export default function ServicePage() {
   }, [selectedTableOrder, modals.showOrderDetailModal, modalActions]);
 
   const handleConfigurationModeChange = useCallback((configuring: boolean) => {
-    React.startTransition(() => {
-      setIsConfiguringMenu(configuring);
-      if (!configuring) {
-        setMenuConfigActions(null);
-      }
-    });
+    setIsConfiguringMenu(configuring);
+    if (!configuring) {
+      setMenuConfigActions(null);
+    }
   }, []);
 
   const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void; isValid?: boolean } | null) => {
-    React.startTransition(() => {
-      setMenuConfigActions(actions);
-    });
+    setMenuConfigActions(actions);
   }, []);
 
   const handleLinesChange = useCallback((newLines: OrderLine[]) => {
@@ -766,7 +762,7 @@ export default function ServicePage() {
                     console.error('Erreur suppression:', error);
                   }
                 }}
-                onUpdateOrderItemStatus={handleStatusUpdate}
+                onUpdateOrderLinesStatus={handleStatusUpdate}
               />
               <View style={{ padding: 16 }}>
                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
