@@ -43,23 +43,30 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const xStart = useRef(new Animated.Value(table.xStart * CELL_SIZE)).current;
   const yStart = useRef(new Animated.Value(table.yStart * CELL_SIZE)).current;
   const opacity = useRef(new Animated.Value(1)).current;
+  const isDragging = useRef(false);
+  const isResizing = useRef(false);
 
   // const isSizeValid = table.width >= MIN_CELLS && table.height >= MIN_CELLS;
 
   useEffect(() => {
+    // Ne pas mettre à jour pendant le drag ou resize
+    if (isDragging.current || isResizing.current) {
+      return;
+    }
+
     // Si position invalide et en mode édition, repositionner automatiquement
     if (!positionValid && isEditing) {
       // Animation de fade pour le repositionnement
       Animated.sequence([
-        Animated.timing(opacity, { 
-          toValue: 0, 
-          duration: 80, 
-          useNativeDriver: true 
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 80,
+          useNativeDriver: true
         }),
-        Animated.timing(opacity, { 
-          toValue: 1, 
-          duration: 100, 
-          useNativeDriver: true 
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true
         })
       ]).start();
 
@@ -88,13 +95,25 @@ export const RoomTable: React.FC<TableViewProps> = ({
     yStart.setValue(table.yStart * CELL_SIZE);
   }, [table.width, table.height, table.xStart, table.yStart, positionValid, isEditing]);
 
+  const dragStartPosition = useRef({ x: 0, y: 0 });
+
   const dragPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        isDragging.current = true;
+        // Stocker la position initiale au début du drag
+        dragStartPosition.current = {
+          x: table.xStart * CELL_SIZE,
+          y: table.yStart * CELL_SIZE
+        };
+      },
       onPanResponderMove: (_, gesture) => {
-        const newXStart = Math.round((lastValidXStart.current * CELL_SIZE + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
-        const newYStart = Math.round((lastValidYStart.current * CELL_SIZE + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
+        // Calculer la nouvelle position basée sur la position initiale du drag
+        const newXStart = Math.round((dragStartPosition.current.x + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
+        const newYStart = Math.round((dragStartPosition.current.y + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
 
+        // Mettre à jour l'animation en temps réel pour un mouvement fluide
         xStart.setValue(newXStart);
         yStart.setValue(newYStart);
       },
@@ -106,23 +125,37 @@ export const RoomTable: React.FC<TableViewProps> = ({
           xStart: newTableXStart,
           yStart: newTableYStart
         });
+        isDragging.current = false;
+      },
+      onPanResponderTerminate: () => {
+        isDragging.current = false;
       }
     })
   ).current;
 
+  const resizeStartDimensions = useRef({ width: 0, height: 0, x: 0, y: 0 });
+
   const rightPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        isResizing.current = true;
+        resizeStartDimensions.current.width = table.width * CELL_SIZE;
+      },
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidWidth.current * CELL_SIZE + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
+          Math.round((resizeStartDimensions.current.width + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
         width.setValue(newWidth);
       },
       onPanResponderRelease: () => {
         const newTableWidth = Math.round((width as any)._value / CELL_SIZE);
         onUpdate(table.id, { width: newTableWidth });
+        isResizing.current = false;
+      },
+      onPanResponderTerminate: () => {
+        isResizing.current = false;
       }
     })
   ).current;
@@ -130,21 +163,32 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const leftPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        isResizing.current = true;
+        resizeStartDimensions.current.width = table.width * CELL_SIZE;
+        resizeStartDimensions.current.x = table.xStart * CELL_SIZE;
+      },
       onPanResponderMove: (_, gesture) => {
         const newWidth = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidWidth.current * CELL_SIZE - gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
+          Math.round((resizeStartDimensions.current.width - gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
-        const newXStart = (lastValidXStart.current - ((newWidth / CELL_SIZE) - lastValidWidth.current)) * CELL_SIZE;
+        const widthDiff = (newWidth - resizeStartDimensions.current.width) / CELL_SIZE;
+        const newXStart = (table.xStart - widthDiff) * CELL_SIZE;
         width.setValue(newWidth);
         xStart.setValue(newXStart);
       },
       onPanResponderRelease: () => {
         const newTableWidth = Math.round((width as any)._value / CELL_SIZE);
+        const newTableXStart = Math.round((xStart as any)._value / CELL_SIZE);
         onUpdate(table.id, {
           width: newTableWidth,
-          xStart: lastValidXStart.current - (newTableWidth - lastValidWidth.current)
+          xStart: newTableXStart
         });
+        isResizing.current = false;
+      },
+      onPanResponderTerminate: () => {
+        isResizing.current = false;
       }
     })
   ).current;
@@ -152,16 +196,24 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const bottomPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        isResizing.current = true;
+        resizeStartDimensions.current.height = table.height * CELL_SIZE;
+      },
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidHeight.current * CELL_SIZE + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
+          Math.round((resizeStartDimensions.current.height + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
         height.setValue(newHeight);
       },
       onPanResponderRelease: () => {
         const newTableHeight = Math.round((height as any)._value / CELL_SIZE);
         onUpdate(table.id, { height: newTableHeight });
+        isResizing.current = false;
+      },
+      onPanResponderTerminate: () => {
+        isResizing.current = false;
       }
     })
   ).current;
@@ -169,21 +221,32 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const topPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        isResizing.current = true;
+        resizeStartDimensions.current.height = table.height * CELL_SIZE;
+        resizeStartDimensions.current.y = table.yStart * CELL_SIZE;
+      },
       onPanResponderMove: (_, gesture) => {
         const newHeight = Math.max(
           MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidHeight.current * CELL_SIZE - gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
+          Math.round((resizeStartDimensions.current.height - gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
         );
-        const newYStart = (lastValidYStart.current - ((newHeight / CELL_SIZE) - lastValidHeight.current)) * CELL_SIZE;
+        const heightDiff = (newHeight - resizeStartDimensions.current.height) / CELL_SIZE;
+        const newYStart = (table.yStart - heightDiff) * CELL_SIZE;
         height.setValue(newHeight);
         yStart.setValue(newYStart);
       },
       onPanResponderRelease: () => {
         const newTableHeight = Math.round((height as any)._value / CELL_SIZE);
+        const newTableYStart = Math.round((yStart as any)._value / CELL_SIZE);
         onUpdate(table.id, {
           height: newTableHeight,
-          yStart: lastValidYStart.current - (newTableHeight - lastValidHeight.current)
+          yStart: newTableYStart
         });
+        isResizing.current = false;
+      },
+      onPanResponderTerminate: () => {
+        isResizing.current = false;
       }
     })
   ).current;

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { View, StyleSheet, Dimensions, Platform, Animated, PanResponder } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Table } from '~/types/table.types';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
@@ -9,6 +9,7 @@ import { Order } from '~/types/order.types';
 import TableActionPanel from '~/components/Room/TableActionPanel';
 import { getTableStatus } from '~/lib/utils';
 import { Toast } from '~/components/ui/toast';
+import RoomMobile from './RoomMobile';
 
 const CELL_SIZE = 50;
 const PANEL_POSITION_KEY = 'actionPanelPosition';
@@ -84,6 +85,66 @@ const Room: React.FC<RoomProps> = ({
   };
 
   const [panelPosition, setPanelPosition] = useState(getInitialPanelPosition());
+
+  // Animation values for custom pan and zoom - MUST be declared before any conditional returns
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const [isPanning, setIsPanning] = useState(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => !editionMode,
+      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => !editionMode,
+      onPanResponderGrant: () => {
+        setIsPanning(true);
+        // Extraire les valeurs actuelles pour les utiliser comme offset
+        translateX.setOffset((translateX as any)._value);
+        translateY.setOffset((translateY as any)._value);
+        translateX.setValue(0);
+        translateY.setValue(0);
+      },
+      onPanResponderMove: Platform.OS === 'web' ?
+        (evt, gestureState) => {
+          // Pour le web, utiliser setValue directement
+          translateX.setValue(gestureState.dx);
+          translateY.setValue(gestureState.dy);
+        } :
+        // Pour iOS/Android, utiliser Animated.event avec useNativeDriver
+        Animated.event(
+          [null, { dx: translateX, dy: translateY }],
+          {
+            useNativeDriver: false,  // Obligé de mettre false car on anime des transforms groupées
+            listener: (evt, gestureState) => {
+              // Force la mise à jour sur mobile
+              if (Platform.OS !== 'web') {
+                translateX.setValue(gestureState.dx);
+                translateY.setValue(gestureState.dy);
+              }
+            }
+          }
+        ),
+      onPanResponderRelease: () => {
+        setIsPanning(false);
+        translateX.flattenOffset();
+        translateY.flattenOffset();
+      },
+      onPanResponderTerminate: () => {
+        setIsPanning(false);
+        translateX.flattenOffset();
+        translateY.flattenOffset();
+      }
+    })
+  ).current;
+
+  // Update scale when dimensions change
+  useEffect(() => {
+    if (dimensions?.initialZoom) {
+      scale.setValue(dimensions.initialZoom);
+    }
+  }, [dimensions?.initialZoom]);
 
   useEffect(() => {
     const loadPanelPosition = async () => {
@@ -321,6 +382,91 @@ const Room: React.FC<RoomProps> = ({
     );
   }
 
+  // Use optimized RoomMobile component for iOS/Android
+  if (Platform.OS === 'web') {
+    return (
+      <RoomMobile
+        tables={tables}
+        orders={orders}
+        editingTableId={editingTableId}
+        editionMode={editionMode}
+        width={width}
+        height={height}
+        isLoading={isLoading}
+        onTableUpdate={onTableUpdate}
+        onTableLongPress={onTableLongPress}
+        onTablePress={onTablePress}
+        onEditTable={onEditTable}
+        onDeleteTable={onDeleteTable}
+        dimensions={dimensions}
+      />
+    );
+  }
+
+  // Use custom pan/zoom on mobile platforms where ReactNativeZoomableView has issues
+  const USE_CUSTOM_PAN = false;
+
+  if (USE_CUSTOM_PAN) {
+    return (
+      <View style={styles.container}>
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[
+            styles.animatedContainer,
+            {
+              transform: [
+                { translateX: translateX },
+                { translateY: translateY },
+                { scale: scale }
+              ]
+            }
+          ]}
+        >
+          <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
+            <RoomGrid
+              width={dimensions.gridWidth}
+              height={dimensions.gridHeight}
+              GRID_COLS={width}
+              GRID_ROWS={height}
+              CELL_SIZE={CELL_SIZE}
+            />
+            {visibleTables.map(table => (
+              <RoomTable
+                key={table.id}
+                table={table}
+                status={getTableStatus(table)}
+                isEditing={editingTableId === table.id}
+                editionMode={editionMode}
+                positionValid={isPositionValid(table)}
+                CELL_SIZE={CELL_SIZE}
+                currentZoom={currentZoom}
+                isSelected={editingTableId === table.id}
+                onPress={() => handleTableSelect(table)}
+                onLongPress={onTableLongPress}
+                onUpdate={onTableUpdate}
+              />
+            ))}
+          </View>
+        </Animated.View>
+        {editionMode && editingTableId && tables.find(table => table.id === editingTableId) && (
+          <TableActionPanel
+            position={panelPosition}
+            onPositionChange={handlePanelMove}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteClick}
+          />
+        )}
+        <Toast
+          visible={showToast}
+          message={toastMessage}
+          type="warning"
+          duration={2000}
+          onHide={() => setShowToast(false)}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ReactNativeZoomableView
@@ -329,13 +475,15 @@ const Room: React.FC<RoomProps> = ({
         minZoom={0.2}
         zoomStep={0.5}
         initialZoom={dimensions.initialZoom}
-        bindToBorders={true}
+        bindToBorders={false}
         contentWidth={dimensions.gridWidth}
         contentHeight={dimensions.gridHeight}
         onSingleTap={handleBackgroundPress}
-        onZoomEnd={(_, __, { zoomLevel }) => {
-          setCurrentZoom(zoomLevel);
+        onZoomAfter={(_, __, zoomableViewEventObject) => {
+          setCurrentZoom(zoomableViewEventObject.zoomLevel);
         }}
+        disablePanOnInitialZoom={false}
+        captureEvent={true}
       >
         <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
           <RoomGrid
@@ -399,6 +547,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#F5F5F5',
+  },
+  animatedContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });
 
