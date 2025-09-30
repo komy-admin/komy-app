@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { FileText } from 'lucide-react-native';
+import { Text } from '~/components/ui';
+import { SectionHeader } from '~/components/admin/SectionHeader';
 import { MenuFormData } from './MenuEditor.types';
 
 interface MenuBasicInfoProps {
@@ -16,17 +18,11 @@ export const MenuBasicInfo = memo<MenuBasicInfoProps>(({
 }) => {
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeaderInline}>
-        <View style={styles.sectionIconContainer}>
-          <FileText size={20} color="#2A2E33" />
-        </View>
-        <View style={styles.sectionHeaderText}>
-          <Text style={styles.sectionHeaderTitle}>1. Informations générales</Text>
-          <Text style={styles.sectionHeaderSubtitle}>
-            Définissez le nom, prix et description de votre menu
-          </Text>
-        </View>
-      </View>
+      <SectionHeader
+        icon={FileText}
+        title="1. Informations générales"
+        subtitle="Définissez le nom, prix et description de votre menu"
+      />
 
       <View style={styles.row}>
         <View style={[styles.field, styles.fieldLarge]}>
@@ -114,41 +110,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-  },
-  sectionHeaderInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#F3F4F6',
-  },
-  sectionIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  sectionHeaderText: {
-    flex: 1,
-  },
-  sectionHeaderTitle: {
-    fontSize: 19,
-    fontWeight: '700',
-    color: '#2A2E33',
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  sectionHeaderSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    fontWeight: '500',
   },
   row: {
     flexDirection: 'row',

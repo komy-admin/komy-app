@@ -1,6 +1,8 @@
 import React, { forwardRef, useImperativeHandle, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { Plus, Settings } from 'lucide-react-native';
+import { Text } from '~/components/ui';
+import { SectionHeader } from '~/components/admin/SectionHeader';
 import { MenuBasicInfo } from './MenuBasicInfo';
 import { CategoryEditor } from './CategoryEditor';
 import { CategoryItemAssignment } from './CategoryItemAssignment';
@@ -141,17 +143,11 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
         />
 
         <View style={styles.section}>
-          <View style={styles.sectionHeaderInline}>
-            <View style={styles.sectionIconContainer}>
-              <Settings size={20} color="#2A2E33" />
-            </View>
-            <View style={styles.sectionHeaderText}>
-              <Text style={styles.sectionHeaderTitle}>2. Catégories et articles</Text>
-              <Text style={styles.sectionHeaderSubtitle}>
-                Configurez les catégories du menu et assignez des articles
-              </Text>
-            </View>
-          </View>
+          <SectionHeader
+            icon={Settings}
+            title="2. Catégories et articles"
+            subtitle="Configurez les catégories du menu et assignez des articles"
+          />
 
           {errors.categories && (
             <View style={styles.errorBanner}>
@@ -242,41 +238,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-  },
-  sectionHeaderInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#F3F4F6',
-  },
-  sectionIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  sectionHeaderText: {
-    flex: 1,
-  },
-  sectionHeaderTitle: {
-    fontSize: 19,
-    fontWeight: '700',
-    color: '#2A2E33',
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  sectionHeaderSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    fontWeight: '500',
   },
   errorBanner: {
     backgroundColor: '#FEE2E2',

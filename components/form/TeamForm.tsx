@@ -6,6 +6,8 @@ import { getEnumValue, getUserProfileText } from '~/lib/utils';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
 import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
+import { SectionHeader } from '~/components/admin/SectionHeader';
+import { Users } from 'lucide-react-native';
 
 interface TeamFormProps {
   user: User | null;
@@ -169,9 +171,13 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
     <View style={styles.container}>
       {/* Formulaire en grille compacte */}
       <View style={styles.formGrid}>
-        {/* Section principale - Informations de base */}
+        {/* Section principale - Informations générales */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. Informations de base</Text>
+          <SectionHeader
+            icon={Users}
+            title="1. Informations générales"
+            subtitle="Renseignez les informations personnelles et identifiants du membre"
+          />
 
           {/* Ligne 1: Rôle */}
           <View style={[styles.row, { marginBottom: 16 }]}>
@@ -316,17 +322,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2A2E33',
-    marginBottom: 24,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#F3F4F6',
-    letterSpacing: 0.5,
   },
 
   // Système de lignes et colonnes

@@ -7,6 +7,8 @@ import { ItemType } from '~/types/item-type.types';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
 import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
+import { SectionHeader } from '~/components/admin/SectionHeader';
+import { FileText } from 'lucide-react-native';
 
 interface MenuFormProps {
   item: Item | null;
@@ -156,9 +158,13 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     <View style={styles.container}>
       {/* Formulaire en grille compacte */}
       <View style={styles.formGrid}>
-        {/* Section principale - Informations de base */}
+        {/* Section principale - Informations générales */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. Informations de base</Text>
+          <SectionHeader
+            icon={FileText}
+            title="1. Informations générales"
+            subtitle="Définissez le nom, prix et catégorie de l'article"
+          />
 
           {/* Ligne 1: Nom + Prix + Statut */}
           <View style={styles.row}>
@@ -294,17 +300,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2A2E33',
-    marginBottom: 24,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#F3F4F6',
-    letterSpacing: 0.5,
   },
 
   // Système de lignes et colonnes

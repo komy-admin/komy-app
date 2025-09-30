@@ -1,10 +1,12 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { View, StyleSheet, Text, Platform } from 'react-native';
-import { TextInput, NumberInput } from '~/components/ui';
+import { View, StyleSheet, Platform } from 'react-native';
+import { Text, TextInput, NumberInput } from '~/components/ui';
 import { Room } from '~/types/room.types';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
 import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
+import { SectionHeader } from '~/components/admin/SectionHeader';
+import { LayoutDashboard } from 'lucide-react-native';
 
 interface RoomFormProps {
   room: Room | null;
@@ -112,9 +114,13 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
     <View style={styles.container}>
       {/* Formulaire en grille compacte */}
       <View style={styles.formGrid}>
-        {/* Section principale - Informations de base */}
+        {/* Section principale - Informations générales */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. Informations de la salle</Text>
+          <SectionHeader
+            icon={LayoutDashboard}
+            title="1. Informations générales"
+            subtitle="Définissez le nom et les dimensions de la salle"
+          />
 
           {/* Ligne 1: Nom */}
           <View style={styles.row}>
@@ -187,17 +193,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2A2E33',
-    marginBottom: 24,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#F3F4F6',
-    letterSpacing: 0.5,
   },
 
   // Système de lignes et colonnes
