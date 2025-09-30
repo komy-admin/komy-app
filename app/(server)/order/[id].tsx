@@ -32,7 +32,9 @@ export default function OrderDetailPage() {
   // Redirection automatique si la commande n'existe plus
   useEffect(() => {
     if (orderId && !order) {
-      router.replace('/(server)');
+      React.startTransition(() => {
+        router.replace('/(server)');
+      });
     }
   }, [orderId, order]);
 
@@ -53,8 +55,10 @@ export default function OrderDetailPage() {
   // Retour automatique si commande terminée
   useEffect(() => {
     if (isOrderTerminated) {
-      showToast('Cette commande est terminée', 'info');
-      router.replace('/(server)');
+      React.startTransition(() => {
+        showToast('Cette commande est terminée', 'info');
+        router.replace('/(server)');
+      });
     }
   }, [isOrderTerminated, showToast]);
 
