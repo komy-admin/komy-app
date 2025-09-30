@@ -159,19 +159,8 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
     );
   }, [items, activeItemType]);
 
-  // Si aucun article disponible
-  if (filteredItems.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>
-          Aucun article disponible dans cette catégorie
-        </Text>
-      </View>
-    );
-  }
-
-  // Styles dynamiques pour les cartes
-  const getCardStyle = (index: number) => {
+  // Styles dynamiques pour les cartes - mémorisé pour éviter recalcul
+  const getCardStyle = useCallback((index: number) => {
     const gap = 8;
     const padding = 16;
     const availableWidth = width - (padding * 2) - (gap * (columnsPerRow - 1));
@@ -185,7 +174,38 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
       marginRight: (index + 1) % columnsPerRow === 0 ? 0 : gap,
       marginBottom: 12,
     };
-  };
+  }, [width, columnsPerRow, isMobile]);
+
+  // Render item function for FlatList
+  const renderItem = useCallback(({ item, index }: { item: Item; index: number }) => (
+    <View
+      key={item.id}
+      style={[
+        styles.itemCard,
+        getCardStyle(index)
+      ]}
+    >
+      <OrderItemCard
+        item={item}
+        totalQuantity={getTotalItemQuantity(item.id)}
+        draftQuantity={getDraftItemQuantity(item.id)}
+        onUpdateQuantity={updateItemQuantity}
+        isTablet={isTablet}
+        dynamicButtonSize={dynamicButtonSize}
+      />
+    </View>
+  ), [getTotalItemQuantity, getDraftItemQuantity, updateItemQuantity, isTablet, dynamicButtonSize, getCardStyle]);
+
+  // Si aucun article disponible
+  if (filteredItems.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>
+          Aucun article disponible dans cette catégorie
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -196,25 +216,13 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
           { paddingHorizontal: isMobile ? 12 : 16 }
         ]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+        bounces={false}
       >
-        {filteredItems.map((item, index) => (
-          <View
-            key={item.id}
-            style={[
-              styles.itemCard,
-              getCardStyle(index)
-            ]}
-          >
-            <OrderItemCard
-              item={item}
-              totalQuantity={getTotalItemQuantity(item.id)}
-              draftQuantity={getDraftItemQuantity(item.id)}
-              onUpdateQuantity={updateItemQuantity}
-              isTablet={isTablet}
-              dynamicButtonSize={dynamicButtonSize}
-            />
-          </View>
-        ))}
+        <View style={styles.itemsGrid}>
+          {filteredItems.map((item, index) => renderItem({ item, index }))}
+        </View>
       </ScrollView>
     </View>
   );
@@ -255,10 +263,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gridContainer: {
+    paddingVertical: 16,
+  },
+  itemsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingVertical: 16,
-    justifyContent: 'flex-start',
   },
   emptyContainer: {
     flex: 1,

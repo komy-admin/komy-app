@@ -57,7 +57,10 @@ export type OrderLine = {
 
   // Items du menu avec statuts individuels (seulement si type = MENU)
   items?: OrderLineItem[];
-  
+
+  // selectedItems pour les menus (mappage categoryId -> itemId) - utilisé pour l'API
+  selectedItems?: Record<string, string>;
+
   // Timestamps
   createdAt: string;
   updatedAt: string;

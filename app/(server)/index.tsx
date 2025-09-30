@@ -1,18 +1,19 @@
 // app/(server)/index.tsx - Page principale avec plan de salle et liste des commandes
 import React, { useMemo, useCallback, useState, useRef } from 'react';
-import { View, ScrollView, Pressable, Dimensions } from 'react-native';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Card, CardContent, Text, Badge, Button } from '~/components/ui';
+import { View, Pressable, Dimensions } from 'react-native';
+import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import { Card, CardContent, Text, Badge } from '~/components/ui';
 import RoomComponent from '~/components/Room/Room';
 import { Status } from '~/types/status.enum';
 import { Table } from '~/types/table.types';
 import { Room } from '~/types/room.types';
 import { Clock, CheckCircle2, AlertCircle, Package, RefreshCw, Plus } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
-import { useRooms, useMenu, useTables, useOrders } from '~/hooks/useRestaurant';
-import { getStatusColor, getStatusText, getMostImportantStatus } from '~/lib/utils';
+import { useRooms, useTables, useOrders } from '~/hooks/useRestaurant';
+import { getStatusColor, getStatusText, getMostImportantStatus, getOrderGlobalStatus } from '~/lib/utils';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ServerHomePage() {
   const snapPoints = useMemo(() => ['15%', '35%', '60%'], []);
@@ -28,6 +29,16 @@ export default function ServerHomePage() {
   // État local
   const [bottomSheetIndex, setBottomSheetIndex] = useState(0);
 
+  // Nettoyer la sélection quand on revient sur cette page
+  useFocusEffect(
+    useCallback(() => {
+      // On ne fait rien au focus
+      return () => {
+        // Au blur (quand on quitte la page), on pourrait nettoyer si nécessaire
+      };
+    }, [])
+  );
+
   // Gestion du changement de salle
   const handleChangeRoom = useCallback((room: Room) => {
     setCurrentRoom(room.id);
@@ -42,20 +53,20 @@ export default function ServerHomePage() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedTable(table.id);
 
-    // Chercher si une commande existe pour cette table
+    // Toujours rechercher la commande la plus récente pour cette table
     const existingOrder = currentRoomOrders.find(order => order.tableId === table.id);
 
     if (existingOrder) {
       // Navigation vers la page de détail de la commande
       router.push({
-        pathname: '/(server)/service',
-        params: { orderId: existingOrder.id, tableId: table.id }
+        pathname: '/(server)/order/[id]',
+        params: { id: existingOrder.id }
       });
     } else {
-      // Navigation vers la page de prise de commande
+      // Navigation vers la page de création de commande
       router.push({
-        pathname: '/(server)/order-form',
-        params: { tableId: table.id }
+        pathname: '/(server)/order/form',
+        params: { tableId: table.id, mode: 'create' }
       });
     }
   }, [currentRoomOrders, setSelectedTable]);
@@ -64,8 +75,8 @@ export default function ServerHomePage() {
   const handleOrderPress = useCallback((orderId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
-      pathname: '/(server)/service',
-      params: { orderId }
+      pathname: '/(server)/order/[id]',
+      params: { id: orderId }
     });
   }, []);
 
@@ -88,128 +99,132 @@ export default function ServerHomePage() {
     }
   }, []);
 
-  // Rendu du contenu du BottomSheet - Liste simple des commandes
-  const renderBottomSheetContent = useCallback(() => {
-    const ordersWithTables = currentRoomOrders
+  // Données préparées pour la liste
+  const ordersWithTables = useMemo(() => {
+    return currentRoomOrders
       .filter(order => order.lines && order.lines.length > 0)
       .sort((a, b) => {
-        // Trier par statut prioritaire puis par date
         const statusA = getMostImportantStatus(a.lines?.map(l => l.status || Status.PENDING) || []);
         const statusB = getMostImportantStatus(b.lines?.map(l => l.status || Status.PENDING) || []);
-
         const priorityOrder = [Status.READY, Status.INPROGRESS, Status.PENDING, Status.SERVED, Status.TERMINATED];
         const priorityA = priorityOrder.indexOf(statusA);
         const priorityB = priorityOrder.indexOf(statusB);
-
         if (priorityA !== priorityB) {
           return priorityA - priorityB;
         }
-
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
+  }, [currentRoomOrders]);
+
+  // Header du BottomSheet
+  const renderHeader = useCallback(() => (
+    <View className="px-4 py-3">
+      <Text className="text-base font-bold text-gray-900 mb-2">
+        Commandes en cours ({ordersWithTables.length})
+      </Text>
+      <View className="flex-row flex-wrap gap-2">
+        {rooms.map((room) => (
+          <Pressable
+            key={room.id}
+            onPress={() => handleChangeRoom(room)}
+          >
+            <Badge
+              variant="outline"
+              active={room.id === currentRoom?.id}
+              size="sm"
+            >
+              <Text className="text-xs">{room.name}</Text>
+            </Badge>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  ), [ordersWithTables.length, rooms, currentRoom, handleChangeRoom]);
+
+  // Rendu d'une commande
+  const renderOrder = useCallback(({ item: order }: { item: typeof ordersWithTables[0] }) => {
+    const orderStatus = getOrderGlobalStatus(order);
+    const table = currentRoomTables.find(t => t.id === order.tableId);
 
     return (
-      <BottomSheetScrollView
-        className="px-4"
-        showsVerticalScrollIndicator={true}
-        bounces={true}
+      <Pressable
+        onPress={() => handleOrderPress(order.id)}
       >
-        <View className="py-3">
-          {/* Header */}
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-base font-bold text-gray-900">
-              Commandes en cours ({ordersWithTables.length})
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="flex-1 ml-3"
-              contentContainerStyle={{ alignItems: 'center' }}
-            >
-              <View className="flex-row gap-2">
-                {rooms.map((room) => (
-                  <Pressable
-                    key={room.id}
-                    onPress={() => handleChangeRoom(room)}
-                  >
-                    <Badge
-                      variant="outline"
-                      active={room.id === currentRoom?.id}
-                      size="sm"
-                    >
-                      <Text className="text-xs">{room.name}</Text>
-                    </Badge>
-                  </Pressable>
-                ))}
+        <Card
+          className="mx-4 mb-2"
+          style={{
+            backgroundColor: getStatusColor(orderStatus),
+            borderWidth: 1,
+            borderColor: getStatusColor(orderStatus)
+          }}
+        >
+          <CardContent className="py-3 px-4">
+            <View className="flex-row justify-between items-center">
+              <View className="flex-1">
+                <View className="flex-row items-center gap-2">
+                  <Text className="font-semibold text-gray-900">
+                    Table {table?.name || order.tableId}
+                  </Text>
+                  <Text className="text-xs text-gray-600">
+                    • {order.lines?.length || 0} articles
+                  </Text>
+                </View>
+                <Text className="text-xs text-gray-700 mt-1">
+                  {new Date(order.createdAt).toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </Text>
               </View>
-            </ScrollView>
-          </View>
 
-          {/* Liste des commandes */}
-          {ordersWithTables.length === 0 ? (
-            <View className="py-8 items-center">
-              <Text className="text-gray-500 text-sm">
-                Aucune commande en cours
-              </Text>
-            </View>
-          ) : (
-            ordersWithTables.map((order) => {
-              const orderStatus = getMostImportantStatus(
-                (order.lines || []).map(line => line.status || Status.PENDING)
-              );
-              const table = currentRoomTables.find(t => t.id === order.tableId);
-
-              return (
-                <Pressable
-                  key={order.id}
-                  onPress={() => handleOrderPress(order.id)}
+              <View className="flex-row items-center gap-2">
+                {getStatusIcon(orderStatus)}
+                <View
+                  style={{
+                    backgroundColor: '#ffffff',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 6
+                  }}
                 >
-                  <Card
-                    className="mb-2 border border-gray-200"
-                    style={{ backgroundColor: `${getStatusColor(orderStatus)}15` }}
-                  >
-                    <CardContent className="py-3 px-4">
-                      <View className="flex-row justify-between items-center">
-                        <View className="flex-1">
-                          <View className="flex-row items-center gap-2">
-                            <Text className="font-semibold text-gray-900">
-                              Table {table?.name || order.tableId}
-                            </Text>
-                            <Text className="text-xs text-gray-500">
-                              • {order.lines?.length || 0} articles
-                            </Text>
-                          </View>
-                          <Text className="text-xs text-gray-600 mt-1">
-                            {new Date(order.createdAt).toLocaleTimeString('fr-FR', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </Text>
-                        </View>
-
-                        <View className="flex-row items-center gap-2">
-                          {getStatusIcon(orderStatus)}
-                          <Badge
-                            variant="outline"
-                            size="sm"
-                            style={{ backgroundColor: `${getStatusColor(orderStatus)}20` }}
-                          >
-                            <Text className="text-xs font-medium">
-                              {getStatusText(orderStatus)}
-                            </Text>
-                          </Badge>
-                        </View>
-                      </View>
-                    </CardContent>
-                  </Card>
-                </Pressable>
-              );
-            })
-          )}
-        </View>
-      </BottomSheetScrollView>
+                  <Text className="text-xs font-semibold text-gray-800">
+                    {getStatusText(orderStatus)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </CardContent>
+        </Card>
+      </Pressable>
     );
-  }, [currentRoomOrders, currentRoomTables, rooms, currentRoom, handleChangeRoom, handleOrderPress, getStatusIcon]);
+  }, [currentRoomTables, handleOrderPress, getStatusIcon]);
+
+  // Rendu du contenu du BottomSheet
+  const renderBottomSheetContent = useCallback(() => {
+    if (ordersWithTables.length === 0) {
+      return (
+        <View style={{ flex: 1 }}>
+          {renderHeader()}
+          <View className="py-8 items-center">
+            <Text className="text-gray-500 text-sm">
+              Aucune commande en cours
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <BottomSheetFlatList
+        data={ordersWithTables}
+        renderItem={renderOrder}
+        keyExtractor={(item: any) => item.id}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={{ paddingBottom: 16 }}
+        showsVerticalScrollIndicator={true}
+      />
+    );
+  }, [ordersWithTables, renderOrder, renderHeader]);
 
   return (
     <View className="flex-1 bg-background">
@@ -218,14 +233,14 @@ export default function ServerHomePage() {
         <RoomComponent
           tables={currentRoomTables}
           orders={currentRoomOrders}
-          editingTableId={selectedTableId}
+          editingTableId={selectedTableId || undefined}
           editionMode={false}
           isLoading={false}
-          width={currentRoom?.width}
-          height={currentRoom?.height}
+          width={currentRoom?.width || undefined}
+          height={currentRoom?.height || undefined}
           onTablePress={handleTablePress}
           onTableLongPress={handleTablePress}
-          onTableUpdate={() => {}}
+          onTableUpdate={() => { }}
         />
 
         {/* Bouton flottant pour créer une commande rapide */}
@@ -235,10 +250,19 @@ export default function ServerHomePage() {
               showToast('Sélectionnez une table d\'abord', 'warning');
               return;
             }
-            router.push({
-              pathname: '/(server)/order-form',
-              params: { tableId: selectedTableId }
-            });
+            // Vérifier si la table a déjà une commande
+            const existingOrder = currentRoomOrders.find(order => order.tableId === selectedTableId);
+            if (existingOrder) {
+              router.push({
+                pathname: '/(server)/order/[id]',
+                params: { id: existingOrder.id }
+              });
+            } else {
+              router.push({
+                pathname: '/(server)/order/form',
+                params: { tableId: selectedTableId, mode: 'create' }
+              });
+            }
           }}
           style={{
             position: 'absolute',

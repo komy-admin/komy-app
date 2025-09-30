@@ -1,5 +1,4 @@
-// app/(server)/service.tsx - Page de détail et gestion de commande
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, Button } from '~/components/ui';
@@ -7,14 +6,15 @@ import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import MobileOrderDetailView from '~/components/Service/MobileOrderDetailView';
 import { Status } from '~/types/status.enum';
-import { OrderLineType } from '~/types/order-line.types';
+import { OrderLineType, OrderLine } from '~/types/order-line.types';
 import { ArrowLeft, Trash2, CheckCircle, Plus } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
 import { useOrders, useMenu, useOrderLines } from '~/hooks/useRestaurant';
 import * as Haptics from 'expo-haptics';
 
-export default function ServiceDetailPage() {
-  const { orderId, tableId } = useLocalSearchParams();
+export default function OrderDetailPage() {
+  const { id } = useLocalSearchParams();
+  const orderId = id as string;
   const { showToast } = useToast();
 
   // Hooks pour les données
@@ -23,14 +23,25 @@ export default function ServiceDetailPage() {
   const { deleteOrderLine, deleteOrderLines } = useOrderLines();
 
   // Récupération de la commande
-  const order = getOrderById(orderId as string);
+  const order = getOrderById(orderId);
 
   // États locaux pour les modales
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showTerminateModal, setShowTerminateModal] = useState(false);
 
+  // Redirection automatique si la commande n'existe plus
+  useEffect(() => {
+    if (orderId && !order) {
+      // Attendre un court instant pour laisser le temps au store de se mettre à jour
+      const timeout = setTimeout(() => {
+        router.replace('/(server)');
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [orderId, order]);
+
   // Vérifier si la commande est terminée
-  const isOrderTerminated = React.useMemo(() => {
+  const isOrderTerminated = useMemo(() => {
     if (!order?.lines || order.lines.length === 0) return false;
 
     return order.lines.every(line => {
@@ -43,6 +54,14 @@ export default function ServiceDetailPage() {
     });
   }, [order]);
 
+  // Retour automatique si commande terminée
+  useEffect(() => {
+    if (isOrderTerminated) {
+      showToast('Cette commande est terminée', 'info');
+      router.replace('/(server)');
+    }
+  }, [isOrderTerminated, showToast]);
+
   // Gestion de la suppression de commande
   const handleDeleteOrder = useCallback(async () => {
     if (!order) return;
@@ -51,7 +70,7 @@ export default function ServiceDetailPage() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       await deleteOrder(order.id);
       showToast('Commande supprimée avec succès', 'success');
-      router.back();
+      router.replace('/(server)');
     } catch (error) {
       console.error('Erreur suppression:', error);
       showToast('Erreur lors de la suppression', 'error');
@@ -88,7 +107,7 @@ export default function ServiceDetailPage() {
 
       showToast('Commande terminée avec succès', 'success');
       setShowTerminateModal(false);
-      router.back();
+      router.replace('/(server)');
     } catch (error) {
       console.error('Erreur terminaison:', error);
       showToast('Erreur lors de la terminaison', 'error');
@@ -98,6 +117,8 @@ export default function ServiceDetailPage() {
   // Gestion de la suppression de lignes
   const handleDeleteOrderLines = useCallback(async (lineIds: string[]) => {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
       if (lineIds.length === 1) {
         await deleteOrderLine(lineIds[0]);
         showToast('Article supprimé avec succès', 'success');
@@ -105,6 +126,9 @@ export default function ServiceDetailPage() {
         await deleteOrderLines(lineIds);
         showToast(`${lineIds.length} articles supprimés`, 'success');
       }
+
+      // Si toutes les lignes sont supprimées, la commande sera supprimée automatiquement
+      // et la redirection se fera via le useEffect
     } catch (error) {
       console.error('Erreur suppression lignes:', error);
       showToast('Erreur lors de la suppression', 'error');
@@ -112,54 +136,62 @@ export default function ServiceDetailPage() {
   }, [deleteOrderLine, deleteOrderLines, showToast]);
 
   // Gestion de la mise à jour de statut
-  const handleStatusUpdate = useCallback(async (lines: any[], status: Status) => {
+  const handleStatusUpdate = useCallback(async (orderLines: OrderLine[], status: Status) => {
     if (!order) return;
 
     try {
-      const orderLineIds = lines.map(line => line.id);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Extraire les IDs des lignes
+      const lineIds = orderLines.map(line => line.id);
+
+      // Séparer les IDs selon le type
+      const orderLineIds: string[] = [];
+      const orderLineItemIds: string[] = [];
+
+      lineIds.forEach(lineId => {
+        // Trouver si c'est une OrderLine ou un OrderLineItem
+        const isOrderLine = order.lines?.some(line => line.id === lineId);
+        if (isOrderLine) {
+          orderLineIds.push(lineId);
+        } else {
+          orderLineItemIds.push(lineId);
+        }
+      });
 
       await updateOrderStatus(order.id, {
         status,
-        orderLineIds,
+        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
       });
 
       showToast('Statut mis à jour avec succès', 'success');
     } catch (error) {
       console.error('Erreur mise à jour statut:', error);
-      showToast('Erreur lors de la mise à jour du statut', 'error');
+      showToast('Erreur lors de la mise à jour', 'error');
     }
   }, [order, updateOrderStatus, showToast]);
-
 
   // Navigation vers l'ajout d'articles
   const handleAddItems = useCallback(() => {
     if (!order) return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
-      pathname: '/(server)/order-form',
+      pathname: '/(server)/order/form',
       params: {
         orderId: order.id,
         tableId: order.tableId,
-        addMode: 'true'
+        mode: 'add'
       }
     });
   }, [order]);
 
-  // Retour automatique si commande terminée
-  useEffect(() => {
-    if (isOrderTerminated) {
-      showToast('Cette commande est terminée', 'info');
-      router.back();
-    }
-  }, [isOrderTerminated]);
-
+  // Si la commande n'existe pas, afficher un message de chargement
   if (!order) {
     return (
       <View className="flex-1 bg-background items-center justify-center p-4">
-        <Text className="text-gray-600 text-center mb-4">Commande introuvable</Text>
-        <Button onPress={() => router.back()}>
-          <Text className="text-white">Retour</Text>
-        </Button>
+        <Text className="text-gray-600 text-center">Redirection en cours...</Text>
       </View>
     );
   }
@@ -170,7 +202,7 @@ export default function ServiceDetailPage() {
       <View className="bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between px-4 py-3">
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => router.replace('/(server)')}
             className="flex-row items-center"
           >
             <ArrowLeft size={20} color="#374151" />
@@ -181,10 +213,15 @@ export default function ServiceDetailPage() {
             Table {order.table?.name}
           </Text>
 
-          <View style={{ width: 60 }} />
+          <Pressable
+            onPress={() => setShowDeleteModal(true)}
+            className="p-2"
+          >
+            <Trash2 size={20} color="#EF4444" />
+          </Pressable>
         </View>
 
-        {/* Info bar */}
+        {/* Infos de la commande */}
         <View className="px-4 pb-3">
           <View className="flex-row justify-between items-center">
             <Text className="text-sm text-gray-600">
@@ -233,17 +270,10 @@ export default function ServiceDetailPage() {
               <Text className="text-gray-900 font-medium ml-1">Terminer</Text>
             </View>
           </Button>
-
-          <Pressable
-            onPress={() => setShowDeleteModal(true)}
-            className="px-4 items-center justify-center"
-          >
-            <Trash2 size={20} color="#EF4444" />
-          </Pressable>
         </View>
       </View>
 
-      {/* Modal de confirmation de suppression */}
+      {/* Modale de confirmation de suppression */}
       <DeleteConfirmationModal
         isVisible={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -251,19 +281,19 @@ export default function ServiceDetailPage() {
           setShowDeleteModal(false);
           handleDeleteOrder();
         }}
-        entityName={`de la table ${order.table?.name || 'N/A'}`}
+        entityName={`de la table ${order.table?.name || order.table?.id || 'N/A'}`}
         entityType="la commande"
       />
 
-      {/* Modal de confirmation de terminaison */}
+      {/* Modale de confirmation de terminaison */}
       <ConfirmationModal
         isVisible={showTerminateModal}
         onClose={() => setShowTerminateModal(false)}
         onConfirm={handleTerminateOrder}
         title="Terminer la commande"
         message={`Voulez-vous vraiment terminer la commande de la table ${order.table?.name || 'N/A'} ?`}
-        description="Cette action marquera tous les articles comme terminés."
-        confirmText="Terminer"
+        description="Cette action marquera tous les articles de la commande comme terminés. La commande disparaîtra de la vue service."
+        confirmText="Confirmer"
         confirmVariant="default"
       />
     </View>

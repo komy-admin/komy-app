@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { CustomModal } from '~/components/CustomModal';
 import { Button } from '~/components/ui';
 import { Portal } from '@rn-primitives/portal';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface DeleteConfirmationModalProps {
   isVisible: boolean;
@@ -23,11 +25,14 @@ export function DeleteConfirmationModal({
   isLoading = false,
   usePortal = false // Par défaut, n'utilise pas le Portal
 }: DeleteConfirmationModalProps) {
+  // Utilise une largeur responsive: max 90% de l'écran ou 400px
+  const modalWidth = Math.min(SCREEN_WIDTH * 0.9, 400);
+
   const modalContent = (
     <CustomModal
       isVisible={isVisible}
       onClose={onClose}
-      width={600}
+      width={modalWidth}
       height={320}
       title="Confirmation de suppression"
       titleColor="#FF4444"
