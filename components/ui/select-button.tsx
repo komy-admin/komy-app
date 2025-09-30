@@ -47,6 +47,14 @@ export const SelectButton = memo<SelectButtonProps>(({
       color: '#FFFFFF',
       fontWeight: variant === 'main' ? '700' as TextStyle['fontWeight'] : '600' as TextStyle['fontWeight']
     } : undefined,
+    // Force les styles critiques sur Web
+    Platform.OS === 'web' && {
+      fontSize: variant === 'main' ? 14 : variant === 'compact' ? 12 : 13,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontWeight: isActive
+        ? (variant === 'main' ? '700' : '600')
+        : (variant === 'compact' ? '500' : '500')
+    },
     textStyle
   ].filter(Boolean) as TextStyle[];
 
