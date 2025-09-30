@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text } from '~/components/ui';
@@ -182,18 +182,14 @@ export default function OrderFormPage() {
 
   // Configuration des actions de menu
   const handleConfigurationModeChange = useCallback((configuring: boolean) => {
-    React.startTransition(() => {
-      setIsConfiguringMenu(configuring);
-      if (!configuring) {
-        setMenuConfigActions(null);
-      }
-    });
+    setIsConfiguringMenu(configuring);
+    if (!configuring) {
+      setMenuConfigActions(null);
+    }
   }, []);
 
   const handleConfigurationActionsChange = useCallback((actions: any) => {
-    React.startTransition(() => {
-      setMenuConfigActions(actions);
-    });
+    setMenuConfigActions(actions);
   }, []);
 
   return (

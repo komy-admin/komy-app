@@ -32,11 +32,7 @@ export default function OrderDetailPage() {
   // Redirection automatique si la commande n'existe plus
   useEffect(() => {
     if (orderId && !order) {
-      // Attendre un court instant pour laisser le temps au store de se mettre à jour
-      const timeout = setTimeout(() => {
-        router.replace('/(server)');
-      }, 100);
-      return () => clearTimeout(timeout);
+      router.replace('/(server)');
     }
   }, [orderId, order]);
 

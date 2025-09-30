@@ -131,10 +131,10 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
   // Détection taille écran pour optimiser tactile tablette
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  
+
   // Styles dynamiques pour boutons optimisés tablette
   const dynamicButtonSize = isTablet ? 38 : 32;
-  
+
   // Menus filtrés - seulement les actifs
   const filteredMenus = useMemo(() => {
     return activeMenus.filter(menu => menu.isActive);
@@ -145,8 +145,6 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
     <View
       style={[
         styles.menuRow,
-        // Supprime marginRight pour les 2ème cartes de chaque ligne
-        (index + 1) % 2 === 0 && { marginRight: 0 }
       ]}
     >
       <OrderMenuRow
@@ -219,8 +217,7 @@ const styles = StyleSheet.create({
     maxWidth: '49%',
     height: 180, // Hauteur augmentée
     padding: 16,
-    marginBottom: 12,
-    marginRight: 8,
+    margin: 4,
     backgroundColor: '#F8F9FA', // Style ISO OrderItemsList
     borderRadius: 12,
     borderWidth: 1,

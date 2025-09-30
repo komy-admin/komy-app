@@ -218,7 +218,7 @@ export function SidePanel({
         <Animated.View
           style={[styles.content, { opacity: contentOpacity }]}
           pointerEvents="auto"
-          removeClippedSubviews={Platform.OS !== 'web'}
+          removeClippedSubviews={false}
         >
           <View
             style={[

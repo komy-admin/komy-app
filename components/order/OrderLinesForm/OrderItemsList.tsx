@@ -171,7 +171,7 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
       minWidth: Math.max(140, cardWidth), // Minimum 140px de largeur
       maxWidth: 250, // Maximum 250px de largeur
       height: isMobile ? 110 : 130,
-      marginRight: (index + 1) % columnsPerRow === 0 ? 0 : gap,
+      //marginRight: (index + 1) % columnsPerRow === 0 ? 0 : gap,
       marginBottom: 12,
     };
   }, [width, columnsPerRow, isMobile]);
@@ -267,6 +267,7 @@ const styles = StyleSheet.create({
   },
   itemsGrid: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
     flexWrap: 'wrap',
   },
   emptyContainer: {

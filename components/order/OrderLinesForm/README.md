@@ -116,11 +116,6 @@ utils/order/
 - Index O(1) pour recherches
 - Sélecteurs Redux optimisés
 
-### 🚀 **React.startTransition**
-- Transitions non-bloquantes
-- UI responsive pendant calculs
-- Priorité aux interactions utilisateur
-
 ## 📝 Guide d'Utilisation
 
 ### 🔌 **Import du Composant**
