@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import {
+  GestureHandlerRootView,
+  GestureDetector,
+  Gesture,
+} from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  runOnJS,
+} from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Table } from '~/types/table.types';
-import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
+import { Order } from '~/types/order.types';
+import { Toast } from '~/components/ui/toast';
 import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
-import { Order } from '~/types/order.types';
 import TableActionPanel from '~/components/Room/TableActionPanel';
 import { getTableStatus } from '~/lib/utils';
-import { Toast } from '~/components/ui/toast';
 
 const CELL_SIZE = 50;
 const PANEL_POSITION_KEY = 'actionPanelPosition';
@@ -53,8 +62,29 @@ const Room: React.FC<RoomProps> = ({
   } | null>(null);
   const [isGridReady, setIsGridReady] = useState(false);
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
-  const [currentZoom, setCurrentZoom] = useState(dimensions?.initialZoom || 1);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [lastValidPositions, setLastValidPositions] = useState<Map<string, { x: number, y: number }>>(new Map());
+
+  // Gesture handler values
+  const initialZoom = dimensions?.initialZoom || 1;
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const scale = useSharedValue(initialZoom);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+  const savedScale = useSharedValue(initialZoom);
+  const [currentZoom, setCurrentZoom] = useState(initialZoom);
+
+  // Update scale if dimensions change
+  useEffect(() => {
+    if (dimensions?.initialZoom && dimensions.initialZoom !== scale.value) {
+      scale.value = dimensions.initialZoom;
+      savedScale.value = dimensions.initialZoom;
+      setCurrentZoom(dimensions.initialZoom);
+    }
+  }, [dimensions?.initialZoom]);
 
   // Synchroniser selectedTable avec editingTableId
   useEffect(() => {
@@ -66,19 +96,11 @@ const Room: React.FC<RoomProps> = ({
     }
   }, [editingTableId, tables]);
 
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [lastValidPositions, setLastValidPositions] = useState<Map<string, { x: number, y: number }>>(new Map());
-
   const getInitialPanelPosition = () => {
     const screenWidth = Dimensions.get('window').width;
     const screenHeight = Dimensions.get('window').height;
-    const gridWidth = width * CELL_SIZE;
-
     return {
-      x: Platform.OS === 'web' ?
-        gridWidth + ((screenWidth - gridWidth) / 2) - 75 :
-        screenWidth / 2 - 75,
+      x: screenWidth / 2 - 75,
       y: screenHeight / 3
     };
   };
@@ -99,6 +121,15 @@ const Room: React.FC<RoomProps> = ({
 
     loadPanelPosition();
   }, []);
+
+  const handlePanelMove = async (newPosition: { x: number; y: number }) => {
+    setPanelPosition(newPosition);
+    try {
+      await AsyncStorage.setItem(PANEL_POSITION_KEY, JSON.stringify(newPosition));
+    } catch (error) {
+      console.error('Error saving panel position:', error);
+    }
+  };
 
   function isTableWithinRoom(table: Table): boolean {
     return (
@@ -129,7 +160,21 @@ const Room: React.FC<RoomProps> = ({
 
   function isPositionValid(table: Table): boolean {
     if (table.id !== editingTableId) return true;
-    return isTableWithinRoom(table) && !hasTableCollision(table, tables);
+    return (
+      table.xStart >= 0 &&
+      table.yStart >= 0 &&
+      table.xStart + table.width <= width &&
+      table.yStart + table.height <= height &&
+      !tables.some(otherTable => {
+        if (otherTable.id === table.id) return false;
+        return (
+          table.xStart < otherTable.xStart + otherTable.width &&
+          table.xStart + table.width > otherTable.xStart &&
+          table.yStart < otherTable.yStart + otherTable.height &&
+          table.yStart + table.height > otherTable.yStart
+        );
+      })
+    );
   }
 
   // Enregistrer la dernière position valide lors de la sélection
@@ -235,8 +280,6 @@ const Room: React.FC<RoomProps> = ({
     return zoom;
   }
 
-  const [zoomKey, setZoomKey] = useState(0);
-
   useEffect(() => {
     setIsGridReady(false);
     setVisibleTables([]);
@@ -252,8 +295,6 @@ const Room: React.FC<RoomProps> = ({
         initialZoom: calculateOptimalZoom(screenWidth, gridWidth, gridHeight, width, height)
       });
 
-      setZoomKey(prev => prev + 1);
-
       const timer = setTimeout(() => {
         setIsGridReady(true);
       }, 100);
@@ -268,9 +309,9 @@ const Room: React.FC<RoomProps> = ({
     }
   }, [isGridReady, tables]);
 
-  const handleBackgroundPress = () => {
+  const handleBackgroundPress = useCallback(() => {
     onTablePress(null);
-  };
+  }, [onTablePress]);
 
   const handleTableSelect = useCallback((table: Table) => {
     if (editingTableId === table.id) return;
@@ -292,15 +333,6 @@ const Room: React.FC<RoomProps> = ({
     }
   }, [tables, editingTableId, editionMode, checkTableValidity]);
 
-  const handlePanelMove = async (newPosition: { x: number; y: number }) => {
-    setPanelPosition(newPosition);
-    try {
-      await AsyncStorage.setItem(PANEL_POSITION_KEY, JSON.stringify(newPosition));
-    } catch (error) {
-      console.error('Error saving panel position:', error);
-    }
-  };
-
   const handleEditClick = () => {
     if (onEditTable) {
       onEditTable();
@@ -313,6 +345,72 @@ const Room: React.FC<RoomProps> = ({
     }
   };
 
+  const updateZoom = useCallback((value: number) => {
+    setCurrentZoom(value);
+  }, []);
+
+  const panGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(!editionMode)
+      .onStart(() => {
+        'worklet';
+        savedTranslateX.value = translateX.value;
+        savedTranslateY.value = translateY.value;
+      })
+      .onUpdate((event) => {
+        'worklet';
+        translateX.value = savedTranslateX.value + event.translationX;
+        translateY.value = savedTranslateY.value + event.translationY;
+      })
+      .runOnJS(false),
+  [editionMode]);
+
+  const pinchGesture = useMemo(() =>
+    Gesture.Pinch()
+      .enabled(!editionMode)
+      .onStart(() => {
+        'worklet';
+        savedScale.value = scale.value;
+      })
+      .onUpdate((event) => {
+        'worklet';
+        const newScale = savedScale.value * event.scale;
+        scale.value = Math.min(Math.max(newScale, 0.2), 1.5);
+      })
+      .onEnd(() => {
+        'worklet';
+        runOnJS(updateZoom)(scale.value);
+      })
+      .runOnJS(false),
+  [editionMode, updateZoom]);
+
+  const tapGesture = useMemo(() =>
+    Gesture.Tap()
+      .onEnd(() => {
+        'worklet';
+        runOnJS(handleBackgroundPress)();
+      })
+      .runOnJS(false),
+  [handleBackgroundPress]);
+
+  const composedGesture = useMemo(() =>
+    Gesture.Simultaneous(
+      panGesture,
+      pinchGesture,
+      Gesture.Exclusive(tapGesture)
+    ),
+  [panGesture, pinchGesture, tapGesture]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+    };
+  }, []);
+
   if (isLoading || !dimensions) {
     return (
       <View style={[styles.container, styles.loading]}>
@@ -322,47 +420,42 @@ const Room: React.FC<RoomProps> = ({
   }
 
   return (
-    <View style={styles.container}>
-      <ReactNativeZoomableView
-        key={zoomKey}
-        maxZoom={1.5}
-        minZoom={0.2}
-        zoomStep={0.5}
-        initialZoom={dimensions.initialZoom}
-        bindToBorders={true}
-        contentWidth={dimensions.gridWidth}
-        contentHeight={dimensions.gridHeight}
-        onSingleTap={handleBackgroundPress}
-        onZoomEnd={(_, __, { zoomLevel }) => {
-          setCurrentZoom(zoomLevel);
-        }}
-      >
-        <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
-          <RoomGrid
-            width={dimensions.gridWidth}
-            height={dimensions.gridHeight}
-            GRID_COLS={width}
-            GRID_ROWS={height}
-            CELL_SIZE={CELL_SIZE}
-          />
-          {visibleTables.map(table => (
-            <RoomTable
-              key={table.id}
-              table={table}
-              status={getTableStatus(table)}
-              isEditing={editingTableId === table.id}
-              editionMode={editionMode}
-              positionValid={isPositionValid(table)}
+    <GestureHandlerRootView style={styles.container}>
+      <GestureDetector gesture={composedGesture}>
+        <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+          <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
+            <RoomGrid
+              width={dimensions.gridWidth}
+              height={dimensions.gridHeight}
+              GRID_COLS={width}
+              GRID_ROWS={height}
               CELL_SIZE={CELL_SIZE}
-              currentZoom={currentZoom}
-              isSelected={editingTableId === table.id}
-              onPress={() => handleTableSelect(table)}
-              onLongPress={onTableLongPress}
-              onUpdate={onTableUpdate}
             />
-          ))}
-        </View>
-      </ReactNativeZoomableView>
+            {visibleTables.map(table => {
+              const isEditing = editingTableId === table.id;
+              return (
+                <RoomTable
+                  key={table.id}
+                  table={table}
+                  tables={tables}
+                  roomWidth={width}
+                  roomHeight={height}
+                  status={getTableStatus(table)}
+                  isEditing={isEditing}
+                  editionMode={editionMode}
+                  positionValid={isPositionValid(table)}
+                  CELL_SIZE={CELL_SIZE}
+                  currentZoom={currentZoom}
+                  isSelected={isEditing}
+                  onPress={() => onTablePress(table)}
+                  onLongPress={onTableLongPress}
+                  onUpdate={onTableUpdate}
+                />
+              );
+            })}
+          </View>
+        </Animated.View>
+      </GestureDetector>
       {editionMode && editingTableId && tables.find(table => table.id === editingTableId) && (
         <TableActionPanel
           position={panelPosition}
@@ -378,7 +471,7 @@ const Room: React.FC<RoomProps> = ({
         duration={2000}
         onHide={() => setShowToast(false)}
       />
-    </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -399,6 +492,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#F5F5F5',
+  },
+  animatedContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });
 

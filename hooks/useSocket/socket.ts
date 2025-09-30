@@ -22,11 +22,17 @@ export class SocketService {
       });
 
       this.socket.on('connect', () => {
-          console.log('Connected to socket server');
+          console.log('[SocketService] ✅ Connected to WebSocket server');
+          console.log('[SocketService] Socket ID:', this.socket?.id);
       });
 
-      this.socket.on('disconnect', () => {
-          console.log('Disconnected from socket server');
+      this.socket.on('disconnect', (reason) => {
+          console.log('[SocketService] ❌ Disconnected from WebSocket server. Reason:', reason);
+      });
+
+      // Debug: écouter tous les événements
+      this.socket.onAny((eventName, ...args) => {
+          console.log('[SocketService] 📨 Event received:', eventName, args);
       });
     }
 
@@ -63,7 +69,10 @@ export class SocketService {
 
     disconnect() {
         if (this.socket) {
+            // Cleanup listeners
+            this.socket.offAny();
             this.socket.disconnect();
+            this.socket = null;
         }
     }
 }

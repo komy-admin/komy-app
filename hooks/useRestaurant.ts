@@ -120,3 +120,5 @@ export { useTables } from './useTables';
 export { useOrders } from './useOrders';
 export { useMenu } from './useMenu';
 export { useUsers } from './useUsers';
+export { useOrderLines } from './useOrderLines';
+export { useMenus } from './useMenus';

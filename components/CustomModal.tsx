@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet, View, TouchableWithoutFeedback, Platform, ViewStyle, Dimensions, Text } from 'react-native';
 import Animated, {
   useAnimatedStyle,
-  withSpring,
   useSharedValue,
   withTiming,
   interpolate,
@@ -33,30 +32,15 @@ export function CustomModal({
   titleColor,
 }: CustomModalProps) {
   const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.9);
-  const translateY = useSharedValue(20);
+  const scale = useSharedValue(0.95);
 
   React.useEffect(() => {
     if (isVisible) {
-      opacity.value = withTiming(1, { duration: 300 });
-      scale.value = withSpring(1, {
-        damping: 25,
-        stiffness: 400,
-      });
-      translateY.value = withSpring(0, {
-        damping: 25,
-        stiffness: 400,
-      });
+      opacity.value = withTiming(1, { duration: 200 });
+      scale.value = withTiming(1, { duration: 200 });
     } else {
-      opacity.value = withTiming(0, { duration: 200 });
-      scale.value = withSpring(0.9, {
-        damping: 25,
-        stiffness: 400,
-      });
-      translateY.value = withSpring(20, {
-        damping: 25,
-        stiffness: 400,
-      });
+      opacity.value = withTiming(0, { duration: 150 });
+      scale.value = withTiming(0.95, { duration: 150 });
     }
   }, [isVisible]);
 
@@ -74,8 +58,7 @@ export function CustomModal({
   const modalStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { scale: scale.value },
-        { translateY: translateY.value }
+        { scale: scale.value }
       ],
       opacity: opacity.value,
     };

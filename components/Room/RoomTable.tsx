@@ -1,13 +1,26 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, PanResponder, Platform, Pressable, StyleSheet, View, ViewStyle } from "react-native";
+import React, { useMemo, useCallback } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import { getStatusColor, getStatusBorderStyle } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
 import { RoomChairs } from "./RoomChairs";
+import {
+  GestureDetector,
+  Gesture,
+} from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  runOnJS,
+  withSpring,
+} from 'react-native-reanimated';
 
 interface TableViewProps {
   table: Table;
+  tables: Table[]; // Pour vérifier les collisions
+  roomWidth: number; // Largeur de la room en cellules
+  roomHeight: number; // Hauteur de la room en cellules
   status?: Status;
   isEditing: boolean;
   editionMode: boolean;
@@ -22,6 +35,9 @@ interface TableViewProps {
 
 export const RoomTable: React.FC<TableViewProps> = ({
   table,
+  tables,
+  roomWidth,
+  roomHeight,
   status,
   isEditing,
   editionMode,
@@ -34,284 +50,376 @@ export const RoomTable: React.FC<TableViewProps> = ({
   onUpdate
 }) => {
   const MIN_CELLS = 2;
-  const lastValidWidth = useRef(table.width);
-  const lastValidHeight = useRef(table.height);
-  const lastValidXStart = useRef(table.xStart);
-  const lastValidYStart = useRef(table.yStart);
-  const width = useRef(new Animated.Value(table.width * CELL_SIZE)).current;
-  const height = useRef(new Animated.Value(table.height * CELL_SIZE)).current;
-  const xStart = useRef(new Animated.Value(table.xStart * CELL_SIZE)).current;
-  const yStart = useRef(new Animated.Value(table.yStart * CELL_SIZE)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
 
-  // const isSizeValid = table.width >= MIN_CELLS && table.height >= MIN_CELLS;
+  // Positions animées pour le drag
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const startX = useSharedValue(table.xStart * CELL_SIZE);
+  const startY = useSharedValue(table.yStart * CELL_SIZE);
 
-  useEffect(() => {
-    // Si position invalide et en mode édition, repositionner automatiquement
-    if (!positionValid && isEditing) {
-      // Animation de fade pour le repositionnement
-      Animated.sequence([
-        Animated.timing(opacity, { 
-          toValue: 0, 
-          duration: 80, 
-          useNativeDriver: true 
-        }),
-        Animated.timing(opacity, { 
-          toValue: 1, 
-          duration: 100, 
-          useNativeDriver: true 
-        })
-      ]).start();
+  // Position actuelle de la table (mise à jour après chaque drag)
+  const currentX = useSharedValue(table.xStart * CELL_SIZE);
+  const currentY = useSharedValue(table.yStart * CELL_SIZE);
 
-      // Repositionner à la dernière position valide
+  // Position de départ pour revenir en cas de collision
+  const lastValidX = useSharedValue(table.xStart * CELL_SIZE);
+  const lastValidY = useSharedValue(table.yStart * CELL_SIZE);
+
+  // Dimensions animées pour le resize
+  const width = useSharedValue(table.width * CELL_SIZE);
+  const height = useSharedValue(table.height * CELL_SIZE);
+  const startWidth = useSharedValue(table.width * CELL_SIZE);
+  const startHeight = useSharedValue(table.height * CELL_SIZE);
+
+  // Dimensions actuelles (mise à jour après chaque resize)
+  const currentWidth = useSharedValue(table.width * CELL_SIZE);
+  const currentHeight = useSharedValue(table.height * CELL_SIZE);
+
+  // Scale pour l'effet de sélection
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
+  // Vérifier si une position est valide (dans les limites et sans collision)
+  const isValidPosition = useCallback((x: number, y: number, w: number, h: number) => {
+    'worklet';
+    // Vérifier les limites de la room
+    if (x < 0 || y < 0 || x + w > roomWidth || y + h > roomHeight) {
+      return false;
+    }
+
+    // Vérifier les collisions avec d'autres tables
+    // NOTE: Cette vérification se fait côté JS, pas dans le worklet
+    return true; // La vérification complète sera faite dans onEnd
+  }, [roomWidth, roomHeight]);
+
+  // Synchroniser les valeurs actuelles avec les props de la table
+  React.useEffect(() => {
+    currentX.value = table.xStart * CELL_SIZE;
+    currentY.value = table.yStart * CELL_SIZE;
+    currentWidth.value = table.width * CELL_SIZE;
+    currentHeight.value = table.height * CELL_SIZE;
+
+    // Mettre à jour les positions valides
+    lastValidX.value = table.xStart * CELL_SIZE;
+    lastValidY.value = table.yStart * CELL_SIZE;
+
+    // Synchroniser aussi les valeurs animées
+    width.value = table.width * CELL_SIZE;
+    height.value = table.height * CELL_SIZE;
+    translateX.value = 0;
+    translateY.value = 0;
+  }, [table.xStart, table.yStart, table.width, table.height]);
+
+  // Callbacks
+  const handlePress = useCallback(() => {
+    onPress(table);
+  }, [onPress, table]);
+
+  const handleLongPress = useCallback(() => {
+    onLongPress(table);
+  }, [onLongPress, table]);
+
+  const handleUpdatePosition = useCallback((newX: number, newY: number) => {
+    const gridX = Math.round(newX / CELL_SIZE);
+    const gridY = Math.round(newY / CELL_SIZE);
+
+    // Vérifier les collisions avec d'autres tables
+    const hasCollision = tables.some(otherTable => {
+      if (otherTable.id === table.id) return false;
+
+      const tableWidth = Math.round(currentWidth.value / CELL_SIZE);
+      const tableHeight = Math.round(currentHeight.value / CELL_SIZE);
+
+      return (
+        gridX < otherTable.xStart + otherTable.width &&
+        gridX + tableWidth > otherTable.xStart &&
+        gridY < otherTable.yStart + otherTable.height &&
+        gridY + tableHeight > otherTable.yStart
+      );
+    });
+
+    // Si pas de collision, mettre à jour
+    if (!hasCollision) {
+      // Mettre à jour les positions actuelles
+      currentX.value = newX;
+      currentY.value = newY;
+      translateX.value = 0;
+      translateY.value = 0;
+
       onUpdate(table.id, {
-        width: lastValidWidth.current,
-        height: lastValidHeight.current,
-        xStart: lastValidXStart.current,
-        yStart: lastValidYStart.current
+        xStart: Math.max(0, gridX),
+        yStart: Math.max(0, gridY)
       });
-      return;
+    } else {
+      // Animation de retour à la dernière position valide
+      const deltaX = lastValidX.value - currentX.value;
+      const deltaY = lastValidY.value - currentY.value;
+
+      translateX.value = withSpring(deltaX, {}, () => {
+        // Une fois l'animation terminée, reset les valeurs
+        translateX.value = 0;
+        currentX.value = lastValidX.value;
+      });
+
+      translateY.value = withSpring(deltaY, {}, () => {
+        translateY.value = 0;
+        currentY.value = lastValidY.value;
+      });
     }
+  }, [CELL_SIZE, onUpdate, table.id, tables, currentWidth, currentHeight, lastValidX, lastValidY]);
 
-    // Mettre à jour les dernières positions valides si la position est valide
-    if (positionValid) {
-      lastValidWidth.current = table.width;
-      lastValidHeight.current = table.height;
-      lastValidXStart.current = table.xStart;
-      lastValidYStart.current = table.yStart;
+  const handleUpdateSize = useCallback((newWidth: number, newHeight: number, newX?: number, newY?: number) => {
+    const gridWidth = Math.round(newWidth / CELL_SIZE);
+    const gridHeight = Math.round(newHeight / CELL_SIZE);
+    const updates: Partial<Table> = {
+      width: Math.max(MIN_CELLS, gridWidth),
+      height: Math.max(MIN_CELLS, gridHeight)
+    };
+    if (newX !== undefined) {
+      updates.xStart = Math.max(0, Math.round(newX / CELL_SIZE));
     }
+    if (newY !== undefined) {
+      updates.yStart = Math.max(0, Math.round(newY / CELL_SIZE));
+    }
+    onUpdate(table.id, updates);
+  }, [CELL_SIZE, onUpdate, table.id]);
 
-    // Mise à jour normale des dimensions et positions
-    width.setValue(table.width * CELL_SIZE);
-    height.setValue(table.height * CELL_SIZE);
-    xStart.setValue(table.xStart * CELL_SIZE);
-    yStart.setValue(table.yStart * CELL_SIZE);
-  }, [table.width, table.height, table.xStart, table.yStart, positionValid, isEditing]);
+  // Geste de tap
+  const tapGesture = useMemo(() =>
+    Gesture.Tap()
+      .onEnd(() => {
+        'worklet';
+        runOnJS(handlePress)();
+      })
+      .runOnJS(false),
+    [handlePress]);
 
-  const dragPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        const newXStart = Math.round((lastValidXStart.current * CELL_SIZE + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
-        const newYStart = Math.round((lastValidYStart.current * CELL_SIZE + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE;
+  // Geste de long press
+  const longPressGesture = useMemo(() =>
+    Gesture.LongPress()
+      .minDuration(500)
+      .onEnd(() => {
+        'worklet';
+        runOnJS(handleLongPress)();
+      })
+      .runOnJS(false),
+    [handleLongPress]);
 
-        xStart.setValue(newXStart);
-        yStart.setValue(newYStart);
-      },
-      onPanResponderRelease: (_, gesture) => {
-        const newTableXStart = Math.round((xStart as any)._value / CELL_SIZE);
-        const newTableYStart = Math.round((yStart as any)._value / CELL_SIZE);
+  // Gestes de redimensionnement avec snap-to-grid en temps réel
+  const rightResizeGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(isEditing && editionMode)
+      .onStart(() => {
+        'worklet';
+        startWidth.value = currentWidth.value;
+      })
+      .onUpdate((event) => {
+        'worklet';
+        const rawWidth = startWidth.value + event.translationX;
+        // Snap to grid pendant le resize
+        const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
+        width.value = snappedWidth;
+      })
+      .onEnd(() => {
+        'worklet';
+        currentWidth.value = width.value;
+        runOnJS(handleUpdateSize)(width.value, currentHeight.value);
+      })
+      .runOnJS(false),
+    [isEditing, editionMode, handleUpdateSize]);
 
-        onUpdate(table.id, {
-          xStart: newTableXStart,
-          yStart: newTableYStart
-        });
-      }
-    })
-  ).current;
+  const leftResizeGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(isEditing && editionMode)
+      .onStart(() => {
+        'worklet';
+        startWidth.value = currentWidth.value;
+        startX.value = currentX.value;
+      })
+      .onUpdate((event) => {
+        'worklet';
+        const rawWidth = startWidth.value - event.translationX;
+        const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
+        const deltaWidth = snappedWidth - currentWidth.value;
 
-  const rightPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        const newWidth = Math.max(
-          MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidWidth.current * CELL_SIZE + gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
-        );
-        width.setValue(newWidth);
-      },
-      onPanResponderRelease: () => {
-        const newTableWidth = Math.round((width as any)._value / CELL_SIZE);
-        onUpdate(table.id, { width: newTableWidth });
-      }
-    })
-  ).current;
+        width.value = snappedWidth;
+        translateX.value = -deltaWidth;
+      })
+      .onEnd(() => {
+        'worklet';
+        const deltaGrid = (width.value - currentWidth.value) / CELL_SIZE;
+        const newX = currentX.value - deltaGrid * CELL_SIZE;
 
-  const leftPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        const newWidth = Math.max(
-          MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidWidth.current * CELL_SIZE - gesture.dx * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
-        );
-        const newXStart = (lastValidXStart.current - ((newWidth / CELL_SIZE) - lastValidWidth.current)) * CELL_SIZE;
-        width.setValue(newWidth);
-        xStart.setValue(newXStart);
-      },
-      onPanResponderRelease: () => {
-        const newTableWidth = Math.round((width as any)._value / CELL_SIZE);
-        onUpdate(table.id, {
-          width: newTableWidth,
-          xStart: lastValidXStart.current - (newTableWidth - lastValidWidth.current)
-        });
-      }
-    })
-  ).current;
+        currentWidth.value = width.value;
+        currentX.value = newX;
+        translateX.value = 0;
 
-  const bottomPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        const newHeight = Math.max(
-          MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidHeight.current * CELL_SIZE + gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
-        );
-        height.setValue(newHeight);
-      },
-      onPanResponderRelease: () => {
-        const newTableHeight = Math.round((height as any)._value / CELL_SIZE);
-        onUpdate(table.id, { height: newTableHeight });
-      }
-    })
-  ).current;
+        runOnJS(handleUpdateSize)(width.value, currentHeight.value, newX, undefined);
+      })
+      .runOnJS(false),
+    [isEditing, editionMode, handleUpdateSize]);
 
-  const topPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        const newHeight = Math.max(
-          MIN_CELLS * CELL_SIZE,
-          Math.round((lastValidHeight.current * CELL_SIZE - gesture.dy * (1 / currentZoom)) / CELL_SIZE) * CELL_SIZE
-        );
-        const newYStart = (lastValidYStart.current - ((newHeight / CELL_SIZE) - lastValidHeight.current)) * CELL_SIZE;
-        height.setValue(newHeight);
-        yStart.setValue(newYStart);
-      },
-      onPanResponderRelease: () => {
-        const newTableHeight = Math.round((height as any)._value / CELL_SIZE);
-        onUpdate(table.id, {
-          height: newTableHeight,
-          yStart: lastValidYStart.current - (newTableHeight - lastValidHeight.current)
-        });
-      }
-    })
-  ).current;
+  const bottomResizeGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(isEditing && editionMode)
+      .onStart(() => {
+        'worklet';
+        startHeight.value = currentHeight.value;
+      })
+      .onUpdate((event) => {
+        'worklet';
+        const rawHeight = startHeight.value + event.translationY;
+        const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
+        height.value = snappedHeight;
+      })
+      .onEnd(() => {
+        'worklet';
+        currentHeight.value = height.value;
+        runOnJS(handleUpdateSize)(currentWidth.value, height.value);
+      })
+      .runOnJS(false),
+    [isEditing, editionMode, handleUpdateSize]);
 
-  const tablePanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponderCapture: () => false,
-      onPanResponderGrant: () => {
-        onPress(table);
-      },
-      onPanResponderTerminationRequest: () => false,
-    })
-  ).current;
+  const topResizeGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(isEditing && editionMode)
+      .onStart(() => {
+        'worklet';
+        startHeight.value = currentHeight.value;
+        startY.value = currentY.value;
+      })
+      .onUpdate((event) => {
+        'worklet';
+        const rawHeight = startHeight.value - event.translationY;
+        const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
+        const deltaHeight = snappedHeight - currentHeight.value;
+
+        height.value = snappedHeight;
+        translateY.value = -deltaHeight;
+      })
+      .onEnd(() => {
+        'worklet';
+        const deltaGrid = (height.value - currentHeight.value) / CELL_SIZE;
+        const newY = currentY.value - deltaGrid * CELL_SIZE;
+
+        currentHeight.value = height.value;
+        currentY.value = newY;
+        translateY.value = 0;
+
+        runOnJS(handleUpdateSize)(currentWidth.value, height.value, undefined, newY);
+      })
+      .runOnJS(false),
+    [isEditing, editionMode, handleUpdateSize]);
+
+  // Geste de drag pour déplacer la table avec snap-to-grid en temps réel
+  const dragGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(isEditing && editionMode)
+      .onStart(() => {
+        'worklet';
+        scale.value = withSpring(1.05);
+        // Sauvegarder la position actuelle comme dernière position valide
+        lastValidX.value = currentX.value;
+        lastValidY.value = currentY.value;
+        // Utiliser la position actuelle comme point de départ
+        startX.value = currentX.value;
+        startY.value = currentY.value;
+        translateX.value = 0;
+        translateY.value = 0;
+      })
+      .onUpdate((event) => {
+        'worklet';
+        // Calculer la nouvelle position avec snap-to-grid en temps réel
+        const rawX = startX.value + event.translationX;
+        const rawY = startY.value + event.translationY;
+
+        // Snap to grid pendant le mouvement
+        const snappedX = Math.round(rawX / CELL_SIZE);
+        const snappedY = Math.round(rawY / CELL_SIZE);
+
+        // Vérifier les limites de la room
+        const constrainedX = Math.max(0, Math.min(snappedX, roomWidth - Math.round(currentWidth.value / CELL_SIZE)));
+        const constrainedY = Math.max(0, Math.min(snappedY, roomHeight - Math.round(currentHeight.value / CELL_SIZE)));
+
+        // Appliquer le mouvement snappé et contraint
+        translateX.value = constrainedX * CELL_SIZE - currentX.value;
+        translateY.value = constrainedY * CELL_SIZE - currentY.value;
+      })
+      .onEnd(() => {
+        'worklet';
+        scale.value = withSpring(1);
+
+        // Calculer la position finale snappée
+        const finalX = currentX.value + translateX.value;
+        const finalY = currentY.value + translateY.value;
+
+        // Appeler la fonction de validation qui vérifiera les collisions
+        runOnJS(handleUpdatePosition)(finalX, finalY);
+      })
+      .runOnJS(false),
+    [isEditing, editionMode, handleUpdatePosition]);
+
+  // Geste composé uniquement pour la table principale (pas les handles)
+  const composedGesture = useMemo(() => {
+    if (isEditing && editionMode) {
+      return dragGesture;
+    } else {
+      return Gesture.Exclusive(longPressGesture, tapGesture);
+    }
+  }, [isEditing, editionMode, dragGesture, longPressGesture, tapGesture]);
+
+  // Style animé pour la table
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      position: 'absolute' as const,
+      left: currentX.value + translateX.value,
+      top: currentY.value + translateY.value,
+      width: width.value,
+      height: height.value,
+      transform: [
+        { scale: scale.value }
+      ],
+      opacity: opacity.value,
+      zIndex: isSelected ? 10000 : 1000,
+    };
+  }, [isSelected]);
+
+  // Reset des animations quand la table change
+  React.useEffect(() => {
+    if (!isEditing) {
+      translateX.value = withSpring(0);
+      translateY.value = withSpring(0);
+      scale.value = withSpring(1);
+    }
+  }, [isEditing, table.xStart, table.yStart]);
+
+  // Validation de position
+  React.useEffect(() => {
+    if (!positionValid && isEditing) {
+      opacity.value = withSpring(0.5);
+    } else {
+      opacity.value = withSpring(1);
+    }
+  }, [positionValid, isEditing]);
+
+  const tableStyle = useMemo(() => ({
+    backgroundColor: !editionMode && status ? getStatusColor(status) : '#D9D9D9',
+    ...(isEditing
+      ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' as const }
+      : (status ? getStatusBorderStyle(status, table) : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const })
+    ),
+  }), [status, isEditing, table]);
 
   return (
-    Platform.OS === 'web' || Platform.OS === 'ios' ? (
-      <Pressable
-        onPress={() => onPress(table)}
-        onLongPress={() => onLongPress(table)}
-        delayLongPress={500}
-        style={{ zIndex: isSelected ? 10000 : 1000 }}
-      >
-        <Animated.View
-          style={[
-            styles.tableContainer,
-            {
-              width,
-              height,
-              left: xStart,
-              top: yStart,
-            },
-          ]}
-        >
-          <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
-          <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
-
-          <View style={styles.innerContainer}>
-            <Animated.View
-              style={[
-                styles.table,
-                {
-                  backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
-                  opacity: 1,
-                  ...(isEditing 
-                    ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' }
-                    : (status ? getStatusBorderStyle(status, table) : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' })
-                  ),
-                },
-              ]}
-            >
-              <Text style={styles.tableText}>{table.name}</Text>
-            </Animated.View>
-          </View>
-
-          <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
-          <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
-
-          {isEditing && editionMode && (
-            <>
-              <Animated.View
-                {...dragPanResponder.panHandlers}
-                style={styles.dragArea}
-              />
-              <Animated.View
-                {...rightPanResponder.panHandlers}
-                style={styles.rightHandle}
-              >
-                <View style={styles.handleDot} />
-              </Animated.View>
-              <Animated.View
-                {...leftPanResponder.panHandlers}
-                style={styles.leftHandle}
-              >
-                <View style={styles.handleDot} />
-              </Animated.View>
-              <Animated.View
-                {...bottomPanResponder.panHandlers}
-                style={styles.bottomHandle}
-              >
-                <View style={styles.handleDot} />
-              </Animated.View>
-              <Animated.View
-                {...topPanResponder.panHandlers}
-                style={styles.topHandle}
-              >
-                <View style={styles.handleDot} />
-              </Animated.View>
-            </>
-          )}
-        </Animated.View>
-      </Pressable>) : (
-      <Animated.View
-        {...tablePanResponder.panHandlers}
-        style={[
-          styles.tableContainer,
-          {
-            width,
-            height,
-            left: xStart,
-            top: yStart,
-            opacity,
-            zIndex: isSelected ? 20000 : 10000,
-            elevation: isSelected ? 20000 : 10000,
-          },
-        ]}
-      >
+    <GestureDetector gesture={composedGesture}>
+      <Animated.View style={animatedStyle}>
         <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
         <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
 
         <View style={styles.innerContainer}>
-          <Animated.View
-            style={[
-              styles.table,
-              {
-                backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
-                opacity: 1,
-                ...(isEditing 
-                  ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' }
-                  : (status ? getStatusBorderStyle(status, table) : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' })
-                ),
-              },
-            ]}
-          >
+          <View style={[styles.table, tableStyle]}>
             <Text style={styles.tableText}>{table.name}</Text>
-          </Animated.View>
+          </View>
         </View>
 
         <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
@@ -319,47 +427,41 @@ export const RoomTable: React.FC<TableViewProps> = ({
 
         {isEditing && editionMode && (
           <>
-            <Animated.View
-              {...dragPanResponder.panHandlers}
-              style={styles.dragArea}
-            />
-            <Animated.View
-              {...rightPanResponder.panHandlers}
-              style={styles.rightHandle}
-            >
-              <View style={styles.handleDot} />
-            </Animated.View>
-            <Animated.View
-              {...leftPanResponder.panHandlers}
-              style={styles.leftHandle}
-            >
-              <View style={styles.handleDot} />
-            </Animated.View>
-            <Animated.View
-              {...bottomPanResponder.panHandlers}
-              style={styles.bottomHandle}
-            >
-              <View style={styles.handleDot} />
-            </Animated.View>
-            <Animated.View
-              {...topPanResponder.panHandlers}
-              style={styles.topHandle}
-            >
-              <View style={styles.handleDot} />
-            </Animated.View>
+            {/* Handle de redimensionnement droit */}
+            <GestureDetector gesture={rightResizeGesture}>
+              <Animated.View style={styles.rightHandle}>
+                <View style={styles.handleDot} />
+              </Animated.View>
+            </GestureDetector>
+
+            {/* Handle de redimensionnement gauche */}
+            <GestureDetector gesture={leftResizeGesture}>
+              <Animated.View style={styles.leftHandle}>
+                <View style={styles.handleDot} />
+              </Animated.View>
+            </GestureDetector>
+
+            {/* Handle de redimensionnement bas */}
+            <GestureDetector gesture={bottomResizeGesture}>
+              <Animated.View style={styles.bottomHandle}>
+                <View style={styles.handleDot} />
+              </Animated.View>
+            </GestureDetector>
+
+            {/* Handle de redimensionnement haut */}
+            <GestureDetector gesture={topResizeGesture}>
+              <Animated.View style={styles.topHandle}>
+                <View style={styles.handleDot} />
+              </Animated.View>
+            </GestureDetector>
           </>
         )}
       </Animated.View>
-    )
+    </GestureDetector>
   );
 };
 
 const styles = StyleSheet.create({
-  tableContainer: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   innerContainer: {
     width: '100%',
     height: '100%',
@@ -385,12 +487,6 @@ const styles = StyleSheet.create({
   tableText: {
     color: '#2A2E33',
     fontWeight: 'bold',
-  },
-  dragArea: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'transparent',
   },
   rightHandle: {
     position: 'absolute',
