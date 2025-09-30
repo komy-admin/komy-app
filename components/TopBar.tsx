@@ -48,7 +48,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
     if (user?.profileImage) {
       return { uri: user.profileImage };
     }
-    return require('~/assets/images/userprofiledefault.jpg');
+    return require('../assets/images/userprofiledefault.jpg');
   };
 
   const handleLogout = async () => {
@@ -95,15 +95,14 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingLeft: 10,
           paddingRight: 20,
           zIndex: showProfileMenu ? 1001 : 1,
         }}
       >
         <View>
           <Image
-            source={require('~/assets/images/icone_fork_it.png')}
-            style={{ width: 80, height: 80, resizeMode: 'contain' }}
+            source={require('../assets/images/logo_komy_png/logo_name_v1.png')}
+            style={{ width: 100, height: 100, resizeMode: 'contain' }}
           />
         </View>
 

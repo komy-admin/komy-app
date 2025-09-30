@@ -1,4 +1,4 @@
-# 📱 Fork'it Application
+# 📱 Komy Application
 
 Application mobile développée avec Expo et React Native.
 

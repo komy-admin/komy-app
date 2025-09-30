@@ -90,7 +90,7 @@ const LogoPulse: React.FC = () => {
   return (
     <Animated.View style={[styles.logoAnimated, { transform: [{ scale: scaleAnim }] }]}>
       <Image
-        source={require('~/assets/images/icone_fork_it.png')}
+        source={require('../assets/images/logo_komy_png/logo_name.png')}
         style={styles.logoImage}
         resizeMode="contain"
       />
@@ -231,8 +231,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logoImage: {
-    width: 140,
-    height: 140,
+    width: 200,
+    height: 200,
     tintColor: undefined,
   },
   progressContainer: {

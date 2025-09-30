@@ -22,7 +22,7 @@ export default function LoginScreen() {
   return (
     <View className="flex-1 items-center justify-center p-4 bg-background">
       <Text className="text-2xl font-bold text-foreground mb-8 text-center">
-        Fork'it
+        Komy
       </Text>
       
       {error ? (

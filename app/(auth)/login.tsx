@@ -1,4 +1,4 @@
-import { View, StyleSheet, Platform, Text as RNText, Modal } from 'react-native';
+import { View, StyleSheet, Platform, Modal, Image } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
@@ -64,9 +64,11 @@ export default function LoginScreen() {
         enableResetScrollToCoords={false}
       >
         <View style={styles.contentContainer}>
-          <RNText style={styles.title}>
-            Fork'it
-          </RNText>
+          <Image
+            source={require('../../assets/images/logo_komy_png/logo_name.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
           <View style={styles.qrButtonContainer}>
             <Button
@@ -146,10 +148,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingVertical: 20,
     maxWidth: 480,
     alignSelf: 'center',
     width: '100%',
+  },
+  logo: {
+    width: 150,
+    height: 150,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,
