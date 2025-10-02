@@ -8,6 +8,7 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useUsers } from './useUsers';
 import { useMenus } from './useMenus';
+import { useTags } from './useTags';
 
 /**
  * Hook principal simplifié qui combine tous les hooks spécialisés
@@ -28,6 +29,7 @@ export const useRestaurant = () => {
   const menuHook = useMenu();
   const menusHook = useMenus();
   const usersHook = useUsers();
+  const tagsHook = useTags();
 
   return {
     // === DONNÉES ===
@@ -50,7 +52,10 @@ export const useRestaurant = () => {
     menus: menusHook.allMenus,
     items: menuHook.items,
     itemTypes: menuHook.itemTypes,
-    
+
+    // Tags
+    tags: tagsHook.tags,
+
     // Utilisateurs
     users: usersHook.users,
     
@@ -90,7 +95,16 @@ export const useRestaurant = () => {
     updateMenuItem: menuHook.updateMenuItem,
     deleteMenuItem: menuHook.deleteMenuItem,
     loadItemTypes: menuHook.loadItemTypes,
-    
+
+    // === ACTIONS CRUD TAGS ===
+    createTag: tagsHook.createTag,
+    updateTag: tagsHook.updateTag,
+    deleteTag: tagsHook.deleteTag,
+    getTagOptions: tagsHook.getOptions,
+    createTagOption: tagsHook.createOption,
+    updateTagOption: tagsHook.updateOption,
+    deleteTagOption: tagsHook.deleteOption,
+
     // === ACTIONS CRUD UTILISATEURS ===
     loadUsers: usersHook.loadUsers,
     createUser: usersHook.createUser,
@@ -118,3 +132,4 @@ export { useMenu } from './useMenu';
 export { useUsers } from './useUsers';
 export { useOrderLines } from './useOrderLines';
 export { useMenus } from './useMenus';
+export { useTags } from './useTags';

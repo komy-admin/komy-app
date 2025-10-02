@@ -1,211 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, TextInput, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { Plus, PencilLine, Trash2, Check, X, Utensils, Save, ChefHat, Wine, Users, Eye, EyeOff } from 'lucide-react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { Plus, Trash2, Check, X, Utensils, Tags as TagsIcon, ChefHat, Wine, Settings2, Users, Eye } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
+import { useTags } from '~/hooks/useTags';
+import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
 import { ItemType } from '~/types/item-type.types';
-import { useAccountConfig } from '~/hooks/useAccountConfig';
+import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 
-interface ItemTypeCardProps {
-  itemType: ItemType;
-  isEditing: boolean;
-  onEdit: () => void;
-  onSave: (data: Partial<ItemType>) => void;
-  onCancel: () => void;
-  onDelete: () => void;
-}
+type TabType = 'item-types' | 'tags' | 'views';
 
-// Couleur par défaut pour tous les itemTypes
-const getItemTypeColor = () => '#6366F1';
-
-// Génère les initiales du nom (1 ou 2 lettres)
-const getItemTypeInitials = (itemTypeName: string) => {
-  const words = itemTypeName.trim().split(' ');
-  if (words.length === 1) {
-    return words[0].substring(0, 2).toUpperCase();
-  }
-  return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
-};
-
-// Composant réutilisable pour les boutons de sélection de département
-const DepartmentButtons: React.FC<{
-  selectedDepartment: 'kitchen' | 'bar';
-  onDepartmentChange: (department: 'kitchen' | 'bar') => void;
-  styles: any;
-}> = ({ selectedDepartment, onDepartmentChange, styles }) => (
-  <View style={styles.editDepartmentRow}>
-    <TouchableOpacity
-      style={[
-        styles.fullWidthDepartmentButton,
-        styles.kitchenButton,
-        selectedDepartment === 'kitchen' && styles.kitchenButtonActive
-      ]}
-      onPress={() => onDepartmentChange('kitchen')}
-    >
-      <ChefHat size={16} color={selectedDepartment === 'kitchen' ? '#FFFFFF' : '#10B981'} strokeWidth={2} />
-      <Text style={[
-        styles.fullWidthDepartmentText,
-        selectedDepartment === 'kitchen' && styles.fullWidthDepartmentTextActive
-      ]}>
-        Cuisine
-      </Text>
-    </TouchableOpacity>
-    
-    <TouchableOpacity
-      style={[
-        styles.fullWidthDepartmentButton,
-        styles.barButton,
-        selectedDepartment === 'bar' && styles.barButtonActive
-      ]}
-      onPress={() => onDepartmentChange('bar')}
-    >
-      <Wine size={16} color={selectedDepartment === 'bar' ? '#FFFFFF' : '#A855F7'} strokeWidth={2} />
-      <Text style={[
-        styles.fullWidthDepartmentText,
-        selectedDepartment === 'bar' && styles.fullWidthDepartmentTextActive
-      ]}>
-        Bar
-      </Text>
-    </TouchableOpacity>
-  </View>
-);
-
-const ItemTypeCard: React.FC<ItemTypeCardProps> = ({
-  itemType,
-  isEditing,
-  onEdit,
-  onSave,
-  onCancel,
-  onDelete
-}) => {
-  const [editedName, setEditedName] = useState(itemType.name);
-  const [selectedDepartment, setSelectedDepartment] = useState<'kitchen' | 'bar'>(
-    itemType.type === 'bar' ? 'bar' : 'kitchen'
-  );
-
-  React.useEffect(() => {
-    setEditedName(itemType.name);
-    setSelectedDepartment(itemType.type === 'bar' ? 'bar' : 'kitchen');
-  }, [itemType.name, itemType.type, isEditing]);
-
-  const handleSave = () => {
-    if (editedName.trim() && (editedName.trim() !== itemType.name || selectedDepartment !== itemType.type)) {
-      onSave({ name: editedName.trim(), type: selectedDepartment });
-    } else {
-      onCancel(); // Si pas de changement, juste annuler
-    }
+const getTagFieldTypeLabel = (fieldType: TagFieldType): string => {
+  const labels: Record<TagFieldType, string> = {
+    'select': 'Sélection',
+    'multi-select': 'Multi-sélection',
+    'number': 'Nombre',
+    'text': 'Texte',
+    'toggle': 'Oui/Non'
   };
-
-  const hasChanges = editedName.trim() !== itemType.name || selectedDepartment !== itemType.type;
-
-  const handleCancel = () => {
-    setEditedName(itemType.name);
-    onCancel();
-  };
-
-  return (
-    <View style={styles.itemTypeCard}>
-      <View style={styles.itemTypeCardHeader}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.iconText}>
-            {getItemTypeInitials(itemType.name)}
-          </Text>
-        </View>
-        
-        {isEditing ? (
-          <>
-            <View style={styles.editContentContainer}>
-              <View style={styles.editInputContainer}>
-                <TextInput
-                  style={styles.editInput}
-                  value={editedName}
-                  onChangeText={setEditedName}
-                  placeholder="Nom du type"
-                  autoFocus
-                />
-              </View>
-            </View>
-            
-            <View style={styles.cardActions}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.validateButton, (!editedName.trim() || !hasChanges) && styles.disabledButton]}
-                onPress={handleSave}
-                disabled={!editedName.trim() || !hasChanges}
-              >
-                <Check size={16} color="#FFFFFF" strokeWidth={2} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.cancelButton]}
-                onPress={handleCancel}
-              >
-                <X size={16} color="#EF4444" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <>
-            <View style={styles.itemTypeInfo}>
-              <Text style={styles.itemTypeName}>{itemType.name}</Text>
-              
-              {/* Affichage du département sélectionné */}
-              <View style={styles.departmentDisplay}>
-                <View style={[
-                  styles.departmentBadge, 
-                  selectedDepartment === 'kitchen' ? styles.kitchenBadge : styles.barBadge
-                ]}>
-                  {selectedDepartment === 'kitchen' ? (
-                    <ChefHat size={12} color="#FFFFFF" strokeWidth={2} />
-                  ) : (
-                    <Wine size={12} color="#FFFFFF" strokeWidth={2} />
-                  )}
-                  <Text style={styles.departmentBadgeText}>
-                    {selectedDepartment === 'kitchen' ? 'Cuisine' : 'Bar'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.cardActions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={onEdit}
-              >
-                <PencilLine size={16} color="#6366F1" strokeWidth={1.5} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.actionButton, styles.deleteButton]}
-                onPress={onDelete}
-              >
-                <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </View>
-      
-      {/* Boutons département en mode édition - en dessous de tout le contenu de la carte */}
-      {isEditing && (
-        <DepartmentButtons
-          selectedDepartment={selectedDepartment}
-          onDepartmentChange={setSelectedDepartment}
-          styles={styles}
-        />
-      )}
-    </View>
-  );
+  return labels[fieldType] || fieldType;
 };
 
 export default function ConfigurationRestoPage() {
-  const {
-    itemTypes,
-    loading,
-    error,
-    createItemType,
-    updateItemType,
-    deleteItemType
-  } = useItemTypes();
+  const [activeTab, setActiveTab] = useState<TabType>('item-types');
+  const [sidePanelVisible, setSidePanelVisible] = useState(false);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
 
+  const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
+  const { tags, createTag, updateTag, deleteTag, bulkCreateOptions, bulkDeleteOptions } = useTags();
   const {
     teamEnabled,
     kitchenEnabled,
@@ -213,481 +36,165 @@ export default function ConfigurationRestoPage() {
     updateConfig,
     isLoading: configLoading
   } = useAccountConfig();
-
   const { showToast } = useToast();
-  const isMountedRef = React.useRef(true);
 
-  const [isCreating, setIsCreating] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemDepartment, setNewItemDepartment] = useState<'kitchen' | 'bar'>('kitchen');
-  const [localItemTypes, setLocalItemTypes] = useState<ItemType[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [localEditingItemId, setLocalEditingItemId] = useState<string | null>(null);
-
-  // États locaux pour les toggles de vues
-  const [localTeamEnabled, setLocalTeamEnabled] = useState(teamEnabled);
-  const [localKitchenEnabled, setLocalKitchenEnabled] = useState(kitchenEnabled);
-  const [localBarEnabled, setLocalBarEnabled] = useState(barEnabled);
-  const [viewsHasChanges, setViewsHasChanges] = useState(false);
-  
-  // Synchroniser l'état local avec les itemTypes du store
-  React.useEffect(() => {
-    if (itemTypes && itemTypes.length > 0 && !hasChanges) {
-      setLocalItemTypes([...itemTypes]);
-    }
-  }, [itemTypes, hasChanges]);
-
-  // Synchroniser les états locaux des vues avec le store
-  useEffect(() => {
-    setLocalTeamEnabled(teamEnabled);
-    setLocalKitchenEnabled(kitchenEnabled);
-    setLocalBarEnabled(barEnabled);
-  }, [teamEnabled, kitchenEnabled, barEnabled]);
-
-  // Vérifier si les vues ont changé
-  useEffect(() => {
-    const hasViewChanges =
-      localTeamEnabled !== teamEnabled ||
-      localKitchenEnabled !== kitchenEnabled ||
-      localBarEnabled !== barEnabled;
-    setViewsHasChanges(hasViewChanges);
-  }, [localTeamEnabled, localKitchenEnabled, localBarEnabled, teamEnabled, kitchenEnabled, barEnabled]);
-
-  // Cleanup pour éviter les memory leaks
-  React.useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const handleCreateItemType = () => {
-    if (!newItemName.trim()) return;
-    
-    // Vérification des doublons
-    const isDuplicate = localItemTypes.some(
-      item => item.name.toLowerCase() === newItemName.trim().toLowerCase()
-    );
-    
-    if (isDuplicate) {
-      showToast('Ce nom de type existe déjà', 'error');
-      return;
-    }
-    
-    const newItemType: ItemType = {
-      id: `temp-${Date.now()}`, // ID temporaire
-      name: newItemName.trim(),
-      type: newItemDepartment
-    };
-    
-    console.log('🆕 Création local itemType:', newItemType);
-    setLocalItemTypes(prev => {
-      const newList = [...prev, newItemType];
-      console.log('📝 Nouvelle liste locale:', newList);
-      return newList;
-    });
-    setNewItemName('');
-    setNewItemDepartment('kitchen');
-    setIsCreating(false);
-    setHasChanges(true);
-    console.log('✅ HasChanges défini à true');
+  const openSidePanelForTag = (tag?: Tag) => {
+    setEditingTag(tag || null);
+    setEditingItemType(null);
+    setSidePanelVisible(true);
   };
 
-  const handleUpdateItemType = (id: string, data: Partial<ItemType>) => {
-    // Vérifier si il y a vraiment un changement
-    const currentItem = localItemTypes.find(item => item.id === id);
-    if (!currentItem || !data.name || (currentItem.name === data.name.trim() && currentItem.type === data.type)) {
-      setLocalEditingItemId(null);
-      return;
-    }
-    
-    // Appliquer le changement
-    setLocalItemTypes(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, ...data } : item
-      )
-    );
-    setLocalEditingItemId(null);
-    setHasChanges(true);
+  const openSidePanelForItemType = (itemType?: ItemType) => {
+    setEditingItemType(itemType || null);
+    setEditingTag(null);
+    setSidePanelVisible(true);
   };
 
-  const handleDeleteItemType = (itemType: ItemType) => {
-    setLocalItemTypes(prev => prev.filter(item => item.id !== itemType.id));
-    setHasChanges(true);
+  const closeSidePanel = () => {
+    setSidePanelVisible(false);
+    setEditingTag(null);
+    setEditingItemType(null);
   };
 
-  const handleSaveAllChanges = async () => {
-    console.log('🔄 Tentative de sauvegarde, hasChanges:', hasChanges, 'isMounted:', isMountedRef.current);
-    if (!hasChanges || !isMountedRef.current) return;
-    
+  const handleSaveTag = async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
     try {
-      // Créer les nouveaux items (ceux avec ID temporaire)
-      const newItems = localItemTypes.filter(item => item.id.startsWith('temp-'));
-      for (const item of newItems) {
-        if (!isMountedRef.current) return;
-        await createItemType({ name: item.name, type: item.type });
-      }
-      
-      // Mettre à jour les items existants qui ont été modifiés
-      const existingItems = localItemTypes.filter(item => !item.id.startsWith('temp-'));
-      for (const item of existingItems) {
-        if (!isMountedRef.current) return;
-        const originalItem = itemTypes.find(original => original.id === item.id);
-        if (originalItem && (originalItem.name !== item.name || originalItem.type !== item.type)) {
-          await updateItemType(item.id, { name: item.name, type: item.type });
+      if (editingTag) {
+        await updateTag(editingTag.id, tagData);
+
+        if (options && options.length > 0) {
+          const newOptions = options.filter(opt => !opt.id);
+          if (newOptions.length > 0) {
+            await bulkCreateOptions(editingTag.id, newOptions);
+          }
+        }
+      } else {
+        const createdTag = await createTag(tagData);
+
+        if (options && options.length > 0 && createdTag.id) {
+          await bulkCreateOptions(createdTag.id, options);
         }
       }
-      
-      // Supprimer les items qui ne sont plus dans la liste locale
-      const deletedItems = itemTypes.filter(original =>
-        !localItemTypes.some(local => local.id === original.id)
-      );
-      for (const item of deletedItems) {
-        if (!isMountedRef.current) return;
-        await deleteItemType(item.id);
-      }
-      
-      if (!isMountedRef.current) return;
-      setHasChanges(false);
-      showToast('Types d\'article sauvegardés avec succès', 'success');
+      showToast(editingTag ? 'Tag modifié' : 'Tag créé', 'success');
+      closeSidePanel();
     } catch (error) {
-      if (!isMountedRef.current) return;
-      console.error('Erreur lors de la sauvegarde:', error);
-      showToast('Erreur lors de la sauvegarde des types', 'error');
+      console.error('Error saving tag:', error);
+      showToast('Erreur lors de la sauvegarde', 'error');
     }
   };
 
-  const handleSaveViewsChanges = async () => {
-    if (!viewsHasChanges || !isMountedRef.current) return;
-
+  const handleSaveItemType = async (itemTypeData: Partial<ItemType>) => {
     try {
-      await updateConfig({
-        teamEnabled: localTeamEnabled,
-        kitchenEnabled: localKitchenEnabled,
-        barEnabled: localBarEnabled
-      });
-
-      if (!isMountedRef.current) return;
-      setViewsHasChanges(false);
-      showToast('Configuration des vues sauvegardée avec succès', 'success');
+      if (editingItemType) {
+        await updateItemType(editingItemType.id, itemTypeData);
+      } else {
+        await createItemType(itemTypeData);
+      }
+      showToast(editingItemType ? 'Type d\'article modifié' : 'Type d\'article créé', 'success');
+      closeSidePanel();
     } catch (error) {
-      if (!isMountedRef.current) return;
-      console.error('Erreur lors de la sauvegarde de la configuration:', error);
-      showToast('Erreur lors de la sauvegarde de la configuration', 'error');
+      console.error('Error saving item type:', error);
+      showToast('Erreur lors de la sauvegarde', 'error');
     }
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.blurOverlay}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Carte de configuration des vues */}
-          <View style={styles.row}>
-            <View style={styles.activeCard}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-                  <Eye size={20} color="#6366F1" strokeWidth={1.5} />
-                </View>
-                <View style={styles.headerContent}>
-                  <Text style={styles.cardTitle}>Visibilité des vues</Text>
-                  <Text style={styles.cardSubtitle}>
-                    Activer ou désactiver les sections de l'application
-                  </Text>
-                </View>
-              </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <Settings2 size={24} color="#1E293B" strokeWidth={2} />
+        <Text style={styles.headerTitle}>Paramètres du Restaurant</Text>
+      </View>
 
-              <View style={styles.viewsConfigContainer}>
-                {/* Vue Équipe */}
-                <View style={styles.viewConfigRow}>
-                  <View style={styles.viewConfigLeft}>
-                    <View style={[styles.viewIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                      <Users size={18} color="#3B82F6" strokeWidth={1.5} />
-                    </View>
-                    <View style={styles.viewTextContainer}>
-                      <Text style={styles.viewTitle}>Équipe</Text>
-                      <Text style={styles.viewDescription}>Gestion des utilisateurs et profils</Text>
-                    </View>
-                  </View>
-                  <Switch
-                    value={localTeamEnabled}
-                    onValueChange={setLocalTeamEnabled}
-                    trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                    thumbColor={localTeamEnabled ? '#FFFFFF' : '#F3F4F6'}
-                    disabled={configLoading}
-                  />
-                </View>
+      <View style={styles.content}>
+        {/* Sidebar Navigation */}
+        <View style={styles.sidebar}>
+          <TouchableOpacity
+            style={[styles.sidebarTab, activeTab === 'item-types' && styles.sidebarTabActive]}
+            onPress={() => setActiveTab('item-types')}
+          >
+            <Utensils size={20} color={activeTab === 'item-types' ? '#6366F1' : '#64748B'} strokeWidth={2} />
+            <Text style={[styles.sidebarTabText, activeTab === 'item-types' && styles.sidebarTabTextActive]}>
+              Types d'articles
+            </Text>
+          </TouchableOpacity>
 
-                {/* Vue Cuisine */}
-                <View style={styles.viewConfigRow}>
-                  <View style={styles.viewConfigLeft}>
-                    <View style={[styles.viewIconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                      <ChefHat size={18} color="#10B981" strokeWidth={1.5} />
-                    </View>
-                    <View style={styles.viewTextContainer}>
-                      <Text style={styles.viewTitle}>Cuisine</Text>
-                      <Text style={styles.viewDescription}>Préparation des plats</Text>
-                    </View>
-                  </View>
-                  <Switch
-                    value={localKitchenEnabled}
-                    onValueChange={setLocalKitchenEnabled}
-                    trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                    thumbColor={localKitchenEnabled ? '#FFFFFF' : '#F3F4F6'}
-                    disabled={configLoading}
-                  />
-                </View>
+          <TouchableOpacity
+            style={[styles.sidebarTab, activeTab === 'tags' && styles.sidebarTabActive]}
+            onPress={() => setActiveTab('tags')}
+          >
+            <TagsIcon size={20} color={activeTab === 'tags' ? '#A855F7' : '#64748B'} strokeWidth={2} />
+            <Text style={[styles.sidebarTabText, activeTab === 'tags' && styles.sidebarTabTextActive]}>
+              Tags personnalisés
+            </Text>
+          </TouchableOpacity>
 
-                {/* Vue Bar */}
-                <View style={styles.viewConfigRow}>
-                  <View style={styles.viewConfigLeft}>
-                    <View style={[styles.viewIconContainer, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
-                      <Wine size={18} color="#A855F7" strokeWidth={1.5} />
-                    </View>
-                    <View style={styles.viewTextContainer}>
-                      <Text style={styles.viewTitle}>Bar</Text>
-                      <Text style={styles.viewDescription}>Préparation des boissons</Text>
-                    </View>
-                  </View>
-                  <Switch
-                    value={localBarEnabled}
-                    onValueChange={setLocalBarEnabled}
-                    trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                    thumbColor={localBarEnabled ? '#FFFFFF' : '#F3F4F6'}
-                    disabled={configLoading}
-                  />
-                </View>
-              </View>
-            </View>
-          </View>
+          <TouchableOpacity
+            style={[styles.sidebarTab, activeTab === 'views' && styles.sidebarTabActive]}
+            onPress={() => setActiveTab('views')}
+          >
+            <Eye size={20} color={activeTab === 'views' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
+            <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
+              Visibilité des vues
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-          <View style={styles.row}>
-            <View style={styles.activeCard}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-                  <Utensils size={20} color="#6366F1" strokeWidth={1.5} />
-                </View>
-                <View style={styles.headerContent}>
-                  <Text style={styles.cardTitle}>Types d'articles</Text>
-                  <Text style={styles.cardSubtitle}>
-                    Gérer les catégories de votre menu
-                  </Text>
-                </View>
-                
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => setIsCreating(true)}
-                  disabled={isCreating}
-                >
-                  <Plus size={16} color="#FFFFFF" strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {activeTab === 'item-types' && (
+            <ItemTypesTab
+              itemTypes={itemTypes}
+              onCreateItemType={() => openSidePanelForItemType()}
+              onEditItemType={(itemType) => openSidePanelForItemType(itemType)}
+              onDeleteItemType={deleteItemType}
+            />
+          )}
+          {activeTab === 'tags' && (
+            <TagsTab
+              tags={tags}
+              onCreateTag={() => openSidePanelForTag()}
+              onEditTag={(tag) => openSidePanelForTag(tag)}
+              onDeleteTag={deleteTag}
+            />
+          )}
+          {activeTab === 'views' && (
+            <ViewsTab
+              teamEnabled={teamEnabled}
+              kitchenEnabled={kitchenEnabled}
+              barEnabled={barEnabled}
+              updateConfig={updateConfig}
+              configLoading={configLoading}
+            />
+          )}
+        </View>
 
+        {/* Side Panel Overlay */}
+        {sidePanelVisible && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            {/* Overlay */}
+            <TouchableOpacity
+              style={styles.overlay}
+              activeOpacity={1}
+              onPress={closeSidePanel}
+            />
 
-              {/* Liste des types d'articles */}
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Chargement...</Text>
-                </View>
-              ) : error ? (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
+            {/* Panel */}
+            <View style={styles.sidePanel}>
+              {activeTab === 'tags' ? (
+                <TagFormPanel
+                  tag={editingTag}
+                  onSave={handleSaveTag}
+                  onCancel={closeSidePanel}
+                  onBulkDeleteOptions={bulkDeleteOptions}
+                />
               ) : (
-                <View style={styles.itemTypesGrid}>
-                  {localItemTypes.length === 0 && !isCreating ? (
-                    <View style={styles.emptyContainer}>
-                      <Text style={styles.emptyText}>
-                        Aucun type d'article configuré
-                      </Text>
-                      <Text style={styles.emptySubtext}>
-                        Ajoutez votre premier type pour commencer
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      {/* Créer les rangées de 2 éléments pour les items existants */}
-                      {Array.from({ length: Math.ceil(localItemTypes.length / 2) }, (_, rowIndex) => {
-                        const startIndex = rowIndex * 2;
-                        const rowItems = localItemTypes.slice(startIndex, startIndex + 2);
-                        const isLastRow = startIndex + 2 >= localItemTypes.length;
-                        const hasOddNumberInLastRow = isLastRow && rowItems.length === 1;
-                        
-                        return (
-                          <View key={rowIndex} style={styles.itemTypesRow}>
-                            {rowItems.map((itemType) => (
-                              <View key={itemType.id} style={styles.itemTypeColumn}>
-                                <ItemTypeCard
-                                  itemType={itemType}
-                                  isEditing={localEditingItemId === itemType.id}
-                                  onEdit={() => setLocalEditingItemId(itemType.id)}
-                                  onSave={(data) => handleUpdateItemType(itemType.id, data)}
-                                  onCancel={() => setLocalEditingItemId(null)}
-                                  onDelete={() => handleDeleteItemType(itemType)}
-                                />
-                              </View>
-                            ))}
-                            
-                            {/* Si création et dernière rangée avec nombre impair, ajouter le formulaire */}
-                            {isCreating && hasOddNumberInLastRow ? (
-                              <View style={styles.itemTypeColumn}>
-                                <View style={styles.itemTypeCard}>
-                                  <View style={styles.itemTypeCardHeader}>
-                                    <View style={styles.iconContainer}>
-                                      <Text style={styles.iconText}>
-                                        {getItemTypeInitials(newItemName || 'Nouveau')}
-                                      </Text>
-                                    </View>
-                                    
-                                    <View style={styles.editContentContainer}>
-                                      <View style={styles.editInputContainer}>
-                                        <TextInput
-                                          style={styles.editInput}
-                                          value={newItemName}
-                                          onChangeText={setNewItemName}
-                                          placeholder="Nom du nouveau type..."
-                                          autoFocus
-                                        />
-                                      </View>
-                                    </View>
-                                    
-                                    <View style={styles.cardActions}>
-                                      <TouchableOpacity
-                                        style={[styles.actionButton, styles.validateButton, !newItemName.trim() && styles.disabledButton]}
-                                        onPress={handleCreateItemType}
-                                        disabled={!newItemName.trim()}
-                                      >
-                                        <Check size={16} color="#FFFFFF" strokeWidth={2} />
-                                      </TouchableOpacity>
-                                      <TouchableOpacity
-                                        style={[styles.actionButton, styles.cancelButton]}
-                                        onPress={() => {
-                                          setIsCreating(false);
-                                          setNewItemName('');
-                                          setNewItemDepartment('kitchen');
-                                        }}
-                                      >
-                                        <X size={16} color="#EF4444" strokeWidth={2} />
-                                      </TouchableOpacity>
-                                    </View>
-                                  </View>
-                                  
-                                  {/* Boutons département en pleine largeur sous les boutons de base */}
-                                  <DepartmentButtons
-                                    selectedDepartment={newItemDepartment}
-                                    onDepartmentChange={setNewItemDepartment}
-                                    styles={styles}
-                                  />
-                                </View>
-                              </View>
-                            ) : (
-                              /* Colonne vide si pas de création ou si nombre pair - mais pas de flex pour éviter débordement */
-                              rowItems.length === 1 && !isCreating && (
-                                <View style={styles.itemTypeEmptyColumn} />
-                              )
-                            )}
-                          </View>
-                        );
-                      })}
-                      
-                      {/* Formulaire de création sur nouvelle rangée (si nombre pair d'items ou aucun item) */}
-                      {isCreating && localItemTypes.length % 2 === 0 && (
-                        <View style={styles.itemTypesRow}>
-                          <View style={styles.itemTypeColumn}>
-                            <View style={styles.itemTypeCard}>
-                              <View style={styles.itemTypeCardHeader}>
-                                <View style={styles.iconContainer}>
-                                  <Text style={styles.iconText}>
-                                    {getItemTypeInitials(newItemName || 'Nouveau')}
-                                  </Text>
-                                </View>
-                                
-                                <View style={styles.editContentContainer}>
-                                  <View style={styles.editInputContainer}>
-                                    <TextInput
-                                      style={styles.editInput}
-                                      value={newItemName}
-                                      onChangeText={setNewItemName}
-                                      placeholder="Nom du nouveau type..."
-                                      autoFocus
-                                    />
-                                  </View>
-                                </View>
-                                
-                                <View style={styles.cardActions}>
-                                  <TouchableOpacity
-                                    style={[styles.actionButton, styles.validateButton, !newItemName.trim() && styles.disabledButton]}
-                                    onPress={handleCreateItemType}
-                                    disabled={!newItemName.trim()}
-                                  >
-                                    <Check size={16} color="#FFFFFF" strokeWidth={2} />
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                    style={[styles.actionButton, styles.cancelButton]}
-                                    onPress={() => {
-                                      setIsCreating(false);
-                                      setNewItemName('');
-                                    }}
-                                  >
-                                    <X size={16} color="#EF4444" strokeWidth={2} />
-                                  </TouchableOpacity>
-                                </View>
-                              </View>
-                              
-                              {/* Boutons département en pleine largeur sous les boutons de base */}
-                              <DepartmentButtons
-                                selectedDepartment={newItemDepartment}
-                                onDepartmentChange={setNewItemDepartment}
-                                styles={styles}
-                              />
-                            </View>
-                          </View>
-                          <View style={styles.itemTypeEmptyColumn} />
-                        </View>
-                      )}
-                    </>
-                  )}
-                </View>
+                <ItemTypeFormPanel
+                  itemType={editingItemType}
+                  onSave={handleSaveItemType}
+                  onCancel={closeSidePanel}
+                />
               )}
             </View>
-          </View>
-        </ScrollView>
-        
-        {viewsHasChanges && (
-          <View style={styles.stickyButtonContainer}>
-            <TouchableOpacity
-              style={styles.globalSaveButton}
-              onPress={() => {
-                console.log('🔘 Bouton de sauvegarde des vues cliqué');
-                handleSaveViewsChanges();
-              }}
-              disabled={configLoading}
-            >
-              <Save size={18} color="#FFFFFF" strokeWidth={2} />
-              <Text style={styles.globalSaveButtonText}>
-                Enregistrer la configuration des vues
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {hasChanges && !viewsHasChanges && (
-          <View style={styles.stickyButtonContainer}>
-            <TouchableOpacity
-              style={styles.globalSaveButton}
-              onPress={() => {
-                console.log('🔘 Bouton d\'enregistrement des types cliqué');
-                handleSaveAllChanges();
-              }}
-              disabled={loading}
-            >
-              <Save size={18} color="#FFFFFF" strokeWidth={2} />
-              <Text style={styles.globalSaveButtonText}>
-                Enregistrer les types d'articles
-              </Text>
-            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -695,475 +202,1074 @@ export default function ConfigurationRestoPage() {
   );
 }
 
+// Item Types Tab
+interface ItemTypesTabProps {
+  itemTypes: ItemType[];
+  onCreateItemType: () => void;
+  onEditItemType: (itemType: ItemType) => void;
+  onDeleteItemType: (id: string) => void;
+}
+
+const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType, onEditItemType, onDeleteItemType }) => {
+  return (
+    <View style={styles.tabContent}>
+      <View style={styles.tabHeader}>
+        <View>
+          <Text style={styles.tabTitle}>Types d'articles</Text>
+          <Text style={styles.tabSubtitle}>Gérer les catégories de votre menu</Text>
+        </View>
+        <TouchableOpacity style={[styles.createButton, { backgroundColor: '#6366F1' }]} onPress={onCreateItemType}>
+          <Plus size={20} color="#FFFFFF" strokeWidth={2} />
+          <Text style={styles.createButtonText}>Nouveau type</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.tagsList} showsVerticalScrollIndicator={false}>
+        {itemTypes.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Utensils size={48} color="#CBD5E1" strokeWidth={1.5} />
+            <Text style={styles.emptyStateTitle}>Aucun type d'article configuré</Text>
+            <Text style={styles.emptyStateText}>Créez votre premier type pour commencer</Text>
+            <TouchableOpacity style={[styles.emptyStateButton, { borderColor: '#6366F1' }]} onPress={onCreateItemType}>
+              <Plus size={20} color="#6366F1" strokeWidth={2} />
+              <Text style={[styles.emptyStateButtonText, { color: '#6366F1' }]}>Créer un type</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          itemTypes.map((itemType) => (
+            <ItemTypeListItem
+              key={itemType.id}
+              itemType={itemType}
+              onEdit={() => onEditItemType(itemType)}
+              onDelete={() => onDeleteItemType(itemType.id)}
+            />
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+};
+
+// Tags Tab
+interface TagsTabProps {
+  tags: Tag[];
+  onCreateTag: () => void;
+  onEditTag: (tag: Tag) => void;
+  onDeleteTag: (id: string) => void;
+}
+
+const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDeleteTag }) => {
+  return (
+    <View style={styles.tabContent}>
+      <View style={styles.tabHeader}>
+        <View>
+          <Text style={styles.tabTitle}>Tags personnalisés</Text>
+          <Text style={styles.tabSubtitle}>Créer des modificateurs pour vos articles</Text>
+        </View>
+        <TouchableOpacity style={styles.createButton} onPress={onCreateTag}>
+          <Plus size={20} color="#FFFFFF" strokeWidth={2} />
+          <Text style={styles.createButtonText}>Nouveau tag</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.tagsList} showsVerticalScrollIndicator={false}>
+        {tags.length === 0 ? (
+          <View style={styles.emptyState}>
+            <TagsIcon size={48} color="#CBD5E1" strokeWidth={1.5} />
+            <Text style={styles.emptyStateTitle}>Aucun tag configuré</Text>
+            <Text style={styles.emptyStateText}>Créez votre premier tag pour commencer</Text>
+            <TouchableOpacity style={styles.emptyStateButton} onPress={onCreateTag}>
+              <Plus size={20} color="#A855F7" strokeWidth={2} />
+              <Text style={styles.emptyStateButtonText}>Créer un tag</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          tags.map((tag) => (
+            <TagListItem
+              key={tag.id}
+              tag={tag}
+              onEdit={() => onEditTag(tag)}
+              onDelete={() => onDeleteTag(tag.id)}
+            />
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+};
+
+// Views Tab
+interface ViewsTabProps {
+  teamEnabled: boolean;
+  kitchenEnabled: boolean;
+  barEnabled: boolean;
+  updateConfig: (config: { teamEnabled?: boolean; kitchenEnabled?: boolean; barEnabled?: boolean }) => Promise<any>;
+  configLoading: boolean;
+}
+
+const ViewsTab: React.FC<ViewsTabProps> = ({ teamEnabled, kitchenEnabled, barEnabled, updateConfig, configLoading }) => {
+  const { showToast } = useToast();
+  const [localTeamEnabled, setLocalTeamEnabled] = useState(teamEnabled);
+  const [localKitchenEnabled, setLocalKitchenEnabled] = useState(kitchenEnabled);
+  const [localBarEnabled, setLocalBarEnabled] = useState(barEnabled);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setLocalTeamEnabled(teamEnabled);
+    setLocalKitchenEnabled(kitchenEnabled);
+    setLocalBarEnabled(barEnabled);
+  }, [teamEnabled, kitchenEnabled, barEnabled]);
+
+  useEffect(() => {
+    const changed =
+      localTeamEnabled !== teamEnabled ||
+      localKitchenEnabled !== kitchenEnabled ||
+      localBarEnabled !== barEnabled;
+    setHasChanges(changed);
+  }, [localTeamEnabled, localKitchenEnabled, localBarEnabled, teamEnabled, kitchenEnabled, barEnabled]);
+
+  const handleSaveChanges = async () => {
+    if (!hasChanges) return;
+
+    try {
+      await updateConfig({
+        teamEnabled: localTeamEnabled,
+        kitchenEnabled: localKitchenEnabled,
+        barEnabled: localBarEnabled
+      });
+      setHasChanges(false);
+      showToast('Configuration des vues sauvegardée avec succès', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de la configuration:', error);
+      showToast('Erreur lors de la sauvegarde de la configuration', 'error');
+    }
+  };
+
+  return (
+    <View style={styles.tabContent}>
+      <View style={styles.tabHeader}>
+        <View>
+          <Text style={styles.tabTitle}>Visibilité des vues</Text>
+          <Text style={styles.tabSubtitle}>Activer ou désactiver les sections de l'application</Text>
+        </View>
+        {hasChanges && (
+          <TouchableOpacity
+            style={[styles.createButton, { backgroundColor: '#10B981' }]}
+            onPress={handleSaveChanges}
+            disabled={configLoading}
+          >
+            <Check size={20} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.createButtonText}>Enregistrer</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.viewsContainer}>
+        {/* Vue Équipe */}
+        <View style={styles.viewCard}>
+          <View style={styles.viewCardHeader}>
+            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+              <Users size={24} color="#3B82F6" strokeWidth={2} />
+            </View>
+            <View style={styles.viewCardContent}>
+              <Text style={styles.viewCardTitle}>Équipe</Text>
+              <Text style={styles.viewCardDescription}>Gestion des utilisateurs et profils</Text>
+            </View>
+            <Switch
+              value={localTeamEnabled}
+              onValueChange={setLocalTeamEnabled}
+              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+              thumbColor={localTeamEnabled ? '#FFFFFF' : '#F3F4F6'}
+              disabled={configLoading}
+            />
+          </View>
+        </View>
+
+        {/* Vue Cuisine */}
+        <View style={styles.viewCard}>
+          <View style={styles.viewCardHeader}>
+            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <ChefHat size={24} color="#10B981" strokeWidth={2} />
+            </View>
+            <View style={styles.viewCardContent}>
+              <Text style={styles.viewCardTitle}>Cuisine</Text>
+              <Text style={styles.viewCardDescription}>Préparation des plats</Text>
+            </View>
+            <Switch
+              value={localKitchenEnabled}
+              onValueChange={setLocalKitchenEnabled}
+              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+              thumbColor={localKitchenEnabled ? '#FFFFFF' : '#F3F4F6'}
+              disabled={configLoading}
+            />
+          </View>
+        </View>
+
+        {/* Vue Bar */}
+        <View style={styles.viewCard}>
+          <View style={styles.viewCardHeader}>
+            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
+              <Wine size={24} color="#A855F7" strokeWidth={2} />
+            </View>
+            <View style={styles.viewCardContent}>
+              <Text style={styles.viewCardTitle}>Bar</Text>
+              <Text style={styles.viewCardDescription}>Préparation des boissons</Text>
+            </View>
+            <Switch
+              value={localBarEnabled}
+              onValueChange={setLocalBarEnabled}
+              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+              thumbColor={localBarEnabled ? '#FFFFFF' : '#F3F4F6'}
+              disabled={configLoading}
+            />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Item Type List Item
+interface ItemTypeListItemProps {
+  itemType: ItemType;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const ItemTypeListItem: React.FC<ItemTypeListItemProps> = ({ itemType, onEdit, onDelete }) => {
+  const isBar = itemType.type === 'bar';
+  const iconColor = isBar ? '#A855F7' : '#10B981';
+  const backgroundColor = isBar ? '#FAF5FF' : '#F0FDF4';
+
+  return (
+    <View style={styles.tagItem}>
+      <View style={styles.tagItemHeader}>
+        <View style={[styles.tagItemIcon, { backgroundColor }]}>
+          {isBar ? (
+            <Wine size={20} color={iconColor} strokeWidth={2} />
+          ) : (
+            <ChefHat size={20} color={iconColor} strokeWidth={2} />
+          )}
+        </View>
+        <View style={styles.tagItemContent}>
+          <Text style={styles.tagItemTitle}>{itemType.name}</Text>
+          <View style={styles.tagItemMeta}>
+            <View style={[styles.tagBadge, { backgroundColor, borderColor: iconColor }]}>
+              <Text style={[styles.tagBadgeText, { color: iconColor }]}>
+                {isBar ? 'Bar' : 'Cuisine'}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.tagItemActions}>
+          <TouchableOpacity style={styles.tagActionButton} onPress={onEdit}>
+            <Text style={styles.tagActionButtonText}>Modifier</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
+            <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Tag List Item
+interface TagListItemProps {
+  tag: Tag;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const TagListItem: React.FC<TagListItemProps> = ({ tag, onEdit, onDelete }) => {
+  const optionsCount = tag.options?.length || 0;
+  const optionsPreview = tag.options?.slice(0, 3).map(opt => opt.label).join(', ') || '';
+  const hasMore = optionsCount > 3;
+
+  return (
+    <View style={styles.tagItem}>
+      <View style={styles.tagItemHeader}>
+        <View style={styles.tagItemIcon}>
+          <TagsIcon size={20} color="#A855F7" strokeWidth={2} />
+        </View>
+        <View style={styles.tagItemContent}>
+          <Text style={styles.tagItemTitle}>{tag.label}</Text>
+          <View style={styles.tagItemMeta}>
+            <View style={styles.tagBadge}>
+              <Text style={styles.tagBadgeText}>{getTagFieldTypeLabel(tag.fieldType)}</Text>
+            </View>
+            {tag.isRequired && (
+              <View style={[styles.tagBadge, styles.tagBadgeRequired]}>
+                <Text style={styles.tagBadgeText}>Obligatoire</Text>
+              </View>
+            )}
+            {(tag.fieldType === 'select' || tag.fieldType === 'multi-select') && (
+              <View style={[styles.tagBadge, optionsCount === 0 ? styles.tagBadgeWarning : styles.tagBadgeSuccess]}>
+                <Text style={styles.tagBadgeText}>{optionsCount} option{optionsCount > 1 ? 's' : ''}</Text>
+              </View>
+            )}
+          </View>
+          {optionsPreview && (
+            <Text style={styles.tagItemOptions}>
+              {optionsPreview}{hasMore ? '...' : ''}
+            </Text>
+          )}
+        </View>
+        <View style={styles.tagItemActions}>
+          <TouchableOpacity style={styles.tagActionButton} onPress={onEdit}>
+            <Text style={styles.tagActionButtonText}>Modifier</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
+            <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Item Type Form Panel
+interface ItemTypeFormPanelProps {
+  itemType: ItemType | null;
+  onSave: (itemTypeData: Partial<ItemType>) => void;
+  onCancel: () => void;
+}
+
+const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, onSave, onCancel }) => {
+  const [name, setName] = useState(itemType?.name || '');
+  const [type, setType] = useState<'kitchen' | 'bar'>(itemType?.type === 'bar' ? 'bar' : 'kitchen');
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave({ name: name.trim(), type });
+  };
+
+  return (
+    <View style={styles.panelContent}>
+      <View style={styles.panelHeader}>
+        <Text style={styles.panelTitle}>{itemType ? 'Modifier le type' : 'Nouveau type'}</Text>
+        <TouchableOpacity onPress={onCancel}>
+          <X size={24} color="#64748B" strokeWidth={2} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.panelForm} showsVerticalScrollIndicator={false}>
+        {/* Nom du type */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Nom du type</Text>
+          <TextInput
+            style={styles.formInput}
+            value={name}
+            onChangeText={setName}
+            placeholder="Ex: Entrée, Plat, Boisson..."
+            placeholderTextColor="#94A3B8"
+          />
+        </View>
+
+        {/* Département */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Département</Text>
+          <View style={styles.radioGroup}>
+            <TouchableOpacity
+              style={[
+                styles.radioOption,
+                type === 'kitchen' && styles.radioOptionActive,
+                type === 'kitchen' && { borderColor: '#10B981', backgroundColor: '#F0FDF4' }
+              ]}
+              onPress={() => setType('kitchen')}
+            >
+              <View style={styles.radio}>
+                {type === 'kitchen' && <View style={[styles.radioInner, { backgroundColor: '#10B981' }]} />}
+              </View>
+              <ChefHat size={18} color={type === 'kitchen' ? '#10B981' : '#64748B'} strokeWidth={2} />
+              <Text style={[styles.radioLabel, type === 'kitchen' && styles.radioLabelActive]}>
+                Cuisine
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.radioOption,
+                type === 'bar' && styles.radioOptionActive,
+                type === 'bar' && { borderColor: '#A855F7', backgroundColor: '#FAF5FF' }
+              ]}
+              onPress={() => setType('bar')}
+            >
+              <View style={styles.radio}>
+                {type === 'bar' && <View style={[styles.radioInner, { backgroundColor: '#A855F7' }]} />}
+              </View>
+              <Wine size={18} color={type === 'bar' ? '#A855F7' : '#64748B'} strokeWidth={2} />
+              <Text style={[styles.radioLabel, type === 'bar' && styles.radioLabelActive]}>
+                Bar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+
+      <View style={styles.panelFooter}>
+        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <Text style={styles.cancelButtonText}>Annuler</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.saveButton, !name.trim() && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={!name.trim()}
+        >
+          <Check size={20} color="#FFFFFF" strokeWidth={2} />
+          <Text style={styles.saveButtonText}>Enregistrer</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+// Tag Form Panel
+interface TagFormPanelProps {
+  tag: Tag | null;
+  onSave: (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => void;
+  onCancel: () => void;
+  onBulkDeleteOptions: (tagId: string, optionIds: string[]) => Promise<void>;
+}
+
+const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBulkDeleteOptions }) => {
+  const [label, setLabel] = useState(tag?.label || '');
+  const [fieldType, setFieldType] = useState<TagFieldType>(tag?.fieldType || 'select');
+  const [isRequired, setIsRequired] = useState(tag?.isRequired || false);
+  const [options, setOptions] = useState<Partial<TagOption>[]>(tag?.options || []);
+  const [optionsToDelete, setOptionsToDelete] = useState<string[]>([]); // IDs des options à supprimer
+  const [newOptionLabel, setNewOptionLabel] = useState('');
+  const [newOptionPrice, setNewOptionPrice] = useState('');
+
+  const needsOptions = fieldType === 'select' || fieldType === 'multi-select';
+
+  const handleAddOption = () => {
+    if (!newOptionLabel.trim()) return;
+
+    const generatedValue = newOptionLabel.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    const newOption: Partial<TagOption> = {
+      value: generatedValue,
+      label: newOptionLabel.trim(),
+      priceModifier: newOptionPrice ? parseFloat(newOptionPrice) : null,
+      isDefault: options.length === 0,
+      position: options.length,
+    };
+
+    setOptions([...options, newOption]);
+    setNewOptionLabel('');
+    setNewOptionPrice('');
+  };
+
+  const handleDeleteOption = (index: number) => {
+    const option = options[index];
+
+    // Si l'option a un ID, on la marque pour suppression au save
+    if (option.id) {
+      setOptionsToDelete([...optionsToDelete, option.id]);
+    }
+
+    // On retire l'option de l'état local pour l'UI
+    setOptions(options.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!label.trim()) return;
+
+    const generatedName = label.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    if (tag?.id && optionsToDelete.length > 0) {
+      try {
+        await onBulkDeleteOptions(tag.id, optionsToDelete);
+      } catch (error) {
+        console.error('Error bulk deleting options:', error);
+      }
+    }
+
+    onSave(
+      {
+        name: generatedName,
+        label: label.trim(),
+        fieldType,
+        isRequired,
+      },
+      needsOptions ? options : undefined
+    );
+  };
+
+  const fieldTypes: { value: TagFieldType; label: string }[] = [
+    { value: 'select', label: 'Sélection simple' },
+    { value: 'multi-select', label: 'Sélection multiple' },
+    { value: 'number', label: 'Nombre' },
+    { value: 'text', label: 'Texte libre' },
+    { value: 'toggle', label: 'Oui/Non' },
+  ];
+
+  return (
+    <View style={styles.panelContent}>
+      <View style={styles.panelHeader}>
+        <Text style={styles.panelTitle}>{tag ? 'Modifier le tag' : 'Nouveau tag'}</Text>
+        <TouchableOpacity onPress={onCancel}>
+          <X size={24} color="#64748B" strokeWidth={2} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.panelForm} showsVerticalScrollIndicator={false}>
+        {/* Nom du tag */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Nom du tag</Text>
+          <TextInput
+            style={styles.formInput}
+            value={label}
+            onChangeText={setLabel}
+            placeholder="Ex: Cuisson, Garnitures..."
+            placeholderTextColor="#94A3B8"
+          />
+        </View>
+
+        {/* Type de champ */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Type de champ</Text>
+          <View style={styles.radioGroup}>
+            {fieldTypes.map((type) => (
+              <TouchableOpacity
+                key={type.value}
+                style={[
+                  styles.radioOption,
+                  fieldType === type.value && {
+                    borderColor: '#A855F7',
+                    backgroundColor: '#F8F4FF',
+                  }
+                ]}
+                onPress={() => setFieldType(type.value)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.radio}>
+                  {fieldType === type.value && <View style={styles.radioInner} />}
+                </View>
+                <Text style={[styles.radioLabel, fieldType === type.value && styles.radioLabelActive]}>
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Obligatoire */}
+        <TouchableOpacity style={styles.checkbox} onPress={() => setIsRequired(!isRequired)}>
+          <View style={[styles.checkboxBox, isRequired && styles.checkboxBoxChecked]}>
+            {isRequired && <Check size={16} color="#FFFFFF" strokeWidth={3} />}
+          </View>
+          <Text style={styles.checkboxLabel}>Champ obligatoire</Text>
+        </TouchableOpacity>
+
+        {/* Options */}
+        {needsOptions && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sectionTitle}>Options</Text>
+
+            {options.map((option, index) => (
+              <View key={index} style={styles.optionRow}>
+                <View style={styles.optionInputs}>
+                  <TextInput
+                    style={[styles.formInput, { flex: 2 }]}
+                    value={option.label}
+                    editable={false}
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <TextInput
+                    style={[styles.formInput, { flex: 1 }]}
+                    value={option.priceModifier?.toString() || '0'}
+                    editable={false}
+                    placeholder="€"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteOption(index)}>
+                  <Trash2 size={20} color="#EF4444" strokeWidth={1.5} />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <View style={styles.optionRow}>
+              <View style={styles.optionInputs}>
+                <TextInput
+                  style={[styles.formInput, { flex: 2 }]}
+                  value={newOptionLabel}
+                  onChangeText={setNewOptionLabel}
+                  placeholder="Nom de l'option"
+                  placeholderTextColor="#94A3B8"
+                />
+                <TextInput
+                  style={[styles.formInput, { flex: 1 }]}
+                  value={newOptionPrice}
+                  onChangeText={setNewOptionPrice}
+                  placeholder="Prix €"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.addOptionButton}
+                onPress={handleAddOption}
+                disabled={!newOptionLabel.trim()}
+              >
+                <Plus size={20} color={newOptionLabel.trim() ? '#A855F7' : '#CBD5E1'} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      <View style={styles.panelFooter}>
+        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <Text style={styles.cancelButtonText}>Annuler</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.saveButton, !label.trim() && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={!label.trim()}
+        >
+          <Check size={20} color="#FFFFFF" strokeWidth={2} />
+          <Text style={styles.saveButtonText}>Enregistrer</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
-  },
-  blurOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(248, 250, 252, 0.9)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      },
-    }),
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-    paddingBottom: 100,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
-    gap: 20,
-    marginBottom: 20,
-    flexWrap: 'wrap',
-  },
-  activeCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    flex: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  iconText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  headerContent: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  cardSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  addButton: {
-    backgroundColor: '#6366F1',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  validateButton: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
-  },
-  cancelButton: {
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF2F2',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  itemTypesGrid: {
-    flex: 1,
-  },
-  itemTypesRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  itemTypeColumn: {
-    flex: 1,
-  },
-  itemTypeEmptyColumn: {
-    flex: 1,
-    minHeight: 1, // Juste pour forcer l'espace sans contenu visible
-  },
-  itemTypeCard: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    flex: 1,
   },
-  itemTypeInfo: {
-    flex: 1,
-  },
-  itemTypeName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  cardActions: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    gap: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidebar: {
+    width: 240,
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+    padding: 16,
     gap: 8,
   },
-  itemTypeCardHeader: {
+  sidebarTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 40,
+    padding: 12,
+    borderRadius: 8,
+    gap: 12,
   },
-  actionButton: {
+  sidebarTabActive: {
+    backgroundColor: '#F1F5F9',
+  },
+  sidebarTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  sidebarTabTextActive: {
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  mainContent: {
+    flex: 1,
+  },
+  tabContent: {
+    flex: 1,
+    padding: 24,
+  },
+  tabHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  tabTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  tabSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#A855F7',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  createButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  tagsList: {
+    flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 16,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginBottom: 8,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F4FF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A855F7',
+    gap: 8,
+    marginTop: 8,
+  },
+  emptyStateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#A855F7',
+  },
+  tagItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tagItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  tagItemIcon: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: 20,
+    backgroundColor: '#F8F4FF',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
-  deleteButton: {
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF2F2',
-  },
-  editContentContainer: {
+  tagItemContent: {
     flex: 1,
-    marginRight: 12,
-    justifyContent: 'center',
+    gap: 6,
   },
-  editInputContainer: {
-    // Suppression du marginBottom pour centrer l'input
+  tagItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
   },
-  editInput: {
-    height: 40,
-    paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#6366F1',
-    fontSize: 14,
-    color: '#1F2937',
-  },
-  departmentDisplay: {
-    marginTop: 3,
-  },
-  departmentBadge: {
+  tagItemMeta: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  tagBadge: {
+    backgroundColor: '#A855F7',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    gap: 4,
+    borderRadius: 6,
   },
-  kitchenBadge: {
+  tagBadgeRequired: {
+    backgroundColor: '#F59E0B',
+  },
+  tagBadgeSuccess: {
     backgroundColor: '#10B981',
   },
-  barBadge: {
-    backgroundColor: '#A855F7',
+  tagBadgeWarning: {
+    backgroundColor: '#EF4444',
   },
-  departmentBadgeText: {
+  tagBadgeText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  departmentToggle: {
+  tagItemOptions: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  tagItemActions: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
   },
-  departmentLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-    width: 70,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+  tagActionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 6,
-    padding: 2,
+    backgroundColor: '#F1F5F9',
+  },
+  tagActionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  tagActionButtonDanger: {
+    backgroundColor: '#FEF2F2',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    zIndex: 999,
+  },
+  sidePanel: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 400,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 16,
+    zIndex: 1000,
+  },
+  panelContent: {
     flex: 1,
   },
-  toggleOption: {
+  panelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  panelTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  panelForm: {
+    flex: 1,
+    padding: 20,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  formInput: {
+    height: 44,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  radioGroup: {
+    gap: 8,
+  },
+  radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    gap: 4,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  toggleOptionLeft: {
-    // Style spécifique pour l'option de gauche si nécessaire
-  },
-  toggleOptionRight: {
-    // Style spécifique pour l'option de droite si nécessaire
-  },
-  kitchenToggleActive: {
-    backgroundColor: '#F97316',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  barToggleActive: {
-    backgroundColor: '#8B5CF6',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  toggleText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  toggleTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontStyle: 'italic',
-  },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#DC2626',
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  emptySubtext: {
-    fontSize: 12,
-    color: '#94A3B8',
-    textAlign: 'center',
-  },
-  stickyButtonContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    zIndex: 1000,
-  },
-  globalSaveButton: {
-    backgroundColor: '#6366F1',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     gap: 12,
   },
-  globalSaveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  radioOptionActive: {
+    borderColor: '#A855F7',
+    backgroundColor: '#F8F4FF',
   },
-  departmentSelector: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    padding: 2,
-  },
-  departmentOption: {
-    flex: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  kitchenOptionActive: {
-    backgroundColor: '#F97316',
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#A855F7',
   },
-  barOptionActive: {
-    backgroundColor: '#8B5CF6',
+  radioLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    flex: 1,
   },
-  departmentOptionText: {
-    fontSize: 12,
+  radioLabelActive: {
+    color: '#1E293B',
     fontWeight: '500',
-    color: '#6B7280',
   },
-  departmentOptionTextActive: {
-    color: '#FFFFFF',
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
   },
-  editTopRow: {
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxBoxChecked: {
+    backgroundColor: '#A855F7',
+    borderColor: '#A855F7',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
   },
-  editInputInline: {
+  optionInputs: {
     flex: 1,
-    height: 36,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2A2E33',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  inlineActions: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  editDepartmentRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 8,
   },
-  fullWidthDepartmentButton: {
+  addOptionButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: '#F8F4FF',
+  },
+  panelFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  saveButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderRadius: 8,
-    gap: 6,
-    borderWidth: 1,
-  },
-  kitchenButton: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#10B981',
-  },
-  kitchenButtonActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  barButton: {
-    backgroundColor: '#F8F4FF',
-    borderColor: '#A855F7',
-  },
-  barButtonActive: {
     backgroundColor: '#A855F7',
-    borderColor: '#A855F7',
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 8,
   },
-  fullWidthDepartmentText: {
-    fontSize: 13,
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
-  },
-  fullWidthDepartmentTextActive: {
     color: '#FFFFFF',
   },
-  // Styles pour la configuration des vues
-  viewsConfigContainer: {
-    gap: 12,
+  // Views Tab specific styles
+  viewsContainer: {
+    gap: 16,
   },
-  viewConfigRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: '#F8FAFC',
+  viewCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  viewConfigLeft: {
+  viewCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: 12,
+    gap: 16,
   },
-  viewIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  viewIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  viewTextContainer: {
+  viewCardContent: {
     flex: 1,
   },
-  viewTitle: {
-    fontSize: 15,
+  viewCardTitle: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#1E293B',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  viewDescription: {
-    fontSize: 12,
+  viewCardDescription: {
+    fontSize: 14,
     color: '#64748B',
-    fontWeight: '400',
   },
 });

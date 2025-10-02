@@ -1,4 +1,5 @@
 import { ItemType } from '~/types/item-type.types';
+import { Tag } from '~/types/tag.types';
 
 export type Item = {
   id: string;
@@ -10,4 +11,5 @@ export type Item = {
   itemType: ItemType;
   itemTypeId?: string;
   isActive: boolean;
+  tags?: Tag[];
 };

@@ -8,6 +8,7 @@ import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { User } from '~/types/user.types';
 import { Status } from '~/types/status.enum';
+import { Tag } from '~/types/tag.types';
 
 /**
  * État unifié pour toutes les entités métier
@@ -24,7 +25,8 @@ export interface EntitiesState {
   items: Record<string, Item>;
   itemTypes: Record<string, ItemType>;
   users: Record<string, User>;
-  
+  tags: Record<string, Tag>;
+
   // État global
   isInitialized: boolean;
   initError: string | null;
@@ -41,6 +43,7 @@ const initialState: EntitiesState = {
   items: {},
   itemTypes: {},
   users: {},
+  tags: {},
   isInitialized: false,
   initError: null,
 };
@@ -440,6 +443,24 @@ const entitiesSlice = createSlice({
     },
     deleteItemType: (state, action: PayloadAction<{ itemTypeId: string }>) => {
       delete state.itemTypes[action.payload.itemTypeId];
+    },
+
+    // === TAGS ===
+    setTags: (state, action: PayloadAction<{ tags: Tag[] }>) => {
+      state.tags = normalizeArray(action.payload.tags);
+    },
+    createTag: (state, action: PayloadAction<{ tag: Tag }>) => {
+      const { tag } = action.payload;
+      state.tags[tag.id] = tag;
+    },
+    updateTag: (state, action: PayloadAction<{ tag: Partial<Tag> & { id: string } }>) => {
+      const { tag } = action.payload;
+      if (state.tags[tag.id]) {
+        state.tags[tag.id] = { ...state.tags[tag.id], ...tag };
+      }
+    },
+    deleteTag: (state, action: PayloadAction<{ tagId: string }>) => {
+      delete state.tags[action.payload.tagId];
     },
 
     // === USERS ===

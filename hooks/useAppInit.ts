@@ -8,6 +8,8 @@ import { useMenu } from './useMenu';
 import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
 import { accountConfigApiService } from '~/api/account-config.api';
+import { tagApiService } from '~/api/tag.api';
+import { entitiesActions } from '~/store/slices/entities.slice';
 
 export interface InitializationProgress {
   rooms: boolean;
@@ -18,6 +20,7 @@ export interface InitializationProgress {
   orders: boolean;
   users: boolean;
   accountConfig: boolean;
+  tags: boolean;
   // Signature d'index pour résoudre l'erreur TS
   [key: string]: boolean;
 }
@@ -31,6 +34,7 @@ const INITIAL_PROGRESS: InitializationProgress = {
   orders: false,
   users: false,
   accountConfig: false,
+  tags: false,
 };
 
 /**
@@ -113,6 +117,17 @@ export const useAppInit = () => {
         loadItemTypes().then(result => {
           updateProgress('itemTypes', true);
           return result;
+        }),
+        // Charger les tags
+        tagApiService.getAll().then(response => {
+          // L'API retourne { meta, data }, extraire le tableau data
+          const tags = Array.isArray(response) ? response : response.data || [];
+          dispatch(entitiesActions.setTags({ tags }));
+          updateProgress('tags', true);
+          return tags;
+        }).catch(error => {
+          console.error('Erreur lors du chargement des tags:', error);
+          updateProgress('tags', true);
         }),
       ];
 
