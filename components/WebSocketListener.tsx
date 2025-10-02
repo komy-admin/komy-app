@@ -1,4 +1,4 @@
-import { useRestaurantSocket } from '~/hooks/useRestaurantSocket';
+import { useWebSocketSync } from '~/hooks/useSocket/useWebSocketSync';
 
 /**
  * Composant qui initialise les listeners WebSocket
@@ -6,8 +6,8 @@ import { useRestaurantSocket } from '~/hooks/useRestaurantSocket';
  */
 export const WebSocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialise tous les listeners WebSocket pour synchroniser avec Redux
-  useRestaurantSocket();
-  
+  useWebSocketSync();
+
   // Ce composant ne rend rien, il initialise juste les listeners
   return <>{children}</>;
 };

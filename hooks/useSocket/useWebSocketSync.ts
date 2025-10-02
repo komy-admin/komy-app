@@ -1,13 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useContext } from 'react';
 import { useDispatch } from 'react-redux';
-import { useSocket } from './index';
+import { SocketContext } from './SockerProvider';
 import { entitiesActions, sessionActions } from '~/store';
-import { 
-  WEBSOCKET_EVENT_MAP, 
+import {
+  WEBSOCKET_EVENT_MAP,
   WebSocketEvent,
   formatEventPayload,
   getEventName,
-  getReduxAction 
+  getReduxAction
 } from './websocket.config';
 
 /**
@@ -16,79 +16,56 @@ import {
  */
 export const useWebSocketSync = () => {
   const dispatch = useDispatch();
-  const { socket, isConnected } = useSocket();
+  const context = useContext(SocketContext);
+
+  if (!context) {
+    throw new Error('useWebSocketSync must be used within a SocketProvider');
+  }
+
+  const { socket: socketService, isConnected } = context;
 
   useEffect(() => {
-    if (!socket || !isConnected) {
-      console.log('🔌 WebSocket non connecté, skip listeners');
-      return;
-    }
+    if (!socketService || !isConnected) return;
 
-    console.log('🔌 Configuration des listeners WebSocket génériques...');
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
     const listeners: Array<[string, Function]> = [];
 
-    // Parcourir la configuration et enregistrer les listeners
     Object.entries(WEBSOCKET_EVENT_MAP).forEach(([model, actions]) => {
       Object.entries(actions).forEach(([eventType, reduxActionName]) => {
         const eventName = getEventName(model, eventType);
-        
+
         const handler = (event: WebSocketEvent) => {
           try {
-            // Log conditionnel selon le type d'événement
-            const emoji = eventType.includes('created') ? '🆕' :
-                         eventType.includes('updated') ? '📝' :
-                         eventType.includes('deleted') ? '🗑️' :
-                         eventType.includes('batch') ? '📦' : '📡';
-            
-            console.log(`${emoji} ${eventName}:`, event.data?.id || event.dataId || 'batch');
-            
-            // Formater le payload selon le type d'événement
             const payload = formatEventPayload(model, eventType, event.data);
-            
-            // Dispatcher l'action Redux correspondante
             const action = (entitiesActions as any)[reduxActionName] || (sessionActions as any)[reduxActionName];
+
             if (action) {
               dispatch(action(payload));
-              
-              // Log spécial pour les suppressions automatiques
-              if (eventType === 'deleted' && event.data?.reason) {
-                console.log(`⚠️ Suppression automatique: ${event.data.reason}`);
-              }
             } else {
-              console.warn(`❌ Action Redux non trouvée: ${reduxActionName}`);
+              console.warn(`[WebSocket] Action not found: ${reduxActionName}`);
             }
           } catch (error) {
-            console.error(`❌ Erreur lors du traitement de ${eventName}:`, error);
+            console.error(`[WebSocket] Error handling ${eventName}:`, error);
           }
         };
-        
-        // Enregistrer le listener
-        (socket as any).on(eventName, handler);
+
+        socket.on(eventName, handler);
         listeners.push([eventName, handler]);
       });
     });
 
-    console.log(`✅ ${listeners.length} listeners WebSocket enregistrés`);
-
-    // Log des événements écoutés pour debug
-    if (process.env.NODE_ENV === 'development') {
-      const eventNames = listeners.map(([name]) => name);
-      console.log('📡 Événements écoutés:', eventNames);
-    }
-
-    // Cleanup - Supprimer tous les listeners
     return () => {
-      console.log('🔌 Nettoyage des listeners WebSocket...');
       listeners.forEach(([eventName, handler]) => {
-        (socket as any).off(eventName, handler);
+        socket.off(eventName, handler);
       });
-      console.log(`✅ ${listeners.length} listeners supprimés`);
     };
-  }, [socket, isConnected, dispatch]);
+  }, [socketService, isConnected, dispatch]);
 
   return {
     isConnected,
-    socket,
+    socket: socketService,
   };
 };
 
@@ -96,12 +73,18 @@ export const useWebSocketSync = () => {
  * Hook pour logger tous les événements WebSocket (debug uniquement)
  */
 export const useWebSocketDebugger = () => {
-  const { socket, isConnected } = useSocket();
+  const context = useContext(SocketContext);
+  if (!context) return;
+
+  const { socket: socketService, isConnected } = context;
 
   useEffect(() => {
-    if (!socket || !isConnected || process.env.NODE_ENV !== 'development') {
+    if (!socketService || !isConnected || process.env.NODE_ENV !== 'development') {
       return;
     }
+
+    const socket = socketService.getSocket();
+    if (!socket) return;
 
     // Logger tous les événements pour debug
     const originalEmit = socket.emit;
@@ -125,25 +108,34 @@ export const useWebSocketDebugger = () => {
       socket.emit = originalEmit;
       socket.on = originalOn;
     };
-  }, [socket, isConnected]);
+  }, [socketService, isConnected]);
 };
 
 /**
  * Hook pour gérer la reconnexion et la réconciliation des données
  */
 export const useWebSocketReconnection = (onReconnect?: () => void) => {
-  const { socket, isConnected } = useSocket();
+  const context = useContext(SocketContext);
   const dispatch = useDispatch();
 
+  if (!context) {
+    return { isConnected: false };
+  }
+
+  const { socket: socketService, isConnected } = context;
+
   useEffect(() => {
+    if (!socketService) return;
+
+    const socket = socketService.getSocket();
     if (!socket) return;
 
     const handleReconnect = () => {
       console.log('🔄 WebSocket reconnecté, réconciliation des données...');
-      
+
       // Mettre à jour le statut de connexion
       dispatch(sessionActions.setWebSocketConnected(true));
-      
+
       // Callback optionnel pour re-fetch les données
       onReconnect?.();
     };
@@ -160,7 +152,7 @@ export const useWebSocketReconnection = (onReconnect?: () => void) => {
       socket.off('connect', handleReconnect);
       socket.off('disconnect', handleDisconnect);
     };
-  }, [socket, dispatch, onReconnect]);
+  }, [socketService, dispatch, onReconnect]);
 
   return { isConnected };
 };
