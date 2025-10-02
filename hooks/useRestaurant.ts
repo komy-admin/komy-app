@@ -2,7 +2,6 @@ import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { selectIsWebSocketConnected, selectLastSyncTime } from '~/store/slices/session.slice';
 import { selectIsInitialized, selectInitError } from '~/store/slices/entities.slice';
-import { useRestaurantSocket } from './useRestaurantSocket';
 import { useRooms } from './useRooms';
 import { useTables } from './useTables';
 import { useOrders } from './useOrders';
@@ -15,13 +14,11 @@ import { useMenus } from './useMenus';
  * Plus lisible et organisé que l'ancien useRestaurant de 500+ lignes
  */
 export const useRestaurant = () => {
-  // Initialiser la connexion WebSocket
-  const { isConnected: socketConnected } = useRestaurantSocket();
-
   // État global
   const isInitialized = useSelector(selectIsInitialized);
   const initError = useSelector(selectInitError);
   const isConnected = useSelector(selectIsWebSocketConnected);
+  const socketConnected = isConnected; // Alias pour compatibilité
   const lastSyncTime = useSelector(selectLastSyncTime);
 
   // Hooks spécialisés

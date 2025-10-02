@@ -95,6 +95,31 @@ export interface WebSocketEvent {
   reason?: string; // Pour les suppressions automatiques
 }
 
+// Type pour les événements d'invalidation
+export interface InvalidateEvent {
+  action: 'invalidate';
+  resources: string[];
+  accountId: string;
+  timestamp: Date;
+}
+
+// Noms de ressources supportés par le système d'invalidation
+export type ResourceName =
+  | 'items'
+  | 'itemTypes'
+  | 'menus'
+  | 'menuCategories'
+  | 'menuCategoryItems'
+  | 'orders'
+  | 'orderLines'
+  | 'orderLineItems'
+  | 'rooms'
+  | 'tables'
+  | 'tags'
+  | 'users'
+  | 'statuses'
+  | 'accounts';
+
 // Type pour les clés des modèles
 export type WebSocketModel = keyof typeof WEBSOCKET_EVENT_MAP;
 
