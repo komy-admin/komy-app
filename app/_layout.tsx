@@ -123,11 +123,9 @@ function AuthenticationGate() {
   React.useEffect(() => {
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
       // Only check when app becomes active
-      if (nextAppState === 'active' && isAuthenticated && userProfile) {
+      if (nextAppState === 'active' && isAuthenticated && userProfile?.skipPinRequired) {
         // Only check for quick-created users (those with skipPinRequired)
-        if (userProfile.skipPinRequired) {
-          await sessionService.verifyQrTokenStatus();
-        }
+        await sessionService.verifyQrTokenStatus();
       }
     };
 

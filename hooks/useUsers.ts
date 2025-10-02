@@ -135,16 +135,6 @@ export const useUsers = () => {
     }
   }, []);
 
-  const regenerateQrToken = useCallback(async (userId: string) => {
-    try {
-      const response = await userApiService.regenerateQrToken(userId);
-      return response;
-    } catch (error) {
-      console.error('Erreur lors de la régénération du QR code:', error);
-      throw error;
-    }
-  }, []);
-
   const revokeQrToken = useCallback(async (userId: string) => {
     try {
       const response = await userApiService.revokeQrToken(userId);
@@ -206,7 +196,6 @@ export const useUsers = () => {
 
     // Actions QR
     getOrGenerateQrToken,
-    regenerateQrToken,
     revokeQrToken,
 
     // Utilitaires

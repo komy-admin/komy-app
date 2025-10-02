@@ -31,11 +31,9 @@ export default function TeamPage() {
   const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
   const [qrMagicLink, setQrMagicLink] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
-  const [qrError, setQrError] = useState<string | null>(null);
-  const [qrSuccess, setQrSuccess] = useState<string | null>(null);
   const [copiedQrLink, setCopiedQrLink] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [User, setUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { showToast } = useToast();
@@ -77,7 +75,7 @@ export default function TeamPage() {
   const handleCreateUser = () => {
     // Les managers ne peuvent pas créer d'utilisateurs
     if (isManager) return;
-    setUser(null);
+    setSelectedUser(null);
     setCreationMode('quick'); // Default to quick mode
     teamFormView.openCreate();
   };
@@ -106,13 +104,13 @@ export default function TeamPage() {
     if (isManager) return;
     const user = users.find(user => user.id === id);
     if (!user) return;
-    setUser(user);
+    setSelectedUser(user);
     teamFormView.openEdit();
   };
 
   const handleCloseModal = () => {
     teamFormView.close();
-    setUser(null);
+    setSelectedUser(null);
     setCreationMode('quick');
   };
 
@@ -177,8 +175,6 @@ export default function TeamPage() {
     setQrModalVisible(true);
     setQrCodeToken(null);
     setQrMagicLink(null);
-    setQrError(null);
-    setQrSuccess(null);
     setCopiedQrLink(false);
     setQrLoading(true);
 
@@ -189,7 +185,8 @@ export default function TeamPage() {
       // Generate magic link from token
       setQrMagicLink(`forkit://auth/qr-login?token=${res.qrData.token}`);
     } catch (e: any) {
-      setQrError("Erreur lors de la récupération du QR code");
+      showToast("Erreur lors de la récupération du QR code", 'error');
+      setQrModalVisible(false);
     } finally {
       setQrLoading(false);
     }
@@ -226,8 +223,6 @@ export default function TeamPage() {
 
     try {
       setQrLoading(true);
-      setQrError(null);
-      setQrSuccess(null);
       setCopiedQrLink(false);
 
       // Révoquer le QR token sans en générer un nouveau
@@ -464,7 +459,7 @@ export default function TeamPage() {
           <FormHeader
             title={
               teamFormView.mode === 'edit'
-                ? `Modification de "${User?.firstName} ${User?.lastName}"`
+                ? `Modification de "${selectedUser?.firstName} ${selectedUser?.lastName}"`
                 : "Créer un utilisateur"
             }
             onBack={teamFormView.close}
@@ -516,7 +511,7 @@ export default function TeamPage() {
                   onSave={handleSaveUser}
                 >
                   <TeamForm
-                    user={User}
+                    user={selectedUser}
                     activeTab={activeTab}
                   />
                 </AdminFormView>
@@ -532,7 +527,7 @@ export default function TeamPage() {
               onSave={handleSaveUser}
             >
               <TeamForm
-                user={User}
+                user={selectedUser}
                 activeTab={activeTab}
               />
             </AdminFormView>
@@ -558,8 +553,6 @@ export default function TeamPage() {
           setQrModalVisible(false);
           setSelectedUserForQr(null);
           setQrCodeToken(null);
-          setQrError(null);
-          setQrSuccess(null);
         }}
         width={450}
         height={500}
@@ -571,13 +564,7 @@ export default function TeamPage() {
               {qrLoading && (
                 <Text style={styles.loadingText}>Chargement du QR code...</Text>
               )}
-              {qrError && (
-                <Text style={styles.errorText}>{qrError}</Text>
-              )}
-              {qrSuccess && (
-                <Text style={styles.successText}>{qrSuccess}</Text>
-              )}
-              {!qrLoading && !qrError && qrCodeToken && (
+              {!qrLoading && qrCodeToken && (
                 <QRCode value={qrCodeToken} size={220} />
               )}
             </View>

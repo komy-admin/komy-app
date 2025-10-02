@@ -94,13 +94,12 @@ class SessionService {
           // Set full authentication state in Redux
           store.dispatch(sessionActions.setAuthToken({
             authToken: response.authToken,
-            requirePin: false,
-            requirePinSetup: false
+            requirePin: false
           }));
 
           store.dispatch(sessionActions.setSessionToken({
             sessionToken: response.sessionToken,
-            expiresIn: response.expiresIn,
+            expiresIn: response.expiresIn ?? 0,
             user: response.user
           }));
 

@@ -37,19 +37,6 @@ export class UserApiService extends BaseApiService<User> {
   }
 
   /**
-   * Force la génération d'un nouveau QR token (révoque l'ancien) (admin only)
-   */
-  async regenerateQrToken(userId: string): Promise<UserQrTokenResponse> {
-    try {
-      const response = await this.axiosInstance.post<UserQrTokenResponse>(`/admin/user/${userId}/generate-qr`);
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la régénération du QR code:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Révoque le QR token d'un utilisateur sans en générer un nouveau (admin only)
    */
   async revokeQrToken(userId: string): Promise<{ message: string }> {
