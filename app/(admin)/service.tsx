@@ -557,13 +557,12 @@ export default function ServicePage() {
         // Layout normal service avec SidePanel + Room
         <View style={{ flexDirection: 'row', flex: 1 }}>
           <SidePanel
-            style={{ flex: 1 }}
             hideCloseButton={true}
             width={width / 4}
             title="Service"
             onBack={handleDeselectTable}
           >
-            <View style={{ padding: 16, flex: 1 }}>
+            <View style={{ padding: 16, flex: 1, backgroundColor: '#F9FAFB' }}>
               {loading || !filtersLoaded ? (
                 <Text>Chargement...</Text>
               ) : (

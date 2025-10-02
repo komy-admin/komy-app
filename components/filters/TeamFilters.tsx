@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput, Platform } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { Button } from '~/components/ui';
 import { useKeyboardDismiss } from '~/hooks/useKeyboardDismiss';
 import { KEYBOARD_AWARE_CONFIG_SMOOTH } from '~/constants/keyboardConfig';
 
@@ -99,7 +98,7 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
 
       {/* Actions */}
       <View style={styles.filterActions}>
-        <Button
+        <Pressable
           onPress={onClearFilters}
           disabled={!hasActiveFilters()}
           style={[
@@ -113,7 +112,7 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
           ]}>
             Effacer les filtres
           </Text>
-        </Button>
+        </Pressable>
       </View>
     </KeyboardAwareScrollView>
   );
@@ -168,7 +167,14 @@ const styles = StyleSheet.create({
     borderColor: '#2A2E33',
   },
   clearButtonInactive: {
-    backgroundColor: 'transparent',
+    ...Platform.select({
+      web: {
+        backgroundColor: '#F3F4F6', // Gris clair sur web pour éviter le noir avec opacity
+      },
+      default: {
+        backgroundColor: 'transparent',
+      }
+    }),
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
