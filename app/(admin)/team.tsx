@@ -1,7 +1,7 @@
-import { View, ScrollView, useWindowDimensions, Text, StyleSheet, Pressable } from "react-native";
+import { View, ScrollView, useWindowDimensions, Text, StyleSheet, Share, Clipboard, Platform } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import React, { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
 import { AdminFormView, useAdminFormView } from "~/components/admin/AdminFormView";
@@ -9,13 +9,14 @@ import { FormHeader } from '~/components/admin/FormHeader';
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { CustomModal } from "~/components/CustomModal";
 import { TeamForm } from "~/components/form/TeamForm";
+import { QuickTeamForm } from "~/components/form/QuickTeamForm";
 import { useToast } from '~/components/ToastProvider';
 import { QRCode } from "~/components/ui/QRCode";
-import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
-import { ActionMenu, ActionItem } from '~/components/ActionMenu';
+import { CreditCard as Edit2, QrCode, Trash, Share2, Copy } from 'lucide-react-native';
+import { ActionItem } from '~/components/ActionMenu';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { useUsers, useRestaurant } from '~/hooks/useRestaurant';
+import { useUsers } from '~/hooks/useRestaurant';
 import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
 import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 
@@ -25,11 +26,14 @@ export default function TeamPage() {
   const [teamFilters, setTeamFilters] = useState<TeamFilterState>(createEmptyTeamFilters());
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [selectedUserForQr, setSelectedUserForQr] = useState<User | null>(null);
+  const [creationMode, setCreationMode] = useState<'quick' | 'full'>('quick');
   const teamFormView = useAdminFormView();
   const [qrCodeToken, setQrCodeToken] = useState<string | null>(null);
+  const [qrMagicLink, setQrMagicLink] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrSuccess, setQrSuccess] = useState<string | null>(null);
+  const [copiedQrLink, setCopiedQrLink] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [User, setUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -44,7 +48,7 @@ export default function TeamPage() {
 
 
   // Utilisation des hooks Redux (seulement si autorisé)
-  const { users, loading, error, createUser, updateUser, deleteUser, getOrGenerateQrToken, regenerateQrToken, loadUsers, getUsersByProfile } = useUsers();
+  const { users, loading, error, createUser, createQuickUser, updateUser, deleteUser, getOrGenerateQrToken, revokeQrToken, loadUsers, getUsersByProfile } = useUsers();
 
 
   // Filtrer les utilisateurs avec les filtres appliqués
@@ -74,7 +78,27 @@ export default function TeamPage() {
     // Les managers ne peuvent pas créer d'utilisateurs
     if (isManager) return;
     setUser(null);
+    setCreationMode('quick'); // Default to quick mode
     teamFormView.openCreate();
+  };
+
+  const handleQuickCreateSubmit = async (getFormData: () => any) => {
+    try {
+      const formResult = getFormData();
+      if (!formResult.isValid) {
+        return false;
+      }
+
+      const { profil, displayName } = formResult.data;
+      const response = await createQuickUser(profil, displayName);
+      showToast('Utilisateur créé avec succès', 'success');
+      handleCloseModal();
+      return true;
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Erreur lors de la création de l\'utilisateur';
+      showToast(errorMessage, 'error');
+      return false;
+    }
   };
 
   const handleEditUser = (id: string) => {
@@ -89,6 +113,7 @@ export default function TeamPage() {
   const handleCloseModal = () => {
     teamFormView.close();
     setUser(null);
+    setCreationMode('quick');
   };
 
   const handleSaveUser = async (getFormData: () => any) => {
@@ -151,14 +176,18 @@ export default function TeamPage() {
     setSelectedUserForQr(user);
     setQrModalVisible(true);
     setQrCodeToken(null);
+    setQrMagicLink(null);
     setQrError(null);
     setQrSuccess(null);
+    setCopiedQrLink(false);
     setQrLoading(true);
 
     try {
       // Récupère le QR existant ou en crée un nouveau automatiquement
       const res = await getOrGenerateQrToken(user.id);
       setQrCodeToken(res.qrData.token);
+      // Generate magic link from token
+      setQrMagicLink(`forkit://auth/qr-login?token=${res.qrData.token}`);
     } catch (e: any) {
       setQrError("Erreur lors de la récupération du QR code");
     } finally {
@@ -166,27 +195,51 @@ export default function TeamPage() {
     }
   };
 
-  const handleShareQr = () => {
-    console.log('Partager QR Code pour:', selectedUserForQr?.firstName, selectedUserForQr?.lastName);
+  const handleShareQr = async () => {
+    if (!qrMagicLink || !selectedUserForQr) return;
+
+    try {
+      await Share.share({
+        message: `Lien de connexion Fork'it pour ${selectedUserForQr.firstName} ${selectedUserForQr.lastName}: ${qrMagicLink}`,
+        title: 'Connexion Fork\'it',
+      });
+    } catch (error) {
+      console.error('Error sharing QR link:', error);
+    }
   };
 
-  const handleRegenerateQr = async () => {
+  const handleCopyQrLink = async () => {
+    if (!qrMagicLink) return;
+
+    if (Platform.OS === 'web') {
+      await navigator.clipboard.writeText(qrMagicLink);
+    } else {
+      Clipboard.setString(qrMagicLink);
+    }
+    setCopiedQrLink(true);
+    showToast('Lien copié !', 'success');
+    setTimeout(() => setCopiedQrLink(false), 2000);
+  };
+
+  const handleRevokeQr = async () => {
     if (!selectedUserForQr) return;
 
     try {
       setQrLoading(true);
       setQrError(null);
       setQrSuccess(null);
+      setCopiedQrLink(false);
 
-      // Force la génération d'un nouveau QR (révoque l'ancien automatiquement)
-      const res = await regenerateQrToken(selectedUserForQr.id);
-      setQrCodeToken(res.qrData.token);
+      // Révoquer le QR token sans en générer un nouveau
+      await revokeQrToken(selectedUserForQr.id);
+      setQrCodeToken(null);
+      setQrMagicLink(null);
+      setQrModalVisible(false);
 
-      showToast('QR code régénéré avec succès', 'success');
+      showToast('QR code révoqué avec succès', 'success');
     } catch (error) {
-      console.error('Erreur lors de la régénération du QR code:', error);
-      setQrError('Erreur lors de la régénération du QR code');
-      showToast('Erreur lors de la régénération du QR code', 'error');
+      console.error('Erreur révocation QR:', error);
+      showToast('Erreur lors de la révocation du QR code', 'error');
     } finally {
       setQrLoading(false);
     }
@@ -397,7 +450,7 @@ export default function TeamPage() {
         </Tabs>
       </View>
 
-      {/* Modal de modification - cachée pour les managers */}
+      {/* Modal de création/modification - cachée pour les managers */}
       {canModifyUsers && teamFormView.isVisible && (
         <View style={{
           position: 'absolute',
@@ -409,22 +462,81 @@ export default function TeamPage() {
           backgroundColor: '#FFFFFF'
         }}>
           <FormHeader
-            title={teamFormView.mode === 'create' ? "Création d'un utilisateur" : `Modification de "${User?.firstName} ${User?.lastName}"`}
+            title={
+              teamFormView.mode === 'edit'
+                ? `Modification de "${User?.firstName} ${User?.lastName}"`
+                : "Créer un utilisateur"
+            }
             onBack={teamFormView.close}
           />
 
-          <AdminFormView
-            visible={true}
-            mode={teamFormView.mode}
-            onClose={teamFormView.close}
-            onCancel={teamFormView.close}
-            onSave={handleSaveUser}
-          >
-            <TeamForm
-              user={User}
-              activeTab={activeTab}
-            />
-          </AdminFormView>
+          {teamFormView.mode === 'create' ? (
+            // Create mode with tabs
+            <Tabs
+              value={creationMode}
+              onValueChange={(value) => setCreationMode(value as 'quick' | 'full')}
+              style={{ flex: 1 }}
+            >
+              <View style={styles.tabsHeader}>
+                <TabsList style={styles.tabsList}>
+                  <TabsTrigger value="quick" style={styles.tabTrigger}>
+                    <Text style={{ color: creationMode === 'quick' ? '#2A2E33' : '#A0A0A0' }}>
+                      Création rapide
+                    </Text>
+                  </TabsTrigger>
+                  <TabsTrigger value="full" style={styles.tabTrigger}>
+                    <Text style={{ color: creationMode === 'full' ? '#2A2E33' : '#A0A0A0' }}>
+                      Formulaire complet
+                    </Text>
+                  </TabsTrigger>
+                </TabsList>
+              </View>
+
+              <TabsContent value="quick" style={{ flex: 1 }}>
+                <AdminFormView
+                  visible={true}
+                  mode={teamFormView.mode}
+                  onClose={teamFormView.close}
+                  onCancel={teamFormView.close}
+                  onSave={handleQuickCreateSubmit}
+                >
+                  <QuickTeamForm
+                    activeTab={activeTab}
+                    onQuickCreate={createQuickUser}
+                  />
+                </AdminFormView>
+              </TabsContent>
+
+              <TabsContent value="full" style={{ flex: 1 }}>
+                <AdminFormView
+                  visible={true}
+                  mode={teamFormView.mode}
+                  onClose={teamFormView.close}
+                  onCancel={teamFormView.close}
+                  onSave={handleSaveUser}
+                >
+                  <TeamForm
+                    user={User}
+                    activeTab={activeTab}
+                  />
+                </AdminFormView>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            // Edit mode
+            <AdminFormView
+              visible={true}
+              mode={teamFormView.mode}
+              onClose={teamFormView.close}
+              onCancel={teamFormView.close}
+              onSave={handleSaveUser}
+            >
+              <TeamForm
+                user={User}
+                activeTab={activeTab}
+              />
+            </AdminFormView>
+          )}
         </View>
       )}
 
@@ -481,11 +593,24 @@ export default function TeamPage() {
                 variant="outline"
                 disabled={!qrCodeToken || qrLoading}
               >
+                <Share2 size={16} color="#2A2E33" />
                 <Text style={styles.shareButtonText}>Partager</Text>
               </Button>
 
               <Button
-                onPress={handleRegenerateQr}
+                onPress={handleCopyQrLink}
+                style={[styles.shareButton, copiedQrLink && styles.copiedButton]}
+                variant="outline"
+                disabled={!qrCodeToken || qrLoading}
+              >
+                <Copy size={16} color={copiedQrLink ? "#10B981" : "#2A2E33"} />
+                <Text style={[styles.shareButtonText, copiedQrLink && styles.copiedButtonText]}>
+                  {copiedQrLink ? 'Copié !' : 'Copier lien'}
+                </Text>
+              </Button>
+
+              <Button
+                onPress={handleRevokeQr}
                 style={styles.regenerateButton}
                 variant="outline"
                 disabled={!qrCodeToken || qrLoading}
@@ -542,7 +667,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 15,
+    gap: 10,
   },
   shareButton: {
     flex: 1,
@@ -550,11 +675,21 @@ const styles = StyleSheet.create({
     borderColor: '#2A2E33',
     borderWidth: 1,
     borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   shareButtonText: {
     color: '#2A2E33',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
+  },
+  copiedButton: {
+    borderColor: '#10B981',
+  },
+  copiedButtonText: {
+    color: '#10B981',
   },
   regenerateButton: {
     flex: 1,
@@ -565,7 +700,25 @@ const styles = StyleSheet.create({
   },
   regenerateButtonText: {
     color: '#FF4444',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
+  },
+
+  // Tabs styles
+  tabsHeader: {
+    backgroundColor: '#FBFBFB',
+    height: 50,
+  },
+  tabsList: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    height: 50,
+    paddingTop: 4,
+  },
+  tabTrigger: {
+    width: 180,
+    minWidth: 180,
+    height: '100%',
   },
 });

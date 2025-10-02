@@ -49,6 +49,36 @@ export class UserApiService extends BaseApiService<User> {
     }
   }
 
+  /**
+   * Révoque le QR token d'un utilisateur sans en générer un nouveau (admin only)
+   */
+  async revokeQrToken(userId: string): Promise<{ message: string }> {
+    try {
+      const response = await this.axiosInstance.delete<{ message: string }>(`/admin/user/${userId}/revoke-qr`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la révocation du QR code:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Crée rapidement un utilisateur avec des infos minimales (admin only)
+   * Auto-génère les identifiants et retourne directement le QR + liens
+   */
+  async createQuick(profil: string, displayName?: string): Promise<UserQrTokenResponse> {
+    try {
+      const response = await this.axiosInstance.post<UserQrTokenResponse>('/user/quick', {
+        profil,
+        displayName,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la création rapide de l\'utilisateur:', error);
+      throw error;
+    }
+  }
+
   // Méthode pour valider la taille d'image côté front
   validateImageSize(fileSize: number): boolean {
     const maxSize = 5 * 1024 * 1024; // 5MB

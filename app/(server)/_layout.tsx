@@ -3,22 +3,33 @@ import { Stack } from 'expo-router';
 import { Platform, View } from 'react-native';
 import { logout } from '~/store';
 import { useAppDispatch } from '~/store/hooks';
+import { useSelector } from 'react-redux';
+import { RootState } from '~/store';
 import { Text } from '~/components/ui';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
-import { LogOut } from 'lucide-react-native';
+import { LogOut, User as UserIcon } from 'lucide-react-native';
 
 function Header() {
   const dispatch = useAppDispatch();
+  const { user } = useSelector((state: RootState) => state.session);
 
   const handleLogout = () => {
     dispatch(logout());
   };
 
+  const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Utilisateur';
+
   const menuActions: ActionItem[] = [
+    {
+      label: userName,
+      icon: <UserIcon size={16} color="#6B7280" />,
+      onPress: () => {}, // No action, just display
+    },
     {
       label: 'Se déconnecter',
       icon: <LogOut size={16} color="#EF4444" />,
-      onPress: handleLogout
+      onPress: handleLogout,
+      type: 'destructive',
     }
   ];
 
@@ -29,7 +40,7 @@ function Header() {
       </Text>
       <ActionMenu
         actions={menuActions}
-        width={200}
+        width={220}
       />
     </View>
   );

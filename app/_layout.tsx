@@ -2,11 +2,13 @@ import '~/global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { SplashScreen } from 'expo-router';
+import * as Linking from 'expo-linking';
 import * as React from 'react';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { PortalHost } from '@rn-primitives/portal';
 import { store, RootState } from '~/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppState, AppStateStatus } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
@@ -85,6 +87,56 @@ function AuthenticationGate() {
 
     initializeAuth();
   }, [dispatch, authInitialized]);
+
+  // Handle deep links for QR login
+  React.useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      const { hostname, path, queryParams } = Linking.parse(event.url);
+
+      // Handle forkit://auth/qr-login?token=xxx
+      if (hostname === 'auth' && path === 'qr-login' && queryParams?.token) {
+        const token = queryParams.token as string;
+        // Navigate to QR login with token
+        router.push({
+          pathname: '/(auth)/login',
+          params: { qrToken: token }
+        });
+      }
+    };
+
+    // Listen for incoming deep links
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Handle initial deep link (app opened via link)
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [router]);
+
+  // Verify QR token status when app resumes (for quick-created users)
+  React.useEffect(() => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      // Only check when app becomes active
+      if (nextAppState === 'active' && isAuthenticated && userProfile) {
+        // Only check for quick-created users (those with skipPinRequired)
+        if (userProfile.skipPinRequired) {
+          await sessionService.verifyQrTokenStatus();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated, userProfile]);
 
   React.useEffect(() => {
     if (!isInitialized || isLoading) {
