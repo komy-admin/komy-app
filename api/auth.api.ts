@@ -63,6 +63,20 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
+  async verifyQrToken(): Promise<{ valid: boolean; user?: User; error?: string }> {
+    try {
+      const { data } = await this.axiosInstance.get<{ user: User }>(
+        `${this.endpoint}/verify-qr-token`
+      );
+      return { valid: true, user: data.user };
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        return { valid: false, error: err.response?.data?.error || 'Token révoqué' };
+      }
+      throw err;
+    }
+  }
+
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
       const { data } = await this.axiosInstance.post<LoginResponse>(

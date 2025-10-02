@@ -42,6 +42,12 @@ export default function LoginScreen() {
       // Use SessionService for QR login - handles all state management
       const response = await sessionService.qrLogin(data);
 
+      // Check if user skips PIN (quick created users)
+      if (response.skipPin) {
+        // User is fully authenticated, SessionService will handle redirect
+        return;
+      }
+
       // Navigate to PIN verification/setup based on response
       router.push('/pin-verification');
     } catch (error) {

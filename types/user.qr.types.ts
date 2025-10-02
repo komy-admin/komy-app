@@ -20,7 +20,10 @@ export interface UserQrTokenResponse {
 export interface QRLoginResponse {
   requirePinSetup?: boolean;        // True if user needs to create PIN for first time
   requirePinVerification?: boolean;  // True if user needs to verify existing PIN
+  skipPin?: boolean;                 // True if quick created user (no PIN needed)
   authToken: string;                 // JWT 1 year for PIN verification only
+  sessionToken?: string;             // JWT session token if skipPin is true
+  expiresIn?: number;                // Token expiry in seconds
   message: string;
   user: {
     id: string;

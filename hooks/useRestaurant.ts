@@ -97,7 +97,6 @@ export const useRestaurant = () => {
     updateUser: usersHook.updateUser,
     deleteUser: usersHook.deleteUser,
     getOrGenerateQrToken: usersHook.getOrGenerateQrToken,
-    regenerateQrToken: usersHook.regenerateQrToken,
     
     // === UTILITAIRES ===
     getTableById: tablesHook.getTableById,

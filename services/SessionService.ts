@@ -76,6 +76,7 @@ class SessionService {
   /**
    * Handle QR code login
    * Similar to regular login but with QR token
+   * For quick-created users (skipPin=true), completes full authentication immediately
    */
   async qrLogin(qrToken: string): Promise<QRLoginResponse> {
     try {
@@ -85,7 +86,32 @@ class SessionService {
       if (response.authToken) {
         await storageService.setItem('authToken', response.authToken);
 
-        // Set auth state in Redux
+        // Check if user can skip PIN (quick-created users)
+        if (response.skipPin && response.sessionToken) {
+          // Store sessionToken persistently for skip-PIN users
+          await storageService.setItem('sessionToken', response.sessionToken);
+
+          // Set full authentication state in Redux
+          store.dispatch(sessionActions.setAuthToken({
+            authToken: response.authToken,
+            requirePin: false
+          }));
+
+          store.dispatch(sessionActions.setSessionToken({
+            sessionToken: response.sessionToken,
+            expiresIn: response.expiresIn ?? 0,
+            user: response.user
+          }));
+
+          // Store user info
+          if (response.user) {
+            store.dispatch(sessionActions.updateUser(response.user));
+          }
+
+          return response;
+        }
+
+        // Standard flow: Set auth state in Redux
         store.dispatch(sessionActions.setAuthToken({
           authToken: response.authToken,
           requirePin: response.requirePinVerification || false
@@ -250,6 +276,7 @@ class SessionService {
     try {
       // Clear stored authToken
       await storageService.removeItem('authToken');
+      await storageService.removeItem('sessionToken');
 
       // Optional: notify backend
       try {
@@ -262,6 +289,35 @@ class SessionService {
       store.dispatch(sessionActions.logout());
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Verify if QR token is still valid
+   * Used for quick-created users to check if admin has revoked their access
+   */
+  async verifyQrTokenStatus(): Promise<boolean> {
+    try {
+      const state = store.getState();
+      const user = state.session.user;
+
+      // Only check for quick-created users (with skipPinRequired flag)
+      if (!user || !user.skipPinRequired) {
+        return true; // Regular users don't need QR token check
+      }
+
+      const result = await authApiService.verifyQrToken();
+
+      if (!result.valid) {
+        // Token was revoked - logout user
+        await this.logout();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error verifying QR token:', error);
+      return true; // Don't logout on network errors
     }
   }
 }
