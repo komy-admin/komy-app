@@ -21,16 +21,14 @@ export const useUsers = () => {
   const loadUsers = useCallback(async (filters?: any) => {
     try {
       // Loading géré globalement maintenant
-      
-      let queryString = '';
-      if (filters) {
-        queryString = FilterQueryBuilder.build({
-          filters: filters.filters || [],
-          sort: filters.sort || { field: 'firstName', direction: 'asc' },
-          perPage: filters.perPage || 100
-        });
-      }
-      
+
+      // Toujours construire la query avec un perPage élevé par défaut
+      const queryString = FilterQueryBuilder.build({
+        filters: filters?.filters || [],
+        sort: filters?.sort || { field: 'firstName', direction: 'asc' },
+        perPage: filters?.perPage || 1000
+      });
+
       const { data: users } = await userApiService.getAll(queryString);
       dispatch(entitiesActions.setUsers({ users }));
       return users;
@@ -137,15 +135,29 @@ export const useUsers = () => {
     }
   }, []);
 
-  const regenerateQrToken = useCallback(async (userId: string) => {
+  const revokeQrToken = useCallback(async (userId: string) => {
     try {
-      const response = await userApiService.regenerateQrToken(userId);
+      const response = await userApiService.revokeQrToken(userId);
       return response;
     } catch (error) {
-      console.error('Erreur lors de la régénération du QR code:', error);
+      console.error('Erreur lors de la révocation du QR code:', error);
       throw error;
     }
   }, []);
+
+  const createQuickUser = useCallback(async (profil: UserProfile, displayName?: string) => {
+    try {
+      const response = await userApiService.createQuick(profil, displayName);
+      // Le user est déjà dans la réponse, on l'ajoute au store
+      if (response.user) {
+        dispatch(entitiesActions.createUser({ user: response.user as User }));
+      }
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la création rapide de l\'utilisateur:', error);
+      throw error;
+    }
+  }, [dispatch]);
 
   // Utilitaires
   const getUserById = useCallback((userId: string) => {
@@ -168,23 +180,24 @@ export const useUsers = () => {
   return {
     // Données
     users,
-    
+
     // État
     loading,
     error,
-    
+
     // Actions de chargement
     loadUsers,
-    
+
     // Actions CRUD
     createUser,
+    createQuickUser,
     updateUser,
     deleteUser,
-    
+
     // Actions QR
     getOrGenerateQrToken,
-    regenerateQrToken,
-    
+    revokeQrToken,
+
     // Utilitaires
     getUserById,
     getUsersByProfile,

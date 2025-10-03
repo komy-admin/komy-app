@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Pressable, Animated, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { X, SlidersHorizontal } from 'lucide-react-native';
 import { Text } from './ui';
 
@@ -29,86 +29,11 @@ export function SidePanel({
   showCloseButtonWhenTableSelected = false,
 }: SidePanelProps) {
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
   const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
-
-  // Animations refs - initialisées avec les valeurs de l'état ouvert par défaut
-  const animatedWidth = useRef(new Animated.Value(width)).current;
-  const collapsedOpacity = useRef(new Animated.Value(0)).current;
-  const contentOpacity = useRef(new Animated.Value(1)).current;
-  const rotationValue = useRef(new Animated.Value(1)).current;
-
-  // Initialisation au montage - synchroniser avec l'état collapsed si contrôlé
-  useEffect(() => {
-    if (controlledIsCollapsed !== undefined) {
-      animatedWidth.setValue(controlledIsCollapsed ? collapsedWidth : width);
-      collapsedOpacity.setValue(controlledIsCollapsed ? 1 : 0);
-      contentOpacity.setValue(controlledIsCollapsed ? 0 : 1);
-    }
-
-    const timer = setTimeout(() => {
-      setIsInitialized(true);
-    }, Platform.OS === 'ios' ? 0 : 10);
-
-    return () => clearTimeout(timer);
-  }, []); // Une seule fois au montage
-
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    if (isCollapsed) {
-      // Fermeture optimisée : masquer contenu rapidement puis réduire largeur
-      Animated.sequence([
-        Animated.timing(contentOpacity, {
-          toValue: 0,
-          duration: 80,
-          useNativeDriver: false,
-        }),
-        Animated.parallel([
-          Animated.timing(animatedWidth, {
-            toValue: collapsedWidth,
-            duration: 200,
-            useNativeDriver: false,
-          }),
-          Animated.timing(collapsedOpacity, {
-            toValue: 1,
-            duration: 150,
-            useNativeDriver: false,
-          })
-        ])
-      ]).start(() => {
-        setIsAnimating(false);
-      });
-    } else {
-      // Ouverture optimisée : élargir puis afficher contenu
-      Animated.sequence([
-        Animated.timing(collapsedOpacity, {
-          toValue: 0,
-          duration: 50,
-          useNativeDriver: false,
-        }),
-        Animated.timing(animatedWidth, {
-          toValue: width,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(contentOpacity, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: false,
-        })
-      ]).start(() => {
-        setIsAnimating(false);
-      });
-    }
-  }, [isCollapsed, collapsedWidth, width, isInitialized]);
 
   const toggleCollapse = () => {
     if (hideCloseButton && !showCloseButtonWhenTableSelected) return;
-    if (isAnimating) return;
 
-    setIsAnimating(true);
     const newCollapsedState = !isCollapsed;
 
     if (onCollapsedChange) {
@@ -143,114 +68,134 @@ export function SidePanel({
     return !hideCloseButton;
   };
 
-  // Interpolation pour la rotation - plus robuste sur mobile
-  const rotationInterpolate = rotationValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '270deg'],
-  });
-
   return (
-    <Animated.View
+    <View
       style={[
         style,
         styles.container,
-        { width: animatedWidth, maxWidth: animatedWidth },
+        { width: isCollapsed ? collapsedWidth : width },
       ]}
-      pointerEvents={isCollapsed ? 'auto' : 'box-none'}
     >
-      {/* Barre latérale collapsed */}
-      {isCollapsed && (
-        <Animated.View
-          style={[
-            styles.collapsedBarContainer,
-            { opacity: collapsedOpacity }
-          ]}
-          pointerEvents="auto"
-        >
-          <Pressable onPress={toggleCollapse} style={styles.collapsedBar}>
-            <View style={styles.collapsedBarContent}>
-              {/* Section icône */}
-              <Animated.View
-                style={[
-                  styles.fullWidthIconSection,
-                  { opacity: collapsedOpacity }
-                ]}
-              >
-                <SlidersHorizontal size={20} color="#FFFFFF" strokeWidth={2} />
-              </Animated.View>
+      {/* Barre latérale collapsed - TOUJOURS AFFICHÉE */}
+      <View
+        style={[
+          styles.collapsedBarContainer,
+          {
+            opacity: isCollapsed ? 1 : 0,
+            zIndex: isCollapsed ? 10 : 1,
+          }
+        ]}
+        pointerEvents={isCollapsed ? "auto" : "none"}
+      >
+        <Pressable onPress={toggleCollapse} style={styles.collapsedBar}>
+          <View style={styles.collapsedBarContent}>
+            {/* Section icône */}
+            <View style={styles.fullWidthIconSection}>
+              <SlidersHorizontal size={20} color="#FFFFFF" strokeWidth={2} />
+            </View>
 
-              {/* Texte vertical */}
-              <Animated.View
-                style={[
-                  styles.textSection,
-                  { opacity: collapsedOpacity }
-                ]}
+            {/* Texte vertical */}
+            <View style={styles.textSection}>
+              <View
+                style={styles.textContainer}
+                collapsable={false}
               >
-                <View style={styles.textContainer}>
-                  <Animated.Text
-                    style={[
-                      styles.verticalText,
-                      {
-                        transform: [{ rotate: rotationInterpolate }],
-                        opacity: isInitialized ? 1 : 0,
-                      }
-                    ]}
+                <View
+                  style={{
+                    transform: [{ rotate: '270deg' }],
+                    width: 200,
+                    height: 20,
+                  }}
+                  collapsable={false}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: '#718096',
+                      letterSpacing: 1.2,
+                      textAlign: 'center',
+                    }}
                   >
                     AFFICHER LES FILTRES
-                  </Animated.Text>
+                  </Text>
                 </View>
-              </Animated.View>
+              </View>
             </View>
-          </Pressable>
-        </Animated.View>
-      )}
+          </View>
+        </Pressable>
+      </View>
 
-      {/* Contenu principal */}
-      {!isCollapsed && (
-        <Animated.View
-          style={[styles.content, { opacity: contentOpacity }]}
-          pointerEvents="auto"
-          removeClippedSubviews={false}
+      {/* Contenu principal - TOUJOURS AFFICHÉ */}
+      <View
+        style={[
+          styles.content,
+          {
+            opacity: isCollapsed ? 0 : 1,
+            zIndex: isCollapsed ? 1 : 10,
+          }
+        ]}
+        pointerEvents={isCollapsed ? "none" : "auto"}
+      >
+        <View
+          style={[
+            styles.header,
+            getHeaderStyle()
+          ]}
         >
-          <View
-            style={[
-              styles.header,
-              getHeaderStyle()
-            ]}
-          >
-            <View style={styles.headerLeft}>
-              <Text
-                style={styles.title}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {title}
-              </Text>
-              {shouldShowCloseButton() && (
-                <Pressable onPress={handleCloseAction} style={styles.backButton}>
-                  <X size={24} color="#2A2E33" />
-                </Pressable>
-              )}
-            </View>
+          <View style={styles.headerLeft}>
+            <Text
+              style={styles.title}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {title}
+            </Text>
+            {shouldShowCloseButton() && (
+              <Pressable onPress={handleCloseAction} style={styles.backButton}>
+                <X size={24} color="#2A2E33" />
+              </Pressable>
+            )}
           </View>
-          {/* CRITIQUE: Wrapper pour isoler le contenu scrollable */}
-          <View style={styles.childrenContainer}>
-            {children}
-          </View>
-        </Animated.View>
-      )}
-    </Animated.View>
+        </View>
+        {/* CRITIQUE: Wrapper pour isoler le contenu scrollable */}
+        <View style={styles.childrenContainer}>
+          {children}
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-    zIndex: 1000,
+    height: '100%',
+    position: 'relative',
+    backgroundColor: 'transparent',
   },
   content: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 1, height: 0 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '1px 0 3px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   childrenContainer: {
     flex: 1,
@@ -281,8 +226,11 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   collapsedBarContainer: {
-    flex: 1,
-    width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   collapsedBar: {
     flex: 1,
@@ -290,6 +238,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRightWidth: 1,
     borderRightColor: '#E2E8F0',
+    flexDirection: 'column',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -325,13 +274,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 200,
     width: 50,
-  },
-  verticalText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#718096',
-    letterSpacing: 1.2,
-    textAlign: 'center',
-    width: 200,
   },
 });

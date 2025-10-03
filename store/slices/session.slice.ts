@@ -166,12 +166,12 @@ const sessionSlice = createSlice({
     setSessionToken: (state, action: PayloadAction<{
       sessionToken: string;
       expiresIn: number;
-      user: User;
+      user: Partial<User>;
     }>) => {
       const { sessionToken, expiresIn, user } = action.payload;
       state.sessionToken = sessionToken;
       state.sessionExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-      state.user = user;
+      state.user = { ...state.user, ...user } as User;
       state.isAuthenticated = true;
       state.requiresPin = false;
       state.isPinVerified = true;

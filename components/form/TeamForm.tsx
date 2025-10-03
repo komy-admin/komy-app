@@ -137,6 +137,8 @@ export const TeamForm = forwardRef<AdminFormRef<User>, TeamFormProps>(({ user, o
           profil: selectedProfileId as UserProfile,
           ...formData,
           password: user && !isPasswordModified ? '' : formData.password,
+          isPasswordSet: user?.isPasswordSet || false,
+          skipPinRequired: user?.skipPinRequired || false,
         };
       }
 

@@ -1,59 +1,45 @@
 import { io, Socket } from 'socket.io-client';
-import { SocketEvents } from './types';
 import { storageService } from '~/lib/storageService';
 
 export class SocketService {
     private socket: Socket | null = null;
 
     async connect(url: string, sessionToken?: string) {
-      // Use provided sessionToken or try to get from storage
       const token = sessionToken || await storageService.getItem('sessionToken');
 
       if (!token) {
-        console.error('[SocketService] No session token available for WebSocket connection');
+        console.error('[SocketService] No session token available');
         return;
       }
 
-      console.log('[SocketService] Connecting to WebSocket with session token');
       this.socket = io(url, {
-        auth: {
-          token  // Pass sessionToken in auth object as expected by backend
-        }
+        auth: { token }
       });
 
       this.socket.on('connect', () => {
-          console.log('[SocketService] ✅ Connected to WebSocket server');
-          console.log('[SocketService] Socket ID:', this.socket?.id);
+          console.log('[SocketService] Connected');
       });
 
       this.socket.on('disconnect', (reason) => {
-          console.log('[SocketService] ❌ Disconnected from WebSocket server. Reason:', reason);
-      });
-
-      // Debug: écouter tous les événements
-      this.socket.onAny((eventName, ...args) => {
-          console.log('[SocketService] 📨 Event received:', eventName, args);
+          console.log('[SocketService] Disconnected:', reason);
       });
     }
 
-    emit<K extends keyof SocketEvents>(event: K, payload: SocketEvents[K]) {
+    emit(event: string, payload: any) {
         if (this.socket) {
-          console.log('Emiting event:', event);
           this.socket.emit(event, payload);
         } else {
-            console.error('Socket is not connected');
+            console.error('[SocketService] Socket is not connected');
         }
     }
 
-    on<K extends keyof SocketEvents>(event: K, callback: (payload: SocketEvents[K]) => void) {
+    on(event: string, callback: (...args: any[]) => void) {
         if (this.socket) {
           this.socket.on(event, callback);
-        } else {
-            console.error('Socket is not connected');
         }
     }
 
-    off<K extends keyof SocketEvents>(event: K, callback?: (payload: SocketEvents[K]) => void) {
+    off(event: string, callback?: (...args: any[]) => void) {
         if (this.socket) {
             if (callback) {
                 this.socket.off(event, callback);
@@ -67,9 +53,12 @@ export class SocketService {
         return this.socket?.connected || false;
     }
 
+    getSocket() {
+        return this.socket;
+    }
+
     disconnect() {
         if (this.socket) {
-            // Cleanup listeners
             this.socket.offAny();
             this.socket.disconnect();
             this.socket = null;

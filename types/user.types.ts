@@ -19,4 +19,5 @@ export type User = {
   password: string;
   loginId: string;
   isPasswordSet: boolean;
+  skipPinRequired: boolean;
 };

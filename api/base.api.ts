@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from "axios";
 import { Platform } from "react-native";
 import { StorageInterface, storageService } from "~/lib/storageService";
 import { store } from "~/store";
+import { logout } from "~/store";
 
 const DEV_API_URL = Platform.select({
   android: `${process.env.EXPO_PUBLIC_API_URL}/api`,
@@ -90,6 +91,19 @@ export abstract class BaseApiService<T> {
         return config;
       },
       (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor to handle QR token revocation
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        // Check for QR token revocation
+        if (error.response?.status === 401 && error.response?.data?.code === 'QR_TOKEN_REVOKED') {
+          // Dispatch logout action
+          store.dispatch(logout());
+        }
         return Promise.reject(error);
       }
     );

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Platform, Alert, Dimensions } from 'react-native';
+import { useEffect, useState, useMemo, memo } from 'react';
+import { View, Text, Image, Pressable, StyleSheet, Platform, Alert, Dimensions, ImageSourcePropType } from 'react-native';
 import { User, ShieldCheck, Bell, LogOut, PenTool, Database, Settings } from 'lucide-react-native';
 import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,29 @@ import * as ImagePicker from 'expo-image-picker';
 
 type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications' | 'configuration';
 
+// Composant Avatar mémorisé pour éviter les reloads d'image sur resize
+const ProfileAvatar = memo(({
+  source,
+  size
+}: {
+  source: ImageSourcePropType;
+  size: number;
+}) => (
+  <Image
+    source={source}
+    style={{
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      backgroundColor: '#F3F4F6',
+    }}
+    resizeMode="cover"
+    onError={(error) => {
+      console.error('Erreur chargement image:', error);
+    }}
+  />
+));
+
 const CONFIG_ITEMS = [
   { id: 'dashboard', Icon: Database, label: 'Dashboard' },
   { id: 'personal', Icon: User, label: 'Informations personnels' },
@@ -16,6 +39,77 @@ const CONFIG_ITEMS = [
   { id: 'notifications', Icon: Bell, label: 'Notifications' },
   { id: 'configuration', Icon: Settings, label: 'Paramètre du restaurant' },
 ];
+
+// Configuration des breakpoints de hauteur - Extraite pour performance
+const HEIGHT_BREAKPOINTS = {
+  xs: { // < 500px hauteur - Mode ultra-compact (tablette paysage)
+    avatarSize: 50,
+    containerPaddingVertical: 16,
+    profileMarginBottom: 12,
+    userNameSize: 13,
+    userRoleSize: 11,
+    menuItemPaddingVertical: 8,
+    menuItemMinHeight: 36,
+    iconSize: 16,
+    editIconSize: 10,
+    gap: 2,
+  },
+  sm: { // 500-650px hauteur - Mode compact
+    avatarSize: 70,
+    containerPaddingVertical: 20,
+    profileMarginBottom: 16,
+    userNameSize: 14,
+    userRoleSize: 12,
+    menuItemPaddingVertical: 10,
+    menuItemMinHeight: 40,
+    iconSize: 17,
+    editIconSize: 12,
+    gap: 3,
+  },
+  md: { // 650-800px hauteur - Mode moyen
+    avatarSize: 100,
+    containerPaddingVertical: 28,
+    profileMarginBottom: 24,
+    userNameSize: 16,
+    userRoleSize: 13,
+    menuItemPaddingVertical: 11,
+    menuItemMinHeight: 42,
+    iconSize: 18,
+    editIconSize: 14,
+    gap: 4,
+  },
+  lg: { // > 800px hauteur - Mode large
+    avatarSize: 140,
+    containerPaddingVertical: 35,
+    profileMarginBottom: 40,
+    userNameSize: 18,
+    userRoleSize: 14,
+    menuItemPaddingVertical: 12,
+    menuItemMinHeight: 44,
+    iconSize: 18,
+    editIconSize: 16,
+    gap: 4,
+  },
+} as const;
+
+// Configuration des breakpoints de largeur - Extraite pour performance
+const WIDTH_BREAKPOINTS = {
+  sm: {
+    containerPaddingHorizontal: 12,
+    menuTextSize: 12,
+    logoutTextSize: 12,
+  },
+  md: {
+    containerPaddingHorizontal: 16,
+    menuTextSize: 13,
+    logoutTextSize: 13,
+  },
+  lg: {
+    containerPaddingHorizontal: 24,
+    menuTextSize: 14,
+    logoutTextSize: 14,
+  },
+} as const;
 
 type ConfigSidebarProps = {
   currentSection: ConfigSection;
@@ -39,7 +133,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
   }, []);
 
   // Calculer les breakpoints basés sur la largeur de la sidebar
-  const getBreakpoint = () => {
+  const getWidthBreakpoint = () => {
     const screenWidth = dimensions.width;
     const calculatedSidebarWidth = screenWidth * 0.25; // 25% de l'écran
 
@@ -48,7 +142,81 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
     return 'lg'; // Large - tout affiché normalement
   };
 
-  const breakpoint = getBreakpoint();
+  // Calculer les breakpoints basés sur la hauteur disponible
+  const getHeightBreakpoint = () => {
+    const screenHeight = dimensions.height;
+
+    if (screenHeight < 500) return 'xs'; // Très compact - avatar mini, espacements réduits
+    if (screenHeight < 650) return 'sm'; // Compact - avatar petit, marges réduites
+    if (screenHeight < 800) return 'md'; // Moyen - avatar moyen
+    return 'lg'; // Large - avatar complet
+  };
+
+  const widthBreakpoint = getWidthBreakpoint();
+  const heightBreakpoint = getHeightBreakpoint();
+
+  // Taille de l'avatar mémorisée séparément pour éviter les reloads
+  const avatarSize = useMemo(() => {
+    return HEIGHT_BREAKPOINTS[heightBreakpoint].avatarSize;
+  }, [heightBreakpoint]);
+
+  // Styles dynamiques optimisés avec useMemo
+  const dynamicStyles = useMemo(() => {
+    const hConfig = HEIGHT_BREAKPOINTS[heightBreakpoint];
+    const wConfig = WIDTH_BREAKPOINTS[widthBreakpoint];
+
+    return {
+      container: {
+        ...styles.container,
+        paddingVertical: hConfig.containerPaddingVertical,
+        paddingHorizontal: wConfig.containerPaddingHorizontal,
+      },
+      avatarContainer: {
+        ...styles.avatarContainer,
+        width: hConfig.avatarSize,
+        height: hConfig.avatarSize,
+        borderRadius: hConfig.avatarSize / 2,
+        marginBottom: heightBreakpoint === 'xs' ? 8 : 16,
+      },
+      userName: {
+        ...styles.userName,
+        fontSize: hConfig.userNameSize,
+        marginBottom: heightBreakpoint === 'xs' ? 2 : 4,
+      },
+      userRole: {
+        ...styles.userRole,
+        fontSize: hConfig.userRoleSize,
+      },
+      profileSection: {
+        ...styles.profileSection,
+        marginBottom: hConfig.profileMarginBottom,
+      },
+      menuSection: {
+        ...styles.menuSection,
+        gap: hConfig.gap,
+      },
+      menuItem: {
+        paddingVertical: hConfig.menuItemPaddingVertical,
+        minHeight: hConfig.menuItemMinHeight,
+      },
+      menuText: {
+        ...styles.menuText,
+        fontSize: wConfig.menuTextSize,
+      },
+      textContainer: styles.textContainer,
+      iconContainer: styles.iconContainer,
+      iconSize: hConfig.iconSize,
+      editIconSize: hConfig.editIconSize,
+      logoutText: {
+        ...styles.logoutText,
+        fontSize: wConfig.logoutTextSize,
+      },
+      logoutButton: {
+        paddingVertical: hConfig.menuItemPaddingVertical,
+        minHeight: hConfig.menuItemMinHeight,
+      },
+    };
+  }, [heightBreakpoint, widthBreakpoint]);
 
   // Gestion des erreurs
   useEffect(() => {
@@ -112,19 +280,14 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
             }
 
             const reader = new FileReader();
-            reader.onload = async (e) => {
-              const imageUri = e.target?.result as string;
-
-              try {
-                // TODO: Implement updateProfileImage with new store
-                // await dispatch(updateProfileImage({ 
-                //   userId: user.id, 
-                //   imageUri 
-                // })).unwrap();
-                Alert.alert('Succès', 'Photo de profil mise à jour !');
-              } catch (error) {
-                console.error('Erreur upload:', error);
-              }
+            reader.onload = async () => {
+              // TODO: Implement updateProfileImage with new store
+              // const imageUri = e.target?.result as string;
+              // await dispatch(updateProfileImage({
+              //   userId: user.id,
+              //   imageUri
+              // })).unwrap();
+              Alert.alert('Succès', 'Photo de profil mise à jour !');
             };
             reader.readAsDataURL(file);
           }
@@ -143,26 +306,20 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [1, 1],
           quality: 0.8,
-          base64: false,
         });
 
         if (!result.canceled && result.assets[0]) {
-          const imageUri = result.assets[0].uri;
-
-          try {
-            // TODO: Implement updateProfileImage with new store
-            // await dispatch(updateProfileImage({ 
-            //   userId: user.id, 
-            //   imageUri 
-            // })).unwrap();
-            Alert.alert('Succès', 'Photo de profil mise à jour !');
-          } catch (error) {
-            console.error('Erreur upload:', error);
-          }
+          // TODO: Implement updateProfileImage with new store
+          // const imageUri = result.assets[0].uri;
+          // await dispatch(updateProfileImage({
+          //   userId: user.id,
+          //   imageUri
+          // })).unwrap();
+          Alert.alert('Succès', 'Photo de profil mise à jour !');
         }
       }
     } catch (error) {
@@ -171,86 +328,26 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
     }
   };
 
-  // Fonction pour obtenir la source de l'image
-  const getImageSource = () => {
+  // Source de l'image mémorisée pour éviter les re-renders
+  const imageSource = useMemo(() => {
     if (user?.profileImage) {
-      console.log('Image utilisateur:', user.profileImage);
       return { uri: user.profileImage };
     }
     return require('~/assets/images/userprofiledefault.jpg');
-  };
+  }, [user?.profileImage]);
 
-  // Fonction pour tronquer le texte
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-  };
-
-  // Styles dynamiques basés sur le breakpoint
-  const getDynamicStyles = () => {
-    switch (breakpoint) {
-      case 'sm':
-        return {
-          container: { ...styles.container, paddingHorizontal: 12 },
-          avatarContainer: { ...styles.avatarContainer, width: 80, height: 80, borderRadius: 40 },
-          avatar: { ...styles.avatar, borderRadius: 40 },
-          userName: { ...styles.userName, fontSize: 14 },
-          userRole: { ...styles.userRole, fontSize: 12 },
-          profileSection: { ...styles.profileSection, marginBottom: 24 },
-          menuText: { ...styles.menuText, fontSize: 12 },
-          textContainer: styles.textContainer,
-          iconContainer: styles.iconContainer,
-          logoutText: { ...styles.logoutText, fontSize: 12 },
-        };
-      case 'md':
-        return {
-          container: { ...styles.container, paddingHorizontal: 16 },
-          avatarContainer: { ...styles.avatarContainer, width: 100, height: 100, borderRadius: 50 },
-          avatar: { ...styles.avatar, borderRadius: 50 },
-          userName: { ...styles.userName, fontSize: 16 },
-          userRole: { ...styles.userRole, fontSize: 13 },
-          profileSection: { ...styles.profileSection, marginBottom: 32 },
-          menuText: { ...styles.menuText, fontSize: 13 },
-          textContainer: styles.textContainer,
-          iconContainer: styles.iconContainer,
-          logoutText: { ...styles.logoutText, fontSize: 13 },
-        };
-      default: // lg
-        return {
-          container: styles.container,
-          avatarContainer: styles.avatarContainer,
-          avatar: styles.avatar,
-          userName: styles.userName,
-          userRole: styles.userRole,
-          profileSection: styles.profileSection,
-          menuText: styles.menuText,
-          textContainer: styles.textContainer,
-          iconContainer: styles.iconContainer,
-          logoutText: styles.logoutText,
-        };
-    }
-  };
-
-  const dynamicStyles = getDynamicStyles();
 
   return (
     <View style={dynamicStyles.container}>
       <View style={dynamicStyles.profileSection}>
         <View style={dynamicStyles.avatarContainer}>
-          <Image
-            source={getImageSource()}
-            style={dynamicStyles.avatar}
-            resizeMode="cover"
-            onError={(error) => {
-              console.error('Erreur chargement image:', error);
-            }}
-          />
+          <ProfileAvatar source={imageSource} size={avatarSize} />
           <Pressable
             onPress={handleImagePicker}
             disabled={isLoading}
           >
             <View style={styles.editIconContainer}>
-              <PenTool size={breakpoint === 'sm' ? 12 : 16} color="#2A2E33" />
+              <PenTool size={dynamicStyles.editIconSize} color="#2A2E33" />
             </View>
           </Pressable>
         </View>
@@ -269,7 +366,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
         </Text>
       </View>
 
-      <View style={styles.menuSection}>
+      <View style={dynamicStyles.menuSection}>
         {CONFIG_ITEMS.map(({ id, Icon, label }) => {
           const isActive = currentSection === id;
           return (
@@ -285,13 +382,14 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
             >
               <View style={[
                 styles.menuItem,
+                dynamicStyles.menuItem,
                 {
                   backgroundColor: isActive ? '#F3F4F6' : 'transparent',
                 }
               ]}>
                 <View style={dynamicStyles.iconContainer}>
                   <Icon
-                    size={18}
+                    size={dynamicStyles.iconSize}
                     color={isActive ? '#2A2E33' : '#64666A'}
                   />
                 </View>
@@ -325,9 +423,9 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
         ]}
         onPress={handleLogout}
       >
-        <View style={styles.logoutButton}>
+        <View style={[styles.logoutButton, dynamicStyles.logoutButton]}>
           <View style={dynamicStyles.iconContainer}>
-            <LogOut size={18} color="#DC2626" />
+            <LogOut size={dynamicStyles.iconSize} color="#DC2626" />
           </View>
           <View style={dynamicStyles.textContainer}>
             <Text
@@ -372,12 +470,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 70,
-    backgroundColor: '#F3F4F6',
   },
   editIconContainer: {
     position: 'absolute',
