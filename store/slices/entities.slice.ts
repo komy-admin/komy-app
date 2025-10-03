@@ -593,6 +593,7 @@ interface KitchenItem {
   orderId: string;
   itemName: string;
   itemType?: string;
+  itemTypeType?: string;
   menuName?: string;
   menuId?: string;
   status: Status;
@@ -615,6 +616,7 @@ export const selectAllKitchenItems = createSelector(
           orderId: orderLine.orderId,
           itemName: orderLine.item.name,
           itemType: orderLine.item.itemType?.name,
+          itemTypeType: orderLine.item.itemType?.type,
           status: orderLine.status || Status.PENDING,
           orderLineId: orderLine.id
         });
@@ -631,6 +633,7 @@ export const selectAllKitchenItems = createSelector(
                 orderId: orderLine.orderId,
                 itemName: menuItem.item.name,
                 itemType: menuItem.item.itemType?.name,
+                itemTypeType: menuItem.item.itemType?.type,
                 menuName: orderLine.menu?.name,
                 menuId: orderLine.menu?.id,
                 status: menuItem.status || orderLine.status || Status.PENDING,
@@ -657,6 +660,7 @@ export const selectAllKitchenItems = createSelector(
             orderId: parentOrderLine.orderId,
             itemName: orderLineItem.item.name,
             itemType: orderLineItem.item.itemType?.name,
+            itemTypeType: orderLineItem.item.itemType?.type,
             menuName: parentOrderLine.menu?.name,
             menuId: parentOrderLine.menu?.id,
             status: orderLineItem.status || Status.PENDING,

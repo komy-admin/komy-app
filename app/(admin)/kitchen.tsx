@@ -121,7 +121,8 @@ export default function KitchenPage() {
   const filteredKitchenItems = useMemo(() => {
 
     const filtered = kitchenItems.filter(item => {
-      const shouldInclude = AVAILABLE_STATUSES.includes(item.status);
+      const shouldInclude = AVAILABLE_STATUSES.includes(item.status) &&
+        (item.itemTypeType === 'kitchen');
       return shouldInclude;
     });
 

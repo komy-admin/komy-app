@@ -108,7 +108,7 @@ export default function BarmanPage() {
   const filteredBarItems = useMemo(() => {
     const filtered = kitchenItems.filter(item => {
       const shouldInclude = AVAILABLE_STATUSES.includes(item.status) &&
-        (item.itemType === 'Boissons' || item.itemType === 'Bar');
+        (item.itemTypeType === 'bar');
       return shouldInclude;
     });
 
