@@ -24,7 +24,10 @@ export const useAccountConfig = () => {
       dispatch(sessionActions.setAccountConfig({
         id: accountConfig.id,
         reminderMinutes: accountConfig.reminderMinutes,
-        reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
+        reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
+        teamEnabled: accountConfig.teamEnabled ?? true,
+        kitchenEnabled: accountConfig.kitchenEnabled ?? true,
+        barEnabled: accountConfig.barEnabled ?? true
       }));
       return accountConfig;
     } catch (err) {
@@ -42,6 +45,9 @@ export const useAccountConfig = () => {
   const updateConfig = useCallback(async (updates: {
     reminderMinutes?: number;
     reminderNotificationsEnabled?: boolean;
+    teamEnabled?: boolean;
+    kitchenEnabled?: boolean;
+    barEnabled?: boolean;
   }) => {
     setIsLoading(true);
     setError(null);
@@ -55,7 +61,10 @@ export const useAccountConfig = () => {
       dispatch(sessionActions.setAccountConfig({
         id: updatedConfig.id,
         reminderMinutes: updatedConfig.reminderMinutes,
-        reminderNotificationsEnabled: updatedConfig.reminderNotificationsEnabled
+        reminderNotificationsEnabled: updatedConfig.reminderNotificationsEnabled,
+        teamEnabled: updatedConfig.teamEnabled ?? true,
+        kitchenEnabled: updatedConfig.kitchenEnabled ?? true,
+        barEnabled: updatedConfig.barEnabled ?? true
       }));
       return updatedConfig;
     } catch (err) {
@@ -96,6 +105,9 @@ export const useAccountConfig = () => {
     // Valeurs directes
     reminderMinutes: config?.reminderMinutes ?? 15,
     reminderNotificationsEnabled: config?.reminderNotificationsEnabled ?? false,
+    teamEnabled: config?.teamEnabled ?? true,
+    kitchenEnabled: config?.kitchenEnabled ?? true,
+    barEnabled: config?.barEnabled ?? true,
     
     // Compatibilité avec l'ancien code
     isAlertEnabled,

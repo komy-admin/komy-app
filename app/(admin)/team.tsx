@@ -1,7 +1,7 @@
 import { View, ScrollView, useWindowDimensions, Text, StyleSheet, Share, Clipboard, Platform } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
 import { AdminFormView, useAdminFormView } from "~/components/admin/AdminFormView";
@@ -19,8 +19,18 @@ import { RootState } from '~/store';
 import { useUsers } from '~/hooks/useRestaurant';
 import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
 import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
+import { useRouter } from 'expo-router';
 
 export default function TeamPage() {
+  const router = useRouter();
+  const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+
+  // Rediriger si la vue est désactivée
+  useEffect(() => {
+    if (accountConfig && accountConfig.teamEnabled === false) {
+      router.replace('/(admin)/service');
+    }
+  }, [accountConfig, router]);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<UserProfile | 'all'>('all');
   const [teamFilters, setTeamFilters] = useState<TeamFilterState>(createEmptyTeamFilters());
