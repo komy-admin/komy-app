@@ -5,7 +5,7 @@ import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import * as ImagePicker from 'expo-image-picker';
+import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
 
 type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications' | 'configuration';
 
@@ -119,6 +119,7 @@ type ConfigSidebarProps = {
 export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebarProps) {
   const { user, isLoading, error } = useSelector((state: RootState) => state.session);
   const router = useRouter();
+  const { pickImage, isUploading } = useProfileImageUpload();
 
   // État pour gérer les dimensions et les breakpoints
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
@@ -239,95 +240,6 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
     }
   };
 
-  // Validation de taille d'image côté front
-  const validateImageSize = (fileSize: number): boolean => {
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (fileSize > maxSize) {
-      Alert.alert('Erreur', 'L\'image est trop volumineuse (max 5MB)');
-      return false;
-    }
-    return true;
-  };
-
-  const validateImageType = (mimeType: string): boolean => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(mimeType)) {
-      Alert.alert('Erreur', 'Format d\'image non supporté (JPG, PNG, WEBP uniquement)');
-      return false;
-    }
-    return true;
-  };
-
-  // Sélecteur d'image optimisé avec validation front
-  const handleImagePicker = async () => {
-    if (!user?.id) {
-      Alert.alert('Erreur', 'Utilisateur non connecté');
-      return;
-    }
-
-    try {
-      if (Platform.OS === 'web') {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/jpeg,image/jpg,image/png,image/webp';
-        input.style.display = 'none';
-
-        input.onchange = async (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          if (file) {
-            if (!validateImageType(file.type) || !validateImageSize(file.size)) {
-              return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = async () => {
-              // TODO: Implement updateProfileImage with new store
-              // const imageUri = e.target?.result as string;
-              // await dispatch(updateProfileImage({
-              //   userId: user.id,
-              //   imageUri
-              // })).unwrap();
-              Alert.alert('Succès', 'Photo de profil mise à jour !');
-            };
-            reader.readAsDataURL(file);
-          }
-        };
-
-        document.body.appendChild(input);
-        input.click();
-        document.body.removeChild(input);
-
-      } else {
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-        if (permissionResult.granted === false) {
-          Alert.alert('Permission requise', 'Vous devez autoriser l\'accès à la galerie pour changer votre photo de profil.');
-          return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.8,
-        });
-
-        if (!result.canceled && result.assets[0]) {
-          // TODO: Implement updateProfileImage with new store
-          // const imageUri = result.assets[0].uri;
-          // await dispatch(updateProfileImage({
-          //   userId: user.id,
-          //   imageUri
-          // })).unwrap();
-          Alert.alert('Succès', 'Photo de profil mise à jour !');
-        }
-      }
-    } catch (error) {
-      console.error('Erreur lors de la sélection d\'image:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la sélection de l\'image.');
-    }
-  };
-
   // Source de l'image mémorisée pour éviter les re-renders
   const imageSource = useMemo(() => {
     if (user?.profileImage) {
@@ -343,8 +255,8 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
         <View style={dynamicStyles.avatarContainer}>
           <ProfileAvatar source={imageSource} size={avatarSize} />
           <Pressable
-            onPress={handleImagePicker}
-            disabled={isLoading}
+            onPress={pickImage}
+            disabled={isUploading}
           >
             <View style={styles.editIconContainer}>
               <PenTool size={dynamicStyles.editIconSize} color="#2A2E33" />

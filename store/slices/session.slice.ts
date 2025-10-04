@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { User } from '~/types/user.types';
 import { storageService } from '~/lib/storageService';
+import { uploadProfileImage } from '../thunks/uploadProfileImage.thunk';
 
 // Types pour les payloads des actions
 interface AccountConfigPayload {
@@ -391,6 +392,19 @@ const sessionSlice = createSlice({
     builder
       .addCase(logout.fulfilled, () => {
         return initialState;
+      })
+      // Upload profile image
+      .addCase(uploadProfileImage.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(uploadProfileImage.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isLoading = false;
+      })
+      .addCase(uploadProfileImage.rejected, (state, action) => {
+        state.error = action.payload || 'Upload failed';
+        state.isLoading = false;
       });
   },
 });
