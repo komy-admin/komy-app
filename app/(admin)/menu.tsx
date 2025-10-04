@@ -16,6 +16,7 @@ import { MenuEditor } from '~/components/Menu/MenuEditor';
 import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
 import { FormHeader } from '~/components/admin/FormHeader';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { formatPrice } from '~/lib/utils';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -331,6 +332,9 @@ export default function MenuPage() {
       label: 'Prix',
       key: 'price',
       width: '20%',
+      render: (item: Item) => (
+        <Text>{formatPrice(item.price)}</Text>
+      )
     },
     {
       label: 'Statut',
@@ -362,7 +366,7 @@ export default function MenuPage() {
       key: 'basePrice',
       width: '15%',
       render: (menu: Menu) => (
-        <Text>{Number(menu.basePrice).toFixed(2)}€</Text>
+        <Text>{formatPrice(Number(menu.basePrice))}</Text>
       )
     },
     {

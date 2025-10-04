@@ -3,7 +3,7 @@ import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 're
 import { Text } from '~/components/ui';
 import { Plus, Minus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
-import { getContrastColor } from '~/lib/utils';
+import { getContrastColor, formatPrice } from '~/lib/utils';
 
 /**
  * Props pour le composant OrderItemsList
@@ -78,7 +78,7 @@ const OrderItemCard = memo<OrderItemRowProps>(({
           </Text>
         </View>
         <Text style={[styles.itemPrice, item.color ? { marginTop: 8 } : {}]}>
-          {item.price.toFixed(2)}€
+          {formatPrice(item.price)}
         </Text>
       </View>
 

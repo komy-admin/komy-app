@@ -7,6 +7,7 @@ import { Item } from '~/types/item.types';
 import { Plus, Trash2, Settings } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
 import { ItemType } from '@/types/item-type.types';
+import { formatPrice } from '~/lib/utils';
 
 interface MenuConfigurationProps {
   menus: Menu[];
@@ -169,7 +170,7 @@ export function MenuConfiguration({
             {menuCategoryItem.item?.name}
           </Text>
           <Text style={{ fontSize: 12, color: '#666' }}>
-            {menuCategoryItem.item?.price}€
+            {formatPrice(menuCategoryItem.item?.price || 0)}
           </Text>
         </View>
       )
@@ -342,7 +343,7 @@ export function MenuConfiguration({
                   <Text style={{ fontSize: 12, marginBottom: 4, color: '#374151' }}>Article</Text>
                   <Select
                     choices={availableItems.map(item => ({
-                      label: `${item.name} (${item.price}€)`,
+                      label: `${item.name} (${formatPrice(item.price)})`,
                       value: item.id,
                       id: item.id
                     }))}

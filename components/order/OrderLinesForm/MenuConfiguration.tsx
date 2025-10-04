@@ -5,6 +5,7 @@ import { Menu as MenuIcon } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
+import { formatPrice } from '~/lib/utils';
 
 /**
  * Type pour une catégorie de menu
@@ -181,7 +182,7 @@ const MenuItemCard = memo<MenuItemCardProps>(({
             {hasSupplementPrice && (
               <View style={styles.menuItemSupplement}>
                 <Text style={styles.menuItemSupplementText}>
-                  +{supplement.toFixed(2)}€
+                  +{formatPrice(supplement)}
                 </Text>
               </View>
             )}
