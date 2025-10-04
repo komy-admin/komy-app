@@ -1,10 +1,8 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { CustomModal } from '~/components/CustomModal';
 import { Button } from '~/components/ui';
 import { Portal } from '@rn-primitives/portal';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface DeleteConfirmationModalProps {
   isVisible: boolean;
@@ -13,9 +11,14 @@ interface DeleteConfirmationModalProps {
   entityName: string;
   entityType: string;
   isLoading?: boolean;
-  usePortal?: boolean; // Nouveau prop pour contrôler l'utilisation du Portal
+  usePortal?: boolean;
 }
 
+/**
+ * Modal de confirmation de suppression responsive
+ * Width : 90% de l'écran avec max 600px (s'adapte à tous les formats)
+ * Height : Auto (s'adapte au contenu automatiquement)
+ */
 export function DeleteConfirmationModal({
   isVisible,
   onClose,
@@ -23,22 +26,33 @@ export function DeleteConfirmationModal({
   entityName,
   entityType,
   isLoading = false,
-  usePortal = false // Par défaut, n'utilise pas le Portal
+  usePortal = false
 }: DeleteConfirmationModalProps) {
-  // Utilise une largeur responsive: max 90% de l'écran ou 400px
-  const modalWidth = Math.min(SCREEN_WIDTH * 0.9, 400);
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+
+  // Écouter les changements de dimensions (rotation, resize)
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  // Width : 90% avec max 600px - simple et universel
+  const modalWidth = Math.min(screenWidth * 0.9, 600);
 
   const modalContent = (
     <CustomModal
       isVisible={isVisible}
       onClose={onClose}
       width={modalWidth}
-      height={320}
+      height="auto"
       title="Confirmation de suppression"
       titleColor="#FF4444"
     >
       <View style={styles.deleteModalContent}>
-        <View style={{ paddingTop: 20 }}>
+        <View>
           <Text style={styles.deleteMessage}>
             Êtes-vous sûr de vouloir supprimer {entityType} {entityName} ?
           </Text>
@@ -82,11 +96,9 @@ export function DeleteConfirmationModal({
 
 const styles = StyleSheet.create({
   deleteModalContent: {
-    flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 30,
     paddingBottom: 10,
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   deleteMessage: {
