@@ -90,7 +90,10 @@ export const useAppInit = () => {
         dispatch(sessionActions.setAccountConfig({
           id: accountConfig.id,
           reminderMinutes: accountConfig.reminderMinutes,
-          reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled
+          reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
+          teamEnabled: accountConfig.teamEnabled,
+          kitchenEnabled: accountConfig.kitchenEnabled,
+          barEnabled: accountConfig.barEnabled
         }));
         updateProgress('accountConfig', true);
       } catch (error) {

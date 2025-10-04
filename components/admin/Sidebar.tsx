@@ -27,8 +27,9 @@ export function AdminSidebar() {
      // Si pas de clé de config, toujours visible
      if (!item.configKey) return true;
 
-     // Sinon vérifier la config (par défaut true si non défini)
-     return accountConfig?.[item.configKey] ?? true;
+     // Sinon vérifier la config strictement
+     if (!accountConfig) return false;
+     return accountConfig[item.configKey] === true;
    });
  }, [accountConfig]);
 

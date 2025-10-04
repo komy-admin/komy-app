@@ -25,9 +25,9 @@ export const useAccountConfig = () => {
         id: accountConfig.id,
         reminderMinutes: accountConfig.reminderMinutes,
         reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
-        teamEnabled: accountConfig.teamEnabled ?? true,
-        kitchenEnabled: accountConfig.kitchenEnabled ?? true,
-        barEnabled: accountConfig.barEnabled ?? true
+        teamEnabled: accountConfig.teamEnabled,
+        kitchenEnabled: accountConfig.kitchenEnabled,
+        barEnabled: accountConfig.barEnabled
       }));
       return accountConfig;
     } catch (err) {
@@ -62,9 +62,9 @@ export const useAccountConfig = () => {
         id: updatedConfig.id,
         reminderMinutes: updatedConfig.reminderMinutes,
         reminderNotificationsEnabled: updatedConfig.reminderNotificationsEnabled,
-        teamEnabled: updatedConfig.teamEnabled ?? true,
-        kitchenEnabled: updatedConfig.kitchenEnabled ?? true,
-        barEnabled: updatedConfig.barEnabled ?? true
+        teamEnabled: updatedConfig.teamEnabled,
+        kitchenEnabled: updatedConfig.kitchenEnabled,
+        barEnabled: updatedConfig.barEnabled
       }));
       return updatedConfig;
     } catch (err) {
