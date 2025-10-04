@@ -8,6 +8,9 @@ interface AccountConfigPayload {
   id: string;
   reminderMinutes: number;
   reminderNotificationsEnabled: boolean;
+  teamEnabled: boolean;
+  kitchenEnabled: boolean;
+  barEnabled: boolean;
 }
 
 // Utilitaire pour les timestamps
@@ -61,6 +64,9 @@ export interface SessionState {
     id: string;
     reminderMinutes: number;
     reminderNotificationsEnabled: boolean;
+    teamEnabled: boolean;
+    kitchenEnabled: boolean;
+    barEnabled: boolean;
   } | null;
   overdueOrderIds: string[];
   overdueOrderItemIds: string[];

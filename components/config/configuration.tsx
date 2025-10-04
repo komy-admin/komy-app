@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform, TextInput, ScrollView, TouchableOpacity } from 'react-native';
-import { Plus, PencilLine, Trash2, Check, X, Utensils, Save, ChefHat, Wine } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Platform, TextInput, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { Plus, PencilLine, Trash2, Check, X, Utensils, Save, ChefHat, Wine, Users, Eye, EyeOff } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useToast } from '~/components/ToastProvider';
 import { ItemType } from '~/types/item-type.types';
+import { useAccountConfig } from '~/hooks/useAccountConfig';
 
 interface ItemTypeCardProps {
   itemType: ItemType;
@@ -205,15 +206,29 @@ export default function ConfigurationRestoPage() {
     deleteItemType
   } = useItemTypes();
 
+  const {
+    teamEnabled,
+    kitchenEnabled,
+    barEnabled,
+    updateConfig,
+    isLoading: configLoading
+  } = useAccountConfig();
+
   const { showToast } = useToast();
   const isMountedRef = React.useRef(true);
-  
+
   const [isCreating, setIsCreating] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemDepartment, setNewItemDepartment] = useState<'kitchen' | 'bar'>('kitchen');
   const [localItemTypes, setLocalItemTypes] = useState<ItemType[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [localEditingItemId, setLocalEditingItemId] = useState<string | null>(null);
+
+  // États locaux pour les toggles de vues
+  const [localTeamEnabled, setLocalTeamEnabled] = useState(teamEnabled);
+  const [localKitchenEnabled, setLocalKitchenEnabled] = useState(kitchenEnabled);
+  const [localBarEnabled, setLocalBarEnabled] = useState(barEnabled);
+  const [viewsHasChanges, setViewsHasChanges] = useState(false);
   
   // Synchroniser l'état local avec les itemTypes du store
   React.useEffect(() => {
@@ -221,6 +236,22 @@ export default function ConfigurationRestoPage() {
       setLocalItemTypes([...itemTypes]);
     }
   }, [itemTypes, hasChanges]);
+
+  // Synchroniser les états locaux des vues avec le store
+  useEffect(() => {
+    setLocalTeamEnabled(teamEnabled);
+    setLocalKitchenEnabled(kitchenEnabled);
+    setLocalBarEnabled(barEnabled);
+  }, [teamEnabled, kitchenEnabled, barEnabled]);
+
+  // Vérifier si les vues ont changé
+  useEffect(() => {
+    const hasViewChanges =
+      localTeamEnabled !== teamEnabled ||
+      localKitchenEnabled !== kitchenEnabled ||
+      localBarEnabled !== barEnabled;
+    setViewsHasChanges(hasViewChanges);
+  }, [localTeamEnabled, localKitchenEnabled, localBarEnabled, teamEnabled, kitchenEnabled, barEnabled]);
 
   // Cleanup pour éviter les memory leaks
   React.useEffect(() => {
@@ -307,7 +338,7 @@ export default function ConfigurationRestoPage() {
       }
       
       // Supprimer les items qui ne sont plus dans la liste locale
-      const deletedItems = itemTypes.filter(original => 
+      const deletedItems = itemTypes.filter(original =>
         !localItemTypes.some(local => local.id === original.id)
       );
       for (const item of deletedItems) {
@@ -325,14 +356,113 @@ export default function ConfigurationRestoPage() {
     }
   };
 
+  const handleSaveViewsChanges = async () => {
+    if (!viewsHasChanges || !isMountedRef.current) return;
+
+    try {
+      await updateConfig({
+        teamEnabled: localTeamEnabled,
+        kitchenEnabled: localKitchenEnabled,
+        barEnabled: localBarEnabled
+      });
+
+      if (!isMountedRef.current) return;
+      setViewsHasChanges(false);
+      showToast('Configuration des vues sauvegardée avec succès', 'success');
+    } catch (error) {
+      if (!isMountedRef.current) return;
+      console.error('Erreur lors de la sauvegarde de la configuration:', error);
+      showToast('Erreur lors de la sauvegarde de la configuration', 'error');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.blurOverlay}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Carte de configuration des vues */}
+          <View style={styles.row}>
+            <View style={styles.activeCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.iconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                  <Eye size={20} color="#6366F1" strokeWidth={1.5} />
+                </View>
+                <View style={styles.headerContent}>
+                  <Text style={styles.cardTitle}>Visibilité des vues</Text>
+                  <Text style={styles.cardSubtitle}>
+                    Activer ou désactiver les sections de l'application
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.viewsConfigContainer}>
+                {/* Vue Équipe */}
+                <View style={styles.viewConfigRow}>
+                  <View style={styles.viewConfigLeft}>
+                    <View style={[styles.viewIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                      <Users size={18} color="#3B82F6" strokeWidth={1.5} />
+                    </View>
+                    <View style={styles.viewTextContainer}>
+                      <Text style={styles.viewTitle}>Équipe</Text>
+                      <Text style={styles.viewDescription}>Gestion des utilisateurs et profils</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={localTeamEnabled}
+                    onValueChange={setLocalTeamEnabled}
+                    trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                    thumbColor={localTeamEnabled ? '#FFFFFF' : '#F3F4F6'}
+                    disabled={configLoading}
+                  />
+                </View>
+
+                {/* Vue Cuisine */}
+                <View style={styles.viewConfigRow}>
+                  <View style={styles.viewConfigLeft}>
+                    <View style={[styles.viewIconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                      <ChefHat size={18} color="#10B981" strokeWidth={1.5} />
+                    </View>
+                    <View style={styles.viewTextContainer}>
+                      <Text style={styles.viewTitle}>Cuisine</Text>
+                      <Text style={styles.viewDescription}>Préparation des plats</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={localKitchenEnabled}
+                    onValueChange={setLocalKitchenEnabled}
+                    trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                    thumbColor={localKitchenEnabled ? '#FFFFFF' : '#F3F4F6'}
+                    disabled={configLoading}
+                  />
+                </View>
+
+                {/* Vue Bar */}
+                <View style={styles.viewConfigRow}>
+                  <View style={styles.viewConfigLeft}>
+                    <View style={[styles.viewIconContainer, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
+                      <Wine size={18} color="#A855F7" strokeWidth={1.5} />
+                    </View>
+                    <View style={styles.viewTextContainer}>
+                      <Text style={styles.viewTitle}>Bar</Text>
+                      <Text style={styles.viewDescription}>Préparation des boissons</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={localBarEnabled}
+                    onValueChange={setLocalBarEnabled}
+                    trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                    thumbColor={localBarEnabled ? '#FFFFFF' : '#F3F4F6'}
+                    disabled={configLoading}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
           <View style={styles.row}>
             <View style={styles.activeCard}>
               <View style={styles.cardHeader}>
@@ -525,19 +655,37 @@ export default function ConfigurationRestoPage() {
           </View>
         </ScrollView>
         
-        {hasChanges && (
+        {viewsHasChanges && (
           <View style={styles.stickyButtonContainer}>
             <TouchableOpacity
               style={styles.globalSaveButton}
               onPress={() => {
-                console.log('🔘 Bouton d\'enregistrement cliqué');
+                console.log('🔘 Bouton de sauvegarde des vues cliqué');
+                handleSaveViewsChanges();
+              }}
+              disabled={configLoading}
+            >
+              <Save size={18} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.globalSaveButtonText}>
+                Enregistrer la configuration des vues
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {hasChanges && !viewsHasChanges && (
+          <View style={styles.stickyButtonContainer}>
+            <TouchableOpacity
+              style={styles.globalSaveButton}
+              onPress={() => {
+                console.log('🔘 Bouton d\'enregistrement des types cliqué');
                 handleSaveAllChanges();
               }}
               disabled={loading}
             >
               <Save size={18} color="#FFFFFF" strokeWidth={2} />
               <Text style={styles.globalSaveButtonText}>
-                Enregistrer les modifications
+                Enregistrer les types d'articles
               </Text>
             </TouchableOpacity>
           </View>
@@ -975,5 +1123,47 @@ const styles = StyleSheet.create({
   },
   fullWidthDepartmentTextActive: {
     color: '#FFFFFF',
+  },
+  // Styles pour la configuration des vues
+  viewsConfigContainer: {
+    gap: 12,
+  },
+  viewConfigRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  viewConfigLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  viewIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewTextContainer: {
+    flex: 1,
+  },
+  viewTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  viewDescription: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '400',
   },
 });

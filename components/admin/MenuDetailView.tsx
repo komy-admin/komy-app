@@ -6,6 +6,7 @@ import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { Plus, Trash2, Edit, Package } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
+import { formatPrice, eurosToCents } from '~/lib/utils';
 
 interface MenuDetailViewProps {
   menu: Menu;
@@ -196,7 +197,7 @@ export function MenuDetailView({
               🍽️ {menu.name}
             </Text>
             <Text style={{ fontSize: 18, fontWeight: '600', color: '#059669', marginBottom: 8 }}>
-              Prix de base: {menu.basePrice.toFixed(2)}€
+              Prix de base: {formatPrice(menu.basePrice)}
             </Text>
             {menu.description && (
               <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 12, lineHeight: 20 }}>
@@ -289,7 +290,7 @@ export function MenuDetailView({
                     <Text style={{ fontSize: 12, color: '#6B7280' }}>
                       Max {category.maxSelections} sélection{category.maxSelections > 1 ? 's' : ''}
                       {category.priceModifier && category.priceModifier !== 0 && (
-                        <Text> • Modificateur: {category.priceModifier.toFixed(2)}€</Text>
+                        <Text> • Modificateur: {formatPrice(category.priceModifier)}</Text>
                       )}
                     </Text>
                   </View>
@@ -332,7 +333,7 @@ export function MenuDetailView({
                     <View style={{ gap: 8 }}>
                       <Select
                         choices={availableItems.map(item => ({
-                          label: `${item.name} (${item.price}€)`,
+                          label: `${item.name} (${formatPrice(item.price)})`,
                           value: item.id,
                           id: item.id
                         }))}
@@ -428,9 +429,9 @@ export function MenuDetailView({
                               {menuCategoryItem.item?.name}
                             </Text>
                             <Text style={{ fontSize: 12, color: '#6B7280' }}>
-                              Prix: {menuCategoryItem.item?.price}€
+                              Prix: {formatPrice(menuCategoryItem.item?.price || 0)}
                               {menuCategoryItem.supplement > 0 && (
-                                <Text> • Supplément: +{menuCategoryItem.supplement.toFixed(2)}€</Text>
+                                <Text> • Supplément: +{formatPrice(menuCategoryItem.supplement)}</Text>
                               )}
                             </Text>
                           </View>

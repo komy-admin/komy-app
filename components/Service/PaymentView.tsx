@@ -202,8 +202,10 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
     onPaymentComplete(paymentData);
   };
 
-  const formatPrice = (price: number) => {
-    return `${price.toFixed(2)}€`;
+  // Utiliser la fonction utilitaire pour formater les prix (centimes -> euros)
+  const formatPrice = (centimes: number) => {
+    const euros = centimes / 100;
+    return `${euros.toFixed(2)}€`;
   };
 
   const renderItem = ({ item }: { item: OrderLine }) => {

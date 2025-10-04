@@ -4,18 +4,34 @@ import { usePathname } from 'expo-router';
 import { View, Pressable, Platform } from 'react-native';
 import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText, List, GlassWater} from 'lucide-react-native';
 import { Text } from '../ui';
+import { useSelector } from 'react-redux';
+import { RootState } from '~/store';
+import { useMemo } from 'react';
 
 const NAV_ITEMS = [
-  { href: '/service', icon: Grid3X3Icon, label: 'Service' },
-  { href: '/room', icon: LayoutDashboard, label: 'Salles' },
-  { href: '/menu', icon: NotebookText, label: 'Menu' },
-  { href: '/team', icon: Users, label: 'Équipe' },
-  { href: '/kitchen', icon: ChefHat, label: 'Cuisine' },
-  { href: '/barman', icon: GlassWater, label: 'Bar' }
+  { href: '/service', icon: Grid3X3Icon, label: 'Service', configKey: null },
+  { href: '/room', icon: LayoutDashboard, label: 'Salles', configKey: null },
+  { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null },
+  { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const },
+  { href: '/kitchen', icon: ChefHat, label: 'Cuisine', configKey: 'kitchenEnabled' as const },
+  { href: '/barman', icon: GlassWater, label: 'Bar', configKey: 'barEnabled' as const }
 ];
 
 export function AdminSidebar() {
  const pathname = usePathname();
+ const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+
+ // Filtrer les items selon la configuration
+ const visibleNavItems = useMemo(() => {
+   return NAV_ITEMS.filter(item => {
+     // Si pas de clé de config, toujours visible
+     if (!item.configKey) return true;
+
+     // Sinon vérifier la config strictement
+     if (!accountConfig) return false;
+     return accountConfig[item.configKey] === true;
+   });
+ }, [accountConfig]);
 
  return (
    <View style={{
@@ -29,7 +45,7 @@ export function AdminSidebar() {
        },
      }),
    }}>
-     {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+     {visibleNavItems.map(({ href, icon: Icon, label }) => {
        const isActive = pathname.includes(href);
        
        return (

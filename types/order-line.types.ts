@@ -13,7 +13,7 @@ export enum OrderLineType {
 export type OrderLineItemSnapshot = {
   id: string;
   name: string;
-  price: number;
+  price: number; // 💰 Prix en centimes (snapshot figé)
   description?: string;
   allergens?: string[] | null;
   itemType: ItemType; // Type d'item (Entrées, Plats, etc.)
@@ -25,7 +25,7 @@ export type OrderLineMenuSnapshot = {
   id: string;
   name: string;
   description?: string;
-  basePrice: number;
+  basePrice: number; // 💰 Prix en centimes (snapshot figé)
   snapshotAt: string; // ISO timestamp du snapshot
 };
 
@@ -44,8 +44,8 @@ export type OrderLine = {
   orderId: string; // Référence à la commande parente
   type: OrderLineType; // ITEM ou MENU
   quantity: number;
-  unitPrice: number; // Prix unitaire
-  totalPrice: number; // Prix total (unitPrice * quantity)
+  unitPrice: number; // 💰 Prix unitaire en centimes
+  totalPrice: number; // 💰 Prix total en centimes (unitPrice * quantity)
   note?: string; // Note sur la ligne
 
   // Status : seulement pour les ITEM (pour les MENU, le status est sur chaque OrderLineItem)
@@ -110,7 +110,7 @@ export type DraftOrderLineItem = {
   id?: string; // ID optionnel pour les drafts
   categoryName: string;
   item: OrderLineItemSnapshot | Item; // Peut être un Item ou un snapshot
-  supplementPrice?: number; // Prix du supplément pour le menu
+  supplementPrice?: number; // 💰 Prix du supplément en centimes
   note?: string; // Note optionnelle
 };
 
@@ -119,10 +119,10 @@ export type DraftOrderLine = {
   id?: string; // ID optionnel pour les drafts
   type: OrderLineType;
   quantity: number;
-  totalPrice: number;
+  totalPrice: number; // 💰 Prix total en centimes
   note?: string;
   status?: Status;
-  unitPrice?: number; // Optionnel pour les drafts
+  unitPrice?: number; // 💰 Prix unitaire en centimes (optionnel pour les drafts)
   item?: OrderLineItemSnapshot | Item | null; // Peut être un Item ou un snapshot
   menu?: OrderLineMenuSnapshot | Menu | null; // Peut être un Menu ou un snapshot
   items?: DraftOrderLineItem[]; // Items peuvent aussi être des drafts

@@ -1,14 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
-import { 
-  MenuFormData, 
-  MenuCategoryFormData, 
+import {
+  MenuFormData,
+  MenuCategoryFormData,
   LocalMenuCategoryItem,
-  CategoryItemFormData 
+  CategoryItemFormData
 } from '~/components/Menu/MenuEditor/MenuEditor.types';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { useToast } from '~/components/ToastProvider';
+import { centsToEuros, eurosToCents } from '~/lib/utils';
 
 interface UseMenuEditorProps {
   menu?: Menu | null;
@@ -60,14 +61,16 @@ export const useMenuEditor = ({
   const [formData, setFormData] = useState<MenuFormData>({
     name: menu?.name || '',
     description: menu?.description || '',
-    basePrice: menu?.basePrice?.toString() || '',
+    // 💰 Convertir centimes -> euros pour l'affichage
+    basePrice: menu?.basePrice ? centsToEuros(menu.basePrice).toString() : '',
     isActive: menu?.isActive ?? true,
     categories: menu?.categories?.map(cat => ({
       id: cat.id,
       itemTypeId: cat.itemTypeId,
       isRequired: cat.isRequired,
       maxSelections: cat.maxSelections?.toString() || '1',
-      priceModifier: cat.priceModifier?.toString() || '0',
+      // 💰 Convertir centimes -> euros pour l'affichage
+      priceModifier: cat.priceModifier ? centsToEuros(cat.priceModifier).toString() : '0',
     })) || []
   });
 
@@ -95,7 +98,8 @@ export const useMenuEditor = ({
               tempId: `existing-${category.id}-${itemIndex}`,
               originalId: item.id,
               itemId: item.itemId,
-              supplement: typeof item.supplement === 'number' ? item.supplement : Number(item.supplement) || 0,
+              // 💰 Convertir centimes -> euros pour l'affichage
+              supplement: centsToEuros(typeof item.supplement === 'number' ? item.supplement : Number(item.supplement) || 0),
               isAvailable: item.isAvailable,
               item: items.find(i => i.id === item.itemId),
               isModified: false,
@@ -435,7 +439,8 @@ export const useMenuEditor = ({
       id: menu?.id,
       name: formData.name,
       description: formData.description,
-      basePrice: parseFloat(formData.basePrice),
+      // 💰 Convertir euros -> centimes pour l'envoi API
+      basePrice: eurosToCents(parseFloat(formData.basePrice)),
       isActive: formData.isActive,
       categories: formData.categories.map((cat, index) => ({
         id: cat.id,
@@ -443,9 +448,14 @@ export const useMenuEditor = ({
         itemTypeId: cat.itemTypeId,
         isRequired: cat.isRequired,
         maxSelections: parseInt(cat.maxSelections) || 1,
-        priceModifier: parseFloat(cat.priceModifier) || 0,
+        // 💰 Convertir euros -> centimes pour l'envoi API
+        priceModifier: eurosToCents(parseFloat(cat.priceModifier) || 0),
         itemType: itemTypes.find(type => type.id === cat.itemTypeId)!,
-        localItems: localCategoryItems[index] || []
+        // 💰 Convertir les suppléments euros -> centimes pour l'envoi API
+        localItems: (localCategoryItems[index] || []).map(item => ({
+          ...item,
+          supplement: eurosToCents(typeof item.supplement === 'number' ? item.supplement : parseFloat(item.supplement) || 0)
+        }))
       } as any))
     } as Menu;
   }, [menu, formData, localCategoryItems, itemTypes, validateForm]);

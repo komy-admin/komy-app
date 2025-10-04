@@ -5,6 +5,7 @@ import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
 import { useMenus } from '~/hooks/useMenus';
 import { useMenuCalculator } from '~/hooks/useMenuCalculator';
 import { Button } from '../ui';
+import { formatPrice } from '~/lib/utils';
 
 interface MenuSelectorProps {
   visible: boolean;
@@ -373,7 +374,7 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
               <Text style={{ fontSize: 16, color: '#666666' }}>Prix total:</Text>
               <Text style={{ fontSize: 18, fontWeight: '600', color: '#1A1A1A' }}>
-                {currentPrice.totalPrice.toFixed(2)}€
+                {formatPrice(currentPrice.totalPrice)}
               </Text>
             </View>
 

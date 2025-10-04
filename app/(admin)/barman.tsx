@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
@@ -8,6 +8,7 @@ import { useSelector } from 'react-redux';
 import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
+import { useRouter } from 'expo-router';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
@@ -96,6 +97,16 @@ function useBarItemGrouping(orders: Order[], kitchenItems: any[], overdueOrderIt
 }
 
 export default function BarmanPage() {
+  const router = useRouter();
+  const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+
+  // Rediriger si la vue est désactivée
+  useEffect(() => {
+    if (accountConfig && accountConfig.barEnabled === false) {
+      router.replace('/(admin)/service');
+    }
+  }, [accountConfig, router]);
+
   const { orders, loading, error, updateOrderStatus } = useOrders();
 
   const kitchenItems = useSelector(selectAllKitchenItems);

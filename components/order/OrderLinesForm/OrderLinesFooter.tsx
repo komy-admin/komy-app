@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Text } from '~/components/ui';
+import { formatPrice } from '~/lib/utils';
 
 /**
  * Props pour le composant OrderLinesFooter
@@ -86,7 +87,7 @@ export const OrderLinesFooter = memo<OrderLinesFooterProps>(({
 
         {/* Total */}
         <View style={styles.summaryItem}>
-          {renderValue(`${(Number(totalPrice) || 0).toFixed(2)}€`, 'total', '#059669')}
+          {renderValue(formatPrice(Number(totalPrice) || 0), 'total', '#059669')}
         </View>
       </View>
     </View>

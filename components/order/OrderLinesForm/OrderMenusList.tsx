@@ -3,6 +3,7 @@ import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 're
 import { Text } from '~/components/ui';
 import { Plus, Minus } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
+import { formatPrice } from '~/lib/utils';
 
 /**
  * Props pour le composant OrderMenusList
@@ -73,7 +74,7 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
             {menu.description}
           </Text>
         )}
-        <Text style={styles.itemPrice}>À partir de {((menu as any).price || menu.basePrice || 0).toFixed(2)}€</Text>
+        <Text style={styles.itemPrice}>À partir de {formatPrice((menu as any).price || menu.basePrice || 0)}</Text>
       </View>
 
       {/* Contrôles de quantité en bas */}

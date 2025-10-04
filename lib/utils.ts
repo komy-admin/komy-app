@@ -404,3 +404,47 @@ export const calculateOrderTotalFromLines = (orderLines: OrderLine[]): number =>
   return orderLines.reduce((total, line) => total + line.totalPrice, 0);
 };
 
+// ========================================
+// 💰 GESTION DES PRIX (Centimes/Euros)
+// ========================================
+
+/**
+ * Convertit un prix en centimes vers euros (pour l'affichage)
+ * @param centimes - Prix en centimes (ex: 300 pour 3€)
+ * @returns Prix en euros (ex: 3)
+ */
+export const centsToEuros = (centimes: number): number => {
+  return centimes / 100;
+};
+
+/**
+ * Convertit un prix en euros vers centimes (pour l'envoi API)
+ * @param euros - Prix en euros (ex: 3 pour 3€)
+ * @returns Prix en centimes (ex: 300)
+ */
+export const eurosToCents = (euros: number): number => {
+  return Math.round(euros * 100);
+};
+
+/**
+ * Formate un prix en centimes pour l'affichage avec le symbole €
+ * @param centimes - Prix en centimes (ex: 300 pour 3€)
+ * @param decimals - Nombre de décimales (défaut: 2)
+ * @returns Prix formaté (ex: "3,00€")
+ */
+export const formatPrice = (centimes: number, decimals: number = 2): string => {
+  const euros = centsToEuros(centimes);
+  return `${euros.toFixed(decimals).replace('.', ',')}€`;
+};
+
+/**
+ * Formate un prix en centimes pour l'affichage sans symbole
+ * @param centimes - Prix en centimes (ex: 300 pour 3€)
+ * @param decimals - Nombre de décimales (défaut: 2)
+ * @returns Prix formaté sans symbole (ex: "3,00")
+ */
+export const formatPriceWithoutSymbol = (centimes: number, decimals: number = 2): string => {
+  const euros = centsToEuros(centimes);
+  return euros.toFixed(decimals).replace('.', ',');
+};
+

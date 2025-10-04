@@ -9,6 +9,7 @@ import { useToast } from '~/components/ToastProvider';
 import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
 import { SectionHeader } from '~/components/admin/SectionHeader';
 import { FileText } from 'lucide-react-native';
+import { centsToEuros, eurosToCents } from '~/lib/utils';
 
 interface MenuFormProps {
   item: Item | null;
@@ -27,7 +28,8 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
 }, ref) => {
   const [formData, setFormData] = useState({
     name: item?.name || '',
-    price: item?.price ? (typeof item.price === 'string' ? parseFloat(item.price) : item.price) : null,
+    // 💰 Convertir centimes -> euros pour l'affichage dans le formulaire
+    price: item?.price ? centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price) : null,
     itemTypeId: item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : ''),
     color: item?.color || '',
     isActive: item?.isActive ?? true
@@ -65,7 +67,8 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     if (item) {
       setFormData({
         name: item.name,
-        price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
+        // 💰 Convertir centimes -> euros pour l'affichage
+        price: centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price),
         itemTypeId: item.itemType?.id || '',
         color: item.color || '',
         isActive: item.isActive ?? true
@@ -113,13 +116,13 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
       let itemData: Item | null = null;
 
       if (isValid) {
-        // Arrondir à 2 décimales pour éviter les problèmes de précision flottante  
-        const numericPrice = Math.round(formData.price! * 100) / 100;
+        // 💰 Convertir euros -> centimes pour l'envoi API
+        const priceInCents = eurosToCents(formData.price!);
 
         itemData = {
           id: item?.id || '',
           name: formData.name,
-          price: numericPrice,
+          price: priceInCents,
           color: formData.color,
           itemTypeId: selectedItemTypeId,
           itemType: selectedItemType!,
