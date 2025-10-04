@@ -1,7 +1,7 @@
 // components/admin/Sidebar.tsx
 import { Href, Link } from 'expo-router';
 import { usePathname } from 'expo-router';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Platform } from 'react-native';
 import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText, List, GlassWater} from 'lucide-react-native';
 import { Text } from '../ui';
 
@@ -18,7 +18,17 @@ export function AdminSidebar() {
  const pathname = usePathname();
 
  return (
-   <View style={{ width: 100, backgroundColor: '#2A2E33', paddingTop: 8}}>
+   <View style={{
+     width: 100,
+     backgroundColor: '#2A2E33',
+     paddingTop: 8,
+     zIndex: 100, // Toujours au-dessus (web/iOS)
+     ...Platform.select({
+       android: {
+         elevation: 20, // Plus élevé que tous les autres composants
+       },
+     }),
+   }}>
      {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
        const isActive = pathname.includes(href);
        

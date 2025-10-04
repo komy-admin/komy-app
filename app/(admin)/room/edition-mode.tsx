@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable } from "react-native";
+import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from "react-native";
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
@@ -204,7 +204,20 @@ export default function RoomEditionMode() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerContainer}>
+      <View style={[
+        styles.headerContainer,
+        {
+          zIndex: 10,
+          elevation: 5,
+          borderBottomWidth: 1,
+          borderBottomColor: '#EFEFEF',
+          ...Platform.select({
+            android: {
+              shadowColor: 'transparent', // Pas d'ombre visible sur Android
+            },
+          }),
+        }
+      ]}>
         <Pressable
           onPress={handleGoBack}
           style={styles.backButton}
@@ -235,20 +248,22 @@ export default function RoomEditionMode() {
       </View>
 
       {currentRoom && (
-        <RoomComponent
-          key={currentRoom.id}
-          tables={currentRoomTables}
-          editingTableId={selectedTable?.id}
-          editionMode={true}
-          width={currentRoom.width}
-          height={currentRoom.height}
-          isLoading={roomsLoading}
-          onTablePress={handleTablePress}
-          onTableLongPress={handleTablePress}
-          onTableUpdate={handleTableUpdate}
-          onEditTable={handleEditTable}
-          onDeleteTable={handleDeleteTable}
-        />
+        <View style={{ flex: 1, zIndex: 1, elevation: 0 }}>
+          <RoomComponent
+            key={currentRoom.id}
+            tables={currentRoomTables}
+            editingTableId={selectedTable?.id}
+            editionMode={true}
+            width={currentRoom.width}
+            height={currentRoom.height}
+            isLoading={roomsLoading}
+            onTablePress={handleTablePress}
+            onTableLongPress={handleTablePress}
+            onTableUpdate={handleTableUpdate}
+            onEditTable={handleEditTable}
+            onDeleteTable={handleDeleteTable}
+          />
+        </View>
       )}
 
       <View style={styles.cardContainer} pointerEvents="box-none">

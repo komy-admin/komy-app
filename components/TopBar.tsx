@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { View, Image, Text, Pressable, TouchableWithoutFeedback } from 'react-native'
+import { View, Image, Text, Pressable, TouchableWithoutFeedback, Platform } from 'react-native'
 import { FileText, Calendar, LogOut } from 'lucide-react-native'
 import { Href, Link, useRouter } from 'expo-router'
 import { useSelector } from 'react-redux';
@@ -96,7 +96,13 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingRight: 20,
-          zIndex: showProfileMenu ? 1001 : 1,
+          zIndex: showProfileMenu ? 1001 : 25,
+          ...Platform.select({
+            android: {
+              elevation: showProfileMenu ? 1001 : 25,
+              shadowColor: 'transparent',
+            },
+          }),
         }}
       >
         <View>
