@@ -18,6 +18,7 @@ export type OrderLineItemSnapshot = {
   allergens?: string[] | null;
   itemType: ItemType; // Type d'item (Entrées, Plats, etc.)
   snapshotAt: string; // ISO timestamp du snapshot
+  tags?: any[]; // Tags de l'item original (pour permettre l'édition)
 };
 
 // Snapshot d'un menu au moment de la commande (prix figé)
@@ -61,9 +62,29 @@ export type OrderLine = {
   // selectedItems pour les menus (mappage categoryId -> itemId) - utilisé pour l'API
   selectedItems?: Record<string, string>;
 
+  // Tags sélectionnés pour cet item/menu
+  tags?: SelectedTag[];
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
+};
+
+// Type pour les tags sélectionnés dans une OrderLine
+export type TagSnapshot = {
+  id: string;
+  name: string;
+  label: string;
+  fieldType: 'select' | 'multi-select' | 'number' | 'text' | 'toggle';
+  isRequired: boolean;
+  snapshotAt: string;
+};
+
+export type SelectedTag = {
+  tagId: string;
+  tagSnapshot: TagSnapshot;
+  value: string | number | string[] | boolean;
+  priceModifier: number;
 };
 
 // Alias temporaire pour la migration (OrderItem était l'ancien nom)
@@ -75,6 +96,7 @@ export type CreateOrderLineItemRequest = {
   quantity: number;
   itemId: string;
   note?: string;
+  tags?: Record<string, any>; // tagId -> value
 };
 
 export type CreateOrderLineMenuRequest = {
@@ -82,7 +104,7 @@ export type CreateOrderLineMenuRequest = {
   quantity: number;
   menuId: string;
   note?: string;
-  selectedItems: Record<string, string>; // categoryName -> itemId
+  selectedItems: Record<string, { itemId: string; tags?: Record<string, any> }>; // categoryId -> { itemId, tags? }
 };
 
 export type CreateOrderLineRequest = CreateOrderLineItemRequest | CreateOrderLineMenuRequest;
@@ -114,6 +136,28 @@ export type DraftOrderLineItem = {
   note?: string; // Note optionnelle
 };
 
+// Types pour le tracking des opérations CRUD
+export interface OrderLineOperation {
+  type: 'create' | 'update' | 'delete';
+  lineId: string;
+  originalData?: OrderLine;  // Pour les updates, garder l'original
+  currentData?: OrderLine;   // Pour create/update
+  changes?: Partial<OrderLine>; // Quels champs ont changé
+}
+
+export interface OrderLineState {
+  original: OrderLine | null;  // null = nouvelle ligne
+  current: OrderLine;
+  status: 'unchanged' | 'modified' | 'created' | 'deleted';
+  changes?: Partial<OrderLine>; // Quels champs ont changé
+}
+
+export interface OrderFormState {
+  orderId: string | null;
+  lines: OrderLineState[];
+  hasChanges: boolean;
+}
+
 // Type pour les lignes en draft (sans ID car pas encore persistées)
 export type DraftOrderLine = {
   id?: string; // ID optionnel pour les drafts
@@ -126,6 +170,7 @@ export type DraftOrderLine = {
   item?: OrderLineItemSnapshot | Item | null; // Peut être un Item ou un snapshot
   menu?: OrderLineMenuSnapshot | Menu | null; // Peut être un Menu ou un snapshot
   items?: DraftOrderLineItem[]; // Items peuvent aussi être des drafts
+  tags?: SelectedTag[]; // Tags sélectionnés
 };
 
 // Helper type guards

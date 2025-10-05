@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo } from 'react';
 import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '~/components/ui';
-import { Plus, Minus } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { getContrastColor, formatPrice } from '~/lib/utils';
 
@@ -11,110 +11,75 @@ import { getContrastColor, formatPrice } from '~/lib/utils';
 export interface OrderItemsListProps {
   items: Item[];
   activeItemType: string;
-  getTotalItemQuantity: (itemId: string) => number;
-  getDraftItemQuantity: (itemId: string) => number;
-  updateItemQuantity: (itemId: string, action: 'remove' | 'add') => void;
+  onOpenCustomization: (item: Item) => void;
 }
 
 /**
- * Composant pour afficher un item individuel avec contrôles de quantité
+ * Composant pour afficher un item individuel
  */
 interface OrderItemRowProps {
   item: Item;
-  totalQuantity: number;
-  draftQuantity: number;
-  onUpdateQuantity: (itemId: string, action: 'remove' | 'add') => void;
+  onOpenCustomization: (item: Item) => void;
   isTablet: boolean;
-  dynamicButtonSize: number;
+  cardWidth: number;
 }
 
 const OrderItemCard = memo<OrderItemRowProps>(({
   item,
-  totalQuantity,
-  draftQuantity,
-  onUpdateQuantity,
+  onOpenCustomization,
   isTablet,
-  dynamicButtonSize
+  cardWidth
 }) => {
   const handleAdd = useCallback(() => {
-    onUpdateQuantity(item.id, 'add');
-  }, [item.id, onUpdateQuantity]);
-
-  const handleRemove = useCallback(() => {
-    onUpdateQuantity(item.id, 'remove');
-  }, [item.id, onUpdateQuantity]);
-
-  const canRemove = draftQuantity > 0;
+    onOpenCustomization(item);
+  }, [item, onOpenCustomization]);
 
   return (
-    <>
-      {/* Info de l'item */}
-      <View style={styles.itemInfo}>
-        {/* Titre avec background coloré */}
-        {/* Note: Les marges négatives sont utilisées pour étendre le background sur toute la largeur de la carte
-            C'est une solution intentionnelle pour obtenir l'effet visuel désiré */}
+    <Pressable
+      style={[styles.itemCard, { width: cardWidth }]}
+      onPress={handleAdd}
+    >
+      {/* Header coloré avec nom */}
+      {item.color ? (
         <View style={[
-          styles.itemNameContainer,
-          item.color ? {
-            backgroundColor: item.color,
-            marginHorizontal: -12, // Compense le padding de la carte
-            marginTop: -12, // Aligne avec le haut de la carte
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-          } : {}
+          styles.coloredHeader,
+          { backgroundColor: item.color }
         ]}>
           <Text
             style={[
               styles.itemName,
-              item.color ? { color: getContrastColor(item.color) } : {}
+              { color: getContrastColor(item.color) }
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit={true}
-            minimumFontScale={0.75}
+            numberOfLines={2}
           >
             {item.name}
           </Text>
         </View>
-        <Text style={[styles.itemPrice, item.color ? { marginTop: 8 } : {}]}>
+      ) : (
+        <View style={styles.plainHeader}>
+          <Text
+            style={styles.itemNamePlain}
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+        </View>
+      )}
+
+      {/* Prix */}
+      <View style={styles.priceContainer}>
+        <Text style={styles.itemPrice}>
           {formatPrice(item.price)}
         </Text>
       </View>
 
-      {/* Contrôles de quantité */}
-      <View style={styles.quantityContainer}>
-        <Pressable
-          style={[
-            styles.quantityButton,
-            !canRemove && styles.quantityButtonDisabled
-          ]}
-          onPress={handleRemove}
-          disabled={!canRemove}
-        >
-          <Minus
-            size={16}
-            color={canRemove ? COLORS.primary : COLORS.textSecondary}
-            strokeWidth={2}
-          />
-        </Pressable>
-
-        <Text style={styles.quantityText}>
-          {totalQuantity}
-        </Text>
-
-        <Pressable
-          style={styles.quantityButton}
-          onPress={handleAdd}
-        >
-          <Plus
-            size={16}
-            color={COLORS.primary}
-            strokeWidth={2}
-          />
-        </Pressable>
+      {/* Bouton Ajouter */}
+      <View style={styles.addButtonContainer}>
+        <View style={styles.addButton}>
+          <Plus size={22} color="#FFFFFF" strokeWidth={3} />
+        </View>
       </View>
-    </>
+    </Pressable>
   );
 });
 
@@ -122,26 +87,18 @@ OrderItemCard.displayName = 'OrderItemCard';
 
 /**
  * Composant de liste des articles pour OrderLinesForm
- * Affiche les articles filtrés par type avec contrôles de quantité
- * 
- * @param props - Props du composant
- * @returns Composant de liste d'articles mémorisé
+ * Affiche les articles filtrés par type
  */
 export const OrderItemsList = memo<OrderItemsListProps>(({
   items,
   activeItemType,
-  getTotalItemQuantity,
-  getDraftItemQuantity,
-  updateItemQuantity
+  onOpenCustomization
 }) => {
   // Détection taille écran pour adapter la disposition
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const isMobile = width < 480;
   const isSmallTablet = width >= 480 && width < 768;
-
-  // Styles dynamiques pour boutons optimisés tablette
-  const dynamicButtonSize = isTablet ? 38 : 32;
 
   // Calculer le nombre de colonnes en fonction de la largeur
   const getColumnsPerRow = () => {
@@ -159,42 +116,15 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
     );
   }, [items, activeItemType]);
 
-  // Styles dynamiques pour les cartes - mémorisé pour éviter recalcul
-  const getCardStyle = useCallback((index: number) => {
-    const gap = 8;
+  // Calculer la largeur des cartes
+  const cardWidth = useMemo(() => {
+    const gap = 12;
     const padding = 16;
     const availableWidth = width - (padding * 2) - (gap * (columnsPerRow - 1));
-    const cardWidth = availableWidth / columnsPerRow;
+    const calculatedWidth = availableWidth / columnsPerRow;
 
-    return {
-      width: cardWidth,
-      minWidth: Math.max(140, cardWidth), // Minimum 140px de largeur
-      maxWidth: 250, // Maximum 250px de largeur
-      height: isMobile ? 110 : 130,
-      //marginRight: (index + 1) % columnsPerRow === 0 ? 0 : gap,
-      marginBottom: 12,
-    };
-  }, [width, columnsPerRow, isMobile]);
-
-  // Render item function for FlatList
-  const renderItem = useCallback(({ item, index }: { item: Item; index: number }) => (
-    <View
-      key={item.id}
-      style={[
-        styles.itemCard,
-        getCardStyle(index)
-      ]}
-    >
-      <OrderItemCard
-        item={item}
-        totalQuantity={getTotalItemQuantity(item.id)}
-        draftQuantity={getDraftItemQuantity(item.id)}
-        onUpdateQuantity={updateItemQuantity}
-        isTablet={isTablet}
-        dynamicButtonSize={dynamicButtonSize}
-      />
-    </View>
-  ), [getTotalItemQuantity, getDraftItemQuantity, updateItemQuantity, isTablet, dynamicButtonSize, getCardStyle]);
+    return Math.max(160, Math.min(220, calculatedWidth));
+  }, [width, columnsPerRow]);
 
   // Si aucun article disponible
   if (filteredItems.length === 0) {
@@ -221,7 +151,15 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
         bounces={false}
       >
         <View style={styles.itemsGrid}>
-          {filteredItems.map((item, index) => renderItem({ item, index }))}
+          {filteredItems.map((item, index) => (
+            <OrderItemCard
+              key={item.id}
+              item={item}
+              onOpenCustomization={onOpenCustomization}
+              isTablet={isTablet}
+              cardWidth={cardWidth}
+            />
+          ))}
         </View>
       </ScrollView>
     </View>
@@ -230,34 +168,20 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
 
 OrderItemsList.displayName = 'OrderItemsList';
 
-// Constantes de style communes - Style MenuForm avec plus de contraste
 const COLORS = {
-  primary: '#2A2E33',
-  success: '#059669',
-  background: '#F8F9FA', // Background plus clair et visible
-  backgroundSecondary: '#f8fafc',
-  border: '#D1D5DB', // Border plus sombre et contrastée
-  borderLight: '#D1D5DB',
-  disabled: '#E5E7EB',
-  text: '#2A2E33',
-  textSecondary: '#6b7280',
-};
-
-const SHADOWS = {
-  card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
+  background: '#FFFFFF',
+  border: '#E5E7EB',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  price: '#059669',
+  addButton: '#2A2E33',
 };
 
 const styles = StyleSheet.create({
   // Containers
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Même couleur que navigation (blanc pur)
+    backgroundColor: COLORS.background,
   },
   scrollView: {
     flex: 1,
@@ -267,8 +191,8 @@ const styles = StyleSheet.create({
   },
   itemsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     flexWrap: 'wrap',
+    gap: 12,
   },
   emptyContainer: {
     flex: 1,
@@ -276,81 +200,89 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
   },
-
-  // Card styles - styles de base sans dimensions fixes
-  itemCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.card,
-    padding: 12,
-    justifyContent: 'space-between',
-  },
-  itemInfo: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    minHeight: 0,
-  },
-  itemNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-
-  // Text styles
   emptyText: {
     fontSize: 16,
     color: COLORS.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  itemName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.text,
-    lineHeight: 16,
-    textAlign: 'center',
-    flexShrink: 1,
-  },
-  itemPrice: {
-    fontSize: 13,
-    color: COLORS.success,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 'auto',
+
+  // Card styles
+  itemCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    minHeight: 160,
+    position: 'relative',
   },
 
-  // Quantity controls - Style unifié avec OrderMenusList
-  quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Plus blanc pour plus de contraste
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Border plus visible
-    overflow: 'hidden',
-    marginTop: 8,
-    justifyContent: 'space-between',
-  },
-  quantityButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
+  // Header styles
+  coloredHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    minHeight: 80,
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    alignItems: 'center',
   },
-  quantityButtonDisabled: {
-    backgroundColor: '#F3F4F6',
-    opacity: 0.7,
+  plainHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    minHeight: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
   },
-  quantityText: {
-    fontSize: 14,
+  itemName: {
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  itemNamePlain: {
+    fontSize: 15,
     fontWeight: '700',
     color: COLORS.text,
     textAlign: 'center',
-    minWidth: 32,
-    paddingHorizontal: 8,
+    lineHeight: 20,
+  },
+
+  // Prix
+  priceContainer: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  itemPrice: {
+    fontSize: 18,
+    color: COLORS.price,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+
+  // Bouton Ajouter
+  addButtonContainer: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 4,
+  },
+  addButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.addButton,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.addButton,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });

@@ -16,6 +16,7 @@ export * from './popover';
 export * from './modal';
 export * from './color-picker';
 export * from './select-button';
+export * from './TagSelector';
 export { default as PinInput } from './pin-input';
 export type { PinInputRef } from './pin-input';
 export * from './ConfirmationModal';

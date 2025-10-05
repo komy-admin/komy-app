@@ -29,12 +29,22 @@ interface MenuCategoryItem {
 }
 
 /**
+ * Type pour une sélection d'item de menu avec tags
+ */
+export interface MenuItemSelection {
+  itemId: string;
+  tags: any[];
+  note?: string;
+}
+
+/**
  * Props pour le composant MenuConfiguration
  */
 export interface MenuConfigurationProps {
   menu: Menu;
-  tempMenuSelections: Record<string, string[]>;
-  onUpdateTempMenuSelection: (categoryId: string, itemId: string, isSelected: boolean) => void;
+  tempMenuSelections: Record<string, MenuItemSelection[]>;
+  onSelectMenuItem: (item: Item, categoryId: string) => void;
+  onDeselectMenuItem: (categoryId: string) => void;
   getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryNameFromItemTypeId?: (itemTypeId: string) => string;
   itemTypes: ItemType[];
@@ -46,8 +56,8 @@ export interface MenuConfigurationProps {
 interface MenuCategoryProps {
   category: MenuCategoryType;
   index: number;
-  selectedItems: string[];
-  onToggleItem: (categoryId: string, itemId: string) => void;
+  selectedItems: MenuItemSelection[];
+  onToggleItem: (categoryId: string, item: Item) => void;
   getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryName: (itemTypeId: string) => string;
 }
@@ -64,8 +74,8 @@ const MenuCategory = memo<MenuCategoryProps>(({
   const hasSupplementPrice = parseFloat(category.priceModifier?.toString() || '0') > 0;
   const menuCategoryItems = getMenuCategoryItems(category.id);
 
-  const handleToggleItem = useCallback((itemId: string) => {
-    onToggleItem(category.id, itemId);
+  const handleToggleItem = useCallback((item: Item) => {
+    onToggleItem(category.id, item);
   }, [category.id, onToggleItem]);
 
   if (!menuCategoryItems || menuCategoryItems.length === 0) {
@@ -125,8 +135,13 @@ const MenuCategory = memo<MenuCategoryProps>(({
             if (!item) return null;
 
             const supplement = parseFloat(String(menuCategoryItem.supplement || '0'));
-            const isSelected = selectedItems.includes(item.id);
+            const menuItemSelection = selectedItems.find(sel => sel.itemId === item.id);
+            const isSelected = !!menuItemSelection;
             const hasSupplementPrice = supplement > 0;
+            const hasCustomization = !!(menuItemSelection && (
+              (menuItemSelection.tags && menuItemSelection.tags.length > 0) ||
+              (menuItemSelection.note && menuItemSelection.note.trim().length > 0)
+            ));
 
             return (
               <MenuItemCard
@@ -135,7 +150,8 @@ const MenuCategory = memo<MenuCategoryProps>(({
                 isSelected={isSelected}
                 supplement={supplement}
                 hasSupplementPrice={hasSupplementPrice}
-                onToggle={() => handleToggleItem(item.id)}
+                hasCustomization={hasCustomization}
+                onToggle={() => handleToggleItem(item)}
               />
             );
           })}
@@ -154,6 +170,7 @@ interface MenuItemCardProps {
   isSelected: boolean;
   supplement: number;
   hasSupplementPrice: boolean;
+  hasCustomization?: boolean;
   onToggle: () => void;
 }
 
@@ -162,6 +179,7 @@ const MenuItemCard = memo<MenuItemCardProps>(({
   isSelected,
   supplement,
   hasSupplementPrice,
+  hasCustomization = false,
   onToggle
 }) => {
   return (
@@ -184,6 +202,12 @@ const MenuItemCard = memo<MenuItemCardProps>(({
                 <Text style={styles.menuItemSupplementText}>
                   +{formatPrice(supplement)}
                 </Text>
+              </View>
+            )}
+
+            {hasCustomization && (
+              <View style={styles.menuItemCustomizationBadge}>
+                <Text style={styles.menuItemCustomizationBadgeText}>✨</Text>
               </View>
             )}
           </View>
@@ -216,7 +240,8 @@ MenuItemCard.displayName = 'MenuItemCard';
 export const MenuConfiguration = memo<MenuConfigurationProps>(({
   menu,
   tempMenuSelections,
-  onUpdateTempMenuSelection,
+  onSelectMenuItem,
+  onDeselectMenuItem,
   getMenuCategoryItems,
   getCategoryNameFromItemTypeId,
   itemTypes
@@ -233,11 +258,18 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
     return itemType?.name || 'Catégorie inconnue';
   }, [getCategoryNameFromItemTypeId, itemTypes]);
 
-  const handleToggleItem = useCallback((categoryId: string, itemId: string) => {
+  const handleToggleItem = useCallback((categoryId: string, item: Item) => {
     const selectedItems = tempMenuSelections[categoryId] || [];
-    const isSelected = selectedItems.includes(itemId);
-    onUpdateTempMenuSelection(categoryId, itemId, !isSelected);
-  }, [tempMenuSelections, onUpdateTempMenuSelection]);
+    const isSelected = selectedItems.some(sel => sel.itemId === item.id);
+
+    if (isSelected) {
+      // Désélectionner l'item
+      onDeselectMenuItem(categoryId);
+    } else {
+      // Sélectionner l'item -> ouvrir la modale de customisation
+      onSelectMenuItem(item, categoryId);
+    }
+  }, [tempMenuSelections, onSelectMenuItem, onDeselectMenuItem]);
 
   if (!menu) return null;
 
@@ -506,6 +538,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#92400E',
+  },
+
+  menuItemCustomizationBadge: {
+    backgroundColor: '#F5F3FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+
+  menuItemCustomizationBadgeText: {
+    fontSize: 12,
   },
 
   menuItemActions: {

@@ -29,10 +29,12 @@ import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/se
 import { CustomModal } from '@/components/CustomModal';
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { Order } from '@/types/order.types';
-import { OrderLine, CreateOrderLineRequest, OrderLineType } from '~/types/order-line.types';
+import { OrderLine, CreateOrderLineRequest, OrderLineType, OrderLineState } from '~/types/order-line.types';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useMenus } from '~/hooks/useMenus';
 import { Plus, LayoutDashboard } from 'lucide-react-native';
+import { orderApiService } from '~/api/order.api';
+import { generateBulkPayload, countChanges } from '~/utils/order-line-tracker';
 
 export default function ServicePage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -45,6 +47,7 @@ export default function ServicePage() {
   } | null>(null);
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
+  const [initialOrderLines, setInitialOrderLines] = useState<OrderLine[]>([]);
   const { createOrderWithLines, createOrderLines, deleteOrderLine, deleteOrderLines } = useOrderLines();
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useSelector(selectAppInitialized);
@@ -186,6 +189,7 @@ export default function ServicePage() {
     modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
     modalActions.setModalTitle(`Prendre la commande - ${selectedTable?.name}`); // Titre pour nouvelle commande
     setOrderLines([]); // Réinitialiser les lignes pour une nouvelle commande
+    setInitialOrderLines([]); // Pas de lignes initiales pour une nouvelle commande
     setShowOrderModal(true); // Ouvrir la modal
   };
 
@@ -194,8 +198,9 @@ export default function ServicePage() {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
     modalActions.setCameFromOrderDetail(true); // Marquer qu'on vient de la modal détails
     modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Modifier la commande"); // Titre stable pour modification
-    setOrderLines([]); // Réinitialiser les lignes draft (les lignes existantes viendront de selectedTableOrder)
-    // La commande courante est déjà disponible via selectedTableOrder
+    const existingLines = selectedTableOrder?.lines || [];
+    setOrderLines(existingLines); // Initialiser avec les lignes existantes
+    setInitialOrderLines(existingLines); // Sauvegarder l'état initial pour comparaison
     setShowOrderModal(true); // Ouvrir la modal
   };
 
@@ -214,6 +219,7 @@ export default function ServicePage() {
       setShowOrderModal(false);
       setOrderCreatedFromStart(false);
       setOrderLines([]);
+      setInitialOrderLines([]);
 
 
 
@@ -289,46 +295,48 @@ export default function ServicePage() {
   }, []);
 
   const handleLinesChange = useCallback((newLines: OrderLine[]) => {
-    // Si on est en mode modification, filtrer les lignes déjà existantes
-    let linesToSave = newLines;
-
-    if (selectedTableOrder && selectedTableOrder.lines) {
-      const existingLineIds = new Set(selectedTableOrder.lines.map(l => l.id));
-      // Ne garder que les lignes qui n'ont pas d'ID ou dont l'ID commence par "draft-"
-      linesToSave = newLines.filter(line =>
-        !line.id ||
-        line.id.startsWith('draft-') ||
-        !existingLineIds.has(line.id)
-      );
-    }
-
-    setOrderLines(linesToSave);
-  }, [selectedTableOrder]);
+    // Simple : on garde toutes les lignes reçues
+    setOrderLines(newLines);
+  }, []);
 
   const getCurrentLines = useCallback((): OrderLine[] => {
+    return orderLines; // Toujours retourner l'état actuel
+  }, [orderLines]);
+
+  // Vérifier simplement s'il y a des changements
+  const hasChanges = useCallback((): boolean => {
     if (orderCreatedFromStart) {
-      return orderLines; // Mode création : utiliser les lignes draft
-    } else if (selectedTableOrder) {
-      return selectedTableOrder.lines || []; // Mode modification : utiliser les lignes existantes
+      // Mode création : des changements s'il y a des lignes
+      return orderLines.length > 0;
     }
-    return [];
-  }, [orderCreatedFromStart, orderLines, selectedTableOrder]);
+    // Mode modification : comparer avec l'état initial
+    return JSON.stringify(orderLines) !== JSON.stringify(initialOrderLines);
+  }, [orderLines, initialOrderLines, orderCreatedFromStart]);
 
 
   const convertOrderLinesToApiFormat = useCallback((lines: OrderLine[]): CreateOrderLineRequest[] => {
     return lines.map(line => {
       if (line.type === OrderLineType.ITEM) {
+        // Convertir les tags du format frontend (SelectedTag[]) au format API (Record<tagId, value>)
+        const tags: Record<string, any> = {};
+        if (line.tags && line.tags.length > 0) {
+          line.tags.forEach(tag => {
+            tags[tag.tagId] = tag.value;
+          });
+        }
+
         return {
           type: line.type,
           quantity: line.quantity,
           itemId: line.item!.id,
-          note: line.note || ''
+          note: line.note || '',
+          tags: Object.keys(tags).length > 0 ? tags : undefined
         };
       } else if (line.type === OrderLineType.MENU) {
-        // Pour les menus, reconstruire selectedItems à partir des orderLine.items
-        const selectedItems: Record<string, string> = {};
+        // Construire selectedItems avec itemId + tags pour chaque item du menu
+        const selectedItems: Record<string, { itemId: string; tags?: Record<string, any> }> = {};
 
-        line.items?.forEach(orderLineItem => {
+        line.items?.forEach((orderLineItem: any) => {
           // Trouver la catégorie correspondante dans le menu original
           const menu = allMenus.find((m: any) => m.id === line.menu?.id);
           if (menu?.categories) {
@@ -338,7 +346,18 @@ export default function ServicePage() {
             });
 
             if (category) {
-              selectedItems[category.id] = orderLineItem.item.id;
+              // Convertir les tags du format frontend au format API
+              const tags: Record<string, any> = {};
+              if (orderLineItem.tags && orderLineItem.tags.length > 0) {
+                orderLineItem.tags.forEach((tag: any) => {
+                  tags[tag.tagId] = tag.value;
+                });
+              }
+
+              selectedItems[category.id] = {
+                itemId: orderLineItem.item.id,
+                tags: Object.keys(tags).length > 0 ? tags : undefined
+              };
             }
           }
         });
@@ -359,8 +378,9 @@ export default function ServicePage() {
 
   const handleSaveOrder = async () => {
     try {
-      if (!orderLines || orderLines.length === 0) {
-        showToast('Aucune ligne à sauvegarder', 'info');
+      // Vérifier s'il y a des changements
+      if (!hasChanges()) {
+        showToast('Aucune modification à sauvegarder', 'info');
         setOrderCreatedFromStart(false);
         return true;
       }
@@ -368,16 +388,56 @@ export default function ServicePage() {
       // Indiquer qu'on est en train de sauvegarder
       isSavingOrderRef.current = true;
 
-      // Convertir les OrderLine vers le format API
-      const apiData = convertOrderLinesToApiFormat(orderLines);
-
       let updatedOrder;
       if (orderCreatedFromStart) {
         // Mode création : créer order + lignes ensemble
+        const apiData = convertOrderLinesToApiFormat(orderLines);
         updatedOrder = await createOrderWithLines(selectedTableId!, apiData);
       } else if (selectedTableOrder?.id) {
-        // Mode modification : ajouter lignes à l'order existant
-        updatedOrder = await createOrderLines(selectedTableOrder.id, apiData);
+        // Mode modification : analyser les changements et utiliser bulk update
+        const states: OrderLineState[] = [];
+        const currentLineIds = new Set(orderLines.map(l => l.id));
+        const initialLineIds = new Set(initialOrderLines.map(l => l.id));
+
+        // Analyser chaque ligne actuelle
+        for (const line of orderLines) {
+          if (!line.id || line.id.startsWith('draft-')) {
+            // Nouvelle ligne
+            states.push({
+              original: null,
+              current: line,
+              status: 'created',
+              changes: undefined
+            });
+          } else if (initialLineIds.has(line.id)) {
+            // Ligne existante - vérifier les modifications
+            const originalLine = initialOrderLines.find(ol => ol.id === line.id)!;
+            const isModified = JSON.stringify(originalLine) !== JSON.stringify(line);
+            states.push({
+              original: originalLine,
+              current: line,
+              status: isModified ? 'modified' : 'unchanged',
+              changes: isModified ? line : undefined
+            });
+          }
+        }
+
+        // Détecter les suppressions
+        for (const originalLine of initialOrderLines) {
+          if (!currentLineIds.has(originalLine.id)) {
+            // Ligne supprimée
+            states.push({
+              original: originalLine,
+              current: originalLine,
+              status: 'deleted',
+              changes: undefined
+            });
+          }
+        }
+
+        // Utiliser l'API bulk update
+        const payload = generateBulkPayload(states);
+        updatedOrder = await orderApiService.updateWithLines(selectedTableOrder.id, payload);
       }
 
       if (updatedOrder) {
@@ -386,6 +446,7 @@ export default function ServicePage() {
         showToast('Commande mise à jour avec succès.', 'success');
         // Réinitialiser l'état
         setOrderLines([]);
+        setInitialOrderLines([]);
 
         // Fermer la modal de création/modification
         setShowOrderModal(false);
@@ -517,7 +578,7 @@ export default function ServicePage() {
               <OrderLinesButton
                 variant="primary"
                 onPress={handleSaveOrder}
-                disabled={!orderLines || orderLines.length === 0}
+                disabled={!hasChanges()}
                 flex={2}
               >
                 Sauvegarder

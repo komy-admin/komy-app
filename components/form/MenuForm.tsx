@@ -1,20 +1,22 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, Platform, Pressable, Switch } from 'react-native';
-import { Text, Button, TextInput, NumberInput, SelectButton } from '~/components/ui';
+import { Text, Button, TextInput, NumberInput, SelectButton, TagSelector } from '~/components/ui';
 import { ColorPicker } from '~/components/ui/color-picker';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
+import { Tag } from '~/types/tag.types';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
 import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
 import { SectionHeader } from '~/components/admin/SectionHeader';
-import { FileText } from 'lucide-react-native';
+import { FileText, Tags } from 'lucide-react-native';
 import { centsToEuros, eurosToCents } from '~/lib/utils';
 
 interface MenuFormProps {
   item: Item | null;
   itemTypes: ItemType[];
-  onSave?: (item: Item) => void; // Optionnel car maintenant géré par AdminFormView
+  tags: Tag[];
+  onSave?: (item: Item) => void;
   onCancel?: () => void;
   activeTab: string;
 }
@@ -22,6 +24,7 @@ interface MenuFormProps {
 export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
   item,
   itemTypes,
+  tags,
   onSave,
   onCancel,
   activeTab
@@ -32,7 +35,8 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     price: item?.price ? centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price) : null,
     itemTypeId: item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : ''),
     color: item?.color || '',
-    isActive: item?.isActive ?? true
+    isActive: item?.isActive ?? true,
+    selectedTags: item?.tags?.map(t => t.id) || []
   });
 
   const [selectedItemTypeId, setSelectedItemTypeId] = useState<string>(
@@ -71,7 +75,8 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         price: centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price),
         itemTypeId: item.itemType?.id || '',
         color: item.color || '',
-        isActive: item.isActive ?? true
+        isActive: item.isActive ?? true,
+        selectedTags: item.tags?.map(t => t.id) || []
       });
       setSelectedItemTypeId(item.itemType?.id || '');
     } else {
@@ -80,11 +85,21 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         price: null,
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
         color: '',
-        isActive: true
+        isActive: true,
+        selectedTags: []
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
     }
   }, [item, activeTab]);
+
+  const handleTagToggle = React.useCallback((tagId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedTags: prev.selectedTags.includes(tagId)
+        ? prev.selectedTags.filter(id => id !== tagId)
+        : [...prev.selectedTags, tagId]
+    }));
+  }, []);
 
   // Expose l'interface AdminFormRef
   useImperativeHandle(ref, () => ({
@@ -118,6 +133,7 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
       if (isValid) {
         // 💰 Convertir euros -> centimes pour l'envoi API
         const priceInCents = eurosToCents(formData.price!);
+        const selectedTags = tags.filter(t => formData.selectedTags.includes(t.id));
 
         itemData = {
           id: item?.id || '',
@@ -126,7 +142,8 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           color: formData.color,
           itemTypeId: selectedItemTypeId,
           itemType: selectedItemType!,
-          isActive: formData.isActive
+          isActive: formData.isActive,
+          tags: selectedTags
         };
       }
 
@@ -143,7 +160,8 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         price: null,
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
         color: '',
-        isActive: true
+        isActive: true,
+        selectedTags: []
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
     },
@@ -275,6 +293,27 @@ export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
             </View>
           </View>
         </View>
+
+        {/* Section Tags */}
+        {tags.length > 0 && (
+          <View style={styles.section}>
+            <SectionHeader
+              icon={Tags}
+              title="2. Tags"
+              subtitle="Sélectionnez les tags applicables à cet article"
+            />
+
+            <View style={styles.row}>
+              <View style={styles.categorySection}>
+                <TagSelector
+                  tags={tags}
+                  selectedTagIds={formData.selectedTags}
+                  onTagToggle={handleTagToggle}
+                />
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );

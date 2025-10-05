@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
+import { useTags } from '~/hooks/useTags';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
 import { OrderItemsList } from '~/components/order/OrderLinesForm/OrderItemsList';
 import { OrderMenusList } from '~/components/order/OrderLinesForm/OrderMenusList';
@@ -8,8 +9,12 @@ import { MenuConfiguration } from '~/components/order/OrderLinesForm/MenuConfigu
 import { OrderLinesFooter } from '~/components/order/OrderLinesForm/OrderLinesFooter';
 import { OrderLinesHeader } from '~/components/order/OrderLinesForm/OrderLinesHeader';
 import { OrderLinesFormProps } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
-import { OrderLine, OrderLineType } from '~/types/order-line.types';
+import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { OrderLinesButton } from '~/components/order/OrderLinesForm/OrderLinesButton';
+import { ItemCustomizationModal } from '~/components/order/OrderLinesForm/ItemCustomizationModal';
+import { DraftFloatingButton } from '~/components/order/OrderLinesForm/DraftFloatingButton';
+import { DraftReviewModal } from '~/components/order/OrderLinesForm/DraftReviewModal';
+import { Item } from '~/types/item.types';
 import { Status } from '@/types/status.enum';
 
 /**
@@ -37,10 +42,28 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     setDraftLines(lines);
   }, [lines]);
 
+  // Type pour une sélection d'item de menu avec customisation
+  type MenuItemSelection = {
+    itemId: string;
+    tags: SelectedTag[];
+    note?: string;
+  };
+
   // Configuration de menu
   const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
   const [menuBeingConfigured, setMenuBeingConfigured] = useState<any>(null);
-  const [tempMenuSelections, setTempMenuSelections] = useState<Record<string, string[]>>({});
+  const [tempMenuSelections, setTempMenuSelections] = useState<Record<string, MenuItemSelection[]>>({});
+  const [editingMenuId, setEditingMenuId] = useState<string | null>(null); // ID du menu en cours d'édition
+
+  // États pour les modales de customisation d'items
+  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [itemToCustomize, setItemToCustomize] = useState<Item | null>(null);
+  const [editingDraftIndex, setEditingDraftIndex] = useState<number | null>(null);
+
+  // États pour customiser un item de menu
+  const [isCustomizingMenuItem, setIsCustomizingMenuItem] = useState(false);
+  const [menuItemToCustomize, setMenuItemToCustomize] = useState<{ item: Item; categoryId: string } | null>(null);
+  const [isDraftReviewOpen, setIsDraftReviewOpen] = useState(false);
 
   // Hook pour l'UI (navigation, filtres)
   const {
@@ -53,6 +76,12 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     allItemTypes,
   } = useOrderLinesForm({ items, itemTypes });
 
+  // Fonction pour récupérer les tags disponibles pour un item
+  const getItemTags = useCallback((item: Item) => {
+    // Retourner uniquement les tags directement liés à l'item
+    return item.tags || [];
+  }, []);
+
   // Émettre les changements au parent
   const emitChanges = useCallback((newLines: OrderLine[]) => {
     setDraftLines(newLines);
@@ -60,69 +89,182 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, [onLinesChange]);
 
 
-  const addItem = useCallback((item: any) => {
-    const newLine: Partial<OrderLine> = {
-      id: `draft-item-${Date.now()}`,
-      type: OrderLineType.ITEM,
-      quantity: 1,
-      unitPrice: item.price,
-      totalPrice: item.price,
-      status: Status.PENDING,
-      item: {
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        description: item.description,
-        allergens: item.allergens,
-        itemType: item.itemType,
-        snapshotAt: new Date().toISOString()
-      },
-      menu: null
-    };
+  // Handlers pour la customisation d'items
+  const handleOpenCustomization = useCallback((item: Item, draftIndex?: number) => {
+    // Essayer de récupérer l'item complet depuis la liste des items disponibles
+    // car celui passé en paramètre peut être un snapshot sans les tags
+    const fullItem = items.find(i => i.id === item.id);
+    setItemToCustomize(fullItem || item);
 
-    const newLines = [...draftLines, newLine as OrderLine];
-    emitChanges(newLines);
-  }, [draftLines, emitChanges]);
+    // Utiliser directement l'index passé
+    setEditingDraftIndex(draftIndex !== undefined ? draftIndex : null);
+    setIsCustomizing(true);
+  }, [items]);
 
-  const removeItem = useCallback((itemId: string) => {
-    // Trouver la dernière ligne avec cet item
-    const lineIndex = draftLines.findLastIndex(
-      line => line.type === OrderLineType.ITEM && line.item?.id === itemId
-    );
+  const handleConfirmCustomization = useCallback((data: { note?: string; tags: SelectedTag[] }) => {
+    if (!itemToCustomize) return;
 
-    if (lineIndex >= 0) {
-      const newLines = draftLines.filter((_, index) => index !== lineIndex);
+    // Calculer le prix total avec les modifiers des tags
+    const tagsPrice = data.tags.reduce((sum, tag) => sum + (tag.priceModifier || 0), 0);
+    const totalPrice = itemToCustomize.price + tagsPrice;
+
+    if (editingDraftIndex !== null) {
+      // Mode édition : mettre à jour la ligne existante
+      const newLines = [...draftLines];
+      const existingLine = newLines[editingDraftIndex];
+
+      if (existingLine && existingLine.type === OrderLineType.ITEM) {
+        newLines[editingDraftIndex] = {
+          ...existingLine,
+          note: data.note,
+          tags: data.tags,
+          totalPrice: totalPrice,
+          unitPrice: totalPrice,
+        };
+        emitChanges(newLines);
+      }
+    } else {
+      // Mode ajout : créer une nouvelle ligne
+      const newLine: Partial<OrderLine> = {
+        id: `draft-item-${Date.now()}`,
+        type: OrderLineType.ITEM,
+        quantity: 1,
+        unitPrice: totalPrice,
+        totalPrice: totalPrice,
+        status: Status.PENDING,
+        note: data.note,
+        tags: data.tags,
+        item: {
+          id: itemToCustomize.id,
+          name: itemToCustomize.name,
+          price: itemToCustomize.price,
+          description: itemToCustomize.description,
+          allergens: itemToCustomize.allergens,
+          itemType: itemToCustomize.itemType,
+          snapshotAt: new Date().toISOString(),
+          // Stocker les tags de l'item original pour pouvoir éditer plus tard
+          tags: itemToCustomize.tags
+        } as any,
+        menu: null
+      };
+
+      const newLines = [...draftLines, newLine as OrderLine];
+      emitChanges(newLines);
+    }
+
+    // Fermer la modale
+    setIsCustomizing(false);
+    setItemToCustomize(null);
+    setEditingDraftIndex(null);
+  }, [itemToCustomize, editingDraftIndex, draftLines, emitChanges]);
+
+  const handleCancelCustomization = useCallback(() => {
+    setIsCustomizing(false);
+    setItemToCustomize(null);
+    setEditingDraftIndex(null);
+  }, []);
+
+  // Handlers pour la customisation d'items de menu
+  const handleOpenMenuItemCustomization = useCallback((item: Item, categoryId: string) => {
+    // Récupérer l'item complet depuis la liste
+    const fullItem = items.find(i => i.id === item.id);
+    setMenuItemToCustomize({ item: fullItem || item, categoryId });
+    setIsCustomizingMenuItem(true);
+  }, [items]);
+
+  const handleConfirmMenuItemCustomization = useCallback((data: { note?: string; tags: SelectedTag[] }) => {
+    if (!menuItemToCustomize) return;
+
+    const { item, categoryId } = menuItemToCustomize;
+
+    // Ajouter ou remplacer la sélection pour cette catégorie
+    const newSelections = { ...tempMenuSelections };
+    newSelections[categoryId] = [{
+      itemId: item.id,
+      tags: data.tags,
+      note: data.note
+    }];
+
+    setTempMenuSelections(newSelections);
+    setIsCustomizingMenuItem(false);
+    setMenuItemToCustomize(null);
+  }, [menuItemToCustomize, tempMenuSelections]);
+
+  const handleCancelMenuItemCustomization = useCallback(() => {
+    setIsCustomizingMenuItem(false);
+    setMenuItemToCustomize(null);
+  }, []);
+
+  const handleDeleteDraftLine = useCallback((index: number) => {
+    // Utiliser directement l'index sans filtrer
+    const lineToDelete = draftLines[index];
+
+    if (lineToDelete) {
+      // Filtrer toutes les lignes pour enlever celle à supprimer
+      const newLines = draftLines.filter(line => line.id !== lineToDelete.id);
       emitChanges(newLines);
     }
   }, [draftLines, emitChanges]);
 
-  const updateItemQuantity = useCallback((itemId: string, action: 'add' | 'remove') => {
-    if (action === 'add') {
-      const item = items.find(i => i.id === itemId);
-      if (item) addItem(item);
-    } else {
-      removeItem(itemId);
-    }
-  }, [items, addItem, removeItem]);
+  const handleClearAllDraft = useCallback(() => {
+    emitChanges([]);
+    setIsDraftReviewOpen(false);
+  }, [emitChanges]);
 
-  // Calculer les quantités pour l'affichage
-  const getTotalItemQuantity = useCallback((itemId: string) => {
-    return draftLines.filter(
-      line => line.type === OrderLineType.ITEM && line.item?.id === itemId
-    ).length;
-  }, [draftLines]);
+  // Handler pour éditer un menu
+  const handleEditMenu = useCallback((menuLine: OrderLine, index: number) => {
+    if (!menuLine.menu || !menuLine.items) return;
 
-  const getDraftItemQuantity = useCallback((itemId: string) => {
-    const currentCount = getTotalItemQuantity(itemId);
-    const initialCount = lines.filter(
-      line => line.type === OrderLineType.ITEM && line.item?.id === itemId
-    ).length;
-    return Math.max(0, currentCount - initialCount);
-  }, [getTotalItemQuantity, lines]);
+    // Retrouver le menu complet depuis activeMenus
+    const fullMenu = activeMenus.find(m => m.id === menuLine.menu?.id);
+    if (!fullMenu) return;
+
+    // Utiliser directement l'index
+    const lineToEdit = draftLines[index];
+    if (!lineToEdit) return;
+
+    // Sauvegarder l'ID original du menu pour le réutiliser après édition
+    setEditingMenuId(lineToEdit.id);
+
+    // Supprimer le menu du draft
+    const newLines = draftLines.filter(line => line.id !== lineToEdit.id);
+    emitChanges(newLines);
+
+    // Reconstruire tempMenuSelections à partir des items du menu
+    const menuSelections: Record<string, MenuItemSelection[]> = {};
+
+    menuLine.items.forEach((menuItem: any) => {
+      // Trouver la catégorie correspondante dans le menu complet
+      if (fullMenu.categories) {
+        const category = fullMenu.categories.find((cat: any) => {
+          const categoryName = itemTypes?.find(type => type.id === cat.itemTypeId)?.name;
+          return categoryName === menuItem.categoryName;
+        });
+
+        if (category) {
+          menuSelections[category.id] = [{
+            itemId: menuItem.item.id,
+            tags: menuItem.tags || [],
+            note: menuItem.note
+          }];
+        }
+      }
+    });
+
+    // Ouvrir la configuration avec le menu complet et les sélections pré-remplies
+    setMenuBeingConfigured(fullMenu);
+    setTempMenuSelections(menuSelections);
+    setIsConfiguringMenu(true);
+    setIsDraftReviewOpen(false);
+    onConfigurationModeChange?.(true);
+  }, [draftLines, activeMenus, itemTypes, emitChanges, onConfigurationModeChange]);
+
+  // Calculer le nombre total d'items (existants + drafts) dans le panier
+  const draftCount = draftLines.length;
 
 
   // Utiliser un ref pour accéder aux sélections actuelles dans les callbacks
-  const tempMenuSelectionsRef = useRef<Record<string, string[]>>({});
+  const tempMenuSelectionsRef = useRef<Record<string, MenuItemSelection[]>>({});
 
   // Mettre à jour le ref quand tempMenuSelections change
   useEffect(() => {
@@ -130,7 +272,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, [tempMenuSelections]);
 
   // Fonction pour ajouter un menu (définie avant startMenuConfiguration)
-  const addMenu = useCallback((menu: any, selectedItems: Record<string, string>) => {
+  const addMenu = useCallback((menu: any, selectedItems: Record<string, string>, menuSelections: Record<string, MenuItemSelection[]>) => {
 
     // Créer les items du menu
     const menuItems: any[] = [];
@@ -149,8 +291,17 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       }
 
       if (selectedItem && category) {
+        // Récupérer les tags et note pour cet item depuis menuSelections
+        const menuItemSelection = menuSelections[categoryId]?.find(sel => sel.itemId === itemId);
+        const tags = menuItemSelection?.tags || [];
+        const note = menuItemSelection?.note;
+
+        // Calculer le price modifier des tags
+        const tagsPriceModifier = tags.reduce((sum, tag) => sum + (tag.priceModifier || 0), 0);
+
         menuItems.push({
           id: `menu-item-${Date.now()}-${Math.random()}`,
+          categoryId: categoryId,
           categoryName: itemTypes.find(t => t.id === category.itemTypeId)?.name || '',
           status: Status.PENDING,
           item: {
@@ -162,14 +313,16 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             itemType: selectedItem.itemType,
             snapshotAt: new Date().toISOString()
           },
-          supplementPrice: selectedMenuItem?.supplement || 0
+          supplementPrice: selectedMenuItem?.supplement || 0,
+          tags: tags,
+          note: note
         });
-        totalPrice += selectedMenuItem?.supplement || 0;
+        totalPrice += (selectedMenuItem?.supplement || 0) + tagsPriceModifier;
       }
     });
 
     const newLine: Partial<OrderLine> = {
-      id: `draft-menu-${Date.now()}`,
+      id: editingMenuId || `draft-menu-${Date.now()}`, // Utiliser l'ID original si on édite
       type: OrderLineType.MENU,
       quantity: 1,
       unitPrice: totalPrice,
@@ -190,6 +343,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
     const newLines = [...draftLines, newLine as OrderLine];
     emitChanges(newLines);
+    setEditingMenuId(null); // Réinitialiser l'ID d'édition après confirmation
   }, [draftLines, itemTypes, emitChanges]);
 
   // Fonction pour vérifier si un menu peut être auto-configuré
@@ -226,7 +380,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, []);
 
   // Fonction de validation pour vérifier si toutes les catégories obligatoires sont sélectionnées
-  const validateMenuSelections = useCallback((menu: any, selections: Record<string, string[]>): boolean => {
+  const validateMenuSelections = useCallback((menu: any, selections: Record<string, MenuItemSelection[]>): boolean => {
     if (!menu?.categories) return false;
 
     // Vérifier que toutes les catégories obligatoires ont au moins une sélection
@@ -244,20 +398,21 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     setMenuBeingConfigured(null);
     setTempMenuSelections({});
     tempMenuSelectionsRef.current = {};
+    setEditingMenuId(null); // Réinitialiser l'ID d'édition
     onConfigurationModeChange?.(false);
     onConfigurationActionsChange?.(null);
   }, [onConfigurationModeChange, onConfigurationActionsChange]);
 
   const handleConfirmMenuConfiguration = useCallback(() => {
     const selectedItems: Record<string, string> = {};
-    Object.entries(tempMenuSelections).forEach(([categoryId, itemIds]) => {
-      if (itemIds && itemIds.length > 0) {
-        selectedItems[categoryId] = itemIds[0];
+    Object.entries(tempMenuSelections).forEach(([categoryId, selections]) => {
+      if (selections && selections.length > 0) {
+        selectedItems[categoryId] = selections[0].itemId;
       }
     });
 
     if (menuBeingConfigured && Object.keys(selectedItems).length > 0) {
-      addMenu(menuBeingConfigured, selectedItems);
+      addMenu(menuBeingConfigured, selectedItems, tempMenuSelections);
     }
 
     handleCancelMenuConfiguration();
@@ -286,7 +441,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       // Auto-configuration : ajouter directement le menu
       const autoSelectedItems = getAutoMenuConfiguration(menu);
       if (Object.keys(autoSelectedItems).length > 0) {
-        addMenu(menu, autoSelectedItems);
+        // Pour l'auto-configuration, créer un objet vide pour les sélections (pas de tags/notes)
+        const emptyMenuSelections: Record<string, MenuItemSelection[]> = {};
+        addMenu(menu, autoSelectedItems, emptyMenuSelections);
         return; // Pas besoin d'ouvrir la configuration
       }
     }
@@ -380,13 +537,10 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         <MenuConfiguration
           menu={menuBeingConfigured}
           tempMenuSelections={tempMenuSelections}
-          onUpdateTempMenuSelection={(categoryId, itemId, isSelected) => {
+          onSelectMenuItem={handleOpenMenuItemCustomization}
+          onDeselectMenuItem={(categoryId) => {
             const newSelections = { ...tempMenuSelections };
-            if (isSelected) {
-              newSelections[categoryId] = [itemId];
-            } else {
-              delete newSelections[categoryId];
-            }
+            delete newSelections[categoryId];
             setTempMenuSelections(newSelections);
           }}
           getMenuCategoryItems={getMenuCategoryItems}
@@ -408,9 +562,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             <OrderItemsList
               items={activeItems}
               activeItemType={activeItemType}
-              getTotalItemQuantity={getTotalItemQuantity}
-              getDraftItemQuantity={getDraftItemQuantity}
-              updateItemQuantity={updateItemQuantity}
+              onOpenCustomization={handleOpenCustomization}
             />
           )}
 
@@ -429,8 +581,56 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             getTotalItemsCount={getTotalItemsCount}
             getTotalMenusCount={getTotalMenusCount}
           /> */}
+
+          {/* Bouton flottant pour accéder au panier */}
+          <DraftFloatingButton
+            count={draftCount}
+            onPress={() => setIsDraftReviewOpen(true)}
+          />
         </View>
       )}
+
+      {/* Modale de customisation d'item */}
+      {itemToCustomize && (
+        <ItemCustomizationModal
+          visible={isCustomizing}
+          item={itemToCustomize}
+          availableTags={getItemTags(itemToCustomize)}
+          initialData={
+            editingDraftIndex !== null
+              ? {
+                note: draftLines[editingDraftIndex]?.note,
+                tags: draftLines[editingDraftIndex]?.tags || []
+              }
+              : undefined
+          }
+          onConfirm={handleConfirmCustomization}
+          onCancel={handleCancelCustomization}
+        />
+      )}
+
+      {/* Modale de customisation d'item de menu */}
+      {menuItemToCustomize && (
+        <ItemCustomizationModal
+          visible={isCustomizingMenuItem}
+          item={menuItemToCustomize.item}
+          availableTags={getItemTags(menuItemToCustomize.item)}
+          initialData={undefined}
+          onConfirm={handleConfirmMenuItemCustomization}
+          onCancel={handleCancelMenuItemCustomization}
+        />
+      )}
+
+      {/* Modale de revue du panier */}
+      <DraftReviewModal
+        visible={isDraftReviewOpen}
+        draftLines={draftLines}
+        onEdit={handleOpenCustomization}
+        onEditMenu={handleEditMenu}
+        onDelete={handleDeleteDraftLine}
+        onClose={() => setIsDraftReviewOpen(false)}
+        onClearAll={handleClearAllDraft}
+      />
     </View>
   );
 };
