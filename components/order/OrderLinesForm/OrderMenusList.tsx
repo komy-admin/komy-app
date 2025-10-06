@@ -40,76 +40,43 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
 
-  const handleRemove = useCallback(() => {
-    onUpdateQuantity(menu.id, 'remove');
-  }, [menu.id, onUpdateQuantity]);
-
-  const dynamicButtonStyles = {
-    ...styles.compactQuantityButton,
-    width: dynamicButtonSize,
-    height: dynamicButtonSize,
-  };
-
-  const canRemove = draftQuantity > 0;
-
   return (
-    <>
-      {/* Info du menu */}
-      <View style={styles.itemInfo}>
+    <Pressable
+      style={styles.menuCard}
+      onPress={handleAdd}
+    >
+      {/* Header avec nom et description */}
+      <View style={styles.menuHeader}>
         <Text
           style={styles.itemName}
-          numberOfLines={1}
-          adjustsFontSizeToFit={true}
-          minimumFontScale={0.75}
+          numberOfLines={2}
         >
           {menu.name}
         </Text>
         {menu.description && (
           <Text
             style={styles.menuDescription}
-            numberOfLines={1}
-            adjustsFontSizeToFit={true}
-            minimumFontScale={0.75}
+            numberOfLines={2}
           >
             {menu.description}
           </Text>
         )}
-        <Text style={styles.itemPrice}>À partir de {formatPrice((menu as any).price || menu.basePrice || 0)}</Text>
       </View>
 
-      {/* Contrôles de quantité en bas */}
-      <View style={styles.compactQuantityContainer}>
-        <Pressable
-          style={[
-            dynamicButtonStyles,
-            !canRemove && styles.compactQuantityButtonDisabled
-          ]}
-          onPress={handleRemove}
-          disabled={!canRemove}
-        >
-          <Minus
-            size={16}
-            color={canRemove ? "#2A2E33" : "#9CA3AF"}
-            strokeWidth={2}
-          />
-        </Pressable>
-
-        <Text style={styles.compactQuantityText}>
-          {isNaN(totalQuantity) ? '0' : totalQuantity}
+      {/* Prix */}
+      <View style={styles.priceContainer}>
+        <Text style={styles.itemPrice}>
+          À partir de {formatPrice((menu as any).price || menu.basePrice || 0)}
         </Text>
-
-        <Pressable
-          style={dynamicButtonStyles}
-          onPress={handleAdd}
-        >
-          <Plus
-            size={16}
-            color="#2A2E33"
-            strokeWidth={2}
-          />
-        </Pressable>
       </View>
-    </>
+
+      {/* Bouton Ajouter */}
+      <View style={styles.addButtonContainer}>
+        <View style={styles.addButton}>
+          <Plus size={22} color="#FFFFFF" strokeWidth={3} />
+        </View>
+      </View>
+    </Pressable>
   );
 });
 
@@ -143,20 +110,14 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
 
   // Render item function for FlatList - défini après tous les hooks
   const renderMenu = useCallback(({ item: menu, index }: { item: Menu; index: number }) => (
-    <View
-      style={[
-        styles.menuRow,
-      ]}
-    >
-      <OrderMenuRow
-        menu={menu}
-        totalQuantity={getTotalMenuQuantity(menu.id)}
-        draftQuantity={getDraftMenuQuantity(menu.id)}
-        onMenuAdd={handleMenuAdd}
-        onUpdateQuantity={updateMenuQuantity}
-        dynamicButtonSize={dynamicButtonSize}
-      />
-    </View>
+    <OrderMenuRow
+      menu={menu}
+      totalQuantity={getTotalMenuQuantity(menu.id)}
+      draftQuantity={getDraftMenuQuantity(menu.id)}
+      onMenuAdd={handleMenuAdd}
+      onUpdateQuantity={updateMenuQuantity}
+      dynamicButtonSize={dynamicButtonSize}
+    />
   ), [getTotalMenuQuantity, getDraftMenuQuantity, handleMenuAdd, updateMenuQuantity, dynamicButtonSize]);
 
   // Si aucun menu disponible
@@ -189,10 +150,19 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
 
 OrderMenusList.displayName = 'OrderMenusList';
 
+const COLORS = {
+  background: '#FFFFFF',
+  border: '#E5E7EB',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  price: '#059669',
+  addButton: '#2A2E33',
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Même couleur que navigation et OrderItemsList
+    backgroundColor: COLORS.background,
   },
   contentContainer: {
     flexDirection: 'row',
@@ -200,6 +170,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     justifyContent: 'flex-start',
+    gap: 12,
   },
   emptyContainer: {
     flex: 1,
@@ -209,100 +180,83 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: COLORS.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  menuRow: {
-    flexBasis: '49%',
-    maxWidth: '49%',
-    height: 180, // Hauteur augmentée
-    padding: 16,
-    margin: 4,
-    backgroundColor: '#F8F9FA', // Style ISO OrderItemsList
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Style ISO OrderItemsList
+
+  // Card styles
+  menuCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 3,
-    justifyContent: 'space-between',
+    minHeight: 180,
+    flexBasis: '48%',
+    maxWidth: '48%',
   },
-  itemInfo: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    marginBottom: 12,
+
+  // Header styles
+  menuHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    minHeight: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#2A2E33',
-    marginBottom: 6,
-    lineHeight: 16,
+    color: COLORS.text,
     textAlign: 'center',
-  },
-  itemPrice: {
-    fontSize: 13,
-    color: '#059669',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 'auto',
+    lineHeight: 20,
   },
   menuDescription: {
     fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
-    marginBottom: 8,
+    color: COLORS.textSecondary,
     lineHeight: 16,
     fontStyle: 'italic',
     textAlign: 'center',
+    marginTop: 4,
   },
-  menuActions: {
-    alignItems: 'center',
+
+  // Prix
+  priceContainer: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-  menuButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#059669',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-  menuButtonText: {
-    color: 'white',
+  itemPrice: {
     fontSize: 14,
-    fontWeight: '600',
-  },
-  compactQuantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Plus blanc pour plus de contraste
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#D1D5DB', // Border plus visible
-    overflow: 'hidden',
-    justifyContent: 'space-between',
-  },
-  compactQuantityButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  compactQuantityButtonDisabled: {
-    backgroundColor: '#F3F4F6',
-    opacity: 0.7,
-  },
-  compactQuantityText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2A2E33',
+    color: COLORS.price,
+    fontWeight: '800',
     textAlign: 'center',
-    minWidth: 32,
-    paddingHorizontal: 8,
+  },
+
+  // Bouton Ajouter
+  addButtonContainer: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 4,
+  },
+  addButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.addButton,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.addButton,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });
