@@ -589,7 +589,17 @@ export default function ServicePage() {
           <View style={{ flex: 1, height: '100%', position: 'relative' }}>
             {/* Header avec tabs des rooms - seulement si il y a des rooms */}
             {rooms.length > 0 && (
-              <View className='flex-row w-full justify-between' style={{ backgroundColor: '#FBFBFB', height: 50 }}>
+              <View className='flex-row w-full justify-between' style={{
+                backgroundColor: '#FBFBFB',
+                height: 50,
+                zIndex: 10,
+                elevation: 5,
+                ...Platform.select({
+                  android: {
+                    shadowColor: 'transparent', // Pas d'ombre visible sur Android
+                  },
+                }),
+              }}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -707,7 +717,7 @@ export default function ServicePage() {
               </View>
             ) : (
               // Layout normal avec room existante
-              <>
+              <View style={{ flex: 1, zIndex: 1, elevation: 0 }}>
                 {selectedTable && !selectedTableOrder && (
                   <StartOrderCard
                     table={selectedTable}
@@ -727,7 +737,7 @@ export default function ServicePage() {
                   onTableLongPress={handleTablePress}
                   onTableUpdate={() => { }}
                 />
-              </>
+              </View>
             )}
           </View>
         </View>

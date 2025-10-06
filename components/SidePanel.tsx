@@ -172,6 +172,12 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'relative',
     backgroundColor: 'transparent',
+    zIndex: 100, // Toujours au-dessus (web/iOS)
+    ...Platform.select({
+      android: {
+        elevation: 15, // Plus élevé que tous les autres composants
+      },
+    }),
   },
   content: {
     position: 'absolute',
@@ -190,7 +196,8 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
       },
       android: {
-        elevation: 2,
+        elevation: 10, // Plus élevé que les headers (elevation: 5) pour rester au-dessus
+        shadowColor: 'transparent', // Pas d'ombre visible, la bordure suffit
       },
       web: {
         boxShadow: '1px 0 3px rgba(0, 0, 0, 0.05)',
