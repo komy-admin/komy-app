@@ -146,7 +146,7 @@ export const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Options</Text>
                 <Text style={styles.priceModifier}>
-                  +{selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0).toFixed(2)}€
+                  +{Number(selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0)).toFixed(2)}€
                 </Text>
               </View>
             )}
@@ -287,7 +287,7 @@ const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
                       styles.optionPriceText,
                       isSelected && styles.optionPriceTextSelected
                     ]}>
-                      {option.priceModifier > 0 ? '+' : ''}{option.priceModifier.toFixed(2)}€
+                      {option.priceModifier > 0 ? '+' : ''}{Number(option.priceModifier).toFixed(2)}€
                     </Text>
                   </View>
                 )}
@@ -348,7 +348,7 @@ const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => 
                       styles.optionPriceText,
                       isSelected && styles.optionPriceTextSelected
                     ]}>
-                      {option.priceModifier > 0 ? '+' : ''}{option.priceModifier.toFixed(2)}€
+                      {option.priceModifier > 0 ? '+' : ''}{Number(option.priceModifier).toFixed(2)}€
                     </Text>
                   </View>
                 )}
@@ -416,7 +416,7 @@ const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
           {priceModifier !== 0 && (
             <View style={styles.togglePriceBadge}>
               <Text style={styles.togglePriceText}>
-                {priceModifier > 0 ? '+' : ''}{priceModifier.toFixed(2)}€
+                {priceModifier > 0 ? '+' : ''}{Number(priceModifier).toFixed(2)}€
               </Text>
             </View>
           )}

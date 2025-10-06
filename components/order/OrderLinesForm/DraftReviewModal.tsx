@@ -161,7 +161,7 @@ const DraftItemCard: React.FC<DraftLineCardProps> = ({
               </View>
             )}
           </View>
-          <Text style={styles.itemPrice}>{(line.totalPrice || 0).toFixed(2)}€</Text>
+          <Text style={styles.itemPrice}>{Number(line.totalPrice || 0).toFixed(2)}€</Text>
         </View>
         <View style={styles.itemActions}>
           <Pressable
@@ -217,7 +217,7 @@ const DraftItemCard: React.FC<DraftLineCardProps> = ({
                 {tag.priceModifier != null && tag.priceModifier !== 0 && (
                   <View style={styles.tagPriceBadge}>
                     <Text style={styles.tagPriceText}>
-                      {tag.priceModifier > 0 ? '+' : ''}{(tag.priceModifier || 0).toFixed(2)}€
+                      {tag.priceModifier > 0 ? '+' : ''}{Number(tag.priceModifier || 0).toFixed(2)}€
                     </Text>
                   </View>
                 )}

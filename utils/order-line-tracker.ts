@@ -155,12 +155,37 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): any => {
         payload.tags = tags;
       }
     } else if (line.type === OrderLineType.MENU) {
-      // Pour un menu existant, on ne doit PAS envoyer selectedItems
-      // car cela déclenche une re-création complète des items
-      // Les modifications de tags sur les items sont gérées autrement
+      if (line.menu) {
+        payload.menuId = line.menu.id;
+      }
 
-      // Si c'est une ligne existante modifiée, on n'envoie que les champs de base
-      // L'API gardera les items existants
+      // ✅ IMPORTANT: On envoie selectedItems SEULEMENT si le menu a été modifié
+      // Pour un menu inchangé (unchanged), on ne touche pas aux items
+      if (lineState.status === 'modified' && line.items && line.items.length > 0) {
+        const selectedItems: Record<string, any> = {};
+
+        line.items.forEach((item: any) => {
+          if (item.categoryId) {
+            const tags: Record<string, any> = {};
+            if (item.tags && item.tags.length > 0) {
+              item.tags.forEach((tag: any) => {
+                tags[tag.tagId] = tag.value;
+              });
+            }
+
+            selectedItems[item.categoryId] = {
+              itemId: item.item.id,
+              tags: Object.keys(tags).length > 0 ? tags : undefined,
+              note: item.note
+            };
+          }
+        });
+
+        // Ne pas envoyer selectedItems si vide
+        if (Object.keys(selectedItems).length > 0) {
+          payload.selectedItems = selectedItems;
+        }
+      }
     }
 
     lines.push(payload);
