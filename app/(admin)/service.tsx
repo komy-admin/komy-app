@@ -721,7 +721,8 @@ export default function ServicePage() {
                 flex: 1,
                 zIndex: 1,
                 elevation: 0,
-                overflow: 'hidden', // Empêche le débordement visible pendant le calcul
+                // overflow: 'visible' pour permettre gestures partout
+                // Le flash est déjà géré par isGridReady dans Room.tsx
               }}>
                 {selectedTable && !selectedTableOrder && (
                   <StartOrderCard
@@ -921,7 +922,8 @@ export default function ServicePage() {
             alignItems: 'center',
             width: '100%',
             height: '100%',
-            overflow: 'hidden', // Empêche le débordement visible pendant le calcul
+            // overflow: 'visible' pour permettre gestures partout
+            // Le flash est déjà géré par isGridReady dans Room.tsx
           }}>
             <RoomComponent
               tables={currentRoomTables.filter(table => {
