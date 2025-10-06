@@ -215,7 +215,7 @@ export const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({
               disabled={!canConfirm}
             >
               <Text style={styles.confirmButtonText}>
-                {initialData ? 'Modifier' : 'Ajouter au panier'}
+                {initialData ? 'Modifier' : 'Ajouter à la commande'}
               </Text>
             </Pressable>
           </View>

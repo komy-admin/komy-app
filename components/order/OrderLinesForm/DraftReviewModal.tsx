@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Dimensions, Modal } from 'react-native';
 import { Text } from '~/components/ui';
-import { Edit2, Trash2, StickyNote, Tag as TagIcon, ShoppingBag, X } from 'lucide-react-native';
+import { Edit2, Trash2, StickyNote, Tag as TagIcon, ClipboardList, X } from 'lucide-react-native';
 import { OrderLine, OrderLineType } from '~/types/order-line.types';
 import { Item } from '~/types/item.types';
 
@@ -41,7 +41,7 @@ export const DraftReviewModal: React.FC<DraftReviewModalProps> = ({
             <View style={styles.headerLeft}>
               <Text style={styles.title}>Détail de la commande</Text>
               <View style={styles.headerBadge}>
-                <ShoppingBag size={16} color="#3B82F6" strokeWidth={2.5} />
+                <ClipboardList size={16} color="#3B82F6" strokeWidth={2.5} />
                 <Text style={styles.headerBadgeText}>
                   {draftLines.length} ligne{draftLines.length > 1 ? 's' : ''}
                   {draftLines.filter(l => !l.id || l.id.startsWith('draft-')).length > 0 &&
@@ -63,8 +63,8 @@ export const DraftReviewModal: React.FC<DraftReviewModalProps> = ({
           >
             {draftLines.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <ShoppingBag size={64} color="#D1D5DB" strokeWidth={1.5} />
-                <Text style={styles.emptyTitle}>Panier vide</Text>
+                <ClipboardList size={64} color="#D1D5DB" strokeWidth={1.5} />
+                <Text style={styles.emptyTitle}>Commande vide</Text>
                 <Text style={styles.emptyText}>
                   Ajoutez des articles pour commencer
                 </Text>

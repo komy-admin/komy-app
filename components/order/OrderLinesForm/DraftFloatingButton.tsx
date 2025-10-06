@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, View, Platform, Animated } from 'react-native';
 import { Text } from '~/components/ui';
-import { ShoppingCart } from 'lucide-react-native';
+import { ClipboardList } from 'lucide-react-native';
 
 interface DraftFloatingButtonProps {
   count: number;
@@ -20,7 +20,7 @@ export const DraftFloatingButton: React.FC<DraftFloatingButtonProps> = ({
       onPress={onPress}
     >
       <View style={styles.button}>
-        <ShoppingCart size={24} color="#FFFFFF" strokeWidth={2} />
+        <ClipboardList size={24} color="#FFFFFF" strokeWidth={2} />
       </View>
 
       {/* Badge avec count */}

@@ -75,7 +75,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     categoryId: string;
   } | null>(null);
 
-  // Revue du panier
+  // Revue de la commande
   const [isDraftReviewOpen, setIsDraftReviewOpen] = useState(false);
 
   // ====================================================================
@@ -348,11 +348,11 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   ]);
 
   // ====================================================================
-  // HANDLERS - PANIER
+  // HANDLERS - COMMANDE
   // ====================================================================
 
   const handleClearAllDraft = useCallback(() => {
-    // Note : pour vider le panier, le parent doit appeler clearAllLines()
+    // Note : pour vider la commande, le parent doit appeler clearAllLines()
     // On ne gère pas l'état ici
     setIsDraftReviewOpen(false);
   }, []);
@@ -425,7 +425,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             />
           )}
 
-          {/* Bouton flottant pour accéder au panier */}
+          {/* Bouton flottant pour accéder à la commande */}
           <DraftFloatingButton count={lines.length} onPress={() => setIsDraftReviewOpen(true)} />
         </View>
       )}
@@ -454,7 +454,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         />
       )}
 
-      {/* Modale de revue du panier */}
+      {/* Modale de revue de la commande */}
       <DraftReviewModal
         visible={isDraftReviewOpen}
         draftLines={lines}
