@@ -79,6 +79,17 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
+  // Aperçu fantôme pour le drag
+  const ghostOpacity = useSharedValue(0);
+  const ghostX = useSharedValue(0);
+  const ghostY = useSharedValue(0);
+
+  // Précalculs pour le drag (SharedValues pour accès worklet)
+  const cachedTableWidthInCells = useSharedValue(0);
+  const cachedTableHeightInCells = useSharedValue(0);
+  const cachedMaxX = useSharedValue(0);
+  const cachedMaxY = useSharedValue(0);
+
   // Vérifier si une position est valide (dans les limites et sans collision)
   const isValidPosition = useCallback((x: number, y: number, w: number, h: number) => {
     'worklet';
@@ -120,15 +131,15 @@ export const RoomTable: React.FC<TableViewProps> = ({
   }, [onLongPress, table]);
 
   const handleUpdatePosition = useCallback((newX: number, newY: number) => {
-    const gridX = Math.round(newX / CELL_SIZE);
-    const gridY = Math.round(newY / CELL_SIZE);
+    // newX et newY sont déjà en pixels et snappés à la grille
+    const gridX = newX / CELL_SIZE;
+    const gridY = newY / CELL_SIZE;
+    const tableWidth = Math.round(currentWidth.value / CELL_SIZE);
+    const tableHeight = Math.round(currentHeight.value / CELL_SIZE);
 
     // Vérifier les collisions avec d'autres tables
     const hasCollision = tables.some(otherTable => {
       if (otherTable.id === table.id) return false;
-
-      const tableWidth = Math.round(currentWidth.value / CELL_SIZE);
-      const tableHeight = Math.round(currentHeight.value / CELL_SIZE);
 
       return (
         gridX < otherTable.xStart + otherTable.width &&
@@ -140,6 +151,10 @@ export const RoomTable: React.FC<TableViewProps> = ({
 
     // Si pas de collision, mettre à jour
     if (!hasCollision) {
+      // Mettre à jour les dernières positions valides
+      lastValidX.value = newX;
+      lastValidY.value = newY;
+
       // Mettre à jour les positions actuelles
       currentX.value = newX;
       currentY.value = newY;
@@ -147,8 +162,8 @@ export const RoomTable: React.FC<TableViewProps> = ({
       translateY.value = 0;
 
       onUpdate(table.id, {
-        xStart: Math.max(0, gridX),
-        yStart: Math.max(0, gridY)
+        xStart: gridX,
+        yStart: gridY
       });
     } else {
       // Animation de retour à la dernière position valide
@@ -369,61 +384,69 @@ export const RoomTable: React.FC<TableViewProps> = ({
       .runOnJS(false),
     [isEditing, editionMode, handleUpdateSize]);
 
-  // Geste de drag pour déplacer la table avec snap-to-grid en temps réel
+  // Geste de drag fluide avec snap uniquement au relâchement
   const dragGesture = useMemo(() =>
     Gesture.Pan()
       .enabled(isEditing && editionMode)
       .onStart(() => {
         'worklet';
-        scale.value = withSpring(1.05);
-        // Sauvegarder la position actuelle comme dernière position valide
+        scale.value = 1.05;
         lastValidX.value = currentX.value;
         lastValidY.value = currentY.value;
-        // Utiliser la position actuelle comme point de départ
         startX.value = currentX.value;
         startY.value = currentY.value;
         translateX.value = 0;
         translateY.value = 0;
+
+        // Précalculer une seule fois au début du drag
+        cachedTableWidthInCells.value = Math.round(currentWidth.value / CELL_SIZE);
+        cachedTableHeightInCells.value = Math.round(currentHeight.value / CELL_SIZE);
+        cachedMaxX.value = roomWidth - cachedTableWidthInCells.value;
+        cachedMaxY.value = roomHeight - cachedTableHeightInCells.value;
       })
       .onUpdate((event) => {
         'worklet';
-        // Calculer la nouvelle position avec snap-to-grid en temps réel
-        const rawX = startX.value + event.translationX;
-        const rawY = startY.value + event.translationY;
+        // Mouvement direct sans calcul intermédiaire
+        translateX.value = event.translationX;
+        translateY.value = event.translationY;
 
-        // Snap to grid pendant le mouvement
-        const snappedX = Math.round(rawX / CELL_SIZE);
-        const snappedY = Math.round(rawY / CELL_SIZE);
+        // Calculs optimisés pour le fantôme
+        const snappedGridX = Math.round((currentX.value + event.translationX) / CELL_SIZE);
+        const snappedGridY = Math.round((currentY.value + event.translationY) / CELL_SIZE);
 
-        // Vérifier les limites de la room
-        const constrainedX = Math.max(0, Math.min(snappedX, roomWidth - Math.round(currentWidth.value / CELL_SIZE)));
-        const constrainedY = Math.max(0, Math.min(snappedY, roomHeight - Math.round(currentHeight.value / CELL_SIZE)));
+        const constrainedX = Math.max(0, Math.min(snappedGridX, cachedMaxX.value));
+        const constrainedY = Math.max(0, Math.min(snappedGridY, cachedMaxY.value));
 
-        // Appliquer le mouvement snappé et contraint
-        translateX.value = constrainedX * CELL_SIZE - currentX.value;
-        translateY.value = constrainedY * CELL_SIZE - currentY.value;
+        ghostX.value = constrainedX * CELL_SIZE;
+        ghostY.value = constrainedY * CELL_SIZE;
+        ghostOpacity.value = 0.3;
       })
       .onEnd(() => {
         'worklet';
         scale.value = withSpring(1);
+        ghostOpacity.value = withSpring(0);
 
-        // Calculer la position finale snappée
-        const finalX = currentX.value + translateX.value;
-        const finalY = currentY.value + translateY.value;
+        // Snap à la grille - réutiliser les valeurs précalculées
+        const snappedGridX = Math.round((currentX.value + translateX.value) / CELL_SIZE);
+        const snappedGridY = Math.round((currentY.value + translateY.value) / CELL_SIZE);
 
-        // Appeler la fonction de validation qui vérifiera les collisions
+        const constrainedX = Math.max(0, Math.min(snappedGridX, cachedMaxX.value));
+        const constrainedY = Math.max(0, Math.min(snappedGridY, cachedMaxY.value));
+
+        const finalX = constrainedX * CELL_SIZE;
+        const finalY = constrainedY * CELL_SIZE;
+
         runOnJS(handleUpdatePosition)(finalX, finalY);
       })
       .runOnJS(false),
-    [isEditing, editionMode, handleUpdatePosition]);
+  [isEditing, editionMode, handleUpdatePosition, roomWidth, roomHeight]);
 
   // Geste composé uniquement pour la table principale (pas les handles)
   const composedGesture = useMemo(() => {
     if (isEditing && editionMode) {
       return dragGesture;
-    } else {
-      return Gesture.Exclusive(longPressGesture, tapGesture);
     }
+    return Gesture.Exclusive(longPressGesture, tapGesture);
   }, [isEditing, editionMode, dragGesture, longPressGesture, tapGesture]);
 
   // Style animé pour la table
@@ -441,6 +464,24 @@ export const RoomTable: React.FC<TableViewProps> = ({
       zIndex: isSelected ? 10000 : 1000,
     };
   }, [isSelected]);
+
+  // Style pour l'aperçu fantôme
+  const ghostStyle = useAnimatedStyle(() => {
+    return {
+      position: 'absolute' as const,
+      left: ghostX.value,
+      top: ghostY.value,
+      width: width.value,
+      height: height.value,
+      opacity: ghostOpacity.value,
+      zIndex: 999, // Juste en dessous de la table
+      borderWidth: 2,
+      borderColor: '#2A2E33',
+      borderStyle: 'dashed',
+      borderRadius: 5,
+      backgroundColor: 'rgba(42, 46, 51, 0.1)',
+    };
+  });
 
   // Reset des animations quand la table change
   React.useEffect(() => {
@@ -469,8 +510,12 @@ export const RoomTable: React.FC<TableViewProps> = ({
   }), [status, isEditing, table]);
 
   return (
-    <GestureDetector gesture={composedGesture}>
-      <Animated.View style={animatedStyle}>
+    <>
+      {/* Aperçu fantôme de la position snappée */}
+      {isEditing && editionMode && <Animated.View style={ghostStyle} pointerEvents="none" />}
+
+      <GestureDetector gesture={composedGesture}>
+        <Animated.View style={animatedStyle}>
         <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
         <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
 
@@ -516,6 +561,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
         )}
       </Animated.View>
     </GestureDetector>
+    </>
   );
 };
 
