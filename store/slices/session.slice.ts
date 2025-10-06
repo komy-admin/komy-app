@@ -312,6 +312,10 @@ const sessionSlice = createSlice({
     setAccountConfig: (state, action: PayloadAction<AccountConfigPayload>) => {
       state.accountConfig = action.payload;
     },
+
+    updateAccountConfig: (state, action: PayloadAction<{ accountConfig: AccountConfigPayload }>) => {
+      state.accountConfig = action.payload.accountConfig;
+    },
     
     setOverdueOrders: (state, action: PayloadAction<string[]>) => {
       state.overdueOrderIds = action.payload;
