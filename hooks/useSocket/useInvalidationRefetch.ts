@@ -6,6 +6,7 @@ import { useOrders } from '../useOrders';
 import { useMenu } from '../useMenu';
 import { useMenus } from '../useMenus';
 import { useUsers } from '../useUsers';
+import { useAccountConfig } from '../useAccountConfig';
 
 /**
  * Hook centralisé pour gérer le refetch des ressources invalidées
@@ -18,6 +19,7 @@ export const useInvalidationRefetch = () => {
   const menuHook = useMenu();
   const menusHook = useMenus();
   const usersHook = useUsers();
+  const accountConfigHook = useAccountConfig();
 
   /**
    * Mapping des noms de ressources backend vers les fonctions de refetch
@@ -43,6 +45,9 @@ export const useInvalidationRefetch = () => {
 
     // Users
     users: usersHook.loadUsers,
+
+    // Account Config
+    accountConfig: accountConfigHook.loadConfig,
 
     // Resources non implémentées pour le moment
     tags: undefined,

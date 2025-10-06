@@ -82,6 +82,11 @@ export const WEBSOCKET_EVENT_MAP = {
     updated: 'updateUser',
     deleted: 'deleteUser',
   },
+
+  // Account Config
+  accountconfig: {
+    updated: 'updateAccountConfig',
+  },
 } as const;
 
 // Types pour les événements WebSocket
@@ -118,7 +123,8 @@ export type ResourceName =
   | 'tags'
   | 'users'
   | 'statuses'
-  | 'accounts';
+  | 'accounts'
+  | 'accountConfig';
 
 // Type pour les clés des modèles
 export type WebSocketModel = keyof typeof WEBSOCKET_EVENT_MAP;
@@ -164,6 +170,7 @@ export const formatEventPayload = (model: string, action: string, data: any): an
               model === 'menucategory' ? 'menuCategory' :
               model === 'menucategoryitem' ? 'menuCategoryItem' :
               model === 'itemtype' ? 'itemType' :
+              model === 'accountconfig' ? 'accountConfig' :
               model;
               
   return { [key]: data };
