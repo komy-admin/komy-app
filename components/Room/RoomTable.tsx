@@ -171,18 +171,82 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const handleUpdateSize = useCallback((newWidth: number, newHeight: number, newX?: number, newY?: number) => {
     const gridWidth = Math.round(newWidth / CELL_SIZE);
     const gridHeight = Math.round(newHeight / CELL_SIZE);
-    const updates: Partial<Table> = {
-      width: Math.max(MIN_CELLS, gridWidth),
-      height: Math.max(MIN_CELLS, gridHeight)
-    };
-    if (newX !== undefined) {
-      updates.xStart = Math.max(0, Math.round(newX / CELL_SIZE));
+
+    // Position finale (grille)
+    const finalX = newX !== undefined ? Math.round(newX / CELL_SIZE) : table.xStart;
+    const finalY = newY !== undefined ? Math.round(newY / CELL_SIZE) : table.yStart;
+
+    // Vérification des collisions avec d'autres tables
+    const hasCollision = tables.some(otherTable => {
+      if (otherTable.id === table.id) return false;
+
+      return (
+        finalX < otherTable.xStart + otherTable.width &&
+        finalX + Math.max(MIN_CELLS, gridWidth) > otherTable.xStart &&
+        finalY < otherTable.yStart + otherTable.height &&
+        finalY + Math.max(MIN_CELLS, gridHeight) > otherTable.yStart
+      );
+    });
+
+    // Vérification des limites de la room
+    const withinBounds = (
+      finalX >= 0 &&
+      finalY >= 0 &&
+      finalX + Math.max(MIN_CELLS, gridWidth) <= roomWidth &&
+      finalY + Math.max(MIN_CELLS, gridHeight) <= roomHeight
+    );
+
+    if (!hasCollision && withinBounds) {
+      // Position/dimensions valides → mettre à jour
+      if (newX !== undefined) {
+        currentX.value = newX;
+        lastValidX.value = newX;
+        translateX.value = 0; // Reset translation
+      }
+      if (newY !== undefined) {
+        currentY.value = newY;
+        lastValidY.value = newY;
+        translateY.value = 0; // Reset translation
+      }
+
+      currentWidth.value = newWidth;
+      currentHeight.value = newHeight;
+
+      const updates: Partial<Table> = {
+        width: Math.max(MIN_CELLS, gridWidth),
+        height: Math.max(MIN_CELLS, gridHeight)
+      };
+      if (newX !== undefined) {
+        updates.xStart = Math.max(0, finalX);
+      }
+      if (newY !== undefined) {
+        updates.yStart = Math.max(0, finalY);
+      }
+
+      onUpdate(table.id, updates);
+    } else {
+      // Collision ou hors limites → retour aux dimensions valides
+      width.value = withSpring(currentWidth.value);
+      height.value = withSpring(currentHeight.value);
+
+      // Si position a changé (resize left/top), retour à la position valide
+      if (newX !== undefined) {
+        const deltaX = lastValidX.value - currentX.value;
+        translateX.value = withSpring(deltaX, {}, () => {
+          translateX.value = 0;
+          currentX.value = lastValidX.value;
+        });
+      }
+
+      if (newY !== undefined) {
+        const deltaY = lastValidY.value - currentY.value;
+        translateY.value = withSpring(deltaY, {}, () => {
+          translateY.value = 0;
+          currentY.value = lastValidY.value;
+        });
+      }
     }
-    if (newY !== undefined) {
-      updates.yStart = Math.max(0, Math.round(newY / CELL_SIZE));
-    }
-    onUpdate(table.id, updates);
-  }, [CELL_SIZE, onUpdate, table.id]);
+  }, [CELL_SIZE, onUpdate, table.id, tables, roomWidth, roomHeight, currentWidth, currentHeight, lastValidX, lastValidY]);
 
   // Geste de tap
   const tapGesture = useMemo(() =>
@@ -222,7 +286,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
       })
       .onEnd(() => {
         'worklet';
-        currentWidth.value = width.value;
+        // Ne PAS mettre à jour currentWidth ici - laisser handleUpdateSize le faire
         runOnJS(handleUpdateSize)(width.value, currentHeight.value);
       })
       .runOnJS(false),
@@ -250,10 +314,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
         const deltaGrid = (width.value - currentWidth.value) / CELL_SIZE;
         const newX = currentX.value - deltaGrid * CELL_SIZE;
 
-        currentWidth.value = width.value;
-        currentX.value = newX;
-        translateX.value = 0;
-
+        // Ne PAS mettre à jour currentWidth/currentX/translateX ici - laisser handleUpdateSize tout gérer
         runOnJS(handleUpdateSize)(width.value, currentHeight.value, newX, undefined);
       })
       .runOnJS(false),
@@ -274,7 +335,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
       })
       .onEnd(() => {
         'worklet';
-        currentHeight.value = height.value;
+        // Ne PAS mettre à jour currentHeight ici - laisser handleUpdateSize le faire
         runOnJS(handleUpdateSize)(currentWidth.value, height.value);
       })
       .runOnJS(false),
@@ -302,10 +363,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
         const deltaGrid = (height.value - currentHeight.value) / CELL_SIZE;
         const newY = currentY.value - deltaGrid * CELL_SIZE;
 
-        currentHeight.value = height.value;
-        currentY.value = newY;
-        translateY.value = 0;
-
+        // Ne PAS mettre à jour currentHeight/currentY/translateY ici - laisser handleUpdateSize tout gérer
         runOnJS(handleUpdateSize)(currentWidth.value, height.value, undefined, newY);
       })
       .runOnJS(false),

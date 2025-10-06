@@ -248,7 +248,12 @@ export default function RoomEditionMode() {
       </View>
 
       {currentRoom && (
-        <View style={{ flex: 1, zIndex: 1, elevation: 0 }}>
+        <View style={{
+          flex: 1,
+          zIndex: 1,
+          elevation: 0,
+          overflow: 'hidden', // Empêche le débordement visible pendant le calcul
+        }}>
           <RoomComponent
             key={currentRoom.id}
             tables={currentRoomTables}

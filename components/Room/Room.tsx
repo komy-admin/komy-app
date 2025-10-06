@@ -284,20 +284,31 @@ const Room: React.FC<RoomProps> = ({
     setIsGridReady(false);
     setVisibleTables([]);
 
+    // Réinitialiser les transformations pour éviter le flash
+    translateX.value = 0;
+    translateY.value = 0;
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+
     if (!isLoading) {
       const screenWidth = Dimensions.get('window').width;
       const gridWidth = width * CELL_SIZE;
       const gridHeight = height * CELL_SIZE;
+      const newZoom = calculateOptimalZoom(screenWidth, gridWidth, gridHeight, width, height);
 
       setDimensions({
         gridWidth,
         gridHeight,
-        initialZoom: calculateOptimalZoom(screenWidth, gridWidth, gridHeight, width, height)
+        initialZoom: newZoom
       });
+
+      // Réinitialiser le zoom
+      scale.value = newZoom;
+      savedScale.value = newZoom;
 
       const timer = setTimeout(() => {
         setIsGridReady(true);
-      }, 100);
+      }, 50);
 
       return () => clearTimeout(timer);
     }
@@ -411,7 +422,7 @@ const Room: React.FC<RoomProps> = ({
     };
   }, []);
 
-  if (isLoading || !dimensions) {
+  if (isLoading || !dimensions || !isGridReady) {
     return (
       <View style={[styles.container, styles.loading]}>
         <View style={styles.loadingGrid} />

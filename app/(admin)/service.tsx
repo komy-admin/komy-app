@@ -717,7 +717,12 @@ export default function ServicePage() {
               </View>
             ) : (
               // Layout normal avec room existante
-              <View style={{ flex: 1, zIndex: 1, elevation: 0 }}>
+              <View style={{
+                flex: 1,
+                zIndex: 1,
+                elevation: 0,
+                overflow: 'hidden', // Empêche le débordement visible pendant le calcul
+              }}>
                 {selectedTable && !selectedTableOrder && (
                   <StartOrderCard
                     table={selectedTable}
@@ -915,7 +920,8 @@ export default function ServicePage() {
             justifyContent: 'center',
             alignItems: 'center',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            overflow: 'hidden', // Empêche le débordement visible pendant le calcul
           }}>
             <RoomComponent
               tables={currentRoomTables.filter(table => {
