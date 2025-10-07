@@ -1,4 +1,5 @@
 import { useWebSocketSync } from '~/hooks/useSocket/useWebSocketSync';
+import { useAccountConfigSync } from '~/hooks/useSocket/useAccountConfigSync';
 
 /**
  * Composant qui initialise les listeners WebSocket
@@ -7,6 +8,9 @@ import { useWebSocketSync } from '~/hooks/useSocket/useWebSocketSync';
 export const WebSocketListener: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialise tous les listeners WebSocket pour synchroniser avec Redux
   useWebSocketSync();
+
+  // Initialise le listener pour accountConfig (déconnexion auto si teamEnabled = false)
+  useAccountConfigSync();
 
   // Ce composant ne rend rien, il initialise juste les listeners
   return <>{children}</>;
