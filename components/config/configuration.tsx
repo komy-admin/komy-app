@@ -134,7 +134,7 @@ export default function ConfigurationRestoPage() {
           >
             <Eye size={20} color={activeTab === 'views' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
             <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
-              Visibilité des vues
+              Activation modules
             </Text>
           </TouchableOpacity>
         </View>
@@ -349,8 +349,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({ teamEnabled, kitchenEnabled, barEna
     <View style={styles.tabContent}>
       <View style={styles.tabHeader}>
         <View>
-          <Text style={styles.tabTitle}>Visibilité des vues</Text>
-          <Text style={styles.tabSubtitle}>Activer ou désactiver les sections de l'application</Text>
+          <Text style={styles.tabTitle}>Activation modules</Text>
+          <Text style={styles.tabSubtitle}>Activer ou désactiver les modules de l'application</Text>
         </View>
         {hasChanges && (
           <TouchableOpacity
