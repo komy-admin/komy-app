@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import {
   GestureHandlerRootView,
   GestureDetector,
@@ -20,6 +20,7 @@ import TableActionPanel from '~/components/Room/TableActionPanel';
 import { getTableStatus } from '~/lib/utils';
 
 const CELL_SIZE = 50;
+const EXTRA_LINES = 10; // Extension de la grille pour capturer les gestes partout
 const PANEL_POSITION_KEY = 'actionPanelPosition';
 
 interface RoomProps {
@@ -62,7 +63,6 @@ const Room: React.FC<RoomProps> = ({
   } | null>(null);
   const [isGridReady, setIsGridReady] = useState(false);
   const [visibleTables, setVisibleTables] = useState<Table[]>([]);
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [lastValidPositions, setLastValidPositions] = useState<Map<string, { x: number, y: number }>>(new Map());
@@ -85,16 +85,6 @@ const Room: React.FC<RoomProps> = ({
       setCurrentZoom(dimensions.initialZoom);
     }
   }, [dimensions?.initialZoom]);
-
-  // Synchroniser selectedTable avec editingTableId
-  useEffect(() => {
-    if (editingTableId) {
-      const table = tables.find(t => t.id === editingTableId);
-      setSelectedTable(table || null);
-    } else {
-      setSelectedTable(null);
-    }
-  }, [editingTableId, tables]);
 
   const getInitialPanelPosition = () => {
     const screenWidth = Dimensions.get('window').width;
@@ -284,20 +274,34 @@ const Room: React.FC<RoomProps> = ({
     setIsGridReady(false);
     setVisibleTables([]);
 
+    // Réinitialiser les transformations pour éviter le flash
+    translateX.value = 0;
+    translateY.value = 0;
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+
     if (!isLoading) {
       const screenWidth = Dimensions.get('window').width;
-      const gridWidth = width * CELL_SIZE;
-      const gridHeight = height * CELL_SIZE;
+      const roomWidth = width * CELL_SIZE;
+      const roomHeight = height * CELL_SIZE;
+      // Extension de la zone de capture des gestes au-delà de la room
+      const extendedWidth = roomWidth + (EXTRA_LINES * 2 * CELL_SIZE);
+      const extendedHeight = roomHeight + (EXTRA_LINES * 2 * CELL_SIZE);
+      const newZoom = calculateOptimalZoom(screenWidth, roomWidth, roomHeight, width, height);
 
       setDimensions({
-        gridWidth,
-        gridHeight,
-        initialZoom: calculateOptimalZoom(screenWidth, gridWidth, gridHeight, width, height)
+        gridWidth: extendedWidth,
+        gridHeight: extendedHeight,
+        initialZoom: newZoom
       });
+
+      // Réinitialiser le zoom
+      scale.value = newZoom;
+      savedScale.value = newZoom;
 
       const timer = setTimeout(() => {
         setIsGridReady(true);
-      }, 100);
+      }, 50);
 
       return () => clearTimeout(timer);
     }
@@ -313,16 +317,6 @@ const Room: React.FC<RoomProps> = ({
     onTablePress(null);
   }, [onTablePress]);
 
-  const handleTableSelect = useCallback((table: Table) => {
-    if (editingTableId === table.id) return;
-
-    // Sauvegarder la position valide lors de la sélection
-    saveLastValidPosition(table);
-
-    setSelectedTable(table);
-    onTablePress(table);
-  }, [editingTableId, onTablePress, saveLastValidPosition]);
-
   // Valider les tables en mode édition (sans repositionnement)
   useEffect(() => {
     if (editionMode && editingTableId) {
@@ -332,6 +326,38 @@ const Room: React.FC<RoomProps> = ({
       }
     }
   }, [tables, editingTableId, editionMode, checkTableValidity]);
+
+  // Support molette souris pour zoom sur Web
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+
+      const zoomSensitivity = 0.001;
+      const delta = -event.deltaY * zoomSensitivity;
+      const newScale = Math.min(Math.max(scale.value + delta, 0.2), 1.5);
+
+      scale.value = newScale;
+      savedScale.value = newScale;
+      setCurrentZoom(newScale);
+    };
+
+    const timer = setTimeout(() => {
+      const element = document.getElementById('room-zoom-container');
+      if (element) {
+        element.addEventListener('wheel', handleWheel, { passive: false });
+      }
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      const element = document.getElementById('room-zoom-container');
+      if (element) {
+        element.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   const handleEditClick = () => {
     if (onEditTable) {
@@ -367,7 +393,7 @@ const Room: React.FC<RoomProps> = ({
 
   const pinchGesture = useMemo(() =>
     Gesture.Pinch()
-      .enabled(!editionMode)
+      // Pinch activé en edition-mode (pas de conflit avec drag/resize des tables)
       .onStart(() => {
         'worklet';
         savedScale.value = scale.value;
@@ -382,7 +408,7 @@ const Room: React.FC<RoomProps> = ({
         runOnJS(updateZoom)(scale.value);
       })
       .runOnJS(false),
-  [editionMode, updateZoom]);
+  [updateZoom]);
 
   const tapGesture = useMemo(() =>
     Gesture.Tap()
@@ -411,7 +437,7 @@ const Room: React.FC<RoomProps> = ({
     };
   }, []);
 
-  if (isLoading || !dimensions) {
+  if (isLoading || !dimensions || !isGridReady) {
     return (
       <View style={[styles.container, styles.loading]}>
         <View style={styles.loadingGrid} />
@@ -420,39 +446,50 @@ const Room: React.FC<RoomProps> = ({
   }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView
+      nativeID="room-zoom-container"
+      style={styles.container}
+    >
       <GestureDetector gesture={composedGesture}>
         <Animated.View style={[styles.animatedContainer, animatedStyle]}>
           <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
-            <RoomGrid
-              width={dimensions.gridWidth}
-              height={dimensions.gridHeight}
-              GRID_COLS={width}
-              GRID_ROWS={height}
-              CELL_SIZE={CELL_SIZE}
-            />
-            {visibleTables.map(table => {
-              const isEditing = editingTableId === table.id;
-              return (
-                <RoomTable
-                  key={table.id}
-                  table={table}
-                  tables={tables}
-                  roomWidth={width}
-                  roomHeight={height}
-                  status={getTableStatus(table)}
-                  isEditing={isEditing}
-                  editionMode={editionMode}
-                  positionValid={isPositionValid(table)}
-                  CELL_SIZE={CELL_SIZE}
-                  currentZoom={currentZoom}
-                  isSelected={isEditing}
-                  onPress={() => onTablePress(table)}
-                  onLongPress={onTableLongPress}
-                  onUpdate={onTableUpdate}
-                />
-              );
-            })}
+            <View style={{
+              position: 'absolute',
+              left: EXTRA_LINES * CELL_SIZE,
+              top: EXTRA_LINES * CELL_SIZE,
+              width: width * CELL_SIZE,
+              height: height * CELL_SIZE,
+            }}>
+              <RoomGrid
+                width={width * CELL_SIZE}
+                height={height * CELL_SIZE}
+                GRID_COLS={width}
+                GRID_ROWS={height}
+                CELL_SIZE={CELL_SIZE}
+              />
+              {visibleTables.map(table => {
+                const isEditing = editingTableId === table.id;
+                return (
+                  <RoomTable
+                    key={table.id}
+                    table={table}
+                    tables={tables}
+                    roomWidth={width}
+                    roomHeight={height}
+                    status={getTableStatus(table)}
+                    isEditing={isEditing}
+                    editionMode={editionMode}
+                    positionValid={isPositionValid(table)}
+                    CELL_SIZE={CELL_SIZE}
+                    currentZoom={currentZoom}
+                    isSelected={isEditing}
+                    onPress={() => onTablePress(table)}
+                    onLongPress={onTableLongPress}
+                    onUpdate={onTableUpdate}
+                  />
+                );
+              })}
+            </View>
           </View>
         </Animated.View>
       </GestureDetector>
@@ -494,9 +531,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   animatedContainer: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF', // Nécessaire pour capturer les gestes sur toute la surface
   }
 });
 

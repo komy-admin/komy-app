@@ -248,7 +248,13 @@ export default function RoomEditionMode() {
       </View>
 
       {currentRoom && (
-        <View style={{ flex: 1, zIndex: 1, elevation: 0 }}>
+        <View style={{
+          flex: 1,
+          zIndex: 1,
+          elevation: 0,
+          // overflow: 'visible' pour permettre gestures partout
+          // Le flash est déjà géré par isGridReady dans Room.tsx
+        }}>
           <RoomComponent
             key={currentRoom.id}
             tables={currentRoomTables}

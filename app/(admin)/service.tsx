@@ -717,7 +717,13 @@ export default function ServicePage() {
               </View>
             ) : (
               // Layout normal avec room existante
-              <View style={{ flex: 1, zIndex: 1, elevation: 0 }}>
+              <View style={{
+                flex: 1,
+                zIndex: 1,
+                elevation: 0,
+                // overflow: 'visible' pour permettre gestures partout
+                // Le flash est déjà géré par isGridReady dans Room.tsx
+              }}>
                 {selectedTable && !selectedTableOrder && (
                   <StartOrderCard
                     table={selectedTable}
@@ -915,7 +921,9 @@ export default function ServicePage() {
             justifyContent: 'center',
             alignItems: 'center',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            // overflow: 'visible' pour permettre gestures partout
+            // Le flash est déjà géré par isGridReady dans Room.tsx
           }}>
             <RoomComponent
               tables={currentRoomTables.filter(table => {

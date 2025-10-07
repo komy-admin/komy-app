@@ -32,13 +32,13 @@ export const RoomForm = forwardRef<AdminFormRef<Room>, RoomFormProps>(({
     },
     width: {
       required: true,
-      custom: (value) => value >= 5 && value <= 50,
-      message: 'La largeur doit être comprise entre 5 et 50'
+      custom: (value) => value >= 5 && value <= 30,
+      message: 'La largeur doit être comprise entre 5 et 30'
     },
     height: {
       required: true,
-      custom: (value) => value >= 5 && value <= 50,
-      message: 'La hauteur doit être comprise entre 5 et 50'
+      custom: (value) => value >= 5 && value <= 30,
+      message: 'La hauteur doit être comprise entre 5 et 30'
     }
   };
 
