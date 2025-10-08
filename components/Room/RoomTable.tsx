@@ -815,24 +815,38 @@ export const RoomTable: React.FC<TableViewProps> = ({
     ),
   }), [status, isEditing, table]);
 
+  // 🎨 Style pour le conteneur avec curseur et texte non sélectionnable (web)
+  const containerStyle = useMemo(() => ({
+    ...(Platform.OS === 'web' && {
+      userSelect: 'none' as any,
+      WebkitUserSelect: 'none' as any,
+      ...(isEditing && editionMode && {
+        cursor: 'move' as any,
+      }),
+    }),
+  }), [isEditing, editionMode]);
+
   return (
     <>
       {/* Aperçu fantôme de la position snappée */}
       {isEditing && editionMode && <Animated.View style={ghostStyle} pointerEvents="none" />}
 
-      <GestureDetector gesture={composedGesture}>
-        <Animated.View style={animatedStyle}>
-        <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
-        <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
+      <Animated.View style={animatedStyle}>
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View style={[{ width: '100%', height: '100%' }, containerStyle]}>
+            <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
+            <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
 
-        <View style={styles.innerContainer}>
-          <View style={[styles.table, tableStyle]}>
-            <Text style={styles.tableText}>{table.name}</Text>
-          </View>
-        </View>
+            <View style={styles.innerContainer}>
+              <View style={[styles.table, tableStyle]}>
+                <Text style={styles.tableText}>{table.name}</Text>
+              </View>
+            </View>
 
-        <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
-        <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+            <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
+            <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+          </Animated.View>
+        </GestureDetector>
 
         {isEditing && editionMode && (
           <>
@@ -866,7 +880,6 @@ export const RoomTable: React.FC<TableViewProps> = ({
           </>
         )}
       </Animated.View>
-    </GestureDetector>
     </>
   );
 };
@@ -898,15 +911,18 @@ const styles = StyleSheet.create({
     color: '#2A2E33',
     fontWeight: 'bold',
   },
+  // 🎯 HANDLES DE RESIZE - Style de base avec priorité et curseurs
   rightHandle: {
     position: 'absolute',
     right: -5,
     top: '50%',
     width: 30,
     height: 30,
+    transform: [{ translateY: -15 }],
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ translateY: -15 }],
+    zIndex: 10001, // Priorité sur le drag de la table
+    ...(Platform.OS === 'web' && { cursor: 'ew-resize' as any }),
   },
   leftHandle: {
     position: 'absolute',
@@ -914,9 +930,11 @@ const styles = StyleSheet.create({
     top: '50%',
     width: 30,
     height: 30,
+    transform: [{ translateY: -15 }],
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ translateY: -15 }],
+    zIndex: 10001,
+    ...(Platform.OS === 'web' && { cursor: 'ew-resize' as any }),
   },
   bottomHandle: {
     position: 'absolute',
@@ -924,9 +942,11 @@ const styles = StyleSheet.create({
     left: '50%',
     width: 30,
     height: 30,
+    transform: [{ translateX: -15 }],
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ translateX: -15 }],
+    zIndex: 10001,
+    ...(Platform.OS === 'web' && { cursor: 'ns-resize' as any }),
   },
   topHandle: {
     position: 'absolute',
@@ -934,14 +954,22 @@ const styles = StyleSheet.create({
     left: '50%',
     width: 30,
     height: 30,
+    transform: [{ translateX: -15 }],
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ translateX: -15 }],
+    zIndex: 10001,
+    ...(Platform.OS === 'web' && { cursor: 'ns-resize' as any }),
   },
   handleDot: {
-    width: 15,
-    height: 15,
+    width: 20, // Légèrement plus gros pour meilleure visibilité
+    height: 20,
     backgroundColor: '#2A2E33',
     borderRadius: 10,
+    // Halo pour meilleur feedback visuel
+    shadowColor: '#2A2E33',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
 });
