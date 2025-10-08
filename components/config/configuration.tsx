@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { Plus, Trash2, Check, X, Utensils, Tags as TagsIcon, ChefHat, Wine, Settings2, Users, Eye } from 'lucide-react-native';
+import { Plus, Trash2, Check, X, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useTags } from '~/hooks/useTags';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
@@ -99,12 +99,6 @@ export default function ConfigurationRestoPage() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Settings2 size={24} color="#1E293B" strokeWidth={2} />
-        <Text style={styles.headerTitle}>Paramètres du Restaurant</Text>
-      </View>
-
       <View style={styles.content}>
         {/* Sidebar Navigation */}
         <View style={styles.sidebar}>
@@ -553,7 +547,11 @@ const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, onSave,
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.panelForm} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.panelForm}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         {/* Nom du type */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Nom du type</Text>
@@ -577,6 +575,7 @@ const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, onSave,
                 type === 'kitchen' && { borderColor: '#10B981', backgroundColor: '#F0FDF4' }
               ]}
               onPress={() => setType('kitchen')}
+              activeOpacity={1}
             >
               <View style={styles.radio}>
                 {type === 'kitchen' && <View style={[styles.radioInner, { backgroundColor: '#10B981' }]} />}
@@ -594,6 +593,7 @@ const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, onSave,
                 type === 'bar' && { borderColor: '#A855F7', backgroundColor: '#FAF5FF' }
               ]}
               onPress={() => setType('bar')}
+              activeOpacity={1}
             >
               <View style={styles.radio}>
                 {type === 'bar' && <View style={[styles.radioInner, { backgroundColor: '#A855F7' }]} />}
@@ -720,7 +720,12 @@ const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBu
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.panelForm} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.panelForm}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Nom du tag */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Nom du tag</Text>
@@ -748,7 +753,7 @@ const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBu
                   }
                 ]}
                 onPress={() => setFieldType(type.value)}
-                activeOpacity={0.7}
+                activeOpacity={1}
               >
                 <View style={styles.radio}>
                   {fieldType === type.value && <View style={styles.radioInner} />}
@@ -762,7 +767,11 @@ const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBu
         </View>
 
         {/* Obligatoire */}
-        <TouchableOpacity style={styles.checkbox} onPress={() => setIsRequired(!isRequired)}>
+        <TouchableOpacity
+          style={styles.checkbox}
+          onPress={() => setIsRequired(!isRequired)}
+          activeOpacity={1}
+        >
           <View style={[styles.checkboxBox, isRequired && styles.checkboxBoxChecked]}>
             {isRequired && <Check size={16} color="#FFFFFF" strokeWidth={3} />}
           </View>
@@ -773,26 +782,29 @@ const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBu
         {needsOptions && (
           <>
             <View style={styles.divider} />
-            <Text style={styles.sectionTitle}>Options</Text>
+            <Text style={styles.formLabel}>Options</Text>
 
             {options.map((option, index) => (
               <View key={index} style={styles.optionRow}>
                 <View style={styles.optionInputs}>
                   <TextInput
-                    style={[styles.formInput, { flex: 2 }]}
+                    style={[styles.formInput, styles.optionLabelInput]}
                     value={option.label}
                     editable={false}
                     placeholderTextColor="#94A3B8"
                   />
                   <TextInput
-                    style={[styles.formInput, { flex: 1 }]}
+                    style={[styles.formInput, styles.optionPriceInput]}
                     value={option.priceModifier?.toString() || '0'}
                     editable={false}
                     placeholder="€"
                     placeholderTextColor="#94A3B8"
                   />
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteOption(index)}>
+                <TouchableOpacity
+                  style={styles.deleteOptionButton}
+                  onPress={() => handleDeleteOption(index)}
+                >
                   <Trash2 size={20} color="#EF4444" strokeWidth={1.5} />
                 </TouchableOpacity>
               </View>
@@ -801,14 +813,14 @@ const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBu
             <View style={styles.optionRow}>
               <View style={styles.optionInputs}>
                 <TextInput
-                  style={[styles.formInput, { flex: 2 }]}
+                  style={[styles.formInput, styles.optionLabelInput]}
                   value={newOptionLabel}
                   onChangeText={setNewOptionLabel}
                   placeholder="Nom de l'option"
                   placeholderTextColor="#94A3B8"
                 />
                 <TextInput
-                  style={[styles.formInput, { flex: 1 }]}
+                  style={[styles.formInput, styles.optionPriceInput]}
                   value={newOptionPrice}
                   onChangeText={setNewOptionPrice}
                   placeholder="Prix €"
@@ -817,9 +829,13 @@ const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBu
                 />
               </View>
               <TouchableOpacity
-                style={styles.addOptionButton}
+                style={[
+                  styles.addOptionButton,
+                  !newOptionLabel.trim() && styles.addOptionButtonDisabled
+                ]}
                 onPress={handleAddOption}
                 disabled={!newOptionLabel.trim()}
+                activeOpacity={0.7}
               >
                 <Plus size={20} color={newOptionLabel.trim() ? '#A855F7' : '#CBD5E1'} strokeWidth={2} />
               </TouchableOpacity>
@@ -849,20 +865,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1E293B',
   },
   content: {
     flex: 1,
@@ -1093,7 +1095,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1E293B',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   formInput: {
     height: 44,
@@ -1172,13 +1174,8 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#E2E8F0',
-    marginVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 12,
+    marginTop: 20,
+    marginBottom: 16,
   },
   optionRow: {
     flexDirection: 'row',
@@ -1191,6 +1188,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  optionLabelInput: {
+    flex: 2,
+    minWidth: 0,
+  },
+  optionPriceInput: {
+    width: 100,
+    flex: 0,
+  },
+  deleteOptionButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+  },
   addOptionButton: {
     width: 44,
     height: 44,
@@ -1198,6 +1211,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     backgroundColor: '#F8F4FF',
+  },
+  addOptionButtonDisabled: {
+    backgroundColor: '#F1F5F9',
   },
   panelFooter: {
     flexDirection: 'row',
