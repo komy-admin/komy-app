@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Dimensions, Modal } from 'react-native';
 import { Text } from '~/components/ui';
 import { Edit2, Trash2, StickyNote, Tag as TagIcon, ClipboardList, X } from 'lucide-react-native';
-import { OrderLine, OrderLineType } from '~/types/order-line.types';
+import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { Item } from '~/types/item.types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -316,7 +316,7 @@ const DraftMenuCard: React.FC<DraftMenuCardProps> = ({
                     <Text style={styles.menuItemTagsLabel}>Options</Text>
                   </View>
                   <View style={styles.menuItemTagsGrid}>
-                    {menuItem.tags.filter((tag: any) => tag && tag.tagSnapshot).map((tag: any, tagIdx: number) => (
+                    {menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => (
                       <View key={tagIdx} style={styles.menuItemTagChip}>
                         <Text style={styles.menuItemTagLabel}>{tag.tagSnapshot.label}</Text>
                         <Text style={styles.menuItemTagValue}>{formatTagValue(tag)}</Text>

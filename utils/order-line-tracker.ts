@@ -5,6 +5,8 @@ import {
   OrderFormState,
   OrderLineType
 } from '~/types/order-line.types';
+import { Status } from '~/types/status.enum';
+import { deepEquals } from '~/utils/deep-equals';
 
 /**
  * Initialiser les états des lignes à partir des lignes existantes
@@ -29,18 +31,14 @@ export const isLineModified = (original: OrderLine | null, current: OrderLine): 
   if (original.note !== current.note) return true;
   if (original.status !== current.status) return true;
 
-  // Vérifier les tags (pour ITEM)
+  // Vérifier les tags (pour ITEM) - comparaison profonde
   if (current.type === OrderLineType.ITEM) {
-    const originalTags = JSON.stringify(original.tags || []);
-    const currentTags = JSON.stringify(current.tags || []);
-    if (originalTags !== currentTags) return true;
+    if (!deepEquals(original.tags || [], current.tags || [])) return true;
   }
 
-  // Vérifier les items (pour MENU)
+  // Vérifier les items (pour MENU) - comparaison profonde
   if (current.type === OrderLineType.MENU) {
-    const originalItems = JSON.stringify(original.items || []);
-    const currentItems = JSON.stringify(current.items || []);
-    if (originalItems !== currentItems) return true;
+    if (!deepEquals(original.items || [], current.items || [])) return true;
   }
 
   return false;
@@ -64,20 +62,16 @@ export const calculateChanges = (original: OrderLine, current: OrderLine): Parti
     changes.status = current.status;
   }
 
-  // Tags pour ITEM
+  // Tags pour ITEM - comparaison profonde
   if (current.type === OrderLineType.ITEM) {
-    const originalTags = JSON.stringify(original.tags || []);
-    const currentTags = JSON.stringify(current.tags || []);
-    if (originalTags !== currentTags) {
+    if (!deepEquals(original.tags || [], current.tags || [])) {
       changes.tags = current.tags;
     }
   }
 
-  // Items pour MENU
+  // Items pour MENU - comparaison profonde
   if (current.type === OrderLineType.MENU) {
-    const originalItems = JSON.stringify(original.items || []);
-    const currentItems = JSON.stringify(current.items || []);
-    if (originalItems !== currentItems) {
+    if (!deepEquals(original.items || [], current.items || [])) {
       changes.items = current.items;
     }
   }
@@ -119,10 +113,32 @@ export const detectOperations = (lineStates: OrderLineState[]): OrderLineOperati
 };
 
 /**
+ * Type pour le payload de l'API bulk update
+ */
+export interface BulkUpdatePayload {
+  lines: OrderLinePayload[];
+}
+
+export interface OrderLinePayload {
+  id?: string;
+  type: OrderLineType;
+  note?: string;
+  status?: Status;
+  itemId?: string;
+  menuId?: string;
+  tags?: Record<string, any>;
+  selectedItems?: Record<string, {
+    itemId: string;
+    tags?: Record<string, any>;
+    note?: string;
+  }>;
+}
+
+/**
  * Générer le payload pour l'API bulk update
  */
-export const generateBulkPayload = (lineStates: OrderLineState[]): any => {
-  const lines: any[] = [];
+export const generateBulkPayload = (lineStates: OrderLineState[]): BulkUpdatePayload => {
+  const lines: OrderLinePayload[] = [];
 
   // Lignes existantes non supprimées (modified ou unchanged)
   const existingLines = lineStates.filter(ls =>
@@ -138,7 +154,7 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): any => {
   // Car l'API supprime celles non présentes dans le payload
   for (const lineState of existingLines) {
     const line = lineState.current;
-    const payload: any = {
+    const payload: OrderLinePayload = {
       id: line.id, // ID requis pour les existantes
       type: line.type,
       note: line.note,
@@ -194,7 +210,7 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): any => {
   // Pour les nouvelles lignes, pas d'ID
   for (const lineState of newLines) {
     const line = lineState.current;
-    const payload: any = {
+    const payload: OrderLinePayload = {
       // Pas d'ID pour la création
       type: line.type,
       note: line.note,

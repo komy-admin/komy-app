@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { OrderLine, OrderLineType, OrderLineState, SelectedTag } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { orderApiService } from '~/api/order.api';
@@ -6,6 +7,7 @@ import { generateBulkPayload } from '~/utils/order-line-tracker';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import type { MenuSelections } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
+import { entitiesActions } from '~/store/slices/entities.slice';
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -31,6 +33,7 @@ export interface UseOrderLinesManagerOptions {
  */
 export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
   const { initialLines = [], mode, orderId, tableId, onSuccess, onError } = options;
+  const dispatch = useDispatch();
 
   // ✅ État unique centralisé
   const [orderLines, setOrderLines] = useState<OrderLine[]>(initialLines);
@@ -354,12 +357,28 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       if (mode === 'create') {
         // Création : convertir et envoyer
         const apiData = convertToApiFormat(orderLines);
-        result = await orderApiService.createWithLines(tableId, { lines: apiData });
+        const newOrder = await orderApiService.create({
+          tableId,
+          lines: apiData,
+          status: Status.DRAFT
+        });
+
+        // Enrichir et dispatcher au store
+        const enrichedOrder = {
+          ...newOrder,
+          table: newOrder.table || { id: tableId, name: `Table ${tableId}` }
+        };
+        dispatch(entitiesActions.createOrder({ order: enrichedOrder }));
+        result = enrichedOrder;
       } else {
         // Mise à jour : analyser les changements
         const states = analyzeChanges();
         const payload = generateBulkPayload(states);
-        result = await orderApiService.updateWithLines(orderId!, payload);
+        const updatedOrder = await orderApiService.updateWithLines(orderId!, payload);
+
+        // Dispatcher au store
+        dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
+        result = updatedOrder;
       }
 
       onSuccess?.(result);

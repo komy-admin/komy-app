@@ -42,7 +42,6 @@ export const useWebSocketSync = () => {
             const action = (entitiesActions as any)[reduxActionName] || (sessionActions as any)[reduxActionName];
 
             if (action) {
-              console.log(`[WebSocket] ${reduxActionName}:`, payload);
               dispatch(action(payload));
             } else {
               console.warn(`[WebSocket] Action not found: ${reduxActionName}`);
