@@ -199,7 +199,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       // Reconstruire tempMenuSelections depuis menuLine.items
       const selections: MenuSelections = {};
       menuLine.items.forEach((menuItem: any) => {
-        const category = fullMenu.categories?.find((cat) => {
+        const category = fullMenu.categories?.find((cat: any) => {
           const categoryName = itemTypes.find((t) => t.id === cat.itemTypeId)?.name;
           return categoryName === menuItem.categoryName;
         });
