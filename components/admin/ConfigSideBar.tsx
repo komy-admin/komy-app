@@ -33,11 +33,11 @@ const ProfileAvatar = memo(({
 ));
 
 const CONFIG_ITEMS = [
-  { id: 'dashboard', Icon: Database, label: 'Dashboard' },
-  { id: 'personal', Icon: User, label: 'Informations personnels' },
-  { id: 'password', Icon: ShieldCheck, label: 'Sécurité' },
-  { id: 'notifications', Icon: Bell, label: 'Notifications' },
-  { id: 'configuration', Icon: Settings, label: 'Paramètre du restaurant' },
+  { id: 'dashboard', Icon: Database, label: 'Dashboard', color: '#3B82F6' },
+  { id: 'personal', Icon: User, label: 'Informations personnels', color: '#10B981' },
+  { id: 'password', Icon: ShieldCheck, label: 'Sécurité', color: '#F59E0B' },
+  { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
+  { id: 'configuration', Icon: Settings, label: 'Paramètre du restaurant', color: '#A855F7' },
 ];
 
 // Configuration des breakpoints de hauteur - Extraite pour performance
@@ -279,7 +279,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
       </View>
 
       <View style={dynamicStyles.menuSection}>
-        {CONFIG_ITEMS.map(({ id, Icon, label }) => {
+        {CONFIG_ITEMS.map(({ id, Icon, label, color }) => {
           const isActive = currentSection === id;
           return (
             <Pressable
@@ -291,18 +291,19 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
                   borderRadius: 8,
                 }
               ]}
+              android_ripple={{ color: '#F9FAFB' }}
             >
               <View style={[
                 styles.menuItem,
                 dynamicStyles.menuItem,
                 {
-                  backgroundColor: isActive ? '#F3F4F6' : 'transparent',
+                  backgroundColor: isActive ? '#F1F5F9' : 'transparent',
                 }
               ]}>
                 <View style={dynamicStyles.iconContainer}>
                   <Icon
                     size={dynamicStyles.iconSize}
-                    color={isActive ? '#2A2E33' : '#64666A'}
+                    color={isActive ? color : '#64748B'}
                   />
                 </View>
                 <View style={dynamicStyles.textContainer}>
@@ -310,8 +311,8 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
                     style={[
                       dynamicStyles.menuText,
                       {
-                        color: isActive ? '#2A2E33' : '#64666A',
-                        fontWeight: isActive ? '500' : '400',
+                        color: isActive ? '#1E293B' : '#64748B',
+                        fontWeight: isActive ? '600' : '400',
                       }
                     ]}
                     numberOfLines={1}
