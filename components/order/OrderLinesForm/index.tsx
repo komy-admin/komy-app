@@ -153,35 +153,36 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    */
   const startMenuConfiguration = useCallback(
     (menu: Menu) => {
+      // ❌ DÉSACTIVÉ - Auto-configuration des menus
       // Vérifier si le menu peut être auto-configuré
-      const isAutoConfigurable =
-        menu.categories?.every(
-          (cat) => cat.isRequired && cat.items && cat.items.length === 1
-        ) || false;
+      // const isAutoConfigurable =
+      //   menu.categories?.every(
+      //     (cat) => cat.isRequired && cat.items && cat.items.length === 1
+      //   ) || false;
 
-      if (isAutoConfigurable) {
-        // Auto-configuration : ajouter directement
-        const autoSelections: MenuSelections = {};
-        menu.categories?.forEach((cat) => {
-          if (cat.items && cat.items.length === 1) {
-            autoSelections[cat.id] = {
-              itemId: cat.items[0].item!.id,
-              tags: [],
-            };
-          }
-        });
-        onAddMenu(menu, autoSelections, itemTypes);
-        return;
-      }
+      // if (isAutoConfigurable) {
+      //   // Auto-configuration : ajouter directement
+      //   const autoSelections: MenuSelections = {};
+      //   menu.categories?.forEach((cat) => {
+      //     if (cat.items && cat.items.length === 1) {
+      //       autoSelections[cat.id] = {
+      //         itemId: cat.items[0].item!.id,
+      //         tags: [],
+      //       };
+      //     }
+      //   });
+      //   onAddMenu(menu, autoSelections, itemTypes);
+      //   return;
+      // }
 
-      // Configuration manuelle
+      // Configuration manuelle - toujours ouvrir la configuration
       setMenuBeingConfigured(menu);
       setTempMenuSelections({});
       setEditingMenuLineId(null);
       setIsConfiguringMenu(true);
       onConfigurationModeChange?.(true);
     },
-    [onAddMenu, itemTypes, onConfigurationModeChange]
+    [onConfigurationModeChange]
   );
 
   /**
