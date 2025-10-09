@@ -105,6 +105,7 @@ export default function ConfigurationRestoPage() {
           <TouchableOpacity
             style={[styles.sidebarTab, activeTab === 'item-types' && styles.sidebarTabActive]}
             onPress={() => setActiveTab('item-types')}
+            activeOpacity={1}
           >
             <Utensils size={20} color={activeTab === 'item-types' ? '#6366F1' : '#64748B'} strokeWidth={2} />
             <Text style={[styles.sidebarTabText, activeTab === 'item-types' && styles.sidebarTabTextActive]}>
@@ -115,6 +116,7 @@ export default function ConfigurationRestoPage() {
           <TouchableOpacity
             style={[styles.sidebarTab, activeTab === 'tags' && styles.sidebarTabActive]}
             onPress={() => setActiveTab('tags')}
+            activeOpacity={1}
           >
             <TagsIcon size={20} color={activeTab === 'tags' ? '#A855F7' : '#64748B'} strokeWidth={2} />
             <Text style={[styles.sidebarTabText, activeTab === 'tags' && styles.sidebarTabTextActive]}>
@@ -125,6 +127,7 @@ export default function ConfigurationRestoPage() {
           <TouchableOpacity
             style={[styles.sidebarTab, activeTab === 'views' && styles.sidebarTabActive]}
             onPress={() => setActiveTab('views')}
+            activeOpacity={1}
           >
             <Eye size={20} color={activeTab === 'views' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
             <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
