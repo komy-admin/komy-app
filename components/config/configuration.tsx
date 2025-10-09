@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
   },
   tagItemHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
   tagItemIcon: {
