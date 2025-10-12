@@ -158,7 +158,7 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
         </View>
       )}
 
-      {visibleItems.length === 0 ? (
+      {visibleItems.length === 0 && !showAddForm ? (
         <View style={[
           { alignItems: 'center', paddingVertical: 16 },
           WEB_STYLES.ARTICLES
@@ -171,7 +171,7 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
             }
           </Text>
         </View>
-      ) : (
+      ) : visibleItems.length > 0 ? (
         <View style={[styles.assignedItemsListNew, WEB_STYLES.ARTICLES]}>
           {visibleItems.map((localItem: LocalMenuCategoryItem) => {
             const isEditing = isEditingCurrentCategory && editingItem?.tempId === localItem.tempId;
@@ -287,7 +287,7 @@ export const CategoryItemAssignment = memo<CategoryItemAssignmentProps>(({
             );
           })}
         </View>
-      )}
+      ) : null}
     </View>
   );
 });
@@ -325,7 +325,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: { elevation: 3 },
+    }),
   },
 
   articlesSectionContent: {
@@ -397,22 +401,54 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2A2E33',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    })
   },
 
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
+    color: '#2A2E33',
+    paddingHorizontal: 16,
     fontSize: 14,
-    backgroundColor: '#fff',
-    color: '#111827',
-    height: 47,
+    fontWeight: '500',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    ...Platform.select({
+      ios: {
+        paddingVertical: 12,
+        minHeight: 44,
+        elevation: 1,
+      },
+      android: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+        elevation: 0
+      },
+      web: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+        elevation: 1,
+        cursor: 'text',
+        transition: 'all 0.2s ease',
+        ':focus': {
+          borderColor: '#2A2E33',
+          shadowOpacity: 0.1,
+        }
+      } as any,
+    }),
   },
 
 
@@ -431,7 +467,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0 },
+      web: { elevation: 2 },
+    }),
   },
 
   addItemFormButtonTextPrimary: {
@@ -472,7 +512,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0 },
+      web: { elevation: 2 },
+    }),
     ...(Platform.OS === 'web' && {
       transition: 'all 0.2s ease',
       ':hover': {
@@ -585,7 +629,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: { elevation: 4 },
+      android: { elevation: 0 },
+      web: { elevation: 4 },
+    }),
   },
 
   editItemFormHeader: {
@@ -622,10 +670,10 @@ const styles = StyleSheet.create({
   editAvailabilityToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFAFA',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     height: 44,
@@ -636,11 +684,7 @@ const styles = StyleSheet.create({
     elevation: 1,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      ':hover': {
-        borderColor: '#D1D5DB',
-        backgroundColor: '#F9FAFB',
-      }
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     })
   },
 
@@ -649,29 +693,54 @@ const styles = StyleSheet.create({
     borderColor: '#34D399',
     shadowColor: '#10B981',
     shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: {
+        elevation: 3,
+        boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
+      },
+    }),
   },
 
   editAvailabilityIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#9CA3AF',
-    marginRight: 10,
+    marginRight: 12,
   },
 
   editAvailabilityIndicatorActive: {
     backgroundColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0 },
+      web: { elevation: 2 },
+    }),
   },
 
   editAvailabilityText: {
     fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
+    letterSpacing: 0.2,
+    ...(Platform.OS === 'web' ? {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontWeight: 600,
+    } : {})
   },
 
   editAvailabilityTextActive: {
     color: '#047857',
+    fontWeight: '700',
+    ...(Platform.OS === 'web' ? {
+      fontWeight: 700,
+    } : {})
   },
 });

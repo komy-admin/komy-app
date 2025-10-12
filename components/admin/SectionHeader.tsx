@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '700',
     color: '#2A2E33',
-    marginBottom: 6,
+    marginBottom: 3,
     letterSpacing: 0.5,
   },
 

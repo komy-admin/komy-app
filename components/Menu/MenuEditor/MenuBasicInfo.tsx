@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { FileText } from 'lucide-react-native';
 import { Text } from '~/components/ui';
 import { SectionHeader } from '~/components/admin/SectionHeader';
@@ -65,10 +65,34 @@ export const MenuBasicInfo = memo<MenuBasicInfoProps>(({
               <View style={[styles.statusCore, formData.isActive && styles.statusCoreActive]} />
             </View>
             <View style={styles.statusTextContainer}>
-              <Text style={[styles.statusLabelV2, formData.isActive && styles.statusLabelV2Active]}>
+              <Text
+                  style={[
+                    styles.statusLabelV2,
+                    formData.isActive && styles.statusLabelV2Active,
+                    Platform.OS === 'web' && {
+                      fontSize: 13,
+                      fontWeight: formData.isActive ? '700' : '600',
+                      color: formData.isActive ? '#047857' : '#6B7280',
+                      lineHeight: 18,
+                      marginBottom: 0,
+                    }
+                  ]}
+                >
                 {formData.isActive ? 'Actif' : 'Inactif'}
               </Text>
-              <Text style={[styles.statusSubtext, formData.isActive && styles.statusSubtextActive]}>
+              <Text
+                style={[
+                  styles.statusSubtext,
+                  formData.isActive && styles.statusSubtextActive,
+                  Platform.OS === 'web' && {
+                    fontSize: 11,
+                    fontWeight: '500',
+                    color: formData.isActive ? '#059669' : '#9CA3AF',
+                    marginTop: 0,
+                    lineHeight: 14,
+                  }
+                ]}
+              >
                 {formData.isActive ? 'Visible' : 'Masqué'}
               </Text>
             </View>
@@ -100,7 +124,7 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 26,
+    paddingHorizontal: 24,
     paddingVertical: 20,
     marginBottom: 24,
     borderWidth: 1,
@@ -109,20 +133,27 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0.5 },
+      web: { elevation: 2 },
+    }),
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 15,
+    ...(Platform.OS === 'web' ? {} : { gap: 16 }),
   },
   field: {
-    marginRight: 12,
+    ...(Platform.OS === 'web' && { marginRight: 16 }),
   },
   fieldLarge: {
     flex: 2,
+    ...(Platform.OS === 'web' && { marginRight: 16 }),
   },
   fieldSmall: {
     flex: 1,
+    ...(Platform.OS === 'web' && { marginRight: 16 }),
   },
   label: {
     fontSize: 14,
@@ -138,21 +169,47 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     color: '#2A2E33',
     paddingHorizontal: 16,
-    paddingVertical: 12,
     fontSize: 14,
     fontWeight: '500',
-    minHeight: 44,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    ...Platform.select({
+      ios: {
+        paddingVertical: 12,
+        minHeight: 44,
+      },
+      android: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+      },
+      web: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+      } as any,
+    }),
   },
   textArea: {
-    minHeight: 44,
-    maxHeight: 120,
     textAlignVertical: 'top',
-    paddingTop: 12,
+    ...Platform.select({
+      ios: {
+        paddingTop: 12,
+        minHeight: 44,
+      },
+      android: {
+        height: 80,
+        paddingTop: 12,
+      },
+      web: {
+        height: 80,
+        paddingTop: 12,
+        resize: 'vertical' as any,
+      },
+    }),
   },
   errorText: {
     color: '#EF4444',
@@ -162,8 +219,8 @@ const styles = StyleSheet.create({
   statusToggleV2: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: '#FAFAFA',
     borderWidth: 1,
@@ -174,6 +231,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 1,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    })
   },
   statusToggleV2Active: {
     backgroundColor: '#ECFDF5',
@@ -181,7 +242,14 @@ const styles = StyleSheet.create({
     shadowColor: '#10B981',
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 3,
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: {
+        elevation: 3,
+        boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
+      },
+    }),
   },
   statusIconContainer: {
     width: 12,
@@ -218,31 +286,55 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0 },
+      web: { elevation: 2 },
+    }),
   },
   statusTextContainer: {
     flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingVertical: 2,
   },
   statusLabelV2: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: '#6B7280',
     letterSpacing: 0.2,
-    lineHeight: 14,
+    lineHeight: 16,
+    textAlign: 'left',
+    ...(Platform.OS === 'web' ? {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontWeight: 600,
+    } : {})
   },
   statusLabelV2Active: {
     color: '#047857',
     fontWeight: '700',
+    ...(Platform.OS === 'web' ? {
+      fontWeight: 700,
+    } : {})
   },
   statusSubtext: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '500',
     color: '#9CA3AF',
     letterSpacing: 0.1,
-    marginTop: 0,
-    lineHeight: 11,
+    marginTop: 1,
+    lineHeight: 14,
+    textAlign: 'left',
+    ...(Platform.OS === 'web' ? {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontWeight: 500,
+    } : {})
   },
   statusSubtextActive: {
     color: '#059669',
+    ...(Platform.OS === 'web' ? {
+      color: '#059669',
+    } : {})
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet} from 'react-native';
 import { ArrowLeftToLine } from 'lucide-react-native';
 
 interface FormHeaderProps {
@@ -48,7 +48,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingLeft: 20,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2A2E33',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
 });

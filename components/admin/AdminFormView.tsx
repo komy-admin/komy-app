@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     flexGrow: 1,
-    padding: COMMON_STYLES.spacing.xl,
+    padding: COMMON_STYLES.spacing.lg,
     paddingBottom: 100, // Espace pour les boutons sticky réduit
   },
   

@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useState, useCallback } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { Plus, Settings } from 'lucide-react-native';
 import { Text } from '~/components/ui';
 import { SectionHeader } from '~/components/admin/SectionHeader';
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 26,
+    paddingHorizontal: 24,
     paddingVertical: 20,
     marginBottom: 24,
     borderWidth: 1,
@@ -237,7 +237,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0.5 },
+      web: { elevation: 2 },
+    }),
   },
   errorBanner: {
     backgroundColor: '#FEE2E2',

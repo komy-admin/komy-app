@@ -244,15 +244,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    height: 47,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
+    borderColor: '#E5E7EB',
+    ...Platform.select({
+      ios: {
+        paddingVertical: 12,
+        minHeight: 44,
+      },
+      android: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+      },
+      web: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+        cursor: 'pointer',
+      },
     }),
   },
   selectButtonOpen: {
