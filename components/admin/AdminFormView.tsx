@@ -248,6 +248,12 @@ export interface AdminConfirmationModal {
   onCancel: () => void;
 }
 
+// Interface pour le contexte de panel global
+export interface AdminPanelContext {
+  renderPanel: (panel: React.ReactNode) => void;
+  clearPanel: () => void;
+}
+
 export interface AdminFormViewProps {
   visible: boolean;
   mode: AdminFormViewMode;
@@ -284,16 +290,12 @@ export function AdminFormView({
   disableGlobalScroll = false,
   configurationActions
 }: AdminFormViewProps) {
-  // ✅ Return conditionnel AVANT tous les hooks
-  if (!visible) {
-    return null;
-  }
-
   const [isSaving, setIsSaving] = React.useState(false);
   const [confirmationModal, setConfirmationModal] = React.useState<AdminConfirmationModal | null>(null);
+  const [globalPanel, setGlobalPanel] = React.useState<React.ReactNode>(null);
   const formRef = React.useRef<AdminFormRef>(null);
 
-  const handleSave = async () => {
+  const handleSave = React.useCallback(async () => {
     if (!onSave || !formRef.current) return;
 
     const getFormData = () => formRef.current!.getFormData();
@@ -318,7 +320,7 @@ export function AdminFormView({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [onSave, onClose]);
 
   // Créer le contexte pour les confirmations
   const confirmationContext = React.useMemo(() => ({
@@ -330,13 +332,29 @@ export function AdminFormView({
     }
   }), []);
 
-  // Clone l'enfant pour lui passer la ref et le contexte de confirmation
-  const childWithRef = React.isValidElement(children) 
-    ? React.cloneElement(children, { 
+  // Créer le contexte pour le panel global
+  const panelContext = React.useMemo(() => ({
+    renderPanel: (panel: React.ReactNode) => {
+      setGlobalPanel(panel);
+    },
+    clearPanel: () => {
+      setGlobalPanel(null);
+    }
+  }), []);
+
+  // Clone l'enfant pour lui passer la ref et les contextes
+  const childWithRef = React.isValidElement(children)
+    ? React.cloneElement(children, {
         ref: formRef,
-        confirmationContext 
+        confirmationContext,
+        panelContext
       } as any)
     : children;
+
+  // Return conditionnel APRÈS tous les hooks (Rules of Hooks)
+  if (!visible) {
+    return null;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -428,6 +446,13 @@ export function AdminFormView({
           isLoading={confirmationModal.isLoading}
         />
       )}
+
+      {/* Panel global rendu au premier plan avec z-index très élevé */}
+      {globalPanel && (
+        <View style={styles.globalPanelWrapper}>
+          {globalPanel}
+        </View>
+      )}
     </View>
   );
 }
@@ -508,5 +533,11 @@ const styles = StyleSheet.create({
     paddingBottom: COMMON_STYLES.spacing.md,
     borderTopWidth: 1,
     borderTopColor: COMMON_STYLES.colors.border,
+  },
+
+  globalPanelWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    pointerEvents: 'box-none',
   },
 });

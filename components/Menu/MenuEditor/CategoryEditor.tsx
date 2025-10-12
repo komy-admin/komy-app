@@ -66,8 +66,7 @@ export const CategoryEditor = memo<CategoryEditorProps>(({
               {itemType?.name || 'Configuration de catégorie'}
             </Text>
             <Text style={styles.categoryHeaderSubtitle}>
-              {category.isRequired ? 'Obligatoire' : 'Optionnel'} •
-              Max {category.maxSelections} sélection{parseInt(category.maxSelections) > 1 ? 's' : ''}
+              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • Max {category.maxSelections} sélection{parseInt(category.maxSelections) > 1 ? 's' : ''}
             </Text>
           </View>
         </View>

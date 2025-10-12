@@ -5,7 +5,6 @@ export * from './text';
 export * from './tooltip';
 export * from './text-input';
 export * from './number-input';
-export * from './select';
 export * from './separator';
 export * from './tabs';
 export * from './badge';
