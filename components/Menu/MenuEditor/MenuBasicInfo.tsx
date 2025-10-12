@@ -175,21 +175,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 1,
     ...Platform.select({
       ios: {
         paddingVertical: 12,
         minHeight: 44,
+        elevation: 1,
       },
       android: {
         height: 44,
         paddingTop: 11,
         paddingBottom: 11,
+        elevation: 0,
       },
       web: {
         height: 44,
         paddingTop: 11,
         paddingBottom: 11,
+        elevation: 1,
       } as any,
     }),
   },
