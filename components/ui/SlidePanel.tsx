@@ -1,5 +1,5 @@
-import React, { ReactNode } from 'react';
-import { View, StyleSheet, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { ReactNode } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 
 interface SlidePanelProps {
   visible: boolean;
