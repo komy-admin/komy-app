@@ -136,29 +136,30 @@ export const useOrderLines = () => {
 
   /**
    * Créer une commande avec les lignes de commande directement
-   * CETTE FONCTION SERA UTILISÉE QUAND LE SERVEUR VALIDE LA COMMANDE
+   * CETTE FONCTION EST UTILISÉE QUAND LE SERVEUR VALIDE LA COMMANDE POUR LA PREMIÈRE FOIS
    */
   const createOrderWithLines = useCallback(async (
-    tableId: string, 
-    linesData: CreateOrderLineRequest[]
+    tableId: string,
+    linesData: CreateOrderLineRequest[],
+    status: Status = Status.DRAFT
   ): Promise<Order> => {
     try {
       // Créer directement la commande avec toutes les lines
       const newOrder = await orderApiService.create({
         tableId,
         lines: linesData, // Envoyer les CreateOrderLineRequest directement
-        status: Status.DRAFT
+        status
       });
-      
+
       // Enrichir l'order avec les infos de table si manquantes (fallback côté frontend)
       const enrichedOrder = {
         ...newOrder,
         table: newOrder.table || { id: tableId, name: `Table ${tableId}` } // Fallback minimal
       };
-      
+
       // Dispatcher l'action pour mettre à jour le store
       dispatch(entitiesActions.createOrder({ order: enrichedOrder }));
-      
+
       return enrichedOrder;
     } catch (error) {
       console.error('Erreur lors de la création de la commande avec lignes:', error);

@@ -27,7 +27,6 @@ export const isLineModified = (original: OrderLine | null, current: OrderLine): 
   if (!original) return true; // Nouvelle ligne
 
   // Vérifier les champs principaux
-  if (original.quantity !== current.quantity) return true;
   if (original.note !== current.note) return true;
   if (original.status !== current.status) return true;
 
@@ -49,10 +48,6 @@ export const isLineModified = (original: OrderLine | null, current: OrderLine): 
  */
 export const calculateChanges = (original: OrderLine, current: OrderLine): Partial<OrderLine> => {
   const changes: Partial<OrderLine> = {};
-
-  if (original.quantity !== current.quantity) {
-    changes.quantity = current.quantity;
-  }
 
   if (original.note !== current.note) {
     changes.note = current.note;

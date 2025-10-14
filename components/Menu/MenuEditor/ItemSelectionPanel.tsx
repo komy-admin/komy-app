@@ -11,10 +11,13 @@ import {
 } from 'react-native';
 import { X, Check, Package, Search } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
-import { SlidePanel } from '~/components/ui/SlidePanel';
 
-interface ItemSelectionPanelProps {
-  visible: boolean;
+/**
+ * Props pour le contenu du panel de sélection d'articles
+ * Note : Ce composant ne gère PAS le SlidePanel lui-même
+ * Il doit être wrappé dans un SlidePanel par le composant parent
+ */
+interface ItemSelectionPanelContentProps {
   availableItems: Item[];
   onClose: () => void;
   onSelectItem: (itemId: string, supplement: number, isAvailable: boolean) => void;
@@ -27,14 +30,18 @@ interface ItemSelectionPanelProps {
   };
 }
 
-export function ItemSelectionPanel({
-  visible,
+/**
+ * Contenu du panel de sélection d'articles
+ * Séparation des responsabilités : Ce composant gère uniquement le contenu,
+ * le SlidePanel est géré par le composant parent (MenuEditor)
+ */
+export function ItemSelectionPanelContent({
   availableItems,
   onClose,
   onSelectItem,
   mode = 'add',
   editData,
-}: ItemSelectionPanelProps) {
+}: ItemSelectionPanelContentProps) {
   const [selectedItemId, setSelectedItemId] = useState<string>(editData?.itemId || '');
   const [supplement, setSupplement] = useState(editData?.supplement || '0');
   const [isAvailable, setIsAvailable] = useState(editData?.isAvailable ?? true);
@@ -80,8 +87,7 @@ export function ItemSelectionPanel({
     : availableItems.find((item) => item.id === selectedItemId);
 
   return (
-    <SlidePanel visible={visible} onClose={handleClose} width={430}>
-      <View style={styles.panelContent}>
+    <View style={styles.panelContent}>
         {/* Header */}
         <View style={styles.panelHeader}>
           <View>
@@ -254,7 +260,6 @@ export function ItemSelectionPanel({
           </TouchableOpacity>
         </View>
       </View>
-    </SlidePanel>
   );
 }
 

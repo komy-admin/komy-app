@@ -2,7 +2,7 @@ import { ScrollView } from 'react-native';
 import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
-import { AdminFormRef, AdminConfirmationContext, AdminPanelContext } from '~/components/admin/AdminFormView';
+import { AdminFormRef, AdminConfirmationContext } from '~/components/admin/AdminFormView';
 
 export interface MenuEditorProps {
   menu?: Menu | null;
@@ -14,7 +14,6 @@ export interface MenuEditorProps {
   onLoadMenuCategoryItems: (menuCategoryId: string) => MenuCategoryItem[];
   scrollViewRef?: React.RefObject<ScrollView | null>;
   confirmationContext?: AdminConfirmationContext;
-  panelContext?: AdminPanelContext;
 }
 
 export interface MenuFormData {

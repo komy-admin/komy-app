@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
@@ -10,6 +10,7 @@ import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { ItemTypeFormPanel } from './ItemTypeFormPanel';
 import { TagFormPanel } from './TagFormPanel';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
 
 type TabType = 'item-types' | 'tags' | 'views';
 
@@ -30,6 +31,7 @@ export default function ConfigurationRestoPage() {
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
 
+  const { renderPanel, clearPanel } = usePanelPortal();
   const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
   const { tags, createTag, updateTag, deleteTag, bulkCreateOptions, bulkDeleteOptions } = useTags();
   const {
@@ -53,13 +55,14 @@ export default function ConfigurationRestoPage() {
     setSidePanelVisible(true);
   };
 
-  const closeSidePanel = () => {
+  const closeSidePanel = useCallback(() => {
     setSidePanelVisible(false);
     setEditingTag(null);
     setEditingItemType(null);
-  };
+    clearPanel();
+  }, [clearPanel]);
 
-  const handleSaveTag = async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
+  const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
     try {
       if (editingTag) {
         await updateTag(editingTag.id, tagData);
@@ -83,9 +86,9 @@ export default function ConfigurationRestoPage() {
       console.error('Error saving tag:', error);
       showToast('Erreur lors de la sauvegarde', 'error');
     }
-  };
+  }, [editingTag, createTag, updateTag, bulkCreateOptions, showToast, closeSidePanel]);
 
-  const handleSaveItemType = async (itemTypeData: Partial<ItemType>) => {
+  const handleSaveItemType = useCallback(async (itemTypeData: Partial<ItemType>) => {
     try {
       if (editingItemType) {
         await updateItemType(editingItemType.id, itemTypeData);
@@ -98,7 +101,35 @@ export default function ConfigurationRestoPage() {
       console.error('Error saving item type:', error);
       showToast('Erreur lors de la sauvegarde', 'error');
     }
-  };
+  }, [editingItemType, updateItemType, createItemType, showToast, closeSidePanel]);
+
+  // Synchroniser le panel avec le portal global
+  useEffect(() => {
+    if (sidePanelVisible) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={closeSidePanel} width={400}>
+          {activeTab === 'tags' ? (
+            <TagFormPanel
+              tag={editingTag}
+              onSave={handleSaveTag}
+              onCancel={closeSidePanel}
+              onBulkDeleteOptions={bulkDeleteOptions}
+            />
+          ) : (
+            <ItemTypeFormPanel
+              itemType={editingItemType}
+              onSave={handleSaveItemType}
+              onCancel={closeSidePanel}
+            />
+          )}
+        </SlidePanel>,
+        closeSidePanel // ← Passer le onClose au portal
+      );
+    } else if (!sidePanelVisible) {
+      clearPanel();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidePanelVisible, activeTab, editingTag, editingItemType]);
 
   return (
     <View style={styles.container}>
@@ -168,23 +199,7 @@ export default function ConfigurationRestoPage() {
           )}
         </View>
 
-        {/* Side Panel using SlidePanel component */}
-        <SlidePanel visible={sidePanelVisible} onClose={closeSidePanel} width={400}>
-          {activeTab === 'tags' ? (
-            <TagFormPanel
-              tag={editingTag}
-              onSave={handleSaveTag}
-              onCancel={closeSidePanel}
-              onBulkDeleteOptions={bulkDeleteOptions}
-            />
-          ) : (
-            <ItemTypeFormPanel
-              itemType={editingItemType}
-              onSave={handleSaveItemType}
-              onCancel={closeSidePanel}
-            />
-          )}
-        </SlidePanel>
+        {/* Panel rendu via usePanelPortal - pas de rendu local */}
       </View>
     </View>
   );

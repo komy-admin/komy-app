@@ -44,9 +44,8 @@ export type OrderLine = {
   id: string;
   orderId: string; // Référence à la commande parente
   type: OrderLineType; // ITEM ou MENU
-  quantity: number;
   unitPrice: number; // 💰 Prix unitaire en centimes
-  totalPrice: number; // 💰 Prix total en centimes (unitPrice * quantity)
+  totalPrice: number; // 💰 Prix total en centimes (= unitPrice, pas de quantity)
   note?: string; // Note sur la ligne
 
   // Status : seulement pour les ITEM (pour les MENU, le status est sur chaque OrderLineItem)
@@ -93,7 +92,6 @@ export type OrderItem = OrderLine;
 // Types pour les requêtes de création
 export type CreateOrderLineItemRequest = {
   type: OrderLineType.ITEM;
-  quantity: number;
   itemId: string;
   note?: string;
   tags?: Record<string, any>; // tagId -> value
@@ -101,17 +99,15 @@ export type CreateOrderLineItemRequest = {
 
 export type CreateOrderLineMenuRequest = {
   type: OrderLineType.MENU;
-  quantity: number;
   menuId: string;
   note?: string;
-  selectedItems: Record<string, { itemId: string; tags?: Record<string, any> }>; // categoryId -> { itemId, tags? }
+  selectedItems: Record<string, { itemId: string; tags?: Record<string, any>; note?: string }>; // categoryId -> { itemId, tags?, note? }
 };
 
 export type CreateOrderLineRequest = CreateOrderLineItemRequest | CreateOrderLineMenuRequest;
 
 // Types pour les requêtes de modification
 export type UpdateOrderLineRequest = {
-  quantity?: number;
   note?: string;
   status?: Status; // Seulement pour les ITEM
 };
@@ -134,6 +130,13 @@ export type DraftOrderLineItem = {
   item: OrderLineItemSnapshot | Item; // Peut être un Item ou un snapshot
   supplementPrice?: number; // 💰 Prix du supplément en centimes
   note?: string; // Note optionnelle
+};
+
+// Type pour les items de menu enrichis avec les infos nécessaires à la conversion API
+export type DraftMenuItemWithMeta = DraftOrderLineItem & {
+  categoryId: string; // ID de la catégorie pour mapping API
+  tags?: SelectedTag[]; // Tags sélectionnés pour cet item
+  status?: Status; // Status de l'item
 };
 
 // Types pour le tracking des opérations CRUD
@@ -162,7 +165,6 @@ export interface OrderFormState {
 export type DraftOrderLine = {
   id?: string; // ID optionnel pour les drafts
   type: OrderLineType;
-  quantity: number;
   totalPrice: number; // 💰 Prix total en centimes
   note?: string;
   status?: Status;

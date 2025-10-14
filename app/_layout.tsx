@@ -22,6 +22,7 @@ import {
 } from 'react-native-reanimated';
 import { ToastProvider } from '@/components/ToastProvider';
 import { AppInitializer } from '~/components/AppInitializer';
+import { PanelPortalProvider } from '~/hooks/usePanelPortal';
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -261,7 +262,9 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Provider store={store}>
           <SocketProvider>
-            <RootLayoutNav />
+            <PanelPortalProvider>
+              <RootLayoutNav />
+            </PanelPortalProvider>
           </SocketProvider>
         </Provider>
       </GestureHandlerRootView>

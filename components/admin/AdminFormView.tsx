@@ -248,11 +248,8 @@ export interface AdminConfirmationModal {
   onCancel: () => void;
 }
 
-// Interface pour le contexte de panel global
-export interface AdminPanelContext {
-  renderPanel: (panel: React.ReactNode) => void;
-  clearPanel: () => void;
-}
+// Note: Le système de panel global a été déplacé vers usePanelPortal hook
+// Voir ~/hooks/usePanelPortal.tsx pour rendre des panels au niveau root
 
 export interface AdminFormViewProps {
   visible: boolean;
@@ -292,7 +289,6 @@ export function AdminFormView({
 }: AdminFormViewProps) {
   const [isSaving, setIsSaving] = React.useState(false);
   const [confirmationModal, setConfirmationModal] = React.useState<AdminConfirmationModal | null>(null);
-  const [globalPanel, setGlobalPanel] = React.useState<React.ReactNode>(null);
   const formRef = React.useRef<AdminFormRef>(null);
 
   const handleSave = React.useCallback(async () => {
@@ -332,22 +328,11 @@ export function AdminFormView({
     }
   }), []);
 
-  // Créer le contexte pour le panel global
-  const panelContext = React.useMemo(() => ({
-    renderPanel: (panel: React.ReactNode) => {
-      setGlobalPanel(panel);
-    },
-    clearPanel: () => {
-      setGlobalPanel(null);
-    }
-  }), []);
-
-  // Clone l'enfant pour lui passer la ref et les contextes
+  // Clone l'enfant pour lui passer la ref et le context de confirmation
   const childWithRef = React.isValidElement(children)
     ? React.cloneElement(children, {
         ref: formRef,
-        confirmationContext,
-        panelContext
+        confirmationContext
       } as any)
     : children;
 
@@ -446,13 +431,6 @@ export function AdminFormView({
           isLoading={confirmationModal.isLoading}
         />
       )}
-
-      {/* Panel global rendu au premier plan avec z-index très élevé */}
-      {globalPanel && (
-        <View style={styles.globalPanelWrapper}>
-          {globalPanel}
-        </View>
-      )}
     </View>
   );
 }
@@ -533,11 +511,5 @@ const styles = StyleSheet.create({
     paddingBottom: COMMON_STYLES.spacing.md,
     borderTopWidth: 1,
     borderTopColor: COMMON_STYLES.colors.border,
-  },
-
-  globalPanelWrapper: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 9999,
-    pointerEvents: 'box-none',
   },
 });

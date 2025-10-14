@@ -6,13 +6,14 @@ import { SectionHeader } from '~/components/admin/SectionHeader';
 import { MenuBasicInfo } from './MenuBasicInfo';
 import { CategoryEditor } from './CategoryEditor';
 import { CategoryItemAssignment } from './CategoryItemAssignment';
-import { ItemSelectionPanel } from './ItemSelectionPanel';
+import { ItemSelectionPanelContent } from './ItemSelectionPanel';
+import { SlidePanel } from '~/components/ui/SlidePanel';
 import { MenuEditorProps, MenuEditorRef, LocalMenuCategoryItem } from './MenuEditor.types';
 import { useMenuEditor } from '~/hooks/menu/useMenuEditor';
 import { useToast } from '~/components/ToastProvider';
 import { AdminFormData } from '~/components/admin/AdminFormView';
 import { Menu } from '~/types/menu.types';
-import { Item } from '~/types/item.types';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
 
 export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
   menu,
@@ -22,9 +23,9 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
   onCreateMenuCategoryItem,
   scrollViewRef,
   confirmationContext,
-  panelContext
 }, ref) => {
   const { showToast } = useToast();
+  const { renderPanel, clearPanel } = usePanelPortal();
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
   const [panelVisible, setPanelVisible] = useState(false);
   const [panelCategoryIndex, setPanelCategoryIndex] = useState<number | null>(null);
@@ -153,57 +154,28 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
     };
   }, [editingItem]);
 
-  // Memoize the panel component to prevent infinite loop
-  const panelComponent = useMemo(() => {
-    if (!panelVisible || panelCategoryIndex === null) return null;
-
-    return (
-      <ItemSelectionPanel
-        visible={panelVisible}
-        availableItems={currentCategoryItems}
-        onClose={handleClosePanel}
-        onSelectItem={handleSelectItem}
-        mode={editingItem ? 'edit' : 'add'}
-        editData={editData}
-      />
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelVisible, panelCategoryIndex, currentCategoryItems, editingItem, editData]);
-
-  // Track previous panel state to prevent unnecessary updates
-  const prevPanelStateRef = React.useRef<{ visible: boolean; index: number | null; editId: string | null }>({
-    visible: false,
-    index: null,
-    editId: null,
-  });
-
-  // Sync panel state with parent AdminFormView
+  // Sync panel avec le portal global
   useEffect(() => {
-    if (!panelContext) return;
-
-    const currentState = {
-      visible: panelVisible,
-      index: panelCategoryIndex,
-      editId: editingItem?.tempId || null,
-    };
-
-    const prevState = prevPanelStateRef.current;
-
-    // Only update if state has actually changed
-    if (
-      currentState.visible !== prevState.visible ||
-      currentState.index !== prevState.index ||
-      currentState.editId !== prevState.editId
-    ) {
-      prevPanelStateRef.current = currentState;
-
-      if (panelComponent) {
-        panelContext.renderPanel(panelComponent);
-      } else {
-        panelContext.clearPanel();
-      }
+    if (panelVisible && panelCategoryIndex !== null) {
+      // Rendre le panel via le portal avec son onClose
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleClosePanel} width={430}>
+          <ItemSelectionPanelContent
+            availableItems={currentCategoryItems}
+            onClose={handleClosePanel}
+            onSelectItem={handleSelectItem}
+            mode={editingItem ? 'edit' : 'add'}
+            editData={editData}
+          />
+        </SlidePanel>,
+        handleClosePanel // ← Passer le onClose au portal
+      );
+    } else if (!panelVisible) {
+      // Fermer le panel SEULEMENT si on était visible avant
+      clearPanel();
     }
-  }, [panelVisible, panelCategoryIndex, editingItem, panelComponent, panelContext]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelVisible, panelCategoryIndex, currentCategoryItems, editingItem, editData]);
 
   useImperativeHandle(ref, () => ({
     getFormData: (): AdminFormData<Menu> => {
@@ -306,23 +278,7 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
           </Pressable>
         </View>
 
-        {/* Panel is now rendered at AdminFormView level via panelContext */}
-        {/* Fallback for when panelContext is not available */}
-        {!panelContext && (
-          <ItemSelectionPanel
-            visible={panelVisible}
-            availableItems={currentCategoryItems}
-            onClose={handleClosePanel}
-            onSelectItem={handleSelectItem}
-            mode={editingItem ? 'edit' : 'add'}
-            editData={editingItem ? {
-              itemId: editingItem.itemId,
-              itemName: editingItem.item?.name || '',
-              supplement: editingItem.supplement.toString(),
-              isAvailable: editingItem.isAvailable,
-            } : undefined}
-          />
-        )}
+        {/* Panel rendu via usePanelPortal - pas de rendu local nécessaire */}
       </View>
     </View>
   );
