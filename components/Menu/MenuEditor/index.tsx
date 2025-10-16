@@ -157,7 +157,6 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
   // Sync panel avec le portal global
   useEffect(() => {
     if (panelVisible && panelCategoryIndex !== null) {
-      // Rendre le panel via le portal avec son onClose
       renderPanel(
         <SlidePanel visible={true} onClose={handleClosePanel} width={430}>
           <ItemSelectionPanelContent
@@ -167,11 +166,9 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
             mode={editingItem ? 'edit' : 'add'}
             editData={editData}
           />
-        </SlidePanel>,
-        handleClosePanel // ← Passer le onClose au portal
+        </SlidePanel>
       );
     } else if (!panelVisible) {
-      // Fermer le panel SEULEMENT si on était visible avant
       clearPanel();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

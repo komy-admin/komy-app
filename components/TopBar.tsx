@@ -5,6 +5,7 @@ import { Href, Link, useRouter } from 'expo-router'
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { sessionService } from '~/services/SessionService';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
 
 interface TopBarProps {
   showAdditions?: boolean;
@@ -16,6 +17,7 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const { setTopBarHeight } = usePanelPortal();
 
   // Les managers ont accès à l'interface admin mais pas à la config
   const isManager = user?.profil === 'manager'
@@ -88,6 +90,11 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
       )}
 
       <View
+        onLayout={(event) => {
+          // Mesurer la hauteur réelle de la TopBar et la communiquer au PanelPortal
+          const { height } = event.nativeEvent.layout;
+          setTopBarHeight(height);
+        }}
         style={{
           width: '100%',
           height: 90,

@@ -122,8 +122,7 @@ export default function ConfigurationRestoPage() {
               onCancel={closeSidePanel}
             />
           )}
-        </SlidePanel>,
-        closeSidePanel // ← Passer le onClose au portal
+        </SlidePanel>
       );
     } else if (!sidePanelVisible) {
       clearPanel();
