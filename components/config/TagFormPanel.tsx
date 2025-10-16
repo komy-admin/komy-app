@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import { X, Check, Plus, Trash2 } from 'lucide-react-native';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
+import { eurosToCents, centsToEuros } from '~/lib/utils';
 
 interface TagFormPanelProps {
   tag: Tag | null;
@@ -14,7 +15,13 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
   const [label, setLabel] = useState(tag?.label || '');
   const [fieldType, setFieldType] = useState<TagFieldType | null>(tag?.fieldType || null); // null = aucune sélection
   const [isRequired, setIsRequired] = useState(tag?.isRequired || false);
-  const [options, setOptions] = useState<Partial<TagOption>[]>(tag?.options || []);
+  // 💰 Convertir centimes -> euros pour l'affichage
+  const [options, setOptions] = useState<Partial<TagOption>[]>(
+    tag?.options?.map(opt => ({
+      ...opt,
+      priceModifier: opt.priceModifier != null ? centsToEuros(opt.priceModifier) : null
+    })) || []
+  );
   const [optionsToDelete, setOptionsToDelete] = useState<string[]>([]); // IDs des options à supprimer
   const [newOptionLabel, setNewOptionLabel] = useState('');
   const [newOptionPrice, setNewOptionPrice] = useState('');
@@ -80,6 +87,14 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
       }
     }
 
+    // 💰 Convertir euros -> centimes pour l'envoi API
+    const optionsInCents = needsOptions
+      ? options.map(opt => ({
+          ...opt,
+          priceModifier: opt.priceModifier != null ? eurosToCents(Number(opt.priceModifier)) : null
+        }))
+      : undefined;
+
     onSave(
       {
         name: generatedName,
@@ -87,7 +102,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         fieldType,
         isRequired,
       },
-      needsOptions ? options : undefined
+      optionsInCents
     );
   };
 

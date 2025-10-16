@@ -13,6 +13,7 @@ import { Item } from '~/types/item.types';
 import { Tag } from '~/types/tag.types';
 import { SelectedTag } from '~/types/order-line.types';
 import { StickyNote, Tag as TagIcon, X } from 'lucide-react-native';
+import { formatPrice } from '~/lib/utils';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -148,20 +149,20 @@ export const ItemCustomizationModal: React.FC<ItemCustomizationModalProps> = ({
           <View style={styles.priceSticky}>
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Prix de base</Text>
-              <Text style={styles.priceBase}>{Number(item.price).toFixed(2)}€</Text>
+              <Text style={styles.priceBase}>{formatPrice(item.price)}</Text>
             </View>
             {selectedTags.length > 0 && selectedTags.some(t => t.priceModifier !== 0) && (
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Options</Text>
                 <Text style={styles.priceModifier}>
-                  +{Number(selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0)).toFixed(2)}€
+                  +{formatPrice(selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0))}
                 </Text>
               </View>
             )}
             <View style={styles.priceDivider} />
             <View style={styles.priceRow}>
               <Text style={styles.priceTotalLabel}>TOTAL</Text>
-              <Text style={styles.priceTotalValue}>{Number(totalPrice).toFixed(2)}€</Text>
+              <Text style={styles.priceTotalValue}>{formatPrice(totalPrice)}</Text>
             </View>
           </View>
 
@@ -295,7 +296,7 @@ const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
                       styles.optionPriceText,
                       isSelected && styles.optionPriceTextSelected
                     ]}>
-                      {option.priceModifier > 0 ? '+' : ''}{Number(option.priceModifier).toFixed(2)}€
+                      {option.priceModifier > 0 ? '+' : ''}{formatPrice(option.priceModifier)}
                     </Text>
                   </View>
                 )}
@@ -356,7 +357,7 @@ const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => 
                       styles.optionPriceText,
                       isSelected && styles.optionPriceTextSelected
                     ]}>
-                      {option.priceModifier > 0 ? '+' : ''}{Number(option.priceModifier).toFixed(2)}€
+                      {option.priceModifier > 0 ? '+' : ''}{formatPrice(option.priceModifier)}
                     </Text>
                   </View>
                 )}
@@ -424,7 +425,7 @@ const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
           {priceModifier !== 0 && (
             <View style={styles.togglePriceBadge}>
               <Text style={styles.togglePriceText}>
-                {priceModifier > 0 ? '+' : ''}{Number(priceModifier).toFixed(2)}€
+                {priceModifier > 0 ? '+' : ''}{formatPrice(priceModifier)}
               </Text>
             </View>
           )}

@@ -13,7 +13,7 @@ import { formatPrice } from '~/lib/utils';
 interface MenuCategoryType {
   id: string;
   itemTypeId: string;
-  priceModifier?: number | string;
+  priceModifier?: number;
   isRequired?: boolean;
   maxSelections?: number;
 }
@@ -24,7 +24,7 @@ interface MenuCategoryType {
 interface MenuCategoryItem {
   id: string;
   item?: Item;
-  supplement?: number | string;
+  supplement?: number;
   isAvailable?: boolean;
 }
 
@@ -71,7 +71,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
   getCategoryName
 }) => {
   const categoryName = getCategoryName(category.itemTypeId);
-  const hasSupplementPrice = parseFloat(category.priceModifier?.toString() || '0') > 0;
+  const hasSupplementPrice = (category.priceModifier || 0) > 0;
   const menuCategoryItems = getMenuCategoryItems(category.id);
 
   const handleToggleItem = useCallback((item: Item) => {
@@ -119,7 +119,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
           {hasSupplementPrice && (
             <View style={styles.categorySupplementTag}>
               <Text style={styles.categorySupplementTagText}>
-                + {category.priceModifier} € de Supplément
+                + {formatPrice(category.priceModifier || 0)} de Supplément
               </Text>
             </View>
           )}
@@ -134,7 +134,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
             const item = menuCategoryItem?.item;
             if (!item) return null;
 
-            const supplement = parseFloat(String(menuCategoryItem.supplement || '0'));
+            const supplement = menuCategoryItem.supplement || 0;
             const isSelected = selectedItem?.itemId === item.id;
             const hasSupplementPrice = supplement > 0;
             const hasCustomization = !!(selectedItem && (
