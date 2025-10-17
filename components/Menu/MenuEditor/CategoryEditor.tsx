@@ -1,8 +1,9 @@
 import React, { memo, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { MenuCategoryFormData } from './MenuEditor.types';
 import { ItemType } from '~/types/item-type.types';
 import { IconButton } from '~/components/ui/IconButton';
+import { SelectButton } from '~/components/ui/select-button';
 
 interface CategoryEditorProps {
   category: MenuCategoryFormData;
@@ -65,8 +66,7 @@ export const CategoryEditor = memo<CategoryEditorProps>(({
               {itemType?.name || 'Configuration de catégorie'}
             </Text>
             <Text style={styles.categoryHeaderSubtitle}>
-              {category.isRequired ? 'Obligatoire' : 'Optionnel'} •
-              Max {category.maxSelections} sélection{parseInt(category.maxSelections) > 1 ? 's' : ''}
+              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • Max {category.maxSelections} sélection{parseInt(category.maxSelections) > 1 ? 's' : ''}
             </Text>
           </View>
         </View>
@@ -95,24 +95,16 @@ export const CategoryEditor = memo<CategoryEditorProps>(({
       {isExpanded && (
         <View style={styles.categoryContent}>
           <View style={{ marginBottom: 12 }}>
-            <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Type d'item *</Text>
+            <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Catégorie *</Text>
             <View style={styles.categoryButtons}>
               {itemTypes.map((itemType) => (
-                <Pressable
+                <SelectButton
                   key={itemType.id}
-                  style={[
-                    styles.categoryButton,
-                    category.itemTypeId === itemType.id && styles.categoryButtonActive
-                  ]}
+                  label={itemType.name}
+                  isActive={category.itemTypeId === itemType.id}
                   onPress={() => handleUpdateItemType(itemType.id)}
-                >
-                  <Text style={[
-                    styles.categoryButtonText,
-                    category.itemTypeId === itemType.id && styles.categoryButtonTextActive
-                  ]}>
-                    {itemType.name}
-                  </Text>
-                </Pressable>
+                  variant="sub"
+                />
               ))}
             </View>
             {errors[`category_${categoryIndex}_type`] && (
@@ -188,7 +180,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 4,
+    ...Platform.select({
+      ios: { elevation: 4 },
+      android: { elevation: 0.5 },
+      web: { elevation: 4 },
+    }),
     marginBottom: 16,
   },
   categoryButtons: {
@@ -196,45 +192,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
     width: '100%',
-  },
-  categoryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 100,
-    minHeight: 46,
-    flexShrink: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  categoryButtonActive: {
-    backgroundColor: '#2A2E33',
-    borderColor: '#2A2E33',
-    borderWidth: 1.5,
-    shadowColor: '#2A2E33',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  categoryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-    textAlign: 'center',
-    letterSpacing: 0.4,
-  },
-  categoryButtonTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
   },
   row: {
     flexDirection: 'row',
@@ -262,7 +219,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
-    elevation: 3,
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: { elevation: 3 },
+    }),
   },
   categoryNumberText: {
     color: '#FFFFFF',
@@ -307,26 +268,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    height: 46,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    height: 44,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 1,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    })
   },
   requiredToggleActive: {
     backgroundColor: '#FEF3C7',
     borderColor: '#F59E0B',
-    borderWidth: 1.5,
+    borderWidth: 1,
     shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: { elevation: 3 },
+    }),
   },
   requiredIndicator: {
     width: 10,
@@ -341,7 +310,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 3,
-    elevation: 1,
+    ...Platform.select({
+      ios: { elevation: 1 },
+      android: { elevation: 0 },
+      web: { elevation: 1 },
+    }),
   },
   requiredText: {
     fontSize: 13,
@@ -353,25 +326,53 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   label: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2A2E33',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    })
   },
   input: {
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
     backgroundColor: '#FFFFFF',
-    color: '#1E293B',
+    color: '#2A2E33',
+    paddingHorizontal: 16,
+    fontSize: 14,
+    fontWeight: '500',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 1,
+    ...Platform.select({
+      ios: {
+        paddingVertical: 12,
+        minHeight: 44,
+        elevation: 1,
+      },
+      android: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+        elevation: 0,
+      },
+      web: {
+        height: 44,
+        paddingTop: 11,
+        paddingBottom: 11,
+        elevation: 1,
+        cursor: 'text',
+        transition: 'all 0.2s ease',
+        ':focus': {
+          borderColor: '#2A2E33',
+          shadowOpacity: 0.1,
+        }
+      } as any,
+    }),
   },
   selectInput: {
     borderWidth: 1,

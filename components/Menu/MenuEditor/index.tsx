@@ -1,16 +1,19 @@
-import React, { forwardRef, useImperativeHandle, useState, useCallback } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import React, { forwardRef, useImperativeHandle, useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { Plus, Settings } from 'lucide-react-native';
 import { Text } from '~/components/ui';
 import { SectionHeader } from '~/components/admin/SectionHeader';
 import { MenuBasicInfo } from './MenuBasicInfo';
 import { CategoryEditor } from './CategoryEditor';
 import { CategoryItemAssignment } from './CategoryItemAssignment';
-import { MenuEditorProps, MenuEditorRef } from './MenuEditor.types';
+import { ItemSelectionPanelContent } from './ItemSelectionPanel';
+import { SlidePanel } from '~/components/ui/SlidePanel';
+import { MenuEditorProps, MenuEditorRef, LocalMenuCategoryItem } from './MenuEditor.types';
 import { useMenuEditor } from '~/hooks/menu/useMenuEditor';
 import { useToast } from '~/components/ToastProvider';
 import { AdminFormData } from '~/components/admin/AdminFormView';
 import { Menu } from '~/types/menu.types';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
 
 export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
   menu,
@@ -19,19 +22,19 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
   onLoadMenuCategoryItems,
   onCreateMenuCategoryItem,
   scrollViewRef,
-  confirmationContext
+  confirmationContext,
 }, ref) => {
   const { showToast } = useToast();
+  const { renderPanel, clearPanel } = usePanelPortal();
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
+  const [panelVisible, setPanelVisible] = useState(false);
+  const [panelCategoryIndex, setPanelCategoryIndex] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<LocalMenuCategoryItem | null>(null);
 
   const {
     formData,
     errors,
     localCategoryItems,
-    showAddItemForm,
-    itemFormData,
-    editingItem,
-    editItemData,
 
     updateFormField,
     updateCategory,
@@ -39,14 +42,9 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
     removeCategory,
     validateForm,
 
-    toggleAddItemForm,
-    updateItemFormData,
-    addItemToCategory,
+    addItemToCategoryDirect,
     removeItemFromCategory,
-    startEditingItem,
-    updateEditItemData,
-    saveEditedItem,
-    cancelEditingItem,
+    updateItemInCategory,
     toggleItemAvailability,
 
     getMenuData,
@@ -100,6 +98,84 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
       item.isActive
     );
   }, [items]);
+
+  const handleOpenAddPanel = useCallback((categoryIndex: number) => {
+    setPanelCategoryIndex(categoryIndex);
+    setEditingItem(null);
+    setPanelVisible(true);
+  }, []);
+
+  const handleOpenEditPanel = useCallback((categoryIndex: number, item: LocalMenuCategoryItem) => {
+    setPanelCategoryIndex(categoryIndex);
+    setEditingItem(item);
+    setPanelVisible(true);
+  }, []);
+
+  const handleClosePanel = useCallback(() => {
+    setPanelVisible(false);
+    setPanelCategoryIndex(null);
+    setEditingItem(null);
+  }, []);
+
+  const handleSelectItem = useCallback((itemId: string, supplement: number, isAvailable: boolean) => {
+    if (panelCategoryIndex === null) return;
+
+    if (editingItem) {
+      // Mode édition
+      updateItemInCategory(panelCategoryIndex, editingItem.tempId, supplement, isAvailable);
+    } else {
+      // Mode ajout
+      addItemToCategoryDirect(panelCategoryIndex, itemId, supplement, isAvailable);
+    }
+    // Panel will be closed by child via onClose after onSelectItem
+  }, [panelCategoryIndex, editingItem, addItemToCategoryDirect, updateItemInCategory]);
+
+  // Memoize currentCategoryItems to prevent infinite loop
+  // Filter out items that are already assigned to this category
+  const currentCategoryItems = useMemo(() => {
+    if (panelCategoryIndex === null) return [];
+
+    const allItems = getCategoryItems(formData.categories[panelCategoryIndex]?.itemTypeId);
+    const assignedItemIds = (localCategoryItems[panelCategoryIndex] || [])
+      .filter(item => !item.isDeleted)
+      .map(item => item.itemId);
+
+    return allItems.filter(item => !assignedItemIds.includes(item.id));
+  }, [panelCategoryIndex, formData.categories, getCategoryItems, localCategoryItems]);
+
+  // Memoize editData to prevent infinite loop
+  const editData = useMemo(() => {
+    if (!editingItem) return undefined;
+    return {
+      itemId: editingItem.itemId,
+      itemName: editingItem.item?.name || '',
+      supplement: editingItem.supplement.toString(),
+      isAvailable: editingItem.isAvailable,
+    };
+  }, [editingItem]);
+
+  // Sync panel avec le portal global
+  useEffect(() => {
+    if (panelVisible && panelCategoryIndex !== null) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleClosePanel} width={430}>
+          <ItemSelectionPanelContent
+            availableItems={currentCategoryItems}
+            onClose={handleClosePanel}
+            onSelectItem={handleSelectItem}
+            mode={editingItem ? 'edit' : 'add'}
+            editData={editData}
+          />
+        </SlidePanel>
+      );
+    } else if (!panelVisible) {
+      clearPanel();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      clearPanel();
+    };
+  }, [panelVisible, panelCategoryIndex, currentCategoryItems, editingItem, editData]);
 
   useImperativeHandle(ref, () => ({
     getFormData: (): AdminFormData<Menu> => {
@@ -158,9 +234,14 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
           <View style={styles.categoriesList}>
             {formData.categories.map((category, index) => {
               const isExpanded = expandedCategories[index] ?? false;
-              const categoryItems = getCategoryItems(category.itemTypeId);
+              const allCategoryItems = getCategoryItems(category.itemTypeId);
               const currentCategoryItems = localCategoryItems[index] || [];
 
+              // Filter out items that are already assigned to this category
+              const assignedItemIds = currentCategoryItems
+                .filter(item => !item.isDeleted)
+                .map(item => item.itemId);
+              const availableCategoryItems = allCategoryItems.filter(item => !assignedItemIds.includes(item.id));
 
               return (
                 <View key={index}>
@@ -178,23 +259,10 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
                       <CategoryItemAssignment
                         categoryIndex={index}
                         localItems={currentCategoryItems}
-                        availableItems={categoryItems}
-                        showAddForm={showAddItemForm[`category_${index}`] || false}
-                        itemFormData={itemFormData[`category_${index}`] || {
-                          itemId: '',
-                          supplement: '0',
-                          isAvailable: true
-                        }}
-                        editingItem={editingItem}
-                        editItemData={editItemData}
-                        onToggleAddForm={() => toggleAddItemForm(index)}
-                        onUpdateItemFormData={(field, value) => updateItemFormData(index, field, value)}
-                        onAddItem={() => addItemToCategory(index)}
+                        availableItems={availableCategoryItems}
+                        onOpenAddPanel={() => handleOpenAddPanel(index)}
+                        onOpenEditPanel={(item) => handleOpenEditPanel(index, item)}
                         onRemoveItem={(tempId) => removeItemFromCategory(index, tempId)}
-                        onStartEditingItem={(tempId) => startEditingItem(index, tempId)}
-                        onUpdateEditItemData={updateEditItemData}
-                        onSaveEditedItem={saveEditedItem}
-                        onCancelEditingItem={cancelEditingItem}
                         onToggleItemAvailability={(tempId) => toggleItemAvailability(index, tempId)}
                       />
                     )}
@@ -209,6 +277,8 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
             <Text style={styles.addCategoryButtonText}>Ajouter une catégorie</Text>
           </Pressable>
         </View>
+
+        {/* Panel rendu via usePanelPortal - pas de rendu local nécessaire */}
       </View>
     </View>
   );
@@ -228,7 +298,7 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 26,
+    paddingHorizontal: 24,
     paddingVertical: 20,
     marginBottom: 24,
     borderWidth: 1,
@@ -237,7 +307,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0.5 },
+      web: { elevation: 2 },
+    }),
   },
   errorBanner: {
     backgroundColor: '#FEE2E2',

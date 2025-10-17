@@ -4,6 +4,7 @@ import { Text } from '~/components/ui';
 import { Edit2, Trash2, StickyNote, Tag as TagIcon, ClipboardList, X } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { Item } from '~/types/item.types';
+import { formatPrice } from '~/lib/utils';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -161,7 +162,7 @@ const DraftItemCard: React.FC<DraftLineCardProps> = ({
               </View>
             )}
           </View>
-          <Text style={styles.itemPrice}>{Number(line.totalPrice || 0).toFixed(2)}€</Text>
+          <Text style={styles.itemPrice}>{formatPrice(line.totalPrice || 0)}</Text>
         </View>
         <View style={styles.itemActions}>
           <Pressable
@@ -217,7 +218,7 @@ const DraftItemCard: React.FC<DraftLineCardProps> = ({
                 {tag.priceModifier != null && tag.priceModifier !== 0 && (
                   <View style={styles.tagPriceBadge}>
                     <Text style={styles.tagPriceText}>
-                      {tag.priceModifier > 0 ? '+' : ''}{Number(tag.priceModifier || 0).toFixed(2)}€
+                      {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
                     </Text>
                   </View>
                 )}
@@ -262,7 +263,7 @@ const DraftMenuCard: React.FC<DraftMenuCardProps> = ({
               </View>
             )}
           </View>
-          <Text style={styles.menuPrice}>{Number((line.totalPrice || 0)).toFixed(2)}€</Text>
+          <Text style={styles.menuPrice}>{formatPrice(line.totalPrice || 0)}</Text>
         </View>
         <View style={styles.itemActions}>
           {onEditMenu && (
@@ -295,7 +296,7 @@ const DraftMenuCard: React.FC<DraftMenuCardProps> = ({
                 <Text style={styles.menuItemName}>{menuItem.item?.name || ''}</Text>
                 {menuItem.supplementPrice > 0 && (
                   <Text style={styles.menuItemSupplement}>
-                    +{Number(menuItem.supplementPrice).toFixed(2)}€
+                    +{formatPrice(menuItem.supplementPrice)}
                   </Text>
                 )}
               </View>
@@ -323,7 +324,7 @@ const DraftMenuCard: React.FC<DraftMenuCardProps> = ({
                         {tag.priceModifier != null && tag.priceModifier !== 0 && (
                           <View style={styles.menuItemTagPriceBadge}>
                             <Text style={styles.menuItemTagPrice}>
-                              {tag.priceModifier > 0 ? '+' : ''}{Number(tag.priceModifier).toFixed(2)}€
+                              {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
                             </Text>
                           </View>
                         )}

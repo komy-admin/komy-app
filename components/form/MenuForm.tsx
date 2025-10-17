@@ -332,8 +332,9 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 26,
-    paddingVertical: 20,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 5,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: '#F3F4F6',
@@ -341,13 +342,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0.5 },
+      web: { elevation: 2 },
+    }),
   },
 
   // Système de lignes et colonnes
   row: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 15,
     ...(Platform.OS === 'web' ? {
       // Sur web, on évite gap qui peut causer des problèmes de positionnement
     } : {
@@ -464,10 +469,14 @@ const styles = StyleSheet.create({
     shadowColor: '#10B981',
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 3,
-    ...(Platform.OS === 'web' && {
-      boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
-    })
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: {
+        elevation: 3,
+        boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
+      },
+    }),
   },
 
   statusIconContainer: {
@@ -512,7 +521,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0 },
+      web: { elevation: 2 },
+    }),
   },
 
   statusTextContainer: {

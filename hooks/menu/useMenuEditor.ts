@@ -38,7 +38,9 @@ interface UseMenuEditorReturn {
   toggleAddItemForm: (categoryIndex: number) => void;
   updateItemFormData: (categoryIndex: number, field: keyof CategoryItemFormData, value: any) => void;
   addItemToCategory: (categoryIndex: number) => void;
+  addItemToCategoryDirect: (categoryIndex: number, itemId: string, supplement: number, isAvailable: boolean) => void;
   removeItemFromCategory: (categoryIndex: number, tempId: string) => void;
+  updateItemInCategory: (categoryIndex: number, tempId: string, supplement: number, isAvailable: boolean) => void;
   startEditingItem: (categoryIndex: number, tempId: string) => void;
   updateEditItemData: (field: 'supplement' | 'isAvailable', value: any) => void;
   saveEditedItem: () => void;
@@ -175,13 +177,33 @@ export const useMenuEditor = ({
   }, []);
 
   const updateCategory = useCallback((index: number, field: keyof MenuCategoryFormData, value: any) => {
+    // Si on change le type de catégorie, on doit marquer tous les items comme supprimés
+    if (field === 'itemTypeId') {
+      const oldItemTypeId = formData.categories[index].itemTypeId;
+      if (oldItemTypeId !== value && oldItemTypeId) {
+        setLocalCategoryItems(prev => {
+          const currentItems = prev[index] || [];
+          // Marquer tous les items existants comme supprimés et retirer les nouveaux
+          const clearedItems = currentItems
+            .filter(item => item.originalId) // Garder seulement ceux qui existent en base
+            .map(item => ({ ...item, isDeleted: true })); // Les marquer comme supprimés
+
+          return {
+            ...prev,
+            [index]: clearedItems
+          };
+        });
+        showToast('Articles de la catégorie précédente retirés', 'info');
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
-      categories: prev.categories.map((cat, i) => 
+      categories: prev.categories.map((cat, i) =>
         i === index ? { ...cat, [field]: value } : cat
       )
     }));
-  }, []);
+  }, [formData.categories, showToast]);
 
   const addCategory = useCallback(() => {
     const newCategory: MenuCategoryFormData = {
@@ -414,6 +436,57 @@ export const useMenuEditor = ({
     setEditItemData({ supplement: '0', isAvailable: true });
   }, []);
 
+  const addItemToCategoryDirect = useCallback((categoryIndex: number, itemId: string, supplement: number, isAvailable: boolean) => {
+    const existing = localCategoryItems[categoryIndex]?.find(item =>
+      item.itemId === itemId && !item.isDeleted
+    );
+
+    if (existing) {
+      showToast('Cet article est déjà dans la catégorie', 'error');
+      return;
+    }
+
+    const selectedItem = items.find(i => i.id === itemId);
+
+    const newItem: LocalMenuCategoryItem = {
+      tempId: `new-${categoryIndex}-${Date.now()}`,
+      itemId,
+      supplement,
+      isAvailable,
+      item: selectedItem,
+      isModified: false,
+      isDeleted: false
+    };
+
+    setLocalCategoryItems(prev => {
+      const newItems = [...(prev[categoryIndex] || []), newItem];
+      return {
+        ...prev,
+        [categoryIndex]: newItems
+      };
+    });
+
+    showToast('Article ajouté (sera sauvegardé à la validation)', 'success');
+  }, [localCategoryItems, items, showToast]);
+
+  const updateItemInCategory = useCallback((categoryIndex: number, tempId: string, supplement: number, isAvailable: boolean) => {
+    setLocalCategoryItems(prev => ({
+      ...prev,
+      [categoryIndex]: prev[categoryIndex]?.map(item =>
+        item.tempId === tempId
+          ? {
+              ...item,
+              supplement,
+              isAvailable,
+              isModified: true
+            }
+          : item
+      ) || []
+    }));
+
+    showToast('Article modifié avec succès', 'success');
+  }, [showToast]);
+
   const toggleItemAvailability = useCallback((categoryIndex: number, tempId: string) => {
     setLocalCategoryItems(prev => ({
       ...prev,
@@ -492,7 +565,9 @@ export const useMenuEditor = ({
     toggleAddItemForm,
     updateItemFormData,
     addItemToCategory,
+    addItemToCategoryDirect,
     removeItemFromCategory,
+    updateItemInCategory,
     startEditingItem,
     updateEditItemData,
     saveEditedItem,

@@ -9,14 +9,34 @@ interface TagSelectorProps {
   onTagToggle: (tagId: string) => void;
 }
 
+// Styles dynamiques pour le bouton selon l'état
+const getButtonStyle = (isSelected: boolean) => ({
+  backgroundColor: isSelected ? '#ECFDF5' : '#FAFAFA',
+  borderColor: isSelected ? '#34D399' : '#E5E7EB',
+  ...Platform.select({
+    ios: {
+      shadowColor: isSelected ? '#10B981' : '#000',
+      shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
+      shadowOpacity: isSelected ? 0.15 : 0.04,
+      shadowRadius: isSelected ? 8 : 3,
+    },
+    android: { elevation: 0 }, // Pas de shadow border sur Android
+    web: {
+      cursor: 'pointer',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: isSelected
+        ? '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)'
+        : '0 1px 3px rgba(0, 0, 0, 0.04)',
+    } as any,
+  }),
+});
+
 export const TagSelector: React.FC<TagSelectorProps> = ({
   tags,
   selectedTagIds,
   onTagToggle
 }) => {
-  if (tags.length === 0) {
-    return null;
-  }
+  if (tags.length === 0) return null;
 
   return (
     <View style={styles.container}>
@@ -25,14 +45,27 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         return (
           <Pressable
             key={tag.id}
-            style={[styles.tagButton, isSelected && styles.tagButtonActive]}
+            style={[styles.button, getButtonStyle(isSelected)]}
             onPress={() => onTagToggle(tag.id)}
           >
-            <View style={[styles.iconContainer, isSelected && styles.iconContainerActive]}>
-              <View style={[styles.pulse, isSelected && styles.pulseActive]} />
-              <View style={[styles.core, isSelected && styles.coreActive]} />
+            <View style={styles.iconContainer}>
+              <View style={[styles.pulse, {
+                backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                borderColor: isSelected ? '#10B981' : '#D1D5DB',
+              }]} />
+              <View style={[styles.core, {
+                backgroundColor: isSelected ? '#10B981' : '#9CA3AF',
+              }]} />
             </View>
-            <Text style={[styles.tagLabel, isSelected && styles.tagLabelActive]}>
+            <Text style={[styles.label, {
+              fontSize: 13,
+              fontWeight: isSelected ? '700' : '600',
+              color: isSelected ? '#047857' : '#6B7280',
+              ...(Platform.OS === 'web' && {
+                fontSize: 13,
+                fontWeight: isSelected ? 700 : 600,
+              }),
+            }]}>
               {tag.label}
             </Text>
           </Pressable>
@@ -49,36 +82,14 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
   },
-  tagButton: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: '#FAFAFA',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     minHeight: 36,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    })
-  },
-  tagButtonActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#34D399',
-    shadowColor: '#10B981',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
-    ...(Platform.OS === 'web' && {
-      boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
-    })
   },
   iconContainer: {
     width: 12,
@@ -88,50 +99,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconContainerActive: {},
   pulse: {
     position: 'absolute',
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  pulseActive: {
-    borderColor: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   core: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#9CA3AF',
     zIndex: 1,
   },
-  coreActive: {
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tagLabel: {
+  label: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
     letterSpacing: 0.2,
-    ...(Platform.OS === 'web' && {
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontWeight: '600',
-    })
-  },
-  tagLabelActive: {
-    color: '#047857',
-    fontWeight: '700',
-    ...(Platform.OS === 'web' && {
-      fontWeight: '700',
-    })
+    ...Platform.select({
+      web: {
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      } as any,
+    }),
   },
 });

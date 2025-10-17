@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 26,
+    paddingHorizontal: 24,
     paddingVertical: 20,
     marginBottom: 24,
     borderWidth: 1,
@@ -192,13 +192,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0.5 },
+      web: { elevation: 2 },
+    }),
   },
 
   // Système de lignes et colonnes
   row: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 15,
     ...(Platform.OS === 'web' ? {} : { gap: 16 })
   },
 

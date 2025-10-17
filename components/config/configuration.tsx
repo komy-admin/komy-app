@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { Plus, Trash2, Check, X, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useTags } from '~/hooks/useTags';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
 import { ItemType } from '~/types/item-type.types';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
+import { SlidePanel } from '~/components/ui/SlidePanel';
+import { ItemTypeFormPanel } from './ItemTypeFormPanel';
+import { TagFormPanel } from './TagFormPanel';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 type TabType = 'item-types' | 'tags' | 'views';
 
@@ -26,7 +31,11 @@ export default function ConfigurationRestoPage() {
   const [sidePanelVisible, setSidePanelVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
+  const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
+  const [itemTypeToDelete, setItemTypeToDelete] = useState<ItemType | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const { renderPanel, clearPanel } = usePanelPortal();
   const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
   const { tags, createTag, updateTag, deleteTag, bulkCreateOptions, bulkDeleteOptions } = useTags();
   const {
@@ -50,13 +59,62 @@ export default function ConfigurationRestoPage() {
     setSidePanelVisible(true);
   };
 
-  const closeSidePanel = () => {
+  const closeSidePanel = useCallback(() => {
     setSidePanelVisible(false);
     setEditingTag(null);
     setEditingItemType(null);
-  };
+    clearPanel();
+  }, [clearPanel]);
 
-  const handleSaveTag = async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
+  const handleDeleteTagClick = useCallback((tag: Tag) => {
+    setTagToDelete(tag);
+  }, []);
+
+  const handleConfirmDeleteTag = useCallback(async () => {
+    if (!tagToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteTag(tagToDelete.id);
+      showToast('Tag supprimé avec succès', 'success');
+      setTagToDelete(null);
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      showToast('Erreur lors de la suppression du tag', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [tagToDelete, deleteTag, showToast]);
+
+  const handleCancelDeleteTag = useCallback(() => {
+    setTagToDelete(null);
+  }, []);
+
+  const handleDeleteItemTypeClick = useCallback((itemType: ItemType) => {
+    setItemTypeToDelete(itemType);
+  }, []);
+
+  const handleConfirmDeleteItemType = useCallback(async () => {
+    if (!itemTypeToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteItemType(itemTypeToDelete.id);
+      showToast('Type d\'article supprimé avec succès', 'success');
+      setItemTypeToDelete(null);
+    } catch (error) {
+      console.error('Error deleting item type:', error);
+      showToast('Erreur lors de la suppression du type d\'article', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [itemTypeToDelete, deleteItemType, showToast]);
+
+  const handleCancelDeleteItemType = useCallback(() => {
+    setItemTypeToDelete(null);
+  }, []);
+
+  const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
     try {
       if (editingTag) {
         await updateTag(editingTag.id, tagData);
@@ -80,9 +138,9 @@ export default function ConfigurationRestoPage() {
       console.error('Error saving tag:', error);
       showToast('Erreur lors de la sauvegarde', 'error');
     }
-  };
+  }, [editingTag, createTag, updateTag, bulkCreateOptions, showToast, closeSidePanel]);
 
-  const handleSaveItemType = async (itemTypeData: Partial<ItemType>) => {
+  const handleSaveItemType = useCallback(async (itemTypeData: Partial<ItemType>) => {
     try {
       if (editingItemType) {
         await updateItemType(editingItemType.id, itemTypeData);
@@ -95,7 +153,34 @@ export default function ConfigurationRestoPage() {
       console.error('Error saving item type:', error);
       showToast('Erreur lors de la sauvegarde', 'error');
     }
-  };
+  }, [editingItemType, updateItemType, createItemType, showToast, closeSidePanel]);
+
+  // Synchroniser le panel avec le portal global
+  useEffect(() => {
+    if (sidePanelVisible) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={closeSidePanel} width={400}>
+          {activeTab === 'tags' ? (
+            <TagFormPanel
+              tag={editingTag}
+              onSave={handleSaveTag}
+              onCancel={closeSidePanel}
+              onBulkDeleteOptions={bulkDeleteOptions}
+            />
+          ) : (
+            <ItemTypeFormPanel
+              itemType={editingItemType}
+              onSave={handleSaveItemType}
+              onCancel={closeSidePanel}
+            />
+          )}
+        </SlidePanel>
+      );
+    } else if (!sidePanelVisible) {
+      clearPanel();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidePanelVisible, activeTab, editingTag, editingItemType]);
 
   return (
     <View style={styles.container}>
@@ -143,7 +228,7 @@ export default function ConfigurationRestoPage() {
               itemTypes={itemTypes}
               onCreateItemType={() => openSidePanelForItemType()}
               onEditItemType={(itemType) => openSidePanelForItemType(itemType)}
-              onDeleteItemType={deleteItemType}
+              onDeleteItemType={handleDeleteItemTypeClick}
             />
           )}
           {activeTab === 'tags' && (
@@ -151,7 +236,7 @@ export default function ConfigurationRestoPage() {
               tags={tags}
               onCreateTag={() => openSidePanelForTag()}
               onEditTag={(tag) => openSidePanelForTag(tag)}
-              onDeleteTag={deleteTag}
+              onDeleteTag={handleDeleteTagClick}
             />
           )}
           {activeTab === 'views' && (
@@ -165,36 +250,30 @@ export default function ConfigurationRestoPage() {
           )}
         </View>
 
-        {/* Side Panel Overlay */}
-        {sidePanelVisible && (
-          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-            {/* Overlay */}
-            <TouchableOpacity
-              style={styles.overlay}
-              activeOpacity={1}
-              onPress={closeSidePanel}
-            />
-
-            {/* Panel */}
-            <View style={styles.sidePanel}>
-              {activeTab === 'tags' ? (
-                <TagFormPanel
-                  tag={editingTag}
-                  onSave={handleSaveTag}
-                  onCancel={closeSidePanel}
-                  onBulkDeleteOptions={bulkDeleteOptions}
-                />
-              ) : (
-                <ItemTypeFormPanel
-                  itemType={editingItemType}
-                  onSave={handleSaveItemType}
-                  onCancel={closeSidePanel}
-                />
-              )}
-            </View>
-          </View>
-        )}
+        {/* Panel rendu via usePanelPortal - pas de rendu local */}
       </View>
+
+      {/* Modal de confirmation pour la suppression de tag */}
+      <DeleteConfirmationModal
+        isVisible={!!tagToDelete}
+        onClose={handleCancelDeleteTag}
+        onConfirm={handleConfirmDeleteTag}
+        entityName={tagToDelete?.label || ''}
+        entityType="le tag"
+        isLoading={isDeleting}
+        usePortal={true}
+      />
+
+      {/* Modal de confirmation pour la suppression de type d'article */}
+      <DeleteConfirmationModal
+        isVisible={!!itemTypeToDelete}
+        onClose={handleCancelDeleteItemType}
+        onConfirm={handleConfirmDeleteItemType}
+        entityName={itemTypeToDelete?.name || ''}
+        entityType="le type d'article"
+        isLoading={isDeleting}
+        usePortal={true}
+      />
     </View>
   );
 }
@@ -204,7 +283,7 @@ interface ItemTypesTabProps {
   itemTypes: ItemType[];
   onCreateItemType: () => void;
   onEditItemType: (itemType: ItemType) => void;
-  onDeleteItemType: (id: string) => void;
+  onDeleteItemType: (itemType: ItemType) => void;
 }
 
 const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType, onEditItemType, onDeleteItemType }) => {
@@ -238,7 +317,7 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
               key={itemType.id}
               itemType={itemType}
               onEdit={() => onEditItemType(itemType)}
-              onDelete={() => onDeleteItemType(itemType.id)}
+              onDelete={() => onDeleteItemType(itemType)}
             />
           ))
         )}
@@ -252,7 +331,7 @@ interface TagsTabProps {
   tags: Tag[];
   onCreateTag: () => void;
   onEditTag: (tag: Tag) => void;
-  onDeleteTag: (id: string) => void;
+  onDeleteTag: (tag: Tag) => void;
 }
 
 const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDeleteTag }) => {
@@ -286,7 +365,7 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
               key={tag.id}
               tag={tag}
               onEdit={() => onEditTag(tag)}
-              onDelete={() => onDeleteTag(tag.id)}
+              onDelete={() => onDeleteTag(tag)}
             />
           ))
         )}
@@ -525,345 +604,6 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, onEdit, onDelete }) => {
   );
 };
 
-// Item Type Form Panel
-interface ItemTypeFormPanelProps {
-  itemType: ItemType | null;
-  onSave: (itemTypeData: Partial<ItemType>) => void;
-  onCancel: () => void;
-}
-
-const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, onSave, onCancel }) => {
-  const [name, setName] = useState(itemType?.name || '');
-  const [type, setType] = useState<'kitchen' | 'bar'>(itemType?.type === 'bar' ? 'bar' : 'kitchen');
-
-  const handleSave = () => {
-    if (!name.trim()) return;
-    onSave({ name: name.trim(), type });
-  };
-
-  return (
-    <View style={styles.panelContent}>
-      <View style={styles.panelHeader}>
-        <Text style={styles.panelTitle}>{itemType ? 'Modifier le type' : 'Nouveau type'}</Text>
-        <TouchableOpacity onPress={onCancel}>
-          <X size={24} color="#64748B" strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.panelForm}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        {/* Nom du type */}
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Nom du type</Text>
-          <TextInput
-            style={styles.formInput}
-            value={name}
-            onChangeText={setName}
-            placeholder="Ex: Entrée, Plat, Boisson..."
-            placeholderTextColor="#94A3B8"
-          />
-        </View>
-
-        {/* Département */}
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Département</Text>
-          <View style={styles.radioGroup}>
-            <TouchableOpacity
-              style={[
-                styles.radioOption,
-                type === 'kitchen' && styles.radioOptionActive,
-                type === 'kitchen' && { borderColor: '#10B981', backgroundColor: '#F0FDF4' }
-              ]}
-              onPress={() => setType('kitchen')}
-              activeOpacity={1}
-            >
-              <View style={styles.radio}>
-                {type === 'kitchen' && <View style={[styles.radioInner, { backgroundColor: '#10B981' }]} />}
-              </View>
-              <ChefHat size={18} color={type === 'kitchen' ? '#10B981' : '#64748B'} strokeWidth={2} />
-              <Text style={[styles.radioLabel, type === 'kitchen' && styles.radioLabelActive]}>
-                Cuisine
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.radioOption,
-                type === 'bar' && styles.radioOptionActive,
-                type === 'bar' && { borderColor: '#A855F7', backgroundColor: '#FAF5FF' }
-              ]}
-              onPress={() => setType('bar')}
-              activeOpacity={1}
-            >
-              <View style={styles.radio}>
-                {type === 'bar' && <View style={[styles.radioInner, { backgroundColor: '#A855F7' }]} />}
-              </View>
-              <Wine size={18} color={type === 'bar' ? '#A855F7' : '#64748B'} strokeWidth={2} />
-              <Text style={[styles.radioLabel, type === 'bar' && styles.radioLabelActive]}>
-                Bar
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
-      <View style={styles.panelFooter}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-          <Text style={styles.cancelButtonText}>Annuler</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.saveButton, !name.trim() && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={!name.trim()}
-        >
-          <Check size={20} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.saveButtonText}>Enregistrer</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
-// Tag Form Panel
-interface TagFormPanelProps {
-  tag: Tag | null;
-  onSave: (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => void;
-  onCancel: () => void;
-  onBulkDeleteOptions: (tagId: string, optionIds: string[]) => Promise<void>;
-}
-
-const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBulkDeleteOptions }) => {
-  const [label, setLabel] = useState(tag?.label || '');
-  const [fieldType, setFieldType] = useState<TagFieldType>(tag?.fieldType || 'select');
-  const [isRequired, setIsRequired] = useState(tag?.isRequired || false);
-  const [options, setOptions] = useState<Partial<TagOption>[]>(tag?.options || []);
-  const [optionsToDelete, setOptionsToDelete] = useState<string[]>([]); // IDs des options à supprimer
-  const [newOptionLabel, setNewOptionLabel] = useState('');
-  const [newOptionPrice, setNewOptionPrice] = useState('');
-
-  const needsOptions = fieldType === 'select' || fieldType === 'multi-select';
-
-  const handleAddOption = () => {
-    if (!newOptionLabel.trim()) return;
-
-    const generatedValue = newOptionLabel.trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-
-    const newOption: Partial<TagOption> = {
-      value: generatedValue,
-      label: newOptionLabel.trim(),
-      priceModifier: newOptionPrice ? parseFloat(newOptionPrice) : null,
-      isDefault: options.length === 0,
-      position: options.length,
-    };
-
-    setOptions([...options, newOption]);
-    setNewOptionLabel('');
-    setNewOptionPrice('');
-  };
-
-  const handleDeleteOption = (index: number) => {
-    const option = options[index];
-
-    // Si l'option a un ID, on la marque pour suppression au save
-    if (option.id) {
-      setOptionsToDelete([...optionsToDelete, option.id]);
-    }
-
-    // On retire l'option de l'état local pour l'UI
-    setOptions(options.filter((_, i) => i !== index));
-  };
-
-  const handleSave = async () => {
-    if (!label.trim()) return;
-
-    const generatedName = label.trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-
-    if (tag?.id && optionsToDelete.length > 0) {
-      try {
-        await onBulkDeleteOptions(tag.id, optionsToDelete);
-      } catch (error) {
-        console.error('Error bulk deleting options:', error);
-      }
-    }
-
-    onSave(
-      {
-        name: generatedName,
-        label: label.trim(),
-        fieldType,
-        isRequired,
-      },
-      needsOptions ? options : undefined
-    );
-  };
-
-  const fieldTypes: { value: TagFieldType; label: string }[] = [
-    { value: 'select', label: 'Sélection simple' },
-    { value: 'multi-select', label: 'Sélection multiple' },
-    { value: 'number', label: 'Nombre' },
-    { value: 'text', label: 'Texte libre' },
-    { value: 'toggle', label: 'Oui/Non' },
-  ];
-
-  return (
-    <View style={styles.panelContent}>
-      <View style={styles.panelHeader}>
-        <Text style={styles.panelTitle}>{tag ? 'Modifier le tag' : 'Nouveau tag'}</Text>
-        <TouchableOpacity onPress={onCancel}>
-          <X size={24} color="#64748B" strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.panelForm}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Nom du tag */}
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Nom du tag</Text>
-          <TextInput
-            style={styles.formInput}
-            value={label}
-            onChangeText={setLabel}
-            placeholder="Ex: Cuisson, Garnitures..."
-            placeholderTextColor="#94A3B8"
-          />
-        </View>
-
-        {/* Type de champ */}
-        <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Type de champ</Text>
-          <View style={styles.radioGroup}>
-            {fieldTypes.map((type) => (
-              <TouchableOpacity
-                key={type.value}
-                style={[
-                  styles.radioOption,
-                  fieldType === type.value && {
-                    borderColor: '#A855F7',
-                    backgroundColor: '#F8F4FF',
-                  }
-                ]}
-                onPress={() => setFieldType(type.value)}
-                activeOpacity={1}
-              >
-                <View style={styles.radio}>
-                  {fieldType === type.value && <View style={styles.radioInner} />}
-                </View>
-                <Text style={[styles.radioLabel, fieldType === type.value && styles.radioLabelActive]}>
-                  {type.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Obligatoire */}
-        <TouchableOpacity
-          style={styles.checkbox}
-          onPress={() => setIsRequired(!isRequired)}
-          activeOpacity={1}
-        >
-          <View style={[styles.checkboxBox, isRequired && styles.checkboxBoxChecked]}>
-            {isRequired && <Check size={16} color="#FFFFFF" strokeWidth={3} />}
-          </View>
-          <Text style={styles.checkboxLabel}>Champ obligatoire</Text>
-        </TouchableOpacity>
-
-        {/* Options */}
-        {needsOptions && (
-          <>
-            <View style={styles.divider} />
-            <Text style={styles.formLabel}>Options</Text>
-
-            {options.map((option, index) => (
-              <View key={index} style={styles.optionRow}>
-                <View style={styles.optionInputs}>
-                  <TextInput
-                    style={[styles.formInput, styles.optionLabelInput]}
-                    value={option.label}
-                    editable={false}
-                    placeholderTextColor="#94A3B8"
-                  />
-                  <TextInput
-                    style={[styles.formInput, styles.optionPriceInput]}
-                    value={option.priceModifier?.toString() || '0'}
-                    editable={false}
-                    placeholder="€"
-                    placeholderTextColor="#94A3B8"
-                  />
-                </View>
-                <TouchableOpacity
-                  style={styles.deleteOptionButton}
-                  onPress={() => handleDeleteOption(index)}
-                >
-                  <Trash2 size={20} color="#EF4444" strokeWidth={1.5} />
-                </TouchableOpacity>
-              </View>
-            ))}
-
-            <View style={styles.optionRow}>
-              <View style={styles.optionInputs}>
-                <TextInput
-                  style={[styles.formInput, styles.optionLabelInput]}
-                  value={newOptionLabel}
-                  onChangeText={setNewOptionLabel}
-                  placeholder="Nom de l'option"
-                  placeholderTextColor="#94A3B8"
-                />
-                <TextInput
-                  style={[styles.formInput, styles.optionPriceInput]}
-                  value={newOptionPrice}
-                  onChangeText={setNewOptionPrice}
-                  placeholder="Prix €"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.addOptionButton,
-                  !newOptionLabel.trim() && styles.addOptionButtonDisabled
-                ]}
-                onPress={handleAddOption}
-                disabled={!newOptionLabel.trim()}
-                activeOpacity={0.7}
-              >
-                <Plus size={20} color={newOptionLabel.trim() ? '#A855F7' : '#CBD5E1'} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </ScrollView>
-
-      <View style={styles.panelFooter}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-          <Text style={styles.cancelButtonText}>Annuler</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.saveButton, !label.trim() && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={!label.trim()}
-        >
-          <Check size={20} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.saveButtonText}>Enregistrer</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1051,209 +791,6 @@ const styles = StyleSheet.create({
   },
   tagActionButtonDanger: {
     backgroundColor: '#FEF2F2',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    zIndex: 999,
-  },
-  sidePanel: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: 400,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: -4, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 16,
-    zIndex: 1000,
-  },
-  panelContent: {
-    flex: 1,
-  },
-  panelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  panelTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  panelForm: {
-    flex: 1,
-    padding: 20,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 12,
-  },
-  formInput: {
-    height: 44,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#1E293B',
-  },
-  radioGroup: {
-    gap: 8,
-  },
-  radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    gap: 12,
-  },
-  radioOptionActive: {
-    borderColor: '#A855F7',
-    backgroundColor: '#F8F4FF',
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#A855F7',
-  },
-  radioLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    flex: 1,
-  },
-  radioLabelActive: {
-    color: '#1E293B',
-    fontWeight: '500',
-  },
-  checkbox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
-  checkboxBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxBoxChecked: {
-    backgroundColor: '#A855F7',
-    borderColor: '#A855F7',
-  },
-  checkboxLabel: {
-    fontSize: 14,
-    color: '#1E293B',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginTop: 20,
-    marginBottom: 16,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  optionInputs: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  optionLabelInput: {
-    flex: 2,
-    minWidth: 0,
-  },
-  optionPriceInput: {
-    width: 100,
-    flex: 0,
-  },
-  deleteOptionButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: '#FEF2F2',
-  },
-  addOptionButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: '#F8F4FF',
-  },
-  addOptionButtonDisabled: {
-    backgroundColor: '#F1F5F9',
-  },
-  panelFooter: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  saveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#A855F7',
-    gap: 8,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   // Views Tab specific styles
   viewsContainer: {

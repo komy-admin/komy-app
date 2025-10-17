@@ -8,15 +8,15 @@ import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
 import { OrderLine, OrderLineType } from '~/types/order-line.types';
+import { BulkUpdatePayload } from '~/utils/order-line-tracker';
 
 /**
  * Hook spécialisé pour la gestion des commandes
  */
 export const useOrders = () => {
   const dispatch = useDispatch();
-  const { 
-    deleteOrderLines, 
-    updateManyOrderLinesStatus 
+  const {
+    deleteOrderLines
   } = useOrderLines();
 
   // Sélecteurs
@@ -175,6 +175,20 @@ export const useOrders = () => {
     }
   }, [dispatch, orders, deleteOrderLines]);
 
+  /**
+   * Mettre à jour une commande avec ses lignes en utilisant le système de payload bulk
+   */
+  const updateOrderWithLines = useCallback(async (orderId: string, payload: BulkUpdatePayload) => {
+    try {
+      const updatedOrder = await orderApiService.updateWithLines(orderId, payload);
+      dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
+      return updatedOrder;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la commande avec lignes:', error);
+      throw error;
+    }
+  }, [dispatch]);
+
   // Utilitaires
   const getOrderById = useCallback((orderId: string) => {
     return orders.find(order => order.id === orderId) || null;
@@ -214,19 +228,20 @@ export const useOrders = () => {
     orders,
     currentRoomOrders,
     selectedTableOrder,
-    
+
     // État
     loading,
     error,
-    
+
     // Actions CRUD
     loadOrdersForRoom,
     loadAllOrders,
     createOrder,
     updateOrder,
     updateOrderStatus,
+    updateOrderWithLines,
     deleteOrder,
-    
+
     // Utilitaires
     getOrderById,
     getOrderByTableId,

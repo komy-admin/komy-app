@@ -248,6 +248,9 @@ export interface AdminConfirmationModal {
   onCancel: () => void;
 }
 
+// Note: Le système de panel global a été déplacé vers usePanelPortal hook
+// Voir ~/hooks/usePanelPortal.tsx pour rendre des panels au niveau root
+
 export interface AdminFormViewProps {
   visible: boolean;
   mode: AdminFormViewMode;
@@ -284,16 +287,11 @@ export function AdminFormView({
   disableGlobalScroll = false,
   configurationActions
 }: AdminFormViewProps) {
-  // ✅ Return conditionnel AVANT tous les hooks
-  if (!visible) {
-    return null;
-  }
-
   const [isSaving, setIsSaving] = React.useState(false);
   const [confirmationModal, setConfirmationModal] = React.useState<AdminConfirmationModal | null>(null);
   const formRef = React.useRef<AdminFormRef>(null);
 
-  const handleSave = async () => {
+  const handleSave = React.useCallback(async () => {
     if (!onSave || !formRef.current) return;
 
     const getFormData = () => formRef.current!.getFormData();
@@ -318,7 +316,7 @@ export function AdminFormView({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [onSave, onClose]);
 
   // Créer le contexte pour les confirmations
   const confirmationContext = React.useMemo(() => ({
@@ -330,13 +328,18 @@ export function AdminFormView({
     }
   }), []);
 
-  // Clone l'enfant pour lui passer la ref et le contexte de confirmation
-  const childWithRef = React.isValidElement(children) 
-    ? React.cloneElement(children, { 
+  // Clone l'enfant pour lui passer la ref et le context de confirmation
+  const childWithRef = React.isValidElement(children)
+    ? React.cloneElement(children, {
         ref: formRef,
-        confirmationContext 
+        confirmationContext
       } as any)
     : children;
+
+  // Return conditionnel APRÈS tous les hooks (Rules of Hooks)
+  if (!visible) {
+    return null;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -473,7 +476,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     flexGrow: 1,
-    padding: COMMON_STYLES.spacing.xl,
+    padding: COMMON_STYLES.spacing.lg,
     paddingBottom: 100, // Espace pour les boutons sticky réduit
   },
   

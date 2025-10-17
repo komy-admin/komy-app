@@ -1,13 +1,12 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { OrderLine, OrderLineType, OrderLineState, SelectedTag } from '~/types/order-line.types';
+import { OrderLine, OrderLineType, OrderLineState, SelectedTag, DraftMenuItemWithMeta, CreateOrderLineRequest, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { orderApiService } from '~/api/order.api';
 import { generateBulkPayload } from '~/utils/order-line-tracker';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import type { MenuSelections } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
-import { entitiesActions } from '~/store/slices/entities.slice';
+import { useOrderLines } from '~/hooks/useOrderLines';
+import { useOrders } from '~/hooks/useOrders';
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -33,7 +32,8 @@ export interface UseOrderLinesManagerOptions {
  */
 export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
   const { initialLines = [], mode, orderId, tableId, onSuccess, onError } = options;
-  const dispatch = useDispatch();
+  const { createOrderWithLines } = useOrderLines();
+  const { updateOrderWithLines } = useOrders();
 
   // ✅ État unique centralisé
   const [orderLines, setOrderLines] = useState<OrderLine[]>(initialLines);
@@ -60,8 +60,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
 
       const newLine: OrderLine = {
         id: `draft-item-${Date.now()}-${Math.random()}`,
+        orderId: '',
         type: OrderLineType.ITEM,
-        quantity: 1,
         unitPrice: totalPrice,
         totalPrice: totalPrice,
         status: Status.PENDING,
@@ -79,7 +79,9 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
           tags: item.tags,
         },
         menu: null,
-      } as OrderLine;
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
       setOrderLines((prev) => [...prev, newLine]);
     },
@@ -117,7 +119,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
   const addMenu = useCallback(
     (menu: Menu, selections: MenuSelections, itemTypes: any[]) => {
       // Construire les items du menu
-      const menuItems: any[] = [];
+      const menuItems: DraftMenuItemWithMeta[] = [];
       let totalPrice = menu.basePrice || 0;
 
       Object.entries(selections).forEach(([categoryId, selection]) => {
@@ -153,8 +155,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
 
       const newLine: OrderLine = {
         id: `draft-menu-${Date.now()}`,
+        orderId: '',
         type: OrderLineType.MENU,
-        quantity: 1,
         unitPrice: totalPrice,
         totalPrice: totalPrice,
         status: Status.PENDING,
@@ -166,8 +168,19 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
           basePrice: menu.basePrice,
           snapshotAt: new Date().toISOString(),
         },
-        items: menuItems,
-      } as OrderLine;
+        items: menuItems.map((menuItem) => ({
+          id: menuItem.id,
+          categoryId: menuItem.categoryId,
+          categoryName: menuItem.categoryName,
+          status: menuItem.status,
+          item: menuItem.item,
+          supplementPrice: menuItem.supplementPrice,
+          tags: menuItem.tags,
+          note: menuItem.note,
+        })) as OrderLineItem[],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
       setOrderLines((prev) => [...prev, newLine]);
     },
@@ -184,7 +197,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
           if (line.id !== lineId || line.type !== OrderLineType.MENU) return line;
 
           // Reconstruire les items du menu
-          const menuItems: any[] = [];
+          const menuItems: DraftMenuItemWithMeta[] = [];
           let totalPrice = menu.basePrice || 0;
 
           Object.entries(selections).forEach(([categoryId, selection]) => {
@@ -220,7 +233,16 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
 
           return {
             ...line,
-            items: menuItems,
+            items: menuItems.map((menuItem) => ({
+              id: menuItem.id,
+              categoryId: menuItem.categoryId,
+              categoryName: menuItem.categoryName,
+              status: menuItem.status,
+              item: menuItem.item,
+              supplementPrice: menuItem.supplementPrice,
+              tags: menuItem.tags,
+              note: menuItem.note,
+            })) as OrderLineItem[],
             unitPrice: totalPrice,
             totalPrice: totalPrice,
           };
@@ -309,35 +331,37 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
   /**
    * Convertir les lignes au format API pour création
    */
-  const convertToApiFormat = useCallback((lines: OrderLine[]): any[] => {
-    return lines.map((line) => {
-      const base: any = {
-        type: line.type,
-        note: line.note,
-      };
-
+  const convertToApiFormat = useCallback((lines: OrderLine[]): CreateOrderLineRequest[] => {
+    return lines.map((line): CreateOrderLineRequest => {
       if (line.type === OrderLineType.ITEM) {
-        base.itemId = line.item!.id;
-        if (line.tags?.length) {
-          base.tags = Object.fromEntries(line.tags.map((t) => [t.tagId, t.value]));
-        }
-      } else if (line.type === OrderLineType.MENU) {
-        base.menuId = line.menu!.id;
-        base.selectedItems = Object.fromEntries(
-          line.items?.map((item) => [
-            item.categoryId,
-            {
-              itemId: item.item.id,
-              tags: item.tags?.length
-                ? Object.fromEntries(item.tags.map((t) => [t.tagId, t.value]))
-                : undefined,
-              note: item.note,
-            },
-          ]) || []
-        );
+        return {
+          type: OrderLineType.ITEM,
+          itemId: line.item!.id,
+          note: line.note,
+          tags: line.tags?.length
+            ? Object.fromEntries(line.tags.map((t) => [t.tagId, t.value]))
+            : undefined,
+        };
+      } else {
+        // MENU
+        return {
+          type: OrderLineType.MENU,
+          menuId: line.menu!.id,
+          note: line.note,
+          selectedItems: Object.fromEntries(
+            (line.items as DraftMenuItemWithMeta[] | undefined)?.map((item) => [
+              item.categoryId,
+              {
+                itemId: item.item.id,
+                tags: item.tags?.length
+                  ? Object.fromEntries(item.tags.map((t) => [t.tagId, t.value]))
+                  : undefined,
+                note: item.note,
+              },
+            ]) || []
+          ),
+        };
       }
-
-      return base;
     });
   }, []);
 
@@ -355,30 +379,14 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       let result;
 
       if (mode === 'create') {
-        // Création : convertir et envoyer
+        // Création : convertir et envoyer via useOrderLines
         const apiData = convertToApiFormat(orderLines);
-        const newOrder = await orderApiService.create({
-          tableId,
-          lines: apiData,
-          status: Status.DRAFT
-        });
-
-        // Enrichir et dispatcher au store
-        const enrichedOrder = {
-          ...newOrder,
-          table: newOrder.table || { id: tableId, name: `Table ${tableId}` }
-        };
-        dispatch(entitiesActions.createOrder({ order: enrichedOrder }));
-        result = enrichedOrder;
+        result = await createOrderWithLines(tableId, apiData, Status.DRAFT);
       } else {
-        // Mise à jour : analyser les changements
+        // Mise à jour : analyser les changements et envoyer via useOrders
         const states = analyzeChanges();
         const payload = generateBulkPayload(states);
-        const updatedOrder = await orderApiService.updateWithLines(orderId!, payload);
-
-        // Dispatcher au store
-        dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
-        result = updatedOrder;
+        result = await updateOrderWithLines(orderId!, payload);
       }
 
       onSuccess?.(result);
@@ -397,6 +405,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     orderId,
     convertToApiFormat,
     analyzeChanges,
+    createOrderWithLines,
+    updateOrderWithLines,
     onSuccess,
     onError,
   ]);
