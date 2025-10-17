@@ -9,7 +9,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
-import { X, Check, Package, Search } from 'lucide-react-native';
+import { X, Check, Search } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 
 /**

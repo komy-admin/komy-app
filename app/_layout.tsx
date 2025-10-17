@@ -7,7 +7,7 @@ import * as React from 'react';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { PortalHost } from '@rn-primitives/portal';
 import { store, RootState } from '~/store';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppState, AppStateStatus } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
@@ -258,16 +258,18 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <ToastProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <Provider store={store}>
-          <SocketProvider>
-            <PanelPortalProvider>
-              <RootLayoutNav />
-            </PanelPortalProvider>
-          </SocketProvider>
-        </Provider>
-      </GestureHandlerRootView>
-    </ToastProvider>
+    <SafeAreaProvider>
+      <ToastProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <Provider store={store}>
+            <SocketProvider>
+              <PanelPortalProvider>
+                <RootLayoutNav />
+              </PanelPortalProvider>
+            </SocketProvider>
+          </Provider>
+        </GestureHandlerRootView>
+      </ToastProvider>
+    </SafeAreaProvider>
   );
 }

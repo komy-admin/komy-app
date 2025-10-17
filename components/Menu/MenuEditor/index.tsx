@@ -127,8 +127,8 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
       // Mode ajout
       addItemToCategoryDirect(panelCategoryIndex, itemId, supplement, isAvailable);
     }
-    handleClosePanel();
-  }, [panelCategoryIndex, editingItem, addItemToCategoryDirect, updateItemInCategory, handleClosePanel]);
+    // Panel will be closed by child via onClose after onSelectItem
+  }, [panelCategoryIndex, editingItem, addItemToCategoryDirect, updateItemInCategory]);
 
   // Memoize currentCategoryItems to prevent infinite loop
   // Filter out items that are already assigned to this category
@@ -172,6 +172,9 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
       clearPanel();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      clearPanel();
+    };
   }, [panelVisible, panelCategoryIndex, currentCategoryItems, editingItem, editData]);
 
   useImperativeHandle(ref, () => ({

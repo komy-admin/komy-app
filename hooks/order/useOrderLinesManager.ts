@@ -168,7 +168,16 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
           basePrice: menu.basePrice,
           snapshotAt: new Date().toISOString(),
         },
-        items: menuItems as any,
+        items: menuItems.map((menuItem) => ({
+          id: menuItem.id,
+          categoryId: menuItem.categoryId,
+          categoryName: menuItem.categoryName,
+          status: menuItem.status,
+          item: menuItem.item,
+          supplementPrice: menuItem.supplementPrice,
+          tags: menuItem.tags,
+          note: menuItem.note,
+        })) as OrderLineItem[],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -224,7 +233,16 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
 
           return {
             ...line,
-            items: menuItems as OrderLineItem[],
+            items: menuItems.map((menuItem) => ({
+              id: menuItem.id,
+              categoryId: menuItem.categoryId,
+              categoryName: menuItem.categoryName,
+              status: menuItem.status,
+              item: menuItem.item,
+              supplementPrice: menuItem.supplementPrice,
+              tags: menuItem.tags,
+              note: menuItem.note,
+            })) as OrderLineItem[],
             unitPrice: totalPrice,
             totalPrice: totalPrice,
           };
