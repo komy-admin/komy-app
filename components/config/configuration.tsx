@@ -11,6 +11,7 @@ import { SlidePanel } from '~/components/ui/SlidePanel';
 import { ItemTypeFormPanel } from './ItemTypeFormPanel';
 import { TagFormPanel } from './TagFormPanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 
 type TabType = 'item-types' | 'tags' | 'views';
 
@@ -30,6 +31,9 @@ export default function ConfigurationRestoPage() {
   const [sidePanelVisible, setSidePanelVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
+  const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
+  const [itemTypeToDelete, setItemTypeToDelete] = useState<ItemType | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { renderPanel, clearPanel } = usePanelPortal();
   const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
@@ -61,6 +65,54 @@ export default function ConfigurationRestoPage() {
     setEditingItemType(null);
     clearPanel();
   }, [clearPanel]);
+
+  const handleDeleteTagClick = useCallback((tag: Tag) => {
+    setTagToDelete(tag);
+  }, []);
+
+  const handleConfirmDeleteTag = useCallback(async () => {
+    if (!tagToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteTag(tagToDelete.id);
+      showToast('Tag supprimé avec succès', 'success');
+      setTagToDelete(null);
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      showToast('Erreur lors de la suppression du tag', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [tagToDelete, deleteTag, showToast]);
+
+  const handleCancelDeleteTag = useCallback(() => {
+    setTagToDelete(null);
+  }, []);
+
+  const handleDeleteItemTypeClick = useCallback((itemType: ItemType) => {
+    setItemTypeToDelete(itemType);
+  }, []);
+
+  const handleConfirmDeleteItemType = useCallback(async () => {
+    if (!itemTypeToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteItemType(itemTypeToDelete.id);
+      showToast('Type d\'article supprimé avec succès', 'success');
+      setItemTypeToDelete(null);
+    } catch (error) {
+      console.error('Error deleting item type:', error);
+      showToast('Erreur lors de la suppression du type d\'article', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [itemTypeToDelete, deleteItemType, showToast]);
+
+  const handleCancelDeleteItemType = useCallback(() => {
+    setItemTypeToDelete(null);
+  }, []);
 
   const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
     try {
@@ -176,7 +228,7 @@ export default function ConfigurationRestoPage() {
               itemTypes={itemTypes}
               onCreateItemType={() => openSidePanelForItemType()}
               onEditItemType={(itemType) => openSidePanelForItemType(itemType)}
-              onDeleteItemType={deleteItemType}
+              onDeleteItemType={handleDeleteItemTypeClick}
             />
           )}
           {activeTab === 'tags' && (
@@ -184,7 +236,7 @@ export default function ConfigurationRestoPage() {
               tags={tags}
               onCreateTag={() => openSidePanelForTag()}
               onEditTag={(tag) => openSidePanelForTag(tag)}
-              onDeleteTag={deleteTag}
+              onDeleteTag={handleDeleteTagClick}
             />
           )}
           {activeTab === 'views' && (
@@ -200,6 +252,28 @@ export default function ConfigurationRestoPage() {
 
         {/* Panel rendu via usePanelPortal - pas de rendu local */}
       </View>
+
+      {/* Modal de confirmation pour la suppression de tag */}
+      <DeleteConfirmationModal
+        isVisible={!!tagToDelete}
+        onClose={handleCancelDeleteTag}
+        onConfirm={handleConfirmDeleteTag}
+        entityName={tagToDelete?.label || ''}
+        entityType="le tag"
+        isLoading={isDeleting}
+        usePortal={true}
+      />
+
+      {/* Modal de confirmation pour la suppression de type d'article */}
+      <DeleteConfirmationModal
+        isVisible={!!itemTypeToDelete}
+        onClose={handleCancelDeleteItemType}
+        onConfirm={handleConfirmDeleteItemType}
+        entityName={itemTypeToDelete?.name || ''}
+        entityType="le type d'article"
+        isLoading={isDeleting}
+        usePortal={true}
+      />
     </View>
   );
 }
@@ -209,7 +283,7 @@ interface ItemTypesTabProps {
   itemTypes: ItemType[];
   onCreateItemType: () => void;
   onEditItemType: (itemType: ItemType) => void;
-  onDeleteItemType: (id: string) => void;
+  onDeleteItemType: (itemType: ItemType) => void;
 }
 
 const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType, onEditItemType, onDeleteItemType }) => {
@@ -243,7 +317,7 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
               key={itemType.id}
               itemType={itemType}
               onEdit={() => onEditItemType(itemType)}
-              onDelete={() => onDeleteItemType(itemType.id)}
+              onDelete={() => onDeleteItemType(itemType)}
             />
           ))
         )}
@@ -257,7 +331,7 @@ interface TagsTabProps {
   tags: Tag[];
   onCreateTag: () => void;
   onEditTag: (tag: Tag) => void;
-  onDeleteTag: (id: string) => void;
+  onDeleteTag: (tag: Tag) => void;
 }
 
 const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDeleteTag }) => {
@@ -291,7 +365,7 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
               key={tag.id}
               tag={tag}
               onEdit={() => onEditTag(tag)}
-              onDelete={() => onDeleteTag(tag.id)}
+              onDelete={() => onDeleteTag(tag)}
             />
           ))
         )}
