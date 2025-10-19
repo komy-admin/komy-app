@@ -12,6 +12,7 @@ interface DeleteConfirmationModalProps {
   entityType: string;
   isLoading?: boolean;
   usePortal?: boolean;
+  portalName?: string;
 }
 
 /**
@@ -26,7 +27,8 @@ export function DeleteConfirmationModal({
   entityName,
   entityType,
   isLoading = false,
-  usePortal = false
+  usePortal = false,
+  portalName = 'delete-confirmation-modal'
 }: DeleteConfirmationModalProps) {
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
 
@@ -86,7 +88,7 @@ export function DeleteConfirmationModal({
 
   // Utilise Portal conditionnellement
   return usePortal ? (
-    <Portal name="delete-confirmation-modal">
+    <Portal name={portalName}>
       {modalContent}
     </Portal>
   ) : (

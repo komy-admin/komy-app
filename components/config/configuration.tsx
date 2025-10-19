@@ -262,6 +262,7 @@ export default function ConfigurationRestoPage() {
         entityType="le tag"
         isLoading={isDeleting}
         usePortal={true}
+        portalName="delete-tag-modal"
       />
 
       {/* Modal de confirmation pour la suppression de type d'article */}
@@ -273,6 +274,7 @@ export default function ConfigurationRestoPage() {
         entityType="le type d'article"
         isLoading={isDeleting}
         usePortal={true}
+        portalName="delete-item-type-modal"
       />
     </View>
   );
