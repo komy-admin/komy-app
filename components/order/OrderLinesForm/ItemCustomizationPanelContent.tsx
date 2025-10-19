@@ -1,0 +1,959 @@
+import React, { useState, useMemo, useCallback, useEffect, ReactNode } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Switch,
+  TouchableOpacity,
+  Platform,
+  Text as RNText,
+} from 'react-native';
+import { Text, TextInput, NumberInput } from '~/components/ui';
+import { Item } from '~/types/item.types';
+import { Tag } from '~/types/tag.types';
+import { SelectedTag } from '~/types/order-line.types';
+import { StickyNote, Tag as TagIcon, X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash } from 'lucide-react-native';
+import { formatPrice } from '~/lib/utils';
+
+// Type pour les valeurs des tags (union de tous les types possibles)
+type TagValue = string | number | boolean | string[] | null | undefined;
+
+// Type pour le record de valeurs de tags
+type TagValuesRecord = Record<string, TagValue>;
+
+interface ItemCustomizationPanelContentProps {
+  item: Item;
+  availableTags: Tag[];
+  initialData?: { note?: string; tags?: SelectedTag[] };
+  onConfirm: (data: { note?: string; tags: SelectedTag[] }) => void;
+  onCancel: () => void;
+}
+
+// ========================================
+// HELPERS - Extraits hors du composant pour performance
+// ========================================
+
+// Helper: Récupère l'icône et la couleur selon le type de champ
+const getFieldTypeConfig = (fieldType: string) => {
+  switch (fieldType) {
+    case 'select':
+      return { icon: Circle, color: '#3B82F6', bgColor: '#EFF6FF', badgeBgColor: '#DBEAFE', textColor: '#1D4ED8', label: 'Choix unique' };
+    case 'multi-select':
+      return { icon: CheckSquare, color: '#8B5CF6', bgColor: '#F5F3FF', badgeBgColor: '#EDE9FE', textColor: '#6D28D9', label: 'Multi-choix' };
+    case 'toggle':
+      return { icon: ToggleLeft, color: '#10B981', bgColor: '#ECFDF5', badgeBgColor: '#D1FAE5', textColor: '#047857', label: 'Oui/Non' };
+    case 'number':
+      return { icon: Hash, color: '#F59E0B', bgColor: '#FEF3C7', badgeBgColor: '#FDE68A', textColor: '#D97706', label: 'Nombre' };
+    case 'text':
+      return { icon: Type, color: '#EC4899', bgColor: '#FCE7F3', badgeBgColor: '#FBCFE8', textColor: '#BE185D', label: 'Texte' };
+    default:
+      return { icon: Circle, color: '#64748B', bgColor: '#F1F5F9', badgeBgColor: '#E2E8F0', textColor: '#475569', label: 'Champ' };
+  }
+};
+
+export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelContentProps> = ({
+  item,
+  availableTags,
+  initialData,
+  onConfirm,
+  onCancel
+}) => {
+  const [note, setNote] = useState(initialData?.note || '');
+  const [tagValues, setTagValues] = useState<TagValuesRecord>({});
+  const [isValid, setIsValid] = useState(false);
+
+  // Initialiser les valeurs des tags depuis initialData
+  useEffect(() => {
+    if (initialData?.tags) {
+      const values: TagValuesRecord = {};
+      initialData.tags.forEach((t) => {
+        const tagId = t.tagId || t.tagSnapshot?.id;
+        if (tagId) {
+          values[tagId] = t.value;
+        }
+      });
+      setTagValues(values);
+      setNote(initialData.note || '');
+    } else {
+      setTagValues({});
+      setNote('');
+    }
+  }, [initialData, availableTags]);
+
+  const handleTagValueChange = useCallback((tagId: string, value: TagValue) => {
+    setTagValues(prev => ({
+      ...prev,
+      [tagId]: value
+    }));
+  }, []);
+
+  // Calculer les SelectedTag à partir des valeurs actuelles
+  const selectedTags = useMemo((): SelectedTag[] => {
+    const tags: SelectedTag[] = [];
+
+    Object.entries(tagValues).forEach(([tagId, value]) => {
+      const tag = availableTags.find(t => t.id === tagId);
+      if (!tag || value === undefined || value === null || value === '') return;
+
+      let priceModifier = 0;
+
+      // Calculer le priceModifier selon le type
+      if (tag.fieldType === 'select' && typeof value === 'string') {
+        const option = tag.options?.find(o => o.value === value);
+        priceModifier = option?.priceModifier || 0;
+      } else if (tag.fieldType === 'multi-select' && Array.isArray(value)) {
+        value.forEach(v => {
+          const option = tag.options?.find(o => o.value === v);
+          priceModifier += option?.priceModifier || 0;
+        });
+      } else if (tag.fieldType === 'toggle' && value === true) {
+        const defaultOption = tag.options?.find(o => o.isDefault);
+        priceModifier = defaultOption?.priceModifier || 0;
+      }
+
+      tags.push({
+        tagId: tag.id,
+        tagSnapshot: {
+          id: tag.id,
+          name: tag.name,
+          label: tag.label,
+          fieldType: tag.fieldType,
+          isRequired: tag.isRequired,
+          snapshotAt: new Date().toISOString()
+        },
+        value,
+        priceModifier
+      });
+    });
+
+    return tags;
+  }, [tagValues, availableTags]);
+
+  const totalPrice = useMemo(() => {
+    const tagsPrice = selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
+    return item.price + tagsPrice;
+  }, [item.price, selectedTags]);
+
+  const optionsPrice = useMemo(() => {
+    return selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
+  }, [selectedTags]);
+
+  // Validation : vérifier que tous les tags requis ont une valeur
+  useEffect(() => {
+    const canConfirm = availableTags.every(tag => {
+      if (!tag.isRequired) return true;
+      const value = tagValues[tag.id];
+
+      if (value === undefined || value === null || value === '') {
+        return false;
+      }
+
+      if (Array.isArray(value) && value.length === 0) {
+        return false;
+      }
+
+      return true;
+    });
+
+    setIsValid(canConfirm);
+  }, [tagValues, availableTags]);
+
+  const handleConfirm = useCallback(() => {
+    if (!isValid) return;
+    onConfirm({
+      note: note.trim() || undefined,
+      tags: selectedTags
+    });
+  }, [isValid, note, selectedTags, onConfirm]);
+
+  return (
+    <View style={styles.panelContent}>
+      {/* Header */}
+      <View style={styles.panelHeader}>
+        <View>
+          <RNText style={[styles.panelTitle, { fontWeight: '600' }]}>
+            {initialData ? 'Modifier l\'article' : 'Personnaliser l\'article'}
+          </RNText>
+          <RNText style={[styles.panelSubtitle, { lineHeight: 18 }]}>
+            Ajoutez vos préférences et options
+          </RNText>
+        </View>
+        <TouchableOpacity onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <X size={24} color="#64748B" strokeWidth={2} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Form */}
+      <ScrollView
+        style={styles.panelForm}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Banner Article sélectionné - Compact */}
+        <View style={styles.selectedItemBanner}>
+          <View style={styles.selectedItemInfo}>
+            <RNText style={[styles.selectedItemLabel, { textTransform: 'uppercase', fontWeight: '600', letterSpacing: 0.5 }]}>
+              Article sélectionné
+            </RNText>
+            <RNText style={[styles.selectedItemName, { fontWeight: '700' }]}>{item.name}</RNText>
+            <RNText style={styles.selectedItemPrice}>
+              Prix de base : {formatPrice(item.price)}
+            </RNText>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Section Notes */}
+        <View style={styles.formGroup}>
+          <View style={styles.labelRow}>
+            <StickyNote size={16} color="#F59E0B" strokeWidth={2} />
+            <RNText style={[styles.formLabel, { fontWeight: '600' }]}>Notes & Instructions</RNText>
+          </View>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            placeholder="Ex: Sans oignons, bien cuit, sauce à part..."
+            placeholderTextColor="#94A3B8"
+            style={styles.noteInput}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+          <RNText style={[styles.formHint, { lineHeight: 16 }]}>
+            Ajoutez des instructions spéciales pour la cuisine
+          </RNText>
+        </View>
+
+        {/* Divider si tags présents */}
+        {availableTags.length > 0 && <View style={styles.divider} />}
+
+        {/* Section Options/Tags */}
+        {availableTags.length > 0 && (
+          <View style={styles.formGroup}>
+            <View style={styles.labelRow}>
+              <TagIcon size={16} color="#8B5CF6" strokeWidth={2} />
+              <RNText style={[styles.formLabel, { fontWeight: '600' }]}>Options & Personnalisation</RNText>
+            </View>
+            {availableTags.map(tag => (
+              <TagField
+                key={tag.id}
+                tag={tag}
+                value={tagValues[tag.id]}
+                onChange={(value) => handleTagValueChange(tag.id, value)}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Footer avec résumé des prix */}
+      <View style={styles.panelFooter}>
+        {/* Résumé des prix à gauche */}
+        <View style={styles.footerPriceContainer}>
+          {optionsPrice !== 0 && (
+            <View style={styles.footerPriceRow}>
+              <RNText style={[styles.footerPriceLabel, { fontWeight: '500' }]}>Options</RNText>
+              <RNText style={[styles.footerPriceModifier, { fontWeight: '600' }]}>
+                {optionsPrice > 0 ? '+' : ''}{formatPrice(optionsPrice)}
+              </RNText>
+            </View>
+          )}
+          <View style={styles.footerPriceTotalRow}>
+            <RNText style={[styles.footerPriceTotalLabel, { fontWeight: '700' }]}>Total</RNText>
+            <RNText style={[styles.footerPriceTotalValue, { fontWeight: '700' }]}>{formatPrice(totalPrice)}</RNText>
+          </View>
+        </View>
+
+        {/* Boutons à droite */}
+        <View style={styles.footerActions}>
+          <Pressable style={styles.cancelButton} onPress={onCancel}>
+            <RNText style={[styles.cancelButtonText, { fontWeight: '600' }]}>Annuler</RNText>
+          </Pressable>
+          <Pressable
+            key={`save-button-${isValid ? 'enabled' : 'disabled'}`}
+            style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
+            onPress={handleConfirm}
+            disabled={!isValid}
+          >
+            <Check size={20} color="#FFFFFF" strokeWidth={2} />
+            <RNText style={[styles.saveButtonText, { fontWeight: '600' }]}>
+              {initialData ? 'Modifier' : 'Ajouter'}
+            </RNText>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// ========================================
+// TAG CARD COMPONENTS
+// Composants internes pour l'affichage des tags
+// Note: Ces composants sont spécifiques à ce panel et ne sont pas extraits
+// dans un fichier séparé car ils ne sont pas réutilisés ailleurs.
+// ========================================
+
+interface TagFieldProps {
+  tag: Tag;
+  value: TagValue;
+  onChange: (value: TagValue) => void;
+}
+
+/**
+ * TagCardHeader - Header de la card avec nom du tag et badges
+ */
+const TagCardHeader: React.FC<{ tag: Tag }> = ({ tag }) => {
+  const config = getFieldTypeConfig(tag.fieldType);
+  const Icon = config.icon;
+
+  return (
+    <View style={styles.tagCardHeader}>
+      {/* Ligne unique : Nom + badges inline */}
+      <View style={styles.tagHeaderRow}>
+        <RNText style={[styles.tagCardTitle, { fontWeight: '600' }]}>
+          {tag.label}
+        </RNText>
+        <View style={styles.tagHeaderBadges}>
+          <View style={[styles.fieldTypeBadge, { backgroundColor: config.badgeBgColor }]}>
+            <Icon size={10} color={config.textColor} strokeWidth={2.5} />
+            <RNText style={[styles.fieldTypeBadgeText, { color: config.textColor, fontWeight: '600' }]}>
+              {config.label}
+            </RNText>
+          </View>
+          {tag.isRequired && (
+            <View style={styles.requiredBadge}>
+              <RNText style={[styles.requiredBadgeText, { fontWeight: '600' }]}>
+                Requis
+              </RNText>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+};
+
+/**
+ * TagCard - Wrapper de card avec fond coloré selon le type de tag
+ */
+const TagCard: React.FC<{ tag: Tag; children: ReactNode }> = ({ tag, children }) => {
+  const config = getFieldTypeConfig(tag.fieldType);
+
+  return (
+    <View style={[
+      styles.tagCard,
+      {
+        backgroundColor: config.bgColor,
+        borderColor: config.color,
+      }
+    ]}>
+      <View style={styles.tagCardContent}>
+        <TagCardHeader tag={tag} />
+        <View style={styles.tagCardBody}>
+          {children}
+        </View>
+      </View>
+    </View>
+  );
+};
+
+/**
+ * TagField - Routeur vers le bon composant selon le type de tag
+ */
+const TagField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+  switch (tag.fieldType) {
+    case 'select':
+      return <SelectField tag={tag} value={value} onChange={onChange} />;
+    case 'multi-select':
+      return <MultiSelectField tag={tag} value={value || []} onChange={onChange} />;
+    case 'number':
+      return <NumberField tag={tag} value={value} onChange={onChange} />;
+    case 'text':
+      return <TextField tag={tag} value={value} onChange={onChange} />;
+    case 'toggle':
+      return <ToggleField tag={tag} value={value} onChange={onChange} />;
+    default:
+      return null;
+  }
+};
+
+/**
+ * SelectField - Champ de sélection unique (radio buttons)
+ */
+const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+  const options = tag.options || [];
+
+  return (
+    <TagCard tag={tag}>
+      <View style={styles.radioGroup}>
+        {options.map(option => {
+          const isSelected = value === option.value;
+          return (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.radioOption,
+                isSelected && styles.radioOptionActive
+              ]}
+              onPress={() => onChange(option.value)}
+              activeOpacity={1}
+            >
+              <View style={styles.radio}>
+                {isSelected && <View style={styles.radioInner} />}
+              </View>
+              <View style={styles.radioContent}>
+                <RNText style={[
+                  styles.radioLabel,
+                  isSelected && styles.radioLabelActive,
+                  isSelected && { fontWeight: '500' }
+                ]}>
+                  {option.label}
+                </RNText>
+                {option.priceModifier != null && option.priceModifier !== 0 && (
+                  <RNText style={[
+                    styles.radioPriceText,
+                    isSelected && styles.radioPriceTextActive,
+                    { fontWeight: isSelected ? '700' : '600' }
+                  ]}>
+                    {option.priceModifier > 0 ? '+' : ''}{formatPrice(option.priceModifier)}
+                  </RNText>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </TagCard>
+  );
+};
+
+/**
+ * MultiSelectField - Champ de sélection multiple (checkboxes)
+ */
+const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+  const options = tag.options || [];
+  const selectedValues = Array.isArray(value) ? value : [];
+
+  const toggleOption = (optionValue: string) => {
+    if (selectedValues.includes(optionValue)) {
+      onChange(selectedValues.filter(v => v !== optionValue));
+    } else {
+      onChange([...selectedValues, optionValue]);
+    }
+  };
+
+  return (
+    <TagCard tag={tag}>
+      <View style={styles.radioGroup}>
+        {options.map(option => {
+          const isSelected = selectedValues.includes(option.value);
+          return (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.radioOption,
+                isSelected && styles.radioOptionActive
+              ]}
+              onPress={() => toggleOption(option.value)}
+              activeOpacity={1}
+            >
+              <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
+              </View>
+              <View style={styles.radioContent}>
+                <RNText style={[
+                  styles.radioLabel,
+                  isSelected && styles.radioLabelActive,
+                  isSelected && { fontWeight: '500' }
+                ]}>
+                  {option.label}
+                </RNText>
+                {option.priceModifier != null && option.priceModifier !== 0 && (
+                  <RNText style={[
+                    styles.radioPriceText,
+                    isSelected && styles.radioPriceTextActive,
+                    { fontWeight: isSelected ? '700' : '600' }
+                  ]}>
+                    {option.priceModifier > 0 ? '+' : ''}{formatPrice(option.priceModifier)}
+                  </RNText>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </TagCard>
+  );
+};
+
+/**
+ * NumberField - Champ numérique avec validation (0-100)
+ */
+const NumberField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+  // Convertir TagValue vers number pour NumberInput
+  const numValue = typeof value === 'number' ? value : null;
+
+  return (
+    <TagCard tag={tag}>
+      <NumberInput
+        value={numValue}
+        onChangeText={onChange}
+        min={0}
+        max={100}
+        placeholder="0"
+        decimalPlaces={0}
+      />
+    </TagCard>
+  );
+};
+
+/**
+ * TextField - Champ de texte libre
+ */
+const TextField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+  // Convertir TagValue vers string pour TextInput
+  const textValue = typeof value === 'string' ? value : '';
+
+  return (
+    <TagCard tag={tag}>
+      <TextInput
+        value={textValue}
+        onChangeText={onChange}
+        placeholder={`Entrez ${tag.label.toLowerCase()}`}
+        placeholderTextColor="#94A3B8"
+        style={styles.textInput}
+      />
+    </TagCard>
+  );
+};
+
+/**
+ * ToggleField - Champ booléen avec switch (Oui/Non)
+ */
+const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+  const defaultOption = tag.options?.find(o => o.isDefault);
+  const priceModifier = defaultOption?.priceModifier || 0;
+
+  // Convertir TagValue vers boolean pour Switch
+  const boolValue = Boolean(value);
+
+  return (
+    <TagCard tag={tag}>
+      <Pressable
+        style={[
+          styles.toggleOption,
+          boolValue && styles.toggleOptionActive
+        ]}
+        onPress={() => onChange(!boolValue)}
+      >
+        <View style={styles.toggleContent}>
+          <RNText style={[
+            styles.toggleStatusText,
+            boolValue && styles.toggleStatusTextActive,
+            { fontWeight: boolValue ? '600' : '500' }
+          ]}>
+            {boolValue ? 'Activé' : 'Désactivé'}
+          </RNText>
+          {priceModifier !== 0 && (
+            <RNText style={[
+              styles.togglePriceText,
+              boolValue && styles.togglePriceTextActive,
+              { fontWeight: boolValue ? '700' : '600' }
+            ]}>
+              {priceModifier > 0 ? '+' : ''}{formatPrice(priceModifier)}
+            </RNText>
+          )}
+        </View>
+        <Switch
+          value={boolValue}
+          onValueChange={onChange}
+          trackColor={{ false: '#E2E8F0', true: '#BFDBFE' }}
+          thumbColor={boolValue ? '#3B82F6' : '#CBD5E1'}
+          ios_backgroundColor="#E2E8F0"
+        />
+      </Pressable>
+    </TagCard>
+  );
+};
+
+// ========================================
+// STYLES
+// ========================================
+
+const styles = StyleSheet.create({
+  panelContent: {
+    flex: 1,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    gap: 16,
+  },
+  panelTitle: {
+    fontSize: 18,
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  panelSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  panelForm: {
+    flex: 1,
+    padding: 20,
+  },
+  // Banner article sélectionné - Compact (style ItemSelectionPanel)
+  selectedItemBanner: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  selectedItemInfo: {
+    flex: 1,
+  },
+  selectedItemLabel: {
+    fontSize: 12,
+    color: '#3B82F6',
+    marginBottom: 4,
+  },
+  selectedItemName: {
+    fontSize: 16,
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  selectedItemPrice: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 12,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  formLabel: {
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#1E293B',
+    backgroundColor: '#F8FAFC',
+    minHeight: 80,
+    maxHeight: 80,
+    textAlignVertical: 'top',
+  },
+  formHint: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 6,
+  },
+  fieldContainer: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    color: '#1E293B',
+    marginBottom: 10,
+  },
+  required: {
+    color: '#EF4444',
+    fontSize: 14,
+  },
+  // ========================================
+  // TAG CARD STYLES - Compact & Pro avec fond coloré
+  // ========================================
+  tagCard: {
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  tagCardContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  tagCardHeader: {
+    marginBottom: 10,
+  },
+  tagHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  tagCardTitle: {
+    fontSize: 13,
+    color: '#1E293B',
+    flex: 1,
+  },
+  tagHeaderBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  fieldTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 3,
+  },
+  fieldTypeBadgeText: {
+    fontSize: 9,
+    letterSpacing: 0.2,
+  },
+  requiredBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  requiredBadgeText: {
+    fontSize: 9,
+    color: '#DC2626',
+    letterSpacing: 0.2,
+  },
+  tagCardBody: {
+    // Le contenu du champ
+  },
+  // Radio group - Plus compact
+  radioGroup: {
+    gap: 6,
+  },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    gap: 10,
+  },
+  radioOptionActive: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioInner: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: '#3B82F6',
+  },
+  radioContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  radioLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    flex: 1,
+  },
+  radioLabelActive: {
+    color: '#1E293B',
+  },
+  radioPriceText: {
+    fontSize: 11,
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  radioPriceTextActive: {
+    color: '#3B82F6',
+  },
+  // Checkbox pour multi-select - Plus compact
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  textInput: {
+    height: 40,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#1E293B',
+  },
+  // Toggle option - Iso avec les inputs
+  toggleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    height: 40,
+  },
+  toggleOptionActive: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+  toggleContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  toggleLabel: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  toggleLabelActive: {
+    color: '#1E293B',
+  },
+  toggleStatusText: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  toggleStatusTextActive: {
+    color: '#1E293B',
+  },
+  togglePriceText: {
+    fontSize: 11,
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  togglePriceTextActive: {
+    color: '#3B82F6',
+  },
+  panelFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    gap: 16,
+    ...Platform.select({
+      web: {
+        flexWrap: 'nowrap',
+      },
+    }),
+  },
+  // Résumé des prix dans le footer
+  footerPriceContainer: {
+    ...Platform.select({
+      web: {
+        minWidth: 100,
+        maxWidth: 140,
+      },
+      default: {
+        flex: 0.6,
+      },
+    }),
+  },
+  footerPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  footerPriceLabel: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  footerPriceModifier: {
+    fontSize: 12,
+    color: '#059669',
+  },
+  footerPriceTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  footerPriceTotalLabel: {
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  footerPriceTotalValue: {
+    fontSize: 16,
+    color: '#059669',
+  },
+  // Actions (boutons) dans le footer
+  footerActions: {
+    flexDirection: 'row',
+    gap: 12,
+    ...Platform.select({
+      web: {
+        minWidth: 280,
+        flex: 1,
+      },
+      default: {
+        flex: 1.4,
+      },
+    }),
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  saveButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+    gap: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+});

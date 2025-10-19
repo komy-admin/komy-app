@@ -7,11 +7,13 @@ import { OrderMenusList } from '~/components/order/OrderLinesForm/OrderMenusList
 import { MenuConfiguration } from '~/components/order/OrderLinesForm/MenuConfiguration';
 import { OrderLinesFormProps, MenuSelections } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
-import { ItemCustomizationModal } from '~/components/order/OrderLinesForm/ItemCustomizationModal';
+import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm/ItemCustomizationPanelContent';
 import { DraftFloatingButton } from '~/components/order/OrderLinesForm/DraftFloatingButton';
 import { DraftReviewModal } from '~/components/order/OrderLinesForm/DraftReviewModal';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { SlidePanel } from '~/components/ui/SlidePanel';
 
 /**
  * OrderLinesForm - Version refactorisée (composant présentationnel)
@@ -43,6 +45,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // ÉTAT UI UNIQUEMENT (pas de données métier)
   // ====================================================================
 
+  // Panel Portal
+  const { renderPanel, clearPanel } = usePanelPortal();
+
   // Navigation
   const {
     activeMainTab,
@@ -60,16 +65,16 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   const [tempMenuSelections, setTempMenuSelections] = useState<MenuSelections>({});
   const [editingMenuLineId, setEditingMenuLineId] = useState<string | null>(null);
 
-  // Customisation d'item
-  const [isCustomizing, setIsCustomizing] = useState(false);
+  // Customisation d'item (via SlidePanel)
+  const [customizationPanelVisible, setCustomizationPanelVisible] = useState(false);
   const [itemToCustomize, setItemToCustomize] = useState<{
     item: Item;
     lineId?: string; // Si édition
     initialData?: { tags: SelectedTag[]; note?: string };
   } | null>(null);
 
-  // Customisation d'item de menu
-  const [isCustomizingMenuItem, setIsCustomizingMenuItem] = useState(false);
+  // Customisation d'item de menu (via SlidePanel)
+  const [menuItemPanelVisible, setMenuItemPanelVisible] = useState(false);
   const [menuItemToCustomize, setMenuItemToCustomize] = useState<{
     item: Item;
     categoryId: string;
@@ -83,20 +88,20 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // ====================================================================
 
   /**
-   * Ouvrir la modale de customisation pour ajouter un item
+   * Ouvrir le panel de customisation pour ajouter un item
    */
   const handleOpenCustomization = useCallback(
     (item: Item) => {
       // Récupérer l'item complet depuis la liste
       const fullItem = items.find((i) => i.id === item.id) || item;
       setItemToCustomize({ item: fullItem });
-      setIsCustomizing(true);
+      setCustomizationPanelVisible(true);
     },
     [items]
   );
 
   /**
-   * Ouvrir la modale de customisation pour éditer un item existant
+   * Ouvrir le panel de customisation pour éditer un item existant
    */
   const handleEditItem = useCallback(
     (line: OrderLine) => {
@@ -113,7 +118,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           note: line.note,
         },
       });
-      setIsCustomizing(true);
+      setCustomizationPanelVisible(true);
     },
     [items]
   );
@@ -133,14 +138,14 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         onAddItem(itemToCustomize.item, customization);
       }
 
-      setIsCustomizing(false);
+      setCustomizationPanelVisible(false);
       setItemToCustomize(null);
     },
     [itemToCustomize, onAddItem, onUpdateItem]
   );
 
   const handleCancelCustomization = useCallback(() => {
-    setIsCustomizing(false);
+    setCustomizationPanelVisible(false);
     setItemToCustomize(null);
   }, []);
 
@@ -198,16 +203,21 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
       // Reconstruire tempMenuSelections depuis menuLine.items
       const selections: MenuSelections = {};
-      menuLine.items.forEach((menuItem: any) => {
-        const category = fullMenu.categories?.find((cat: any) => {
+      menuLine.items.forEach((menuItem) => {
+        // Type guard : menuItem devrait avoir item et categoryName
+        if (!menuItem.item || !menuItem.categoryName) return;
+
+        const category = fullMenu.categories?.find((cat: { itemTypeId?: string }) => {
           const categoryName = itemTypes.find((t) => t.id === cat.itemTypeId)?.name;
           return categoryName === menuItem.categoryName;
         });
 
-        if (category) {
+        if (category && 'id' in category) {
           selections[category.id] = {
             itemId: menuItem.item.id,
+            // @ts-ignore - menuItem peut avoir tags et note selon le contexte
             tags: menuItem.tags || [],
+            // @ts-ignore
             note: menuItem.note,
           };
         }
@@ -231,7 +241,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     (item: Item, categoryId: string) => {
       const fullItem = items.find((i) => i.id === item.id) || item;
       setMenuItemToCustomize({ item: fullItem, categoryId });
-      setIsCustomizingMenuItem(true);
+      setMenuItemPanelVisible(true);
     },
     [items]
   );
@@ -255,14 +265,14 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         },
       }));
 
-      setIsCustomizingMenuItem(false);
+      setMenuItemPanelVisible(false);
       setMenuItemToCustomize(null);
     },
     [menuItemToCustomize]
   );
 
   const handleCancelMenuItemCustomization = useCallback(() => {
-    setIsCustomizingMenuItem(false);
+    setMenuItemPanelVisible(false);
     setMenuItemToCustomize(null);
   }, []);
 
@@ -359,6 +369,56 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, []);
 
   // ====================================================================
+  // SYNCHRONISATION DES PANELS AVEC LE PORTAL
+  // ====================================================================
+
+  /**
+   * Synchronisation des panels de customisation avec le portal
+   * Gère à la fois le panel d'item normal et le panel d'item de menu
+   */
+  useEffect(() => {
+    // Priorité : panel d'item normal > panel d'item de menu
+    if (customizationPanelVisible && itemToCustomize) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCancelCustomization} width={550}>
+          <ItemCustomizationPanelContent
+            item={itemToCustomize.item}
+            availableTags={itemToCustomize.item.tags || []}
+            initialData={itemToCustomize.initialData}
+            onConfirm={handleConfirmCustomization}
+            onCancel={handleCancelCustomization}
+          />
+        </SlidePanel>
+      );
+    } else if (menuItemPanelVisible && menuItemToCustomize) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCancelMenuItemCustomization} width={550}>
+          <ItemCustomizationPanelContent
+            item={menuItemToCustomize.item}
+            availableTags={menuItemToCustomize.item.tags || []}
+            initialData={undefined}
+            onConfirm={handleConfirmMenuItemCustomization}
+            onCancel={handleCancelMenuItemCustomization}
+          />
+        </SlidePanel>
+      );
+    } else {
+      clearPanel();
+    }
+  }, [
+    customizationPanelVisible,
+    itemToCustomize,
+    menuItemPanelVisible,
+    menuItemToCustomize,
+    renderPanel,
+    clearPanel,
+    handleCancelCustomization,
+    handleConfirmCustomization,
+    handleCancelMenuItemCustomization,
+    handleConfirmMenuItemCustomization,
+  ]);
+
+  // ====================================================================
   // HELPERS
   // ====================================================================
 
@@ -431,29 +491,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         </View>
       )}
 
-      {/* Modale de customisation d'item */}
-      {itemToCustomize && (
-        <ItemCustomizationModal
-          visible={isCustomizing}
-          item={itemToCustomize.item}
-          availableTags={itemToCustomize.item.tags || []}
-          initialData={itemToCustomize.initialData}
-          onConfirm={handleConfirmCustomization}
-          onCancel={handleCancelCustomization}
-        />
-      )}
-
-      {/* Modale de customisation d'item de menu */}
-      {menuItemToCustomize && (
-        <ItemCustomizationModal
-          visible={isCustomizingMenuItem}
-          item={menuItemToCustomize.item}
-          availableTags={menuItemToCustomize.item.tags || []}
-          initialData={undefined}
-          onConfirm={handleConfirmMenuItemCustomization}
-          onCancel={handleCancelMenuItemCustomization}
-        />
-      )}
+      {/* Panels de customisation rendus via Portal - voir useEffect ci-dessus */}
 
       {/* Modale de revue de la commande */}
       <DraftReviewModal
