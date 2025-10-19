@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, Platform, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSegments } from 'expo-router';
 
 // Largeur minimale en dessous de laquelle le panel se ferme automatiquement
 const PANEL_MIN_WIDTH = 850;
@@ -91,6 +92,24 @@ export function PanelPortalProvider({ children }: { children: ReactNode }) {
       subscription?.remove();
     };
   }, [clearPanel]); // Stable car clearPanel est useCallback sans deps
+
+  // SÉCURITÉ : Fermer automatiquement le panel lors de la navigation
+  // Cela évite qu'un panel reste bloqué ouvert si l'utilisateur navigue vers une autre page
+  const segments = useSegments();
+  const previousSegmentsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    const currentPath = segments.join('/');
+    const previousPath = previousSegmentsRef.current.join('/');
+
+    // Si la route a changé et qu'un panel est ouvert, le fermer
+    if (currentPath !== previousPath && panelRef.current) {
+      console.log('🔒 [PanelPortal] Navigation détectée - fermeture automatique du panel');
+      clearPanel();
+    }
+
+    previousSegmentsRef.current = segments;
+  }, [segments, clearPanel]);
 
   return (
     <PanelPortalContext.Provider value={{ renderPanel, clearPanel, setTopBarHeight: handleSetTopBarHeight }}>
