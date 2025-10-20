@@ -9,7 +9,7 @@ import { OrderLinesFormProps, MenuSelections } from '~/components/order/OrderLin
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm/ItemCustomizationPanelContent';
 import { DraftFloatingButton } from '~/components/order/OrderLinesForm/DraftFloatingButton';
-import { DraftReviewModal } from '~/components/order/OrderLinesForm/DraftReviewModal';
+import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
@@ -80,8 +80,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     categoryId: string;
   } | null>(null);
 
-  // Revue de la commande
-  const [isDraftReviewOpen, setIsDraftReviewOpen] = useState(false);
+  // Revue de la commande (via SlidePanel)
+  const [draftReviewPanelVisible, setDraftReviewPanelVisible] = useState(false);
 
   // ====================================================================
   // HANDLERS - ITEMS
@@ -228,7 +228,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       setMenuBeingConfigured(fullMenu);
       setTempMenuSelections(selections);
       setIsConfiguringMenu(true);
-      setIsDraftReviewOpen(false);
+      setDraftReviewPanelVisible(false);
       onConfigurationModeChange?.(true);
     },
     [activeMenus, itemTypes, onConfigurationModeChange]
@@ -365,19 +365,56 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   const handleClearAllDraft = useCallback(() => {
     // Note : pour vider la commande, le parent doit appeler clearAllLines()
     // On ne gère pas l'état ici
-    setIsDraftReviewOpen(false);
+    setDraftReviewPanelVisible(false);
   }, []);
+
+  const handleCloseDraftReview = useCallback(() => {
+    setDraftReviewPanelVisible(false);
+  }, []);
+
+  const handleOpenDraftReview = useCallback(() => {
+    setDraftReviewPanelVisible(true);
+  }, []);
+
+  // ====================================================================
+  // HANDLERS POUR DRAFTREVIEWPANEL (mémoïsés pour éviter re-renders)
+  // ====================================================================
+
+  const handleDraftEdit = useCallback(
+    (index: number) => {
+      const line = lines[index];
+      if (line) {
+        handleEditItem(line);
+      }
+    },
+    [lines, handleEditItem]
+  );
+
+  const handleDraftEditMenu = useCallback(
+    (menuLine: OrderLine) => {
+      handleEditMenu(menuLine);
+    },
+    [handleEditMenu]
+  );
+
+  const handleDraftDelete = useCallback(
+    (index: number) => {
+      const line = lines[index];
+      if (line) {
+        onDeleteLine(line.id);
+      }
+    },
+    [lines, onDeleteLine]
+  );
 
   // ====================================================================
   // SYNCHRONISATION DES PANELS AVEC LE PORTAL
   // ====================================================================
 
   /**
-   * Synchronisation des panels de customisation avec le portal
-   * Gère à la fois le panel d'item normal et le panel d'item de menu
+   * Panel customisation d'item normal (Priorité 1)
    */
   useEffect(() => {
-    // Priorité : panel d'item normal > panel d'item de menu
     if (customizationPanelVisible && itemToCustomize) {
       renderPanel(
         <SlidePanel visible={true} onClose={handleCancelCustomization} width={550}>
@@ -390,7 +427,25 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           />
         </SlidePanel>
       );
-    } else if (menuItemPanelVisible && menuItemToCustomize) {
+    } else if (!menuItemPanelVisible && !draftReviewPanelVisible) {
+      clearPanel();
+    }
+  }, [
+    customizationPanelVisible,
+    itemToCustomize,
+    menuItemPanelVisible,
+    draftReviewPanelVisible,
+    renderPanel,
+    clearPanel,
+    handleCancelCustomization,
+    handleConfirmCustomization,
+  ]);
+
+  /**
+   * Panel customisation d'item de menu (Priorité 2)
+   */
+  useEffect(() => {
+    if (!customizationPanelVisible && menuItemPanelVisible && menuItemToCustomize) {
       renderPanel(
         <SlidePanel visible={true} onClose={handleCancelMenuItemCustomization} width={550}>
           <ItemCustomizationPanelContent
@@ -402,20 +457,52 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           />
         </SlidePanel>
       );
-    } else {
+    } else if (!customizationPanelVisible && !draftReviewPanelVisible) {
       clearPanel();
     }
   }, [
     customizationPanelVisible,
-    itemToCustomize,
     menuItemPanelVisible,
     menuItemToCustomize,
+    draftReviewPanelVisible,
     renderPanel,
     clearPanel,
-    handleCancelCustomization,
-    handleConfirmCustomization,
     handleCancelMenuItemCustomization,
     handleConfirmMenuItemCustomization,
+  ]);
+
+  /**
+   * Panel de revue de la commande (Priorité 3)
+   */
+  useEffect(() => {
+    if (!customizationPanelVisible && !menuItemPanelVisible && draftReviewPanelVisible) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseDraftReview} width={550}>
+          <DraftReviewPanelContent
+            draftLines={lines}
+            onEdit={handleDraftEdit}
+            onEditMenu={handleDraftEditMenu}
+            onDelete={handleDraftDelete}
+            onClose={handleCloseDraftReview}
+            onClearAll={handleClearAllDraft}
+          />
+        </SlidePanel>
+      );
+    } else if (!customizationPanelVisible && !menuItemPanelVisible) {
+      clearPanel();
+    }
+  }, [
+    customizationPanelVisible,
+    menuItemPanelVisible,
+    draftReviewPanelVisible,
+    lines,
+    renderPanel,
+    clearPanel,
+    handleCloseDraftReview,
+    handleClearAllDraft,
+    handleDraftEdit,
+    handleDraftEditMenu,
+    handleDraftDelete,
   ]);
 
   // ====================================================================
@@ -487,36 +574,11 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           )}
 
           {/* Bouton flottant pour accéder à la commande */}
-          <DraftFloatingButton count={lines.length} onPress={() => setIsDraftReviewOpen(true)} />
+          <DraftFloatingButton count={lines.length} onPress={handleOpenDraftReview} />
         </View>
       )}
 
-      {/* Panels de customisation rendus via Portal - voir useEffect ci-dessus */}
-
-      {/* Modale de revue de la commande */}
-      <DraftReviewModal
-        visible={isDraftReviewOpen}
-        draftLines={lines}
-        onEdit={(_item, index) => {
-          // Trouver la ligne correspondante par index
-          const line = lines[index];
-          if (line) {
-            handleEditItem(line);
-          }
-        }}
-        onEditMenu={(menuLine, _index) => {
-          handleEditMenu(menuLine);
-        }}
-        onDelete={(index) => {
-          // Trouver la ligne par index et la supprimer par ID
-          const line = lines[index];
-          if (line) {
-            onDeleteLine(line.id);
-          }
-        }}
-        onClose={() => setIsDraftReviewOpen(false)}
-        onClearAll={handleClearAllDraft}
-      />
+      {/* Panels rendus via Portal - voir useEffect ci-dessus */}
     </View>
   );
 };

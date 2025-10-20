@@ -137,10 +137,6 @@ const MenuCategory = memo<MenuCategoryProps>(({
             const supplement = menuCategoryItem.supplement || 0;
             const isSelected = selectedItem?.itemId === item.id;
             const hasSupplementPrice = supplement > 0;
-            const hasCustomization = !!(selectedItem && (
-              (selectedItem.tags && selectedItem.tags.length > 0) ||
-              (selectedItem.note && selectedItem.note.trim().length > 0)
-            ));
 
             return (
               <MenuItemCard
@@ -149,7 +145,6 @@ const MenuCategory = memo<MenuCategoryProps>(({
                 isSelected={isSelected}
                 supplement={supplement}
                 hasSupplementPrice={hasSupplementPrice}
-                hasCustomization={hasCustomization}
                 onToggle={() => handleToggleItem(item)}
               />
             );
@@ -169,7 +164,6 @@ interface MenuItemCardProps {
   isSelected: boolean;
   supplement: number;
   hasSupplementPrice: boolean;
-  hasCustomization?: boolean;
   onToggle: () => void;
 }
 
@@ -178,7 +172,6 @@ const MenuItemCard = memo<MenuItemCardProps>(({
   isSelected,
   supplement,
   hasSupplementPrice,
-  hasCustomization = false,
   onToggle
 }) => {
   return (
@@ -201,12 +194,6 @@ const MenuItemCard = memo<MenuItemCardProps>(({
                 <Text style={styles.menuItemSupplementText}>
                   +{formatPrice(supplement)}
                 </Text>
-              </View>
-            )}
-
-            {hasCustomization && (
-              <View style={styles.menuItemCustomizationBadge}>
-                <Text style={styles.menuItemCustomizationBadgeText}>✨</Text>
               </View>
             )}
           </View>
@@ -537,19 +524,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#92400E',
-  },
-
-  menuItemCustomizationBadge: {
-    backgroundColor: '#F5F3FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-  },
-
-  menuItemCustomizationBadgeText: {
-    fontSize: 12,
   },
 
   menuItemActions: {
