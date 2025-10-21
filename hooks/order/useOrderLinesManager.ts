@@ -266,6 +266,13 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     setOrderLines([]);
   }, []);
 
+  /**
+   * Réinitialiser l'état aux valeurs initiales (annuler les modifications)
+   */
+  const reset = useCallback(() => {
+    setOrderLines(initialOrderLines);
+  }, [initialOrderLines]);
+
   // ====================================================================
   // DÉTECTION DE CHANGEMENTS
   // ====================================================================
@@ -428,6 +435,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     updateMenu,
     deleteLine,
     clearAllLines,
+    reset,
     save,
 
     // Pour compatibilité avec OrderLinesForm actuel

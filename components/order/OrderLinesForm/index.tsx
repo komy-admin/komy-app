@@ -10,6 +10,7 @@ import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types'
 import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm/ItemCustomizationPanelContent';
 import { DraftFloatingButton } from '~/components/order/OrderLinesForm/DraftFloatingButton';
 import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
@@ -38,6 +39,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   onAddMenu,
   onUpdateMenu,
   onDeleteLine,
+  onClearAll,
   onConfigurationModeChange,
   onConfigurationActionsChange,
 }) => {
@@ -80,8 +82,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     categoryId: string;
   } | null>(null);
 
-  // Revue de la commande (via SlidePanel)
   const [draftReviewPanelVisible, setDraftReviewPanelVisible] = useState(false);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   // ====================================================================
   // HANDLERS - ITEMS
@@ -363,9 +365,21 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // ====================================================================
 
   const handleClearAllDraft = useCallback(() => {
-    // Note : pour vider la commande, le parent doit appeler clearAllLines()
-    // On ne gère pas l'état ici
-    setDraftReviewPanelVisible(false);
+    setDraftReviewPanelVisible(false); // Fermer le panel de revue
+    setShowClearAllConfirm(true); // Ouvrir la confirmation
+  }, []);
+
+  const handleConfirmClearAll = useCallback(() => {
+    if (onClearAll) {
+      onClearAll();
+    }
+    setShowClearAllConfirm(false);
+    // Ne pas rouvrir le DraftReviewPanel après suppression
+  }, [onClearAll]);
+
+  const handleCancelClearAll = useCallback(() => {
+    setShowClearAllConfirm(false);
+    setDraftReviewPanelVisible(true); // Rouvrir le panel de revue si annulé
   }, []);
 
   const handleCloseDraftReview = useCallback(() => {
@@ -568,7 +582,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
                 lines.filter((l) => l.type === OrderLineType.MENU && l.menu?.id === menuId).length
               }
               getDraftMenuQuantity={() => 0} // Non utilisé avec nouvelle archi
-              updateMenuQuantity={() => {}} // Non utilisé
+              updateMenuQuantity={() => { }} // Non utilisé
               handleMenuAdd={startMenuConfiguration}
             />
           )}
@@ -578,7 +592,17 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         </View>
       )}
 
-      {/* Panels rendus via Portal - voir useEffect ci-dessus */}
+      {/* Modal de confirmation pour tout supprimer */}
+      <DeleteConfirmationModal
+        isVisible={showClearAllConfirm}
+        onClose={handleCancelClearAll}
+        onConfirm={handleConfirmClearAll}
+        entityName="toutes les lignes"
+        entityType=""
+        isLoading={false}
+        usePortal={true}
+        portalName="clear-all-confirmation-modal"
+      />
     </View>
   );
 };
