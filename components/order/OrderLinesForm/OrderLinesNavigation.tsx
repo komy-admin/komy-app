@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, Platform, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { SelectButton } from '~/components/ui';
 import { ItemType } from '~/types/item-type.types';
 
@@ -20,6 +20,7 @@ export interface OrderLinesNavigationProps {
 /**
  * Composant de navigation pour OrderLinesForm
  * Gère les tabs principales (ITEMS/MENUS) et la sous-navigation par type d'item
+ * Layout horizontal optimisé pour tablettes
  *
  * @param props - Props du composant
  * @returns Composant de navigation mémorisé
@@ -42,30 +43,37 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
 
   return (
     <View style={styles.navigationContainer}>
-      {/* Navigation principale ITEMS/MENUS */}
-      <View style={styles.mainNavigation}>
-        <View style={styles.tabsContainer}>
+      <View style={styles.horizontalLayout}>
+        {/* Navigation principale ITEMS/MENUS */}
+        <View style={styles.mainTabsHorizontal}>
           <SelectButton
-            label={`Menus (${getTotalMenusCount()})`}
+            label="Menus"
+            count={getTotalMenusCount()}
             isActive={activeMainTab === 'MENUS'}
             onPress={() => onMainTabChange('MENUS')}
-            variant="main"
-            flex
+            variant="pill"
+            activeColor="#6366F1"
+            activeBgColor="rgba(99, 102, 241, 0.12)"
           />
           <SelectButton
-            label={`Articles (${getTotalItemsCount()})`}
+            label="Articles"
+            count={getTotalItemsCount()}
             isActive={activeMainTab === 'ITEMS'}
             onPress={() => onMainTabChange('ITEMS')}
-            variant="main"
-            flex
+            variant="pill"
+            activeColor="#6B7280"
+            activeBgColor="rgba(107, 114, 128, 0.12)"
           />
         </View>
-      </View>
 
-      {/* Sous-navigation par type d'item (visible seulement pour les articles) */}
-      {activeMainTab === 'ITEMS' && (
-        <View style={styles.subNavigation}>
-          <View style={styles.categoryButtons}>
+        {/* Séparateur vertical */}
+        {activeMainTab === 'ITEMS' && (
+          <View style={styles.verticalDivider} />
+        )}
+
+        {/* Types d'items (visible seulement pour les articles) */}
+        {activeMainTab === 'ITEMS' && (
+          <View style={styles.categoryButtonsHorizontal}>
             {itemTypes.map((itemType) => (
               <SelectButton
                 key={itemType.id}
@@ -76,8 +84,8 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
               />
             ))}
           </View>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 });
@@ -87,38 +95,31 @@ OrderLinesNavigation.displayName = 'OrderLinesNavigation';
 const styles = {
   navigationContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    ...(Platform.OS !== 'web' && {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      elevation: 2,
-    })
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  mainNavigation: {
+  horizontalLayout: {
     flexDirection: 'row' as const,
-    gap: 12,
+    alignItems: 'center' as const,
+    gap: 16,
   },
-  tabsContainer: {
+  mainTabsHorizontal: {
     flexDirection: 'row' as const,
-    flex: 1,
-    gap: 12,
+    gap: 8,
   },
-  subNavigation: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+  verticalDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#E5E7EB',
   },
-  categoryButtons: {
+  categoryButtonsHorizontal: {
     flexDirection: 'row' as const,
     flexWrap: 'wrap' as const,
     gap: 8,
+    flex: 1,
   },
 };

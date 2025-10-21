@@ -30,25 +30,39 @@ interface OrderMenuRowProps {
 
 const OrderMenuRow = memo<OrderMenuRowProps>(({
   menu,
-  totalQuantity,
-  draftQuantity,
   onMenuAdd,
-  onUpdateQuantity,
-  dynamicButtonSize
 }) => {
   const handleAdd = useCallback(() => {
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
 
+  // Couleurs neutres pour les menus (pas de couleur spécifique)
+  const menuColor = '#6366F1'; // Indigo pour différencier des items
+  const menuBgColor = 'rgba(99, 102, 241, 0.08)'; // Indigo avec 8% d'opacité
+
   return (
     <Pressable
-      style={styles.menuCard}
+      style={[
+        styles.menuCard,
+        {
+          flex: 1,
+          minWidth: 190,
+          maxWidth: 250,
+          borderColor: menuColor
+        }
+      ]}
       onPress={handleAdd}
     >
       {/* Header avec nom et description */}
-      <View style={styles.menuHeader}>
+      <View style={[
+        styles.menuHeader,
+        { backgroundColor: menuBgColor }
+      ]}>
         <Text
-          style={styles.itemName}
+          style={[
+            styles.itemName,
+            { color: menuColor }
+          ]}
           numberOfLines={2}
         >
           {menu.name}
@@ -72,7 +86,10 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
 
       {/* Bouton Ajouter */}
       <View style={styles.addButtonContainer}>
-        <View style={styles.addButton}>
+        <View style={[
+          styles.addButton,
+          { backgroundColor: menuColor }
+        ]}>
           <Plus size={22} color="#FFFFFF" strokeWidth={3} />
         </View>
       </View>
@@ -190,7 +207,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: COLORS.border,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -198,23 +214,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     minHeight: 180,
-    flexBasis: '48%',
-    maxWidth: '48%',
   },
 
   // Header styles
   menuHeader: {
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 14,
-    minHeight: 80,
+    height: 90, // Hauteur fixe pour aligner toutes les cartes
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
   },
   itemName: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.text,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -232,12 +244,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 8,
+    height: 50, // Hauteur fixe pour gérer les prix à 2 ou 3 chiffres
+    justifyContent: 'center',
   },
   itemPrice: {
     fontSize: 14,
-    color: COLORS.price,
+    color: '#1F2937',
     fontWeight: '800',
     textAlign: 'center',
+    lineHeight: 18,
   },
 
   // Bouton Ajouter
@@ -250,12 +265,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 44,
     borderRadius: 12,
-    backgroundColor: COLORS.addButton,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.addButton,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 4,
   },

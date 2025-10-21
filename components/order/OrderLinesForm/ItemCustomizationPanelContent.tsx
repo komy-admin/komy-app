@@ -63,6 +63,19 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
   const [tagValues, setTagValues] = useState<TagValuesRecord>({});
   const [isValid, setIsValid] = useState(false);
 
+  // Convertir la couleur hex en rgba avec opacité
+  const getColorWithOpacity = useCallback((hexColor: string, opacity: number): string => {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  }, []);
+
+  // Couleurs de l'article
+  const itemColor = item.color || '#3B82F6';
+  const itemBgColor = getColorWithOpacity(itemColor, 0.12);
+
   // Initialiser les valeurs des tags depuis initialData
   useEffect(() => {
     if (initialData?.tags) {
@@ -192,9 +205,23 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
         keyboardShouldPersistTaps="handled"
       >
         {/* Banner Article sélectionné - Compact */}
-        <View style={styles.selectedItemBanner}>
+        <View style={[
+          styles.selectedItemBanner,
+          {
+            backgroundColor: itemBgColor,
+            borderColor: itemColor
+          }
+        ]}>
           <View style={styles.selectedItemInfo}>
-            <RNText style={[styles.selectedItemLabel, { textTransform: 'uppercase', fontWeight: '600', letterSpacing: 0.5 }]}>
+            <RNText style={[
+              styles.selectedItemLabel,
+              {
+                textTransform: 'uppercase',
+                fontWeight: '600',
+                letterSpacing: 0.5,
+                color: itemColor
+              }
+            ]}>
               Article sélectionné
             </RNText>
             <RNText style={[styles.selectedItemName, { fontWeight: '700' }]}>{item.name}</RNText>
@@ -611,18 +638,15 @@ const styles = StyleSheet.create({
   },
   // Banner article sélectionné - Compact (style ItemSelectionPanel)
   selectedItemBanner: {
-    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
   },
   selectedItemInfo: {
     flex: 1,
   },
   selectedItemLabel: {
     fontSize: 12,
-    color: '#3B82F6',
     marginBottom: 4,
   },
   selectedItemName: {

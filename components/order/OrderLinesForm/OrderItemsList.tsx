@@ -21,50 +21,58 @@ interface OrderItemRowProps {
   item: Item;
   onOpenCustomization: (item: Item) => void;
   isTablet: boolean;
-  cardWidth: number;
 }
 
 const OrderItemCard = memo<OrderItemRowProps>(({
   item,
   onOpenCustomization,
-  isTablet,
-  cardWidth
+  isTablet
 }) => {
   const handleAdd = useCallback(() => {
     onOpenCustomization(item);
   }, [item, onOpenCustomization]);
 
+  // Convertir la couleur hex en rgba avec opacité 12%
+  const getColorWithOpacity = (hexColor: string, opacity: number): string => {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  };
+
+  const itemColor = item.color || '#6B7280';
+  const headerBgColor = getColorWithOpacity(itemColor, 0.12);
+  const buttonIconColor = getContrastColor(itemColor);
+
   return (
     <Pressable
-      style={[styles.itemCard, { width: cardWidth }]}
+      style={[
+        styles.itemCard,
+        {
+          flex: 1,
+          minWidth: 190,
+          maxWidth: 250,
+          borderColor: itemColor
+        }
+      ]}
       onPress={handleAdd}
     >
       {/* Header coloré avec nom */}
-      {item.color ? (
-        <View style={[
-          styles.coloredHeader,
-          { backgroundColor: item.color }
-        ]}>
-          <Text
-            style={[
-              styles.itemName,
-              { color: getContrastColor(item.color) }
-            ]}
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.plainHeader}>
-          <Text
-            style={styles.itemNamePlain}
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
-        </View>
-      )}
+      <View style={[
+        styles.coloredHeader,
+        { backgroundColor: headerBgColor }
+      ]}>
+        <Text
+          style={[
+            styles.itemName,
+            { color: itemColor }
+          ]}
+          numberOfLines={2}
+        >
+          {item.name}
+        </Text>
+      </View>
 
       {/* Prix */}
       <View style={styles.priceContainer}>
@@ -75,8 +83,11 @@ const OrderItemCard = memo<OrderItemRowProps>(({
 
       {/* Bouton Ajouter */}
       <View style={styles.addButtonContainer}>
-        <View style={styles.addButton}>
-          <Plus size={22} color="#FFFFFF" strokeWidth={3} />
+        <View style={[
+          styles.addButton,
+          { backgroundColor: itemColor }
+        ]}>
+          <Plus size={22} color={buttonIconColor} strokeWidth={3} />
         </View>
       </View>
     </Pressable>
@@ -97,17 +108,6 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
   // Détection taille écran pour adapter la disposition
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  const isMobile = width < 480;
-  const isSmallTablet = width >= 480 && width < 768;
-
-  // Calculer le nombre de colonnes en fonction de la largeur
-  const getColumnsPerRow = () => {
-    if (isMobile) return 2; // Mobile: 2 colonnes
-    if (isSmallTablet) return 3; // Petite tablette: 3 colonnes
-    return 4; // Grande tablette: 4 colonnes
-  };
-
-  const columnsPerRow = getColumnsPerRow();
 
   // Articles filtrés par type actif - mémorisé pour performance
   const filteredItems = useMemo(() => {
@@ -115,16 +115,6 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
       item.itemTypeId === activeItemType && item.isActive
     );
   }, [items, activeItemType]);
-
-  // Calculer la largeur des cartes
-  const cardWidth = useMemo(() => {
-    const gap = 12;
-    const padding = 16;
-    const availableWidth = width - (padding * 2) - (gap * (columnsPerRow - 1));
-    const calculatedWidth = availableWidth / columnsPerRow;
-
-    return Math.max(160, Math.min(220, calculatedWidth));
-  }, [width, columnsPerRow]);
 
   // Si aucun article disponible
   if (filteredItems.length === 0) {
@@ -143,7 +133,7 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
         style={styles.scrollView}
         contentContainerStyle={[
           styles.gridContainer,
-          { paddingHorizontal: isMobile ? 12 : 16 }
+          { paddingHorizontal: 16 }
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}
@@ -151,13 +141,12 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
         bounces={false}
       >
         <View style={styles.itemsGrid}>
-          {filteredItems.map((item, index) => (
+          {filteredItems.map((item) => (
             <OrderItemCard
               key={item.id}
               item={item}
               onOpenCustomization={onOpenCustomization}
               isTablet={isTablet}
-              cardWidth={cardWidth}
             />
           ))}
         </View>
@@ -220,35 +209,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     minHeight: 160,
-    position: 'relative',
   },
 
   // Header styles
   coloredHeader: {
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 14,
-    minHeight: 80,
+    height: 64, // Hauteur fixe pour aligner toutes les cartes (2 lignes de texte)
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  plainHeader: {
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    minHeight: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
   },
   itemName: {
     fontSize: 15,
     fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  itemNamePlain: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.text,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -261,7 +234,7 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 18,
-    color: COLORS.price,
+    color: '#1F2937',
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -276,12 +249,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 44,
     borderRadius: 12,
-    backgroundColor: COLORS.addButton,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.addButton,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 4,
   },

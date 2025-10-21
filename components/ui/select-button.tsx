@@ -1,15 +1,17 @@
 import React, { memo } from 'react';
-import { Pressable, Platform, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { Pressable, Platform, StyleSheet, ViewStyle, TextStyle, View } from 'react-native';
 import { Text } from './text';
 
 export interface SelectButtonProps {
   label: string;
   isActive: boolean;
   onPress: () => void;
-  variant?: 'main' | 'sub' | 'compact';
+  variant?: 'main' | 'sub' | 'compact' | 'tab' | 'pill';
   style?: ViewStyle;
   textStyle?: TextStyle;
   activeColor?: string;
+  activeBgColor?: string;
+  count?: number;
   flex?: boolean;
 }
 
@@ -25,16 +27,25 @@ export const SelectButton = memo<SelectButtonProps>(({
   style,
   textStyle,
   activeColor = '#2A2E33',
+  activeBgColor,
+  count,
   flex = false
 }) => {
   const buttonStyles = [
     variant === 'main' ? styles.mainButton :
       variant === 'compact' ? styles.compactButton :
-        styles.subButton,
+        variant === 'tab' ? styles.tabButton :
+          variant === 'pill' ? styles.pillButton :
+            styles.subButton,
     flex && styles.flexButton,
-    isActive && {
+    isActive && variant !== 'tab' && variant !== 'pill' && {
       backgroundColor: activeColor,
       borderColor: activeColor
+    },
+    isActive && variant === 'tab' && styles.tabButtonActive,
+    isActive && variant === 'pill' && activeBgColor && {
+      backgroundColor: activeBgColor,
+      borderColor: activeColor,
     },
     style
   ];
@@ -42,18 +53,22 @@ export const SelectButton = memo<SelectButtonProps>(({
   const textStyles: TextStyle[] = [
     variant === 'main' ? styles.mainButtonText :
       variant === 'compact' ? styles.compactButtonText :
-        styles.subButtonText,
-    isActive ? {
+        variant === 'tab' ? styles.tabButtonText :
+          variant === 'pill' ? styles.pillButtonText :
+            styles.subButtonText,
+    isActive && variant !== 'tab' && variant !== 'pill' ? {
       color: '#FFFFFF',
       fontWeight: variant === 'main' ? '700' as TextStyle['fontWeight'] : '600' as TextStyle['fontWeight']
     } : undefined,
+    isActive && variant === 'tab' ? styles.tabButtonTextActive : undefined,
+    isActive && variant === 'pill' ? { color: activeColor, fontWeight: '600' as TextStyle['fontWeight'] } : undefined,
     // Force les styles critiques sur Web
     Platform.OS === 'web' && {
-      fontSize: variant === 'main' ? 14 : variant === 'compact' ? 12 : 13,
+      fontSize: variant === 'main' ? 14 : variant === 'compact' ? 12 : variant === 'tab' ? 14 : variant === 'pill' ? 14 : 13,
       fontFamily: 'system-ui, -apple-system, sans-serif',
       fontWeight: isActive
-        ? (variant === 'main' ? '700' : '600')
-        : (variant === 'compact' ? '500' : '500')
+        ? (variant === 'main' ? '700' : variant === 'tab' ? '600' : variant === 'pill' ? '600' : '600')
+        : (variant === 'compact' ? '500' : variant === 'tab' ? '500' : variant === 'pill' ? '500' : '500')
     },
     textStyle
   ].filter(Boolean) as TextStyle[];
@@ -63,9 +78,28 @@ export const SelectButton = memo<SelectButtonProps>(({
       style={buttonStyles}
       onPress={onPress}
     >
-      <Text style={textStyles}>
-        {label}
-      </Text>
+      {variant === 'pill' && count !== undefined ? (
+        <View style={styles.pillContent}>
+          <Text style={textStyles}>
+            {label}
+          </Text>
+          <View style={[
+            styles.pillBadge,
+            isActive && { backgroundColor: activeColor }
+          ]}>
+            <Text style={[
+              styles.pillBadgeText,
+              isActive && { color: '#FFFFFF' }
+            ]}>
+              {count}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <Text style={textStyles}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 });
@@ -158,5 +192,94 @@ const styles = StyleSheet.create({
 
   flexButton: {
     flex: 1
+  },
+
+  // Tab button styles (modern underline style, no borders)
+  tabButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease'
+    } as any)
+  },
+
+  tabButtonActive: {
+    borderBottomColor: '#2A2E33',
+  },
+
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    })
+  },
+
+  tabButtonTextActive: {
+    color: '#2A2E33',
+    fontWeight: '600' as TextStyle['fontWeight'],
+  },
+
+  // Pill button styles (modern pills with badges)
+  pillButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease'
+    } as any)
+  },
+
+  pillButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    })
+  },
+
+  pillContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  pillBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+
+  pillBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    })
   }
 });
