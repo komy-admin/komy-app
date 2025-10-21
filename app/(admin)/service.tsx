@@ -230,6 +230,9 @@ export default function ServicePage() {
       const wasSaving = !!isSavingOrderRef.current;
       const wasOrderCreatedFromStart = orderCreatedFromStart;
 
+      // Réinitialiser les lignes avant de fermer
+      orderLinesManager.reset();
+
       // Fermer le formulaire
       setShowOrderModal(false);
       setOrderCreatedFromStart(false);
@@ -267,7 +270,8 @@ export default function ServicePage() {
       modals.cameFromOrderDetailModal,
       modalActions,
       deleteOrder,
-      showToast
+      showToast,
+      orderLinesManager
     ]);
   };
 
@@ -394,6 +398,7 @@ export default function ServicePage() {
               onAddMenu={orderLinesManager.addMenu}
               onUpdateMenu={orderLinesManager.updateMenu}
               onDeleteLine={orderLinesManager.deleteLine}
+              onClearAll={orderLinesManager.clearAllLines}
               onConfigurationModeChange={handleConfigurationModeChange}
               onConfigurationActionsChange={handleConfigurationActionsChange}
             />

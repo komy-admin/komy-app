@@ -69,6 +69,7 @@ export default function OrderFormPage() {
           onAddMenu={manager.addMenu}
           onUpdateMenu={manager.updateMenu}
           onDeleteLine={manager.deleteLine}
+          onClearAll={manager.clearAllLines}
           onConfigurationModeChange={setIsConfiguringMenu}
           onConfigurationActionsChange={setMenuConfigActions}
         />
@@ -87,7 +88,13 @@ export default function OrderFormPage() {
             gap: 12,
           }}
         >
-          <OrderLinesButton variant="secondary" onPress={() => router.back()}>
+          <OrderLinesButton
+            variant="secondary"
+            onPress={() => {
+              manager.reset();
+              router.back();
+            }}
+          >
             Annuler
           </OrderLinesButton>
           <OrderLinesButton

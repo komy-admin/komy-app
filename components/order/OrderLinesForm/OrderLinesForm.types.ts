@@ -41,6 +41,7 @@ export interface OrderLinesFormProps {
   onAddMenu: (menu: Menu, selections: MenuSelections, itemTypes: ItemType[]) => void;
   onUpdateMenu: (lineId: string, menu: Menu, selections: MenuSelections, itemTypes: ItemType[]) => void;
   onDeleteLine: (lineId: string) => void;
+  onClearAll?: () => void;
 
   // Configuration (optionnel - pour service.tsx)
   onConfigurationModeChange?: (isConfiguring: boolean) => void;

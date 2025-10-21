@@ -9,7 +9,12 @@ import { OrderLinesFormProps, MenuSelections } from '~/components/order/OrderLin
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm/ItemCustomizationPanelContent';
 import { DraftFloatingButton } from '~/components/order/OrderLinesForm/DraftFloatingButton';
+<<<<<<< HEAD
 import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
+=======
+import { DraftReviewModal } from '~/components/order/OrderLinesForm/DraftReviewModal';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+>>>>>>> d8bf08d (fix(service): delete all)
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
@@ -38,6 +43,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   onAddMenu,
   onUpdateMenu,
   onDeleteLine,
+  onClearAll,
   onConfigurationModeChange,
   onConfigurationActionsChange,
 }) => {
@@ -80,8 +86,14 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     categoryId: string;
   } | null>(null);
 
+<<<<<<< HEAD
   // Revue de la commande (via SlidePanel)
   const [draftReviewPanelVisible, setDraftReviewPanelVisible] = useState(false);
+=======
+  // Revue de la commande
+  const [isDraftReviewOpen, setIsDraftReviewOpen] = useState(false);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+>>>>>>> d8bf08d (fix(service): delete all)
 
   // ====================================================================
   // HANDLERS - ITEMS
@@ -363,9 +375,27 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // ====================================================================
 
   const handleClearAllDraft = useCallback(() => {
+<<<<<<< HEAD
     // Note : pour vider la commande, le parent doit appeler clearAllLines()
     // On ne gère pas l'état ici
     setDraftReviewPanelVisible(false);
+=======
+    setIsDraftReviewOpen(false); // Fermer la modal de revue
+    setShowClearAllConfirm(true); // Ouvrir la confirmation
+  }, []);
+
+  const handleConfirmClearAll = useCallback(() => {
+    if (onClearAll) {
+      onClearAll();
+    }
+    setShowClearAllConfirm(false);
+    // Ne pas rouvrir la DraftReviewModal après suppression
+  }, [onClearAll]);
+
+  const handleCancelClearAll = useCallback(() => {
+    setShowClearAllConfirm(false);
+    setIsDraftReviewOpen(true); // Rouvrir la modal de revue si annulé
+>>>>>>> d8bf08d (fix(service): delete all)
   }, []);
 
   const handleCloseDraftReview = useCallback(() => {
@@ -578,7 +608,69 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         </View>
       )}
 
+<<<<<<< HEAD
       {/* Panels rendus via Portal - voir useEffect ci-dessus */}
+=======
+      {/* Modale de customisation d'item */}
+      {itemToCustomize && (
+        <ItemCustomizationModal
+          visible={isCustomizing}
+          item={itemToCustomize.item}
+          availableTags={itemToCustomize.item.tags || []}
+          initialData={itemToCustomize.initialData}
+          onConfirm={handleConfirmCustomization}
+          onCancel={handleCancelCustomization}
+        />
+      )}
+
+      {/* Modale de customisation d'item de menu */}
+      {menuItemToCustomize && (
+        <ItemCustomizationModal
+          visible={isCustomizingMenuItem}
+          item={menuItemToCustomize.item}
+          availableTags={menuItemToCustomize.item.tags || []}
+          initialData={undefined}
+          onConfirm={handleConfirmMenuItemCustomization}
+          onCancel={handleCancelMenuItemCustomization}
+        />
+      )}
+
+      {/* Modale de revue de la commande */}
+      <DraftReviewModal
+        visible={isDraftReviewOpen}
+        draftLines={lines}
+        onEdit={(_item, index) => {
+          // Trouver la ligne correspondante par index
+          const line = lines[index];
+          if (line) {
+            handleEditItem(line);
+          }
+        }}
+        onEditMenu={(menuLine, _index) => {
+          handleEditMenu(menuLine);
+        }}
+        onDelete={(index) => {
+          // Trouver la ligne par index et la supprimer par ID
+          const line = lines[index];
+          if (line) {
+            onDeleteLine(line.id);
+          }
+        }}
+        onClose={() => setIsDraftReviewOpen(false)}
+        onClearAll={handleClearAllDraft}
+      />
+
+      {/* Modale de confirmation pour tout supprimer */}
+      <DeleteConfirmationModal
+        isVisible={showClearAllConfirm}
+        onClose={handleCancelClearAll}
+        onConfirm={handleConfirmClearAll}
+        entityName="toutes les lignes"
+        entityType=""
+        isLoading={false}
+        usePortal={true}
+      />
+>>>>>>> d8bf08d (fix(service): delete all)
     </View>
   );
 };
