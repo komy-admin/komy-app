@@ -279,8 +279,14 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
 
   /**
    * Vérifier s'il y a des changements non sauvegardés
+   * ET qu'il y a au moins une ligne (on ne peut pas sauvegarder une commande vide)
    */
   const hasChanges = useMemo((): boolean => {
+    // Une commande vide ne peut jamais être sauvegardée
+    if (orderLines.length === 0) {
+      return false;
+    }
+
     if (mode === 'create') {
       return orderLines.length > 0;
     }

@@ -2,8 +2,10 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
-import { OrderItemsList } from '~/components/order/OrderLinesForm/OrderItemsList';
-import { OrderMenusList } from '~/components/order/OrderLinesForm/OrderMenusList';
+import { OrderItemsCardView } from '~/components/order/OrderLinesForm/OrderItemsCardView';
+import { OrderMenusCardView } from '~/components/order/OrderLinesForm/OrderMenusCardView';
+import { OrderItemsTableView } from '~/components/order/OrderLinesForm/OrderItemsTableView';
+import { OrderMenusTableView } from '~/components/order/OrderLinesForm/OrderMenusTableView';
 import { MenuConfiguration } from '~/components/order/OrderLinesForm/MenuConfiguration';
 import { OrderLinesFormProps, MenuSelections } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
@@ -15,6 +17,7 @@ import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { SlidePanel } from '~/components/ui/SlidePanel';
+import { MenuCategory, MenuCategoryItem, MenuItemWithCustomization } from '~/types/menu-configuration.types';
 
 /**
  * OrderLinesForm - Version refactorisée (composant présentationnel)
@@ -60,6 +63,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     activeItems,
     allItemTypes,
   } = useOrderLinesForm({ items, itemTypes });
+
+  // View mode (card ou list)
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   // Configuration de menu
   const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
@@ -160,29 +166,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    */
   const startMenuConfiguration = useCallback(
     (menu: Menu) => {
-      // ❌ DÉSACTIVÉ - Auto-configuration des menus
-      // Vérifier si le menu peut être auto-configuré
-      // const isAutoConfigurable =
-      //   menu.categories?.every(
-      //     (cat) => cat.isRequired && cat.items && cat.items.length === 1
-      //   ) || false;
-
-      // if (isAutoConfigurable) {
-      //   // Auto-configuration : ajouter directement
-      //   const autoSelections: MenuSelections = {};
-      //   menu.categories?.forEach((cat) => {
-      //     if (cat.items && cat.items.length === 1) {
-      //       autoSelections[cat.id] = {
-      //         itemId: cat.items[0].item!.id,
-      //         tags: [],
-      //       };
-      //     }
-      //   });
-      //   onAddMenu(menu, autoSelections, itemTypes);
-      //   return;
-      // }
-
-      // Configuration manuelle - toujours ouvrir la configuration
       setMenuBeingConfigured(menu);
       setTempMenuSelections({});
       setEditingMenuLineId(null);
@@ -209,18 +192,18 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         // Type guard : menuItem devrait avoir item et categoryName
         if (!menuItem.item || !menuItem.categoryName) return;
 
-        const category = fullMenu.categories?.find((cat: { itemTypeId?: string }) => {
+        const category = fullMenu.categories?.find((cat: MenuCategory) => {
           const categoryName = itemTypes.find((t) => t.id === cat.itemTypeId)?.name;
           return categoryName === menuItem.categoryName;
         });
 
         if (category && 'id' in category) {
+          // Cast pour accéder aux propriétés tags et note qui peuvent exister sur menuItem
+          const itemWithCustomization = menuItem as unknown as MenuItemWithCustomization;
           selections[category.id] = {
             itemId: menuItem.item.id,
-            // @ts-ignore - menuItem peut avoir tags et note selon le contexte
-            tags: menuItem.tags || [],
-            // @ts-ignore
-            note: menuItem.note,
+            tags: itemWithCustomization.tags || [],
+            note: itemWithCustomization.note,
           };
         }
       });
@@ -332,7 +315,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   const isMenuConfigurationValid = useMemo(() => {
     if (!menuBeingConfigured?.categories) return false;
 
-    return menuBeingConfigured.categories.every((category: any) => {
+    return menuBeingConfigured.categories.every((category: MenuCategory) => {
       if (!category.isRequired) return true;
       return tempMenuSelections[category.id] !== undefined;
     });
@@ -426,10 +409,18 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // ====================================================================
 
   /**
-   * Panel customisation d'item normal (Priorité 1)
+   * Gestion unifiée des panels avec priorités :
+   * 1. Panel customisation d'item normal
+   * 2. Panel customisation d'item de menu
+   * 3. Panel de revue de la commande
+   *
+   * Note: Les handlers (handleCancel*, handleConfirm*, etc.) sont stables grâce à useCallback
+   * renderPanel et clearPanel sont fournis par usePanelPortal et devraient être stables
+   * 'lines' est inclus pour mettre à jour le DraftReviewPanelContent quand la commande change
    */
   useEffect(() => {
     if (customizationPanelVisible && itemToCustomize) {
+      // Priorité 1 : Customisation d'item normal
       renderPanel(
         <SlidePanel visible={true} onClose={handleCancelCustomization} width={550}>
           <ItemCustomizationPanelContent
@@ -441,25 +432,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           />
         </SlidePanel>
       );
-    } else if (!menuItemPanelVisible && !draftReviewPanelVisible) {
-      clearPanel();
-    }
-  }, [
-    customizationPanelVisible,
-    itemToCustomize,
-    menuItemPanelVisible,
-    draftReviewPanelVisible,
-    renderPanel,
-    clearPanel,
-    handleCancelCustomization,
-    handleConfirmCustomization,
-  ]);
-
-  /**
-   * Panel customisation d'item de menu (Priorité 2)
-   */
-  useEffect(() => {
-    if (!customizationPanelVisible && menuItemPanelVisible && menuItemToCustomize) {
+    } else if (menuItemPanelVisible && menuItemToCustomize) {
+      // Priorité 2 : Customisation d'item de menu
       renderPanel(
         <SlidePanel visible={true} onClose={handleCancelMenuItemCustomization} width={550}>
           <ItemCustomizationPanelContent
@@ -471,25 +445,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           />
         </SlidePanel>
       );
-    } else if (!customizationPanelVisible && !draftReviewPanelVisible) {
-      clearPanel();
-    }
-  }, [
-    customizationPanelVisible,
-    menuItemPanelVisible,
-    menuItemToCustomize,
-    draftReviewPanelVisible,
-    renderPanel,
-    clearPanel,
-    handleCancelMenuItemCustomization,
-    handleConfirmMenuItemCustomization,
-  ]);
-
-  /**
-   * Panel de revue de la commande (Priorité 3)
-   */
-  useEffect(() => {
-    if (!customizationPanelVisible && !menuItemPanelVisible && draftReviewPanelVisible) {
+    } else if (draftReviewPanelVisible) {
+      // Priorité 3 : Panel de revue de la commande
       renderPanel(
         <SlidePanel visible={true} onClose={handleCloseDraftReview} width={550}>
           <DraftReviewPanelContent
@@ -502,21 +459,28 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           />
         </SlidePanel>
       );
-    } else if (!customizationPanelVisible && !menuItemPanelVisible) {
+    } else {
+      // Aucun panel actif : nettoyer
       clearPanel();
     }
   }, [
     customizationPanelVisible,
+    itemToCustomize,
     menuItemPanelVisible,
+    menuItemToCustomize,
     draftReviewPanelVisible,
-    lines,
-    renderPanel,
-    clearPanel,
+    lines, // ✅ Inclus pour mettre à jour le panel quand la commande change
+    handleCancelCustomization,
+    handleConfirmCustomization,
+    handleCancelMenuItemCustomization,
+    handleConfirmMenuItemCustomization,
     handleCloseDraftReview,
     handleClearAllDraft,
     handleDraftEdit,
     handleDraftEditMenu,
     handleDraftDelete,
+    renderPanel,
+    clearPanel,
   ]);
 
   // ====================================================================
@@ -525,9 +489,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
   const getMenuCategoryItems = useCallback(
     (categoryId: string) => {
-      const category = menuBeingConfigured?.categories?.find((cat: any) => cat.id === categoryId);
+      const category = menuBeingConfigured?.categories?.find((cat: MenuCategory) => cat.id === categoryId);
       if (category && category.items) {
-        return category.items.map((menuCategoryItem: any) => {
+        return category.items.map((menuCategoryItem: MenuCategoryItem) => {
           if (!menuCategoryItem.item && menuCategoryItem.itemId) {
             const fullItem = items.find((i) => i.id === menuCategoryItem.itemId);
             return { ...menuCategoryItem, item: fullItem };
@@ -538,6 +502,20 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       return [];
     },
     [menuBeingConfigured, items]
+  );
+
+  // ====================================================================
+  // COMPTEURS MÉMORISÉS POUR PERFORMANCE
+  // ====================================================================
+
+  const getTotalItemsCount = useCallback(
+    () => lines.filter((l) => l.type === OrderLineType.ITEM).length,
+    [lines]
+  );
+
+  const getTotalMenusCount = useCallback(
+    () => lines.filter((l) => l.type === OrderLineType.MENU).length,
+    [lines]
   );
 
   // ====================================================================
@@ -563,26 +541,38 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             activeItemType={activeItemType}
             onItemTypeChange={setActiveItemType}
             itemTypes={allItemTypes}
-            getTotalItemsCount={() => lines.filter((l) => l.type === OrderLineType.ITEM).length}
-            getTotalMenusCount={() => lines.filter((l) => l.type === OrderLineType.MENU).length}
+            getTotalItemsCount={getTotalItemsCount}
+            getTotalMenusCount={getTotalMenusCount}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
           />
 
-          {activeMainTab === 'ITEMS' && (
-            <OrderItemsList
+          {activeMainTab === 'ITEMS' && viewMode === 'card' && (
+            <OrderItemsCardView
               items={activeItems}
               activeItemType={activeItemType}
               onOpenCustomization={handleOpenCustomization}
             />
           )}
 
-          {activeMainTab === 'MENUS' && (
-            <OrderMenusList
+          {activeMainTab === 'ITEMS' && viewMode === 'list' && (
+            <OrderItemsTableView
+              items={activeItems}
+              activeItemType={activeItemType}
+              onOpenCustomization={handleOpenCustomization}
+            />
+          )}
+
+          {activeMainTab === 'MENUS' && viewMode === 'card' && (
+            <OrderMenusCardView
               activeMenus={activeMenus}
-              getTotalMenuQuantity={(menuId) =>
-                lines.filter((l) => l.type === OrderLineType.MENU && l.menu?.id === menuId).length
-              }
-              getDraftMenuQuantity={() => 0} // Non utilisé avec nouvelle archi
-              updateMenuQuantity={() => { }} // Non utilisé
+              handleMenuAdd={startMenuConfiguration}
+            />
+          )}
+
+          {activeMainTab === 'MENUS' && viewMode === 'list' && (
+            <OrderMenusTableView
+              activeMenus={activeMenus}
               handleMenuAdd={startMenuConfiguration}
             />
           )}

@@ -1,6 +1,5 @@
 import React, { memo } from 'react';
-import { Pressable, Platform, StyleSheet, ViewStyle, TextStyle, View } from 'react-native';
-import { Text } from './text';
+import { Pressable, Platform, StyleSheet, ViewStyle, TextStyle, View, Text as RNText } from 'react-native';
 
 export interface SelectButtonProps {
   label: string;
@@ -80,25 +79,25 @@ export const SelectButton = memo<SelectButtonProps>(({
     >
       {variant === 'pill' && count !== undefined ? (
         <View style={styles.pillContent}>
-          <Text style={textStyles}>
+          <RNText style={textStyles}>
             {label}
-          </Text>
+          </RNText>
           <View style={[
             styles.pillBadge,
             isActive && { backgroundColor: activeColor }
           ]}>
-            <Text style={[
+            <RNText style={[
               styles.pillBadgeText,
               isActive && { color: '#FFFFFF' }
             ]}>
               {count}
-            </Text>
+            </RNText>
           </View>
         </View>
       ) : (
-        <Text style={textStyles}>
+        <RNText style={textStyles}>
           {label}
-        </Text>
+        </RNText>
       )}
     </Pressable>
   );

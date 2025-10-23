@@ -1,6 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View, Platform, Animated } from 'react-native';
-import { Text } from '~/components/ui';
+import { Pressable, StyleSheet, View, Platform, Animated, Text as RNText } from 'react-native';
 import { ClipboardList } from 'lucide-react-native';
 
 interface DraftFloatingButtonProps {
@@ -25,7 +24,7 @@ export const DraftFloatingButton: React.FC<DraftFloatingButtonProps> = ({
 
       {/* Badge avec count */}
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>{count}</Text>
+        <RNText style={styles.badgeText}>{count}</RNText>
       </View>
     </Pressable>
   );

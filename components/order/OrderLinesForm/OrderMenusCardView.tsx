@@ -1,18 +1,17 @@
-import React, { memo, useCallback, useMemo } from 'react';
-import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 'react-native';
+import { memo, useMemo, useCallback, useState } from 'react';
+import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent } from 'react-native';
 import { Text } from '~/components/ui';
-import { Plus, Minus } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
 import { formatPrice } from '~/lib/utils';
+import { getMenuPrice } from '~/lib/color-utils';
+import { calculateOptimalCardWidth } from '~/lib/card-layout-utils';
 
 /**
- * Props pour le composant OrderMenusList
+ * Props pour le composant OrderMenusCardView
  */
-export interface OrderMenusListProps {
+export interface OrderMenusCardViewProps {
   activeMenus: Menu[];
-  getTotalMenuQuantity: (menuId: string) => number;
-  getDraftMenuQuantity: (menuId: string) => number;
-  updateMenuQuantity: (menuId: string, action: 'remove' | 'add') => void;
   handleMenuAdd: (menu: Menu) => void;
 }
 
@@ -21,48 +20,37 @@ export interface OrderMenusListProps {
  */
 interface OrderMenuRowProps {
   menu: Menu;
-  totalQuantity: number;
-  draftQuantity: number;
   onMenuAdd: (menu: Menu) => void;
-  onUpdateQuantity: (menuId: string, action: 'remove' | 'add') => void;
-  dynamicButtonSize: number;
+  cardWidth: number;
 }
 
 const OrderMenuRow = memo<OrderMenuRowProps>(({
   menu,
   onMenuAdd,
+  cardWidth,
 }) => {
   const handleAdd = useCallback(() => {
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
 
-  // Couleurs neutres pour les menus (pas de couleur spécifique)
-  const menuColor = '#6366F1'; // Indigo pour différencier des items
-  const menuBgColor = 'rgba(99, 102, 241, 0.08)'; // Indigo avec 8% d'opacité
+  // Mémoiser le style dynamique pour éviter la création d'un nouvel objet à chaque render
+  const dynamicStyle = useMemo(() => ({
+    flexBasis: cardWidth,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: cardWidth,
+    borderColor: '#6366F1'
+  }), [cardWidth]);
 
   return (
     <Pressable
-      style={[
-        styles.menuCard,
-        {
-          flex: 1,
-          minWidth: 190,
-          maxWidth: 250,
-          borderColor: menuColor
-        }
-      ]}
+      style={[styles.menuCard, dynamicStyle]}
       onPress={handleAdd}
     >
       {/* Header avec nom et description */}
-      <View style={[
-        styles.menuHeader,
-        { backgroundColor: menuBgColor }
-      ]}>
+      <View style={[styles.menuHeader, MENU_COLORS.headerBg]}>
         <Text
-          style={[
-            styles.itemName,
-            { color: menuColor }
-          ]}
+          style={[styles.itemName, MENU_COLORS.text]}
           numberOfLines={2}
         >
           {menu.name}
@@ -80,16 +68,13 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
       {/* Prix */}
       <View style={styles.priceContainer}>
         <Text style={styles.itemPrice}>
-          À partir de {formatPrice((menu as any).price || menu.basePrice || 0)}
+          À partir de {formatPrice(getMenuPrice(menu))}
         </Text>
       </View>
 
       {/* Bouton Ajouter */}
       <View style={styles.addButtonContainer}>
-        <View style={[
-          styles.addButton,
-          { backgroundColor: menuColor }
-        ]}>
+        <View style={[styles.addButton, MENU_COLORS.button]}>
           <Plus size={22} color="#FFFFFF" strokeWidth={3} />
         </View>
       </View>
@@ -100,42 +85,41 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
 OrderMenuRow.displayName = 'OrderMenuRow';
 
 /**
- * Composant de liste des menus pour OrderLinesForm
+ * Composant de vue cartes des menus pour OrderLinesForm
  * Affiche tous les menus actifs avec leurs contrôles d'ajout
- * 
+ *
  * @param props - Props du composant
- * @returns Composant de liste de menus mémorisé
+ * @returns Composant de vue cartes de menus mémorisé
  */
-export const OrderMenusList = memo<OrderMenusListProps>(({
+export const OrderMenusCardView = memo<OrderMenusCardViewProps>(({
   activeMenus,
-  getTotalMenuQuantity,
-  getDraftMenuQuantity,
-  updateMenuQuantity,
   handleMenuAdd
 }) => {
-  // Détection taille écran pour optimiser tactile tablette
-  const { width } = useWindowDimensions();
-  const isTablet = width >= 768;
+  // État pour stocker la largeur réelle du container
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
-  // Styles dynamiques pour boutons optimisés tablette
-  const dynamicButtonSize = isTablet ? 38 : 32;
+  // Callback pour mesurer la largeur - mise à jour IMMÉDIATE sans debounce
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    setContainerWidth(width);
+  }, []);
 
   // Menus filtrés - seulement les actifs
   const filteredMenus = useMemo(() => {
     return activeMenus.filter(menu => menu.isActive);
   }, [activeMenus]);
 
-  // Render item function for FlatList - défini après tous les hooks
-  const renderMenu = useCallback(({ item: menu, index }: { item: Menu; index: number }) => (
-    <OrderMenuRow
-      menu={menu}
-      totalQuantity={getTotalMenuQuantity(menu.id)}
-      draftQuantity={getDraftMenuQuantity(menu.id)}
-      onMenuAdd={handleMenuAdd}
-      onUpdateQuantity={updateMenuQuantity}
-      dynamicButtonSize={dynamicButtonSize}
-    />
-  ), [getTotalMenuQuantity, getDraftMenuQuantity, handleMenuAdd, updateMenuQuantity, dynamicButtonSize]);
+  // Calcul de la largeur optimale des cartes
+  // containerWidth mesure contentContainer (qui a paddingHorizontal: 16)
+  const cardWidth = useMemo(() => {
+    return calculateOptimalCardWidth({
+      containerWidth,
+      padding: 16 * 2, // contentContainer a paddingHorizontal: 16
+      gap: 12,
+      minCardWidth: 180,
+      maxCardWidth: 240,
+    });
+  }, [containerWidth]);
 
   // Si aucun menu disponible
   if (filteredMenus.length === 0) {
@@ -151,29 +135,37 @@ export const OrderMenusList = memo<OrderMenusListProps>(({
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       scrollEnabled={true}
       nestedScrollEnabled={true}
       bounces={false}
     >
-      {filteredMenus.map((menu, index) => {
-        const menuElement = renderMenu({ item: menu, index });
-        return React.cloneElement(menuElement, { key: menu.id });
-      })}
+      <View style={styles.contentContainer} onLayout={handleLayout}>
+        {filteredMenus.map((menu) => (
+          <OrderMenuRow
+            key={menu.id}
+            menu={menu}
+            onMenuAdd={handleMenuAdd}
+            cardWidth={cardWidth}
+          />
+        ))}
+      </View>
     </ScrollView>
   );
 });
 
-OrderMenusList.displayName = 'OrderMenusList';
+OrderMenusCardView.displayName = 'OrderMenusCardView';
+
+// Couleurs constantes pour les menus (hors du composant pour éviter les re-créations)
+const MENU_COLORS = {
+  headerBg: { backgroundColor: 'rgba(99, 102, 241, 0.08)' },
+  text: { color: '#6366F1' },
+  button: { backgroundColor: '#6366F1' },
+};
 
 const COLORS = {
   background: '#FFFFFF',
-  border: '#E5E7EB',
-  text: '#111827',
   textSecondary: '#6B7280',
-  price: '#059669',
-  addButton: '#2A2E33',
 };
 
 const styles = StyleSheet.create({

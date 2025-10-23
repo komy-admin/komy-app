@@ -1,6 +1,5 @@
 import React, { memo, useCallback } from 'react';
-import { View, Pressable, Platform, StyleSheet, ScrollView } from 'react-native';
-import { Text } from '~/components/ui';
+import { View, Pressable, Platform, StyleSheet, ScrollView, Text as RNText } from 'react-native';
 import { Menu as MenuIcon } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
@@ -84,13 +83,13 @@ const MenuCategory = memo<MenuCategoryProps>(({
         <View style={styles.categoryHeader}>
           <View style={styles.categoryHeaderContent}>
             <View style={styles.categoryNumberBadge}>
-              <Text style={styles.categoryNumberText}>{index + 1}</Text>
+              <RNText style={styles.categoryNumberText}>{index + 1}</RNText>
             </View>
             <View style={styles.categoryHeaderInfo}>
-              <Text style={styles.categoryHeaderTitle}>{categoryName}</Text>
-              <Text style={styles.categoryHeaderSubtitle}>
+              <RNText style={styles.categoryHeaderTitle}>{categoryName}</RNText>
+              <RNText style={styles.categoryHeaderSubtitle}>
                 Aucun article disponible
-              </Text>
+              </RNText>
             </View>
           </View>
         </View>
@@ -104,23 +103,23 @@ const MenuCategory = memo<MenuCategoryProps>(({
       <View style={styles.categoryHeader}>
         <View style={styles.categoryHeaderContent}>
           <View style={styles.categoryNumberBadge}>
-            <Text style={styles.categoryNumberText}>{index + 1}</Text>
+            <RNText style={styles.categoryNumberText}>{index + 1}</RNText>
           </View>
 
           <View style={styles.categoryHeaderInfo}>
-            <Text style={styles.categoryHeaderTitle}>
+            <RNText style={styles.categoryHeaderTitle}>
               {categoryName}
-            </Text>
-            <Text style={styles.categoryHeaderSubtitle}>
+            </RNText>
+            <RNText style={styles.categoryHeaderSubtitle}>
               {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItem ? 1 : 0} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
-            </Text>
+            </RNText>
           </View>
 
           {hasSupplementPrice && (
             <View style={styles.categorySupplementTag}>
-              <Text style={styles.categorySupplementTagText}>
+              <RNText style={styles.categorySupplementTagText}>
                 + {formatPrice(category.priceModifier || 0)} de Supplément
-              </Text>
+              </RNText>
             </View>
           )}
         </View>
@@ -185,15 +184,15 @@ const MenuItemCard = memo<MenuItemCardProps>(({
       <View style={styles.menuItemContent}>
         <View style={styles.menuItemInfo}>
           <View style={styles.menuItemNameRow}>
-            <Text style={styles.menuItemName}>
+            <RNText style={styles.menuItemName}>
               {item.name}
-            </Text>
+            </RNText>
 
             {hasSupplementPrice && (
               <View style={styles.menuItemSupplement}>
-                <Text style={styles.menuItemSupplementText}>
+                <RNText style={styles.menuItemSupplementText}>
                   +{formatPrice(supplement)}
-                </Text>
+                </RNText>
               </View>
             )}
           </View>
@@ -205,7 +204,7 @@ const MenuItemCard = memo<MenuItemCardProps>(({
             isSelected && styles.menuItemCheckboxSelected
           ]}>
             {isSelected && (
-              <Text style={styles.menuItemCheckboxIcon}>✓</Text>
+              <RNText style={styles.menuItemCheckboxIcon}>✓</RNText>
             )}
           </View>
         </View>
@@ -268,12 +267,12 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
             <MenuIcon size={20} color="#2A2E33" />
           </View>
           <View style={styles.sectionHeaderText}>
-            <Text style={styles.sectionHeaderTitle}>
+            <RNText style={styles.sectionHeaderTitle}>
               Configuration "{menu.name}"
-            </Text>
-            <Text style={styles.sectionHeaderSubtitle}>
+            </RNText>
+            <RNText style={styles.sectionHeaderSubtitle}>
               Personnalisez votre sélection d'articles
-            </Text>
+            </RNText>
           </View>
         </View>
       </View>
@@ -306,10 +305,10 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
           </View>
         ) : (
           <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateTitle}>Aucune catégorie disponible</Text>
-            <Text style={styles.emptyStateSubtitle}>
+            <RNText style={styles.emptyStateTitle}>Aucune catégorie disponible</RNText>
+            <RNText style={styles.emptyStateSubtitle}>
               Ce menu n'a pas encore de catégories configurées
-            </Text>
+            </RNText>
           </View>
         )}
       </ScrollView>

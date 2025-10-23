@@ -1,14 +1,16 @@
-import React, { memo, useCallback, useMemo } from 'react';
-import { View, Pressable, useWindowDimensions, StyleSheet, ScrollView } from 'react-native';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { getContrastColor, formatPrice } from '~/lib/utils';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { calculateOptimalCardWidth } from '~/lib/card-layout-utils';
 
 /**
- * Props pour le composant OrderItemsList
+ * Props pour le composant OrderItemsCardView
  */
-export interface OrderItemsListProps {
+export interface OrderItemsCardViewProps {
   items: Item[];
   activeItemType: string;
   onOpenCustomization: (item: Item) => void;
@@ -20,53 +22,51 @@ export interface OrderItemsListProps {
 interface OrderItemRowProps {
   item: Item;
   onOpenCustomization: (item: Item) => void;
-  isTablet: boolean;
+  cardWidth: number;
 }
 
 const OrderItemCard = memo<OrderItemRowProps>(({
   item,
   onOpenCustomization,
-  isTablet
+  cardWidth,
 }) => {
   const handleAdd = useCallback(() => {
     onOpenCustomization(item);
   }, [item, onOpenCustomization]);
 
-  // Convertir la couleur hex en rgba avec opacité 12%
-  const getColorWithOpacity = (hexColor: string, opacity: number): string => {
-    const hex = hexColor.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  };
+  // Mémoiser les couleurs pour éviter les recalculs
+  const colors = useMemo(() => {
+    const itemColor = item.color || '#6B7280';
+    return {
+      itemColor,
+      headerBgColor: getColorWithOpacity(itemColor, 0.12),
+      buttonIconColor: getContrastColor(itemColor)
+    };
+  }, [item.color]);
 
-  const itemColor = item.color || '#6B7280';
-  const headerBgColor = getColorWithOpacity(itemColor, 0.12);
-  const buttonIconColor = getContrastColor(itemColor);
+  // Mémoiser le style dynamique pour éviter la création d'un nouvel objet à chaque render
+  const dynamicStyle = useMemo(() => ({
+    flexBasis: cardWidth,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: cardWidth,
+    borderColor: colors.itemColor
+  }), [cardWidth, colors.itemColor]);
 
   return (
     <Pressable
-      style={[
-        styles.itemCard,
-        {
-          flex: 1,
-          minWidth: 190,
-          maxWidth: 250,
-          borderColor: itemColor
-        }
-      ]}
+      style={[styles.itemCard, dynamicStyle]}
       onPress={handleAdd}
     >
       {/* Header coloré avec nom */}
       <View style={[
         styles.coloredHeader,
-        { backgroundColor: headerBgColor }
+        { backgroundColor: colors.headerBgColor }
       ]}>
         <Text
           style={[
             styles.itemName,
-            { color: itemColor }
+            { color: colors.itemColor }
           ]}
           numberOfLines={2}
         >
@@ -85,9 +85,9 @@ const OrderItemCard = memo<OrderItemRowProps>(({
       <View style={styles.addButtonContainer}>
         <View style={[
           styles.addButton,
-          { backgroundColor: itemColor }
+          { backgroundColor: colors.itemColor }
         ]}>
-          <Plus size={22} color={buttonIconColor} strokeWidth={3} />
+          <Plus size={22} color={colors.buttonIconColor} strokeWidth={3} />
         </View>
       </View>
     </Pressable>
@@ -97,17 +97,22 @@ const OrderItemCard = memo<OrderItemRowProps>(({
 OrderItemCard.displayName = 'OrderItemCard';
 
 /**
- * Composant de liste des articles pour OrderLinesForm
+ * Composant de vue cartes pour les articles
  * Affiche les articles filtrés par type
  */
-export const OrderItemsList = memo<OrderItemsListProps>(({
+export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   items,
   activeItemType,
   onOpenCustomization
 }) => {
-  // Détection taille écran pour adapter la disposition
-  const { width } = useWindowDimensions();
-  const isTablet = width >= 768;
+  // État pour stocker la largeur réelle du container
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  // Callback pour mesurer la largeur - mise à jour IMMÉDIATE sans debounce
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    setContainerWidth(width);
+  }, []);
 
   // Articles filtrés par type actif - mémorisé pour performance
   const filteredItems = useMemo(() => {
@@ -115,6 +120,18 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
       item.itemTypeId === activeItemType && item.isActive
     );
   }, [items, activeItemType]);
+
+  // Calcul de la largeur optimale des cartes
+  // containerWidth mesure itemsGrid directement (déjà sans padding)
+  const cardWidth = useMemo(() => {
+    return calculateOptimalCardWidth({
+      containerWidth,
+      padding: 0, // itemsGrid n'a pas de padding
+      gap: 12,
+      minCardWidth: 180,
+      maxCardWidth: 240,
+    });
+  }, [containerWidth]);
 
   // Si aucun article disponible
   if (filteredItems.length === 0) {
@@ -131,22 +148,19 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.gridContainer,
-          { paddingHorizontal: 16 }
-        ]}
+        contentContainerStyle={styles.gridContainer}
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}
         nestedScrollEnabled={true}
         bounces={false}
       >
-        <View style={styles.itemsGrid}>
+        <View style={styles.itemsGrid} onLayout={handleLayout}>
           {filteredItems.map((item) => (
             <OrderItemCard
               key={item.id}
               item={item}
               onOpenCustomization={onOpenCustomization}
-              isTablet={isTablet}
+              cardWidth={cardWidth}
             />
           ))}
         </View>
@@ -155,15 +169,11 @@ export const OrderItemsList = memo<OrderItemsListProps>(({
   );
 });
 
-OrderItemsList.displayName = 'OrderItemsList';
+OrderItemsCardView.displayName = 'OrderItemsCardView';
 
 const COLORS = {
   background: '#FFFFFF',
-  border: '#E5E7EB',
-  text: '#111827',
   textSecondary: '#6B7280',
-  price: '#059669',
-  addButton: '#2A2E33',
 };
 
 const styles = StyleSheet.create({
@@ -177,6 +187,7 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     paddingVertical: 16,
+    paddingHorizontal: 16,
   },
   itemsGrid: {
     flexDirection: 'row',
@@ -201,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: '#E5E7EB',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

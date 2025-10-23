@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
-import { View } from 'react-native';
+import { View, Pressable, ScrollView } from 'react-native';
 import { SelectButton } from '~/components/ui';
 import { ItemType } from '~/types/item-type.types';
+import { LayoutGrid, List } from 'lucide-react-native';
 
 /**
  * Props pour le composant OrderLinesNavigation
@@ -15,6 +16,8 @@ export interface OrderLinesNavigationProps {
   getTotalItemsCount: () => number;
   getTotalMenusCount: () => number;
   isConfiguringMenu?: boolean;
+  viewMode: 'card' | 'list';
+  onViewModeChange: (mode: 'card' | 'list') => void;
 }
 
 /**
@@ -34,7 +37,9 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
   itemTypes,
   getTotalItemsCount,
   getTotalMenusCount,
-  isConfiguringMenu = false
+  isConfiguringMenu = false,
+  viewMode,
+  onViewModeChange
 }) => {
   // Ne pas afficher la navigation pendant la configuration de menu
   if (isConfiguringMenu) {
@@ -73,7 +78,12 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
 
         {/* Types d'items (visible seulement pour les articles) */}
         {activeMainTab === 'ITEMS' && (
-          <View style={styles.categoryButtonsHorizontal}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryScrollView}
+            contentContainerStyle={styles.categoryScrollContent}
+          >
             {itemTypes.map((itemType) => (
               <SelectButton
                 key={itemType.id}
@@ -83,8 +93,46 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
                 variant="sub"
               />
             ))}
-          </View>
+          </ScrollView>
         )}
+
+        {/* Spacer flexible quand on est en mode MENUS (pas d'itemTypes) */}
+        {activeMainTab === 'MENUS' && (
+          <View style={{ flex: 1 }} />
+        )}
+
+        {/* Séparateur vertical */}
+        <View style={styles.verticalDivider} />
+
+        {/* Switch View Mode */}
+        <View style={styles.viewModeSwitch}>
+          <Pressable
+            style={[
+              styles.viewModeButton,
+              viewMode === 'card' && styles.viewModeButtonActive
+            ]}
+            onPress={() => onViewModeChange('card')}
+          >
+            <LayoutGrid
+              size={20}
+              color={viewMode === 'card' ? '#6366F1' : '#9CA3AF'}
+              strokeWidth={2}
+            />
+          </Pressable>
+          <Pressable
+            style={[
+              styles.viewModeButton,
+              viewMode === 'list' && styles.viewModeButtonActive
+            ]}
+            onPress={() => onViewModeChange('list')}
+          >
+            <List
+              size={20}
+              color={viewMode === 'list' ? '#6366F1' : '#9CA3AF'}
+              strokeWidth={2}
+            />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -98,7 +146,6 @@ const styles = {
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
-    marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
@@ -116,10 +163,37 @@ const styles = {
     height: 32,
     backgroundColor: '#E5E7EB',
   },
-  categoryButtonsHorizontal: {
-    flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
-    gap: 8,
+  categoryScrollView: {
     flex: 1,
+    maxHeight: 44,
+  },
+  categoryScrollContent: {
+    flexDirection: 'row' as const,
+    gap: 8,
+    alignItems: 'center' as const,
+    paddingRight: 8,
+  },
+  viewModeSwitch: {
+    flexDirection: 'row' as const,
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 4,
+  },
+  viewModeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: 'transparent',
+  },
+  viewModeButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
 };
