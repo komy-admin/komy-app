@@ -52,7 +52,33 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   onClearAll
 }) => {
   const totalLines = draftLines.length;
-  const newLines = draftLines.filter(l => !l.id || l.id.startsWith('draft-')).length;
+
+  // Trier les lignes ET créer une map d'index en une seule passe
+  const { sortedLines, indexMap, newLinesCount } = React.useMemo(() => {
+    // Créer la map d'index original
+    const map = new Map<string, number>();
+    let newCount = 0;
+
+    draftLines.forEach((line, index) => {
+      map.set(line.id || `temp-${index}`, index);
+      if (!line.id || line.id.startsWith('draft-')) {
+        newCount++;
+      }
+    });
+
+    // Trier les lignes
+    const sorted = [...draftLines].sort((a, b) => {
+      const aIsNew = !a.id || a.id.startsWith('draft-');
+      const bIsNew = !b.id || b.id.startsWith('draft-');
+
+      // Les nouveaux items en premier
+      if (aIsNew && !bIsNew) return -1;
+      if (!aIsNew && bIsNew) return 1;
+      return 0; // Garder l'ordre original sinon
+    });
+
+    return { sortedLines: sorted, indexMap: map, newLinesCount: newCount };
+  }, [draftLines]);
 
   return (
     <View style={styles.panelContent}>
@@ -64,7 +90,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
           </RNText>
           <RNText style={[styles.panelSubtitle, { lineHeight: 18 }]}>
             {totalLines} ligne{totalLines > 1 ? 's' : ''}
-            {newLines > 0 && ` · ${newLines} nouvelle${newLines > 1 ? 's' : ''}`}
+            {newLinesCount > 0 && ` · ${newLinesCount} nouvelle${newLinesCount > 1 ? 's' : ''}`}
           </RNText>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -87,16 +113,20 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
             </RNText>
           </View>
         ) : (
-          draftLines.map((line, index) => (
-            <DraftLineCard
-              key={line.id || index}
-              line={line}
-              index={index}
-              onEdit={onEdit}
-              onEditMenu={onEditMenu}
-              onDelete={onDelete}
-            />
-          ))
+          sortedLines.map((line, sortedIndex) => {
+            // Récupérer l'index original depuis la Map (O(1))
+            const originalIndex = indexMap.get(line.id || `temp-${sortedIndex}`) ?? sortedIndex;
+            return (
+              <DraftLineCard
+                key={line.id || originalIndex}
+                line={line}
+                index={originalIndex}
+                onEdit={onEdit}
+                onEditMenu={onEditMenu}
+                onDelete={onDelete}
+              />
+            );
+          })
         )}
       </ScrollView>
 
@@ -164,7 +194,10 @@ const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.me
   const isNewDraft = !line.id || line.id.startsWith('draft-');
 
   return (
-    <View style={styles.itemCard}>
+    <View style={[
+      styles.itemCard,
+      isNewDraft && styles.itemCardNew
+    ]}>
       {/* Header */}
       <View style={styles.itemHeader}>
         <View style={styles.itemMainInfo}>
@@ -259,7 +292,10 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
   const isNewDraft = !line.id || line.id.startsWith('draft-');
 
   return (
-    <View style={styles.menuCard}>
+    <View style={[
+      styles.menuCard,
+      isNewDraft && styles.menuCardNew
+    ]}>
       {/* Header */}
       <View style={styles.menuHeader}>
         <View style={styles.menuMainInfo}>
@@ -428,6 +464,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  itemCardNew: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+    borderWidth: 2,
+  },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -540,6 +581,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#3B82F6',
     borderLeftWidth: 2,
+  },
+  menuCardNew: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
   },
   menuHeader: {
     flexDirection: 'row',
