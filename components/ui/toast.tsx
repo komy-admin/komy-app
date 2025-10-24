@@ -1,4 +1,4 @@
-import { View, Text, Animated, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Text, Animated, StyleSheet, Platform, Modal } from 'react-native';
 import React, { useEffect, useRef } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -11,12 +11,12 @@ interface ToastProps {
   onHide?: () => void;
 }
 
-export function Toast({ 
-  visible, 
-  message, 
-  type = 'info', 
+export function Toast({
+  visible,
+  message,
+  type = 'info',
   duration = 3000,
-  onHide 
+  onHide
 }: ToastProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
@@ -74,29 +74,41 @@ export function Toast({
     }
   };
 
-  if (!visible) return null;
-
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          opacity,
-          transform: [{ translateY }],
-          backgroundColor: getBackgroundColor(),
-        },
-      ]}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={onHide}
     >
-      <Text style={styles.message}>{message}</Text>
-    </Animated.View>
+      <View style={styles.modalContainer} pointerEvents="box-none">
+        <Animated.View
+          style={[
+            styles.container,
+            {
+              opacity,
+              transform: [{ translateY }],
+              backgroundColor: getBackgroundColor(),
+            },
+          ]}
+          pointerEvents="auto"
+        >
+          <Text style={styles.message}>{message}</Text>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    padding: Platform.OS === 'web' ? 40 : 20,
+  },
   container: {
-    position: 'absolute',
-    bottom: Platform.OS === 'web' ? 40 : 20,
-    right: Platform.OS === 'web' ? 40 : 20,
     minWidth: 200,
     maxWidth: 400,
     padding: 16,
@@ -112,7 +124,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 1000,
   },
   message: {
     color: '#FFFFFF',

@@ -134,9 +134,16 @@ export default function ConfigurationRestoPage() {
       }
       showToast(editingTag ? 'Tag modifié' : 'Tag créé', 'success');
       closeSidePanel();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving tag:', error);
-      showToast('Erreur lors de la sauvegarde', 'error');
+
+      // Generic error message for validation errors
+      let errorMessage = 'Erreur lors de la sauvegarde';
+      if (error?.response?.status === 422) {
+        errorMessage = editingTag ? 'Erreur lors de la modification du tag' : 'Erreur lors de la création du tag';
+      }
+
+      showToast(errorMessage, 'error');
     }
   }, [editingTag, createTag, updateTag, bulkCreateOptions, showToast, closeSidePanel]);
 
@@ -149,9 +156,16 @@ export default function ConfigurationRestoPage() {
       }
       showToast(editingItemType ? 'Type d\'article modifié' : 'Type d\'article créé', 'success');
       closeSidePanel();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving item type:', error);
-      showToast('Erreur lors de la sauvegarde', 'error');
+
+      // Generic error message for validation errors
+      let errorMessage = 'Erreur lors de la sauvegarde';
+      if (error?.response?.status === 422) {
+        errorMessage = editingItemType ? 'Erreur lors de la modification du type d\'article' : 'Erreur lors de la création du type d\'article';
+      }
+
+      showToast(errorMessage, 'error');
     }
   }, [editingItemType, updateItemType, createItemType, showToast, closeSidePanel]);
 
