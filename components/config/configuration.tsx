@@ -115,29 +115,24 @@ export default function ConfigurationRestoPage() {
   }, []);
 
   const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
-    try {
-      if (editingTag) {
-        await updateTag(editingTag.id, tagData);
+    if (editingTag) {
+      await updateTag(editingTag.id, tagData);
 
-        if (options && options.length > 0) {
-          const newOptions = options.filter(opt => !opt.id);
-          if (newOptions.length > 0) {
-            await bulkCreateOptions(editingTag.id, newOptions);
-          }
-        }
-      } else {
-        const createdTag = await createTag(tagData);
-
-        if (options && options.length > 0 && createdTag.id) {
-          await bulkCreateOptions(createdTag.id, options);
+      if (options && options.length > 0) {
+        const newOptions = options.filter(opt => !opt.id);
+        if (newOptions.length > 0) {
+          await bulkCreateOptions(editingTag.id, newOptions);
         }
       }
-      showToast(editingTag ? 'Tag modifié' : 'Tag créé', 'success');
-      closeSidePanel();
-    } catch (error) {
-      console.error('Error saving tag:', error);
-      showToast('Erreur lors de la sauvegarde', 'error');
+    } else {
+      const createdTag = await createTag(tagData);
+
+      if (options && options.length > 0 && createdTag.id) {
+        await bulkCreateOptions(createdTag.id, options);
+      }
     }
+    showToast(editingTag ? 'Tag modifié' : 'Tag créé', 'success');
+    closeSidePanel();
   }, [editingTag, createTag, updateTag, bulkCreateOptions, showToast, closeSidePanel]);
 
   const handleSaveItemType = useCallback(async (itemTypeData: Partial<ItemType>) => {
@@ -149,9 +144,16 @@ export default function ConfigurationRestoPage() {
       }
       showToast(editingItemType ? 'Type d\'article modifié' : 'Type d\'article créé', 'success');
       closeSidePanel();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving item type:', error);
-      showToast('Erreur lors de la sauvegarde', 'error');
+
+      // Generic error message for validation errors
+      let errorMessage = 'Erreur lors de la sauvegarde';
+      if (error?.response?.status === 422) {
+        errorMessage = editingItemType ? 'Erreur lors de la modification du type d\'article' : 'Erreur lors de la création du type d\'article';
+      }
+
+      showToast(errorMessage, 'error');
     }
   }, [editingItemType, updateItemType, createItemType, showToast, closeSidePanel]);
 

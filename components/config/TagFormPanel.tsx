@@ -6,7 +6,7 @@ import { eurosToCents, centsToEuros } from '~/lib/utils';
 
 interface TagFormPanelProps {
   tag: Tag | null;
-  onSave: (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => void;
+  onSave: (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => Promise<void>;
   onCancel: () => void;
   onBulkDeleteOptions: (tagId: string, optionIds: string[]) => Promise<void>;
 }
@@ -26,6 +26,8 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
   const [newOptionLabel, setNewOptionLabel] = useState('');
   const [newOptionPrice, setNewOptionPrice] = useState('');
   const [showConfiguration, setShowConfiguration] = useState(!!tag); // true si mode édition, false si création
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const needsOptions = fieldType === 'select' || fieldType === 'multi-select';
 
@@ -74,36 +76,45 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
   const handleSave = async () => {
     if (!label.trim() || !fieldType) return;
 
-    const generatedName = label.trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
+    setError(null);
+    setIsSaving(true);
 
-    if (tag?.id && optionsToDelete.length > 0) {
-      try {
-        await onBulkDeleteOptions(tag.id, optionsToDelete);
-      } catch (error) {
-        console.error('Error bulk deleting options:', error);
+    try {
+      const generatedName = label.trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+      if (tag?.id && optionsToDelete.length > 0) {
+        try {
+          await onBulkDeleteOptions(tag.id, optionsToDelete);
+        } catch (error) {
+          console.error('Error bulk deleting options:', error);
+        }
       }
+
+      // 💰 Convertir euros -> centimes pour l'envoi API
+      const optionsInCents = needsOptions
+        ? options.map(opt => ({
+            ...opt,
+            priceModifier: opt.priceModifier != null ? eurosToCents(Number(opt.priceModifier)) : null
+          }))
+        : undefined;
+
+      await onSave(
+        {
+          name: generatedName,
+          label: label.trim(),
+          fieldType,
+          isRequired,
+        },
+        optionsInCents
+      );
+    } catch (err) {
+      setError(tag ? 'Erreur lors de la modification du tag' : 'Erreur lors de la création du tag');
+    } finally {
+      setIsSaving(false);
     }
-
-    // 💰 Convertir euros -> centimes pour l'envoi API
-    const optionsInCents = needsOptions
-      ? options.map(opt => ({
-          ...opt,
-          priceModifier: opt.priceModifier != null ? eurosToCents(Number(opt.priceModifier)) : null
-        }))
-      : undefined;
-
-    onSave(
-      {
-        name: generatedName,
-        label: label.trim(),
-        fieldType,
-        isRequired,
-      },
-      optionsInCents
-    );
   };
 
   const fieldTypes: { value: TagFieldType; label: string }[] = [
@@ -132,6 +143,12 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
           <X size={24} color="#64748B" strokeWidth={2} />
         </TouchableOpacity>
       </View>
+
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       <ScrollView
         style={styles.panelForm}
@@ -285,12 +302,12 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.saveButton, (!label.trim() || !showConfiguration) && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0)) && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={!label.trim() || !showConfiguration}
+          disabled={!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0)}
         >
           <Check size={20} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.saveButtonText}>Enregistrer</Text>
+          <Text style={styles.saveButtonText}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -521,5 +538,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  errorBanner: {
+    backgroundColor: '#FEE2E2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#DC2626',
+    padding: 12,
+    marginHorizontal: 20,
+    marginVertical: 8,
+    borderRadius: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#991B1B',
+    fontWeight: '500',
   },
 });
