@@ -108,9 +108,11 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
           </View>
 
           <View style={styles.priceTimeColumn}>
-            <Text style={styles.priceText}>
-              {(itemPrice / 100).toFixed(2)}€
-            </Text>
+            {!isFromMenu && (
+              <Text style={styles.priceText}>
+                {(itemPrice / 100).toFixed(2)}€
+              </Text>
+            )}
             <View style={styles.timeContainer}>
               <Clock size={10} color="#9CA3AF" strokeWidth={2} />
               <Text style={styles.timeText}>
@@ -120,31 +122,27 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
           </View>
 
           <View style={styles.actionsColumn}>
-            <Pressable onPress={(e) => {
-              if (isMultiSelectMode) e.stopPropagation?.();
-              handleStatusClick();
-            }}>
-              <IconButton
-                iconName="settings"
-                size={50}
-                variant="primary"
-                isTransparent={true}
-                onPress={() => {}}
-              />
-            </Pressable>
-            {!isFromMenu && (
-              <Pressable onPress={(e) => {
-                if (isMultiSelectMode) e.stopPropagation?.();
-                handleDeleteClick();
-              }}>
+            {isMultiSelectMode ? (
+              <View style={{ width: 50 }} />
+            ) : (
+              <>
                 <IconButton
-                  iconName="trash"
+                  iconName="settings"
                   size={50}
-                  variant="danger"
+                  variant="primary"
                   isTransparent={true}
-                  onPress={() => {}}
+                  onPress={handleStatusClick}
                 />
-              </Pressable>
+                {!isFromMenu && (
+                  <IconButton
+                    iconName="trash"
+                    size={50}
+                    variant="danger"
+                    isTransparent={true}
+                    onPress={handleDeleteClick}
+                  />
+                )}
+              </>
             )}
           </View>
         </View>
