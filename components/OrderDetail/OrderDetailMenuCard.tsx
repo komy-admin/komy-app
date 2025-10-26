@@ -12,12 +12,18 @@ export interface OrderDetailMenuCardProps {
   menuLine: OrderLine;
   onUpdateItemStatus: (orderLineItem: OrderLineItem, newStatus: Status) => void;
   onDelete: () => void;
+  isMultiSelectMode?: boolean;
+  selectedItems?: Set<string>;
+  onToggleItemSelection?: (itemId: string) => void;
 }
 
 export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   menuLine,
   onUpdateItemStatus,
   onDelete,
+  isMultiSelectMode = false,
+  selectedItems = new Set(),
+  onToggleItemSelection,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -126,6 +132,9 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
                     menuName={menuInfo?.name}
                     onStatusChange={(newStatus) => onUpdateItemStatus(orderLineItem, newStatus)}
                     onDelete={() => {}}
+                    isMultiSelectMode={isMultiSelectMode}
+                    isSelected={selectedItems.has(orderLineItem.id)}
+                    onToggleSelection={() => onToggleItemSelection?.(orderLineItem.id)}
                   />
                 ))}
               </View>

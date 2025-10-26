@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
@@ -15,6 +15,9 @@ export interface OrderDetailItemCardProps {
   menuName?: string;
   onStatusChange: (newStatus: Status) => void;
   onDelete: () => void;
+  isMultiSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: () => void;
 }
 
 export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
@@ -24,6 +27,9 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   menuName,
   onStatusChange,
   onDelete,
+  isMultiSelectMode = false,
+  isSelected = false,
+  onToggleSelection,
 }) => {
   const [showStatusSelector, setShowStatusSelector] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -48,10 +54,21 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
     setShowDeleteDialog(true);
   };
 
+  const CardWrapper = isMultiSelectMode ? Pressable : View;
+  const cardProps = isMultiSelectMode ? { onPress: onToggleSelection } : {};
+
   return (
     <>
-      <View style={[styles.card, { borderLeftColor: getStatusColor(itemStatus) }]}>
+      <CardWrapper style={[styles.card, { borderLeftColor: getStatusColor(itemStatus) }]} {...cardProps}>
         <View style={styles.mainContent}>
+          {isMultiSelectMode && (
+            <Pressable onPress={onToggleSelection} style={styles.checkboxContainer}>
+              <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                {isSelected && <Text style={styles.checkboxIcon}>✓</Text>}
+              </View>
+            </Pressable>
+          )}
+
           <View style={styles.leftColumn}>
             <View style={styles.nameRow}>
               <Text style={styles.itemName} numberOfLines={1}>
@@ -103,21 +120,31 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
           </View>
 
           <View style={styles.actionsColumn}>
-            <IconButton
-              iconName="settings"
-              size={50}
-              variant="primary"
-              isTransparent={true}
-              onPress={handleStatusClick}
-            />
-            {!isFromMenu && (
+            <Pressable onPress={(e) => {
+              if (isMultiSelectMode) e.stopPropagation?.();
+              handleStatusClick();
+            }}>
               <IconButton
-                iconName="trash"
+                iconName="settings"
                 size={50}
-                variant="danger"
+                variant="primary"
                 isTransparent={true}
-                onPress={handleDeleteClick}
+                onPress={() => {}}
               />
+            </Pressable>
+            {!isFromMenu && (
+              <Pressable onPress={(e) => {
+                if (isMultiSelectMode) e.stopPropagation?.();
+                handleDeleteClick();
+              }}>
+                <IconButton
+                  iconName="trash"
+                  size={50}
+                  variant="danger"
+                  isTransparent={true}
+                  onPress={() => {}}
+                />
+              </Pressable>
             )}
           </View>
         </View>
@@ -127,7 +154,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
             <Text style={styles.menuNameText}>🍽️ {menuName}</Text>
           </View>
         )}
-      </View>
+      </CardWrapper>
 
       <StatusSelector
         visible={showStatusSelector}
@@ -170,6 +197,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: 12,
+  },
+  checkboxContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+  },
+  checkboxIcon: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   leftColumn: {
     flex: 1,

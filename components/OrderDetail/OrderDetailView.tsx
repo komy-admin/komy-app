@@ -4,6 +4,7 @@ import { OrderDetailTabs } from './OrderDetailTabs';
 import { OrderDetailItemCard } from './OrderDetailItemCard';
 import { OrderDetailMenuCard } from './OrderDetailMenuCard';
 import { OrderDetailActions } from './OrderDetailActions';
+import { OrderDetailMultiSelectBar } from './OrderDetailMultiSelectBar';
 import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
 import { Order } from '~/types/order.types';
 import { Status } from '~/types/status.enum';
@@ -21,6 +22,8 @@ export interface OrderDetailViewProps {
   onPayment: () => void;
   onTerminate: () => void;
   onDelete: () => void;
+  isMultiSelectMode?: boolean;
+  onToggleMultiSelectMode?: () => void;
 }
 
 export const OrderDetailView = React.memo<OrderDetailViewProps>(({
@@ -34,9 +37,15 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
   onPayment,
   onTerminate,
   onDelete,
+  isMultiSelectMode: externalMultiSelectMode,
+  onToggleMultiSelectMode: externalToggleMultiSelectMode,
 }) => {
   const [activeTab, setActiveTab] = useState('ALL');
+  const [internalMultiSelectMode, setInternalMultiSelectMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
+
+  const isMultiSelectMode = externalMultiSelectMode !== undefined ? externalMultiSelectMode : internalMultiSelectMode;
 
   // Logique de regroupement des items par tab
   const { filteredItems, counts } = useMemo(() => {
@@ -144,6 +153,61 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     }
   }, [onDeleteMenuLine, showToast]);
 
+  const toggleMultiSelectMode = useCallback(() => {
+    if (externalToggleMultiSelectMode) {
+      externalToggleMultiSelectMode();
+    } else {
+      setInternalMultiSelectMode((prev) => !prev);
+    }
+    setSelectedItems(new Set());
+  }, [externalToggleMultiSelectMode]);
+
+  const toggleItemSelection = useCallback((itemId: string) => {
+    setSelectedItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleBulkStatusChange = useCallback(async (newStatus: Status) => {
+    if (selectedItems.size === 0) return;
+
+    try {
+      const promises: Promise<void>[] = [];
+
+      selectedItems.forEach((itemId) => {
+        const orderLine = order.lines?.find((line) => line.id === itemId);
+        if (orderLine) {
+          if (orderLine.type === OrderLineType.ITEM) {
+            promises.push(onUpdateItemStatus(orderLine, newStatus));
+          }
+        } else {
+          order.lines?.forEach((line) => {
+            if (line.type === OrderLineType.MENU && line.items) {
+              const menuItem = line.items.find((item) => item.id === itemId);
+              if (menuItem) {
+                promises.push(onUpdateMenuItemStatus(menuItem, newStatus));
+              }
+            }
+          });
+        }
+      });
+
+      await Promise.all(promises);
+      showToast(`${selectedItems.size} article(s) mis à jour`, 'success');
+      setSelectedItems(new Set());
+      toggleMultiSelectMode();
+    } catch (error) {
+      showToast('Erreur lors de la mise à jour', 'error');
+      console.error('Erreur bulk update:', error);
+    }
+  }, [selectedItems, order.lines, onUpdateItemStatus, onUpdateMenuItemStatus, showToast]);
+
   return (
     <View style={styles.container}>
       {/* Tabs */}
@@ -174,6 +238,9 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
                   menuLine={menuLine}
                   onUpdateItemStatus={onUpdateMenuItemStatus}
                   onDelete={() => handleDeleteMenu(menuLine.id, menuLine.menu?.name || 'Menu')}
+                  isMultiSelectMode={isMultiSelectMode}
+                  selectedItems={selectedItems}
+                  onToggleItemSelection={toggleItemSelection}
                 />
               );
             } else {
@@ -196,6 +263,9 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
                       // On ne peut pas supprimer un item de menu individuellement
                       showToast('Impossible de supprimer un item de menu', 'warning');
                     }}
+                    isMultiSelectMode={isMultiSelectMode}
+                    isSelected={selectedItems.has(orderLineItem.id)}
+                    onToggleSelection={() => toggleItemSelection(orderLineItem.id)}
                   />
                 );
               } else {
@@ -206,6 +276,9 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
                     orderLine={orderLine}
                     onStatusChange={(newStatus) => onUpdateItemStatus(orderLine, newStatus)}
                     onDelete={() => handleDeleteItem(orderLine.id, orderLine.item?.name || 'Article')}
+                    isMultiSelectMode={isMultiSelectMode}
+                    isSelected={selectedItems.has(orderLine.id)}
+                    onToggleSelection={() => toggleItemSelection(orderLine.id)}
                   />
                 );
               }
@@ -216,14 +289,28 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
         <View style={{ height: 20 }} />
       </ScrollView>
 
+      {/* Multi-select bar */}
+      {isMultiSelectMode && (
+        <OrderDetailMultiSelectBar
+          selectedCount={selectedItems.size}
+          onCancel={() => {
+            setSelectedItems(new Set());
+            toggleMultiSelectMode();
+          }}
+          onStatusChange={handleBulkStatusChange}
+        />
+      )}
+
       {/* Actions */}
-      <OrderDetailActions
-        orderStatus={order.status}
-        onReassignTable={onReassignTable}
-        onPayment={onPayment}
-        onTerminate={onTerminate}
-        onDelete={onDelete}
-      />
+      {!isMultiSelectMode && (
+        <OrderDetailActions
+          orderStatus={order.status}
+          onReassignTable={onReassignTable}
+          onPayment={onPayment}
+          onTerminate={onTerminate}
+          onDelete={onDelete}
+        />
+      )}
     </View>
   );
 });

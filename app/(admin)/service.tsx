@@ -21,7 +21,7 @@ import {
 import { useSelector } from 'react-redux';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
-import { Plus, LayoutDashboard, X, Edit3 } from 'lucide-react-native';
+import { Plus, LayoutDashboard, X, Edit3, CheckSquare, Square } from 'lucide-react-native';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { OrderDetailView } from '~/components/OrderDetail/OrderDetailView';
@@ -45,6 +45,7 @@ export default function ServicePage() {
   const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
   const [isReassigning, setIsReassigning] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [menuConfigActions, setMenuConfigActions] = useState<{
     onCancel: () => void;
     onConfirm: () => void;
@@ -713,6 +714,36 @@ export default function ServicePage() {
                         </Text>
                       </View>
 
+                      {/* Bouton sélection */}
+                      <Pressable
+                        onPress={() => setIsMultiSelectMode(!isMultiSelectMode)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                          paddingHorizontal: 20,
+                          paddingVertical: 10,
+                          borderLeftWidth: 1,
+                          borderLeftColor: '#F3F4F6',
+                          height: '100%',
+                          justifyContent: 'center',
+                          backgroundColor: isMultiSelectMode ? '#EEF2FF' : 'transparent',
+                        }}
+                      >
+                        {isMultiSelectMode ? (
+                          <CheckSquare size={18} color="#4F46E5" strokeWidth={2} />
+                        ) : (
+                          <Square size={18} color="#6B7280" strokeWidth={2} />
+                        )}
+                        <Text style={{
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: isMultiSelectMode ? '#4F46E5' : '#6B7280',
+                        }}>
+                          Sélection
+                        </Text>
+                      </Pressable>
+
                       {/* Bouton modifier */}
                       <Pressable
                         onPress={handleEditOrder}
@@ -751,6 +782,8 @@ export default function ServicePage() {
                       onPayment={handlePayment}
                       onTerminate={handleTerminate}
                       onDelete={handleDelete}
+                      isMultiSelectMode={isMultiSelectMode}
+                      onToggleMultiSelectMode={() => setIsMultiSelectMode(!isMultiSelectMode)}
                     />
                   </View>
                 ) : (
