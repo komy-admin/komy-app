@@ -16,6 +16,7 @@ export interface OrderDetailViewProps {
   itemTypes: ItemType[];
   onUpdateItemStatus: (orderLine: OrderLine, newStatus: Status) => Promise<void>;
   onUpdateMenuItemStatus: (orderLineItem: OrderLineItem, newStatus: Status) => Promise<void>;
+  onBulkUpdateStatus?: (orderLineIds: string[], orderLineItemIds: string[], newStatus: Status) => Promise<void>;
   onDeleteOrderLine: (orderLineId: string) => Promise<void>;
   onDeleteMenuLine: (orderLineId: string) => Promise<void>;
   onReassignTable: () => void;
@@ -31,6 +32,7 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
   itemTypes,
   onUpdateItemStatus,
   onUpdateMenuItemStatus,
+  onBulkUpdateStatus,
   onDeleteOrderLine,
   onDeleteMenuLine,
   onReassignTable,
@@ -178,35 +180,61 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     if (selectedItems.size === 0) return;
 
     try {
-      const promises: Promise<void>[] = [];
+      if (onBulkUpdateStatus) {
+        const orderLineIds: string[] = [];
+        const orderLineItemIds: string[] = [];
 
-      selectedItems.forEach((itemId) => {
-        const orderLine = order.lines?.find((line) => line.id === itemId);
-        if (orderLine) {
-          if (orderLine.type === OrderLineType.ITEM) {
-            promises.push(onUpdateItemStatus(orderLine, newStatus));
-          }
-        } else {
-          order.lines?.forEach((line) => {
-            if (line.type === OrderLineType.MENU && line.items) {
-              const menuItem = line.items.find((item) => item.id === itemId);
-              if (menuItem) {
-                promises.push(onUpdateMenuItemStatus(menuItem, newStatus));
-              }
+        selectedItems.forEach((itemId) => {
+          const orderLine = order.lines?.find((line) => line.id === itemId);
+          if (orderLine) {
+            if (orderLine.type === OrderLineType.ITEM) {
+              orderLineIds.push(itemId);
             }
-          });
-        }
-      });
+          } else {
+            order.lines?.forEach((line) => {
+              if (line.type === OrderLineType.MENU && line.items) {
+                const menuItem = line.items.find((item) => item.id === itemId);
+                if (menuItem) {
+                  orderLineItemIds.push(itemId);
+                }
+              }
+            });
+          }
+        });
 
-      await Promise.all(promises);
-      showToast(`${selectedItems.size} article(s) mis à jour`, 'success');
+        await onBulkUpdateStatus(orderLineIds, orderLineItemIds, newStatus);
+      } else {
+        const promises: Promise<void>[] = [];
+
+        selectedItems.forEach((itemId) => {
+          const orderLine = order.lines?.find((line) => line.id === itemId);
+          if (orderLine) {
+            if (orderLine.type === OrderLineType.ITEM) {
+              promises.push(onUpdateItemStatus(orderLine, newStatus));
+            }
+          } else {
+            order.lines?.forEach((line) => {
+              if (line.type === OrderLineType.MENU && line.items) {
+                const menuItem = line.items.find((item) => item.id === itemId);
+                if (menuItem) {
+                  promises.push(onUpdateMenuItemStatus(menuItem, newStatus));
+                }
+              }
+            });
+          }
+        });
+
+        await Promise.all(promises);
+        showToast(`${selectedItems.size} article(s) mis à jour`, 'success');
+      }
+
       setSelectedItems(new Set());
       toggleMultiSelectMode();
     } catch (error) {
       showToast('Erreur lors de la mise à jour', 'error');
       console.error('Erreur bulk update:', error);
     }
-  }, [selectedItems, order.lines, onUpdateItemStatus, onUpdateMenuItemStatus, showToast]);
+  }, [selectedItems, order.lines, onUpdateItemStatus, onUpdateMenuItemStatus, onBulkUpdateStatus, showToast, toggleMultiSelectMode]);
 
   return (
     <View style={styles.container}>

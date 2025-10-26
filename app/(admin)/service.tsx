@@ -263,6 +263,22 @@ export default function ServicePage() {
     }
   }, [selectedTableOrder, updateOrderStatus, showToast]);
 
+  const handleBulkUpdateStatus = useCallback(async (orderLineIds: string[], orderLineItemIds: string[], newStatus: Status) => {
+    if (!selectedTableOrder) return;
+
+    try {
+      await updateOrderStatus(selectedTableOrder.id, {
+        status: newStatus,
+        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+      });
+      showToast(`${orderLineIds.length + orderLineItemIds.length} article(s) mis à jour`, 'success');
+    } catch (error) {
+      showToast('Erreur lors de la mise à jour', 'error');
+      console.error('Erreur bulk update:', error);
+    }
+  }, [selectedTableOrder, updateOrderStatus, showToast]);
+
   const handleDeleteOrderLine = useCallback(async (orderLineId: string) => {
     try {
       await deleteOrderLine(orderLineId);
@@ -776,6 +792,7 @@ export default function ServicePage() {
                       itemTypes={allItemTypes}
                       onUpdateItemStatus={handleUpdateItemStatus}
                       onUpdateMenuItemStatus={handleUpdateMenuItemStatus}
+                      onBulkUpdateStatus={handleBulkUpdateStatus}
                       onDeleteOrderLine={handleDeleteOrderLine}
                       onDeleteMenuLine={handleDeleteMenuLine}
                       onReassignTable={handleReassignTable}
