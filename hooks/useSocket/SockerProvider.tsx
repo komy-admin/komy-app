@@ -28,25 +28,24 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     const initSocket = async () => {
       if (!isAuthenticated || !sessionToken) {
-        if (isConnected) {
+        if (socketService.isConnected()) {
+          console.log('[SocketProvider] User logged out, disconnecting socket');
           socketService.disconnect();
           setIsConnected(false);
         }
         return;
       }
 
-      if (socketService.isConnected()) {
-        return;
-      }
-
       try {
+        console.log('[SocketProvider] Connecting socket with token...');
+        // connect() gère automatiquement la déconnexion/reconnexion
         await socketService.connect(
           process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3333',
           sessionToken
         );
 
+        console.log('[SocketProvider] Socket connected, setting state');
         setIsConnected(true);
-        socketService.on('disconnect', () => setIsConnected(false));
       } catch (error) {
         console.error('[SocketProvider] Connection failed:', error);
         setIsConnected(false);
@@ -55,10 +54,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     initSocket();
 
+    // Cleanup function
     return () => {
-      if (isConnected) {
-        socketService.disconnect();
-      }
+      // Note: on ne déconnecte PAS ici car ça pourrait interférer avec une nouvelle connexion
+      // La déconnexion est gérée soit par le logout, soit par le connect() qui nettoie avant de reconnecter
     };
   }, [isAuthenticated, sessionToken]);
 
