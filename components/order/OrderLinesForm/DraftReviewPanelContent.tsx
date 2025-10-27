@@ -2,37 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText } from 'react-native';
 import { Edit2, Trash2, StickyNote, X, ShoppingBag } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
-import { formatPrice } from '~/lib/utils';
-
-// ========================================
-// HELPERS
-// ========================================
-
-// Helper: Récupère la couleur selon le type de champ (même config que ItemCustomizationPanelContent)
-const getFieldTypeConfig = (fieldType: string) => {
-  switch (fieldType) {
-    case 'select':
-      return { bgColor: '#DBEAFE', textColor: '#1D4ED8', priceBgColor: '#BFDBFE' };
-    case 'multi-select':
-      return { bgColor: '#EDE9FE', textColor: '#6D28D9', priceBgColor: '#DDD6FE' };
-    case 'toggle':
-      return { bgColor: '#D1FAE5', textColor: '#047857', priceBgColor: '#A7F3D0' };
-    case 'number':
-      return { bgColor: '#FDE68A', textColor: '#D97706', priceBgColor: '#FCD34D' };
-    case 'text':
-      return { bgColor: '#FBCFE8', textColor: '#BE185D', priceBgColor: '#F9A8D4' };
-    default:
-      return { bgColor: '#E2E8F0', textColor: '#475569', priceBgColor: '#CBD5E1' };
-  }
-};
-
-// Helper: Formater la valeur d'un tag
-const formatTagValue = (tag: any): string => {
-  if (tag.value === null || tag.value === undefined) return '';
-  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
-  if (Array.isArray(tag.value)) return tag.value.join(', ');
-  return String(tag.value);
-};
+import { formatPrice, getFieldTypeConfig, formatTagValue } from '~/lib/utils';
 
 interface DraftReviewPanelContentProps {
   draftLines: OrderLine[];

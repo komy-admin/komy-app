@@ -619,6 +619,8 @@ interface KitchenItem {
   menuId?: string;
   status: Status;
   orderLineId: string;
+  note?: string; // ✅ Note ajoutée
+  tags?: any[]; // ✅ Tags ajoutés (type simplifié pour éviter import circulaire)
 }
 
 // Selector pour les items de cuisine - combine OrderLines et OrderLineItems pour les besoins de la cuisine
@@ -639,7 +641,9 @@ export const selectAllKitchenItems = createSelector(
           itemType: orderLine.item.itemType?.name,
           itemTypeType: orderLine.item.itemType?.type,
           status: orderLine.status || Status.PENDING,
-          orderLineId: orderLine.id
+          orderLineId: orderLine.id,
+          note: orderLine.note, // ✅ Note de l'OrderLine
+          tags: orderLine.tags  // ✅ Tags de l'OrderLine
         });
         processedIds.add(orderLine.id);
       }
@@ -648,6 +652,8 @@ export const selectAllKitchenItems = createSelector(
         if (orderLine.items && orderLine.items.length > 0) {
           orderLine.items.forEach(menuItem => {
             if (menuItem.item) {
+              // Cast temporaire pour accéder aux propriétés tags/note qui peuvent exister
+              const menuItemWithMeta = menuItem as any;
               kitchenItems.push({
                 id: menuItem.id,
                 type: 'MENU_ITEM',
@@ -658,7 +664,9 @@ export const selectAllKitchenItems = createSelector(
                 menuName: orderLine.menu?.name,
                 menuId: orderLine.menu?.id,
                 status: menuItem.status || orderLine.status || Status.PENDING,
-                orderLineId: orderLine.id
+                orderLineId: orderLine.id,
+                note: menuItemWithMeta.note, // ✅ Note de l'item de menu
+                tags: menuItemWithMeta.tags  // ✅ Tags de l'item de menu
               });
               processedIds.add(menuItem.id);
             }
@@ -675,6 +683,7 @@ export const selectAllKitchenItems = createSelector(
           .find(ol => ol.items?.some(item => item.id === orderLineItem.id));
 
         if (parentOrderLine) {
+          const orderLineItemWithMeta = orderLineItem as any;
           kitchenItems.push({
             id: orderLineItem.id,
             type: 'MENU_ITEM',
@@ -685,7 +694,9 @@ export const selectAllKitchenItems = createSelector(
             menuName: parentOrderLine.menu?.name,
             menuId: parentOrderLine.menu?.id,
             status: orderLineItem.status || Status.PENDING,
-            orderLineId: parentOrderLine.id
+            orderLineId: parentOrderLine.id,
+            note: orderLineItemWithMeta.note, // ✅ Note
+            tags: orderLineItemWithMeta.tags  // ✅ Tags
           });
         }
       }
