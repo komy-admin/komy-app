@@ -448,3 +448,63 @@ export const formatPriceWithoutSymbol = (centimes: number, decimals: number = 2)
   return euros.toFixed(decimals).replace('.', ',');
 };
 
+// ========================================
+// 🏷️ GESTION DES TAGS
+// ========================================
+
+/**
+ * Configuration des couleurs par type de champ de tag
+ */
+export const getFieldTypeConfig = (fieldType: string) => {
+  switch (fieldType) {
+    case 'select':
+      return { bgColor: '#DBEAFE', textColor: '#1D4ED8', priceBgColor: '#BFDBFE' };
+    case 'multi-select':
+      return { bgColor: '#EDE9FE', textColor: '#6D28D9', priceBgColor: '#DDD6FE' };
+    case 'toggle':
+      return { bgColor: '#D1FAE5', textColor: '#047857', priceBgColor: '#A7F3D0' };
+    case 'number':
+      return { bgColor: '#FDE68A', textColor: '#D97706', priceBgColor: '#FCD34D' };
+    case 'text':
+      return { bgColor: '#FBCFE8', textColor: '#BE185D', priceBgColor: '#F9A8D4' };
+    default:
+      return { bgColor: '#E2E8F0', textColor: '#475569', priceBgColor: '#CBD5E1' };
+  }
+};
+
+/**
+ * Formate la valeur d'un tag selon son type
+ */
+export const formatTagValue = (tag: any): string => {
+  if (tag.value === null || tag.value === undefined) return '';
+  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
+  if (Array.isArray(tag.value)) return tag.value.join(', ');
+  return String(tag.value);
+};
+
+// ========================================
+// 🪑 GESTION DES TABLES
+// ========================================
+
+/**
+ * Extrait l'ID court d'une table (ex: "Table A1" -> "TA1")
+ */
+export const getTableShortId = (tableName: string): string => {
+  if (!tableName) return '';
+
+  // Si le format est "Table A1", on extrait "TA1"
+  const match = tableName.match(/Table\s+([A-Z])(\d+)/i);
+  if (match) {
+    return `T${match[1].toUpperCase()}${match[2]}`;
+  }
+
+  // Si le format est "A1", on extrait "TA1"
+  const simpleMatch = tableName.match(/^([A-Z])(\d+)$/i);
+  if (simpleMatch) {
+    return `T${simpleMatch[1].toUpperCase()}${simpleMatch[2]}`;
+  }
+
+  // Sinon, retourner le nom tel quel mais tronqué
+  return tableName.length > 6 ? tableName.substring(0, 6) : tableName;
+};
+

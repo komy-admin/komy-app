@@ -1,6 +1,7 @@
-import { OrderLine, DraftOrderLine } from '~/types/order-line.types';
+import { OrderLine, DraftOrderLine, SelectedTag } from '~/types/order-line.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
+import { Menu } from '~/types/menu.types';
 
 /**
  * Actions de configuration pour les menus
@@ -12,14 +13,37 @@ export interface ConfigurationActions {
 }
 
 /**
- * Props pour le composant OrderLinesForm (composant contrôlé pur)
- * Plus de ref, plus de compatibilité AdminFormRef - juste props down / events up
+ * Sélections de menu (format simplifié)
+ */
+export interface MenuSelections {
+  [categoryId: string]: {
+    itemId: string;
+    tags: SelectedTag[];
+    note?: string;
+  };
+}
+
+/**
+ * Props pour le composant OrderLinesForm (NOUVEAU - composant présentationnel pur)
+ *
+ * Le composant ne gère PLUS l'état des lignes, il émet seulement des événements au parent.
+ * Le parent (via useOrderLinesManager) gère tout l'état et la logique métier.
  */
 export interface OrderLinesFormProps {
-  lines: OrderLine[];           // Lignes actuelles (contrôlé par le parent)
-  items: Item[];               // Items disponibles
-  itemTypes: ItemType[];       // Types d'items
-  onLinesChange: (lines: OrderLine[]) => void;  // Callback pour émettre les changements
+  // Données (read-only)
+  lines: OrderLine[];
+  items: Item[];
+  itemTypes: ItemType[];
+
+  // Événements (mutations)
+  onAddItem: (item: Item, customization: { tags: SelectedTag[]; note?: string }) => void;
+  onUpdateItem: (lineId: string, customization: { tags: SelectedTag[]; note?: string }) => void;
+  onAddMenu: (menu: Menu, selections: MenuSelections, itemTypes: ItemType[]) => void;
+  onUpdateMenu: (lineId: string, menu: Menu, selections: MenuSelections, itemTypes: ItemType[]) => void;
+  onDeleteLine: (lineId: string) => void;
+  onClearAll?: () => void;
+
+  // Configuration (optionnel - pour service.tsx)
   onConfigurationModeChange?: (isConfiguring: boolean) => void;
   onConfigurationActionsChange?: (actions: ConfigurationActions | null) => void;
 }

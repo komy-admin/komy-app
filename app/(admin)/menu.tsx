@@ -8,6 +8,7 @@ import { MenuForm } from "~/components/form/MenuForm";
 import { useToast } from '~/components/ToastProvider';
 import { useMenu, useRestaurant } from '~/hooks/useRestaurant';
 import { useMenus } from '~/hooks/useMenus';
+import { useTags } from '~/hooks/useTags';
 import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
 import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
@@ -47,6 +48,7 @@ export default function MenuPage() {
   // Utilisation des hooks Redux
   const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
   const { allMenus, loading: menusLoading, error: menusError, createMenuBulk, updateMenuBulk, deleteMenu, createMenuCategoryItem, loadMenuCategoryItems } = useMenus();
+  const { tags } = useTags();
 
   // Filtrer les articles avec les filtres appliqués et trier par statut
   const filteredItems = useMemo(() => {
@@ -106,17 +108,18 @@ export default function MenuPage() {
         throw new Error("Type not found");
       }
 
-      const itemWithType = {
+      const itemData: any = {
         ...item,
         color: item.color || undefined,
-        itemType: itemType
+        itemType: itemType,
+        tags: item.tags?.map(t => t.id) || []
       };
 
       if (item.id) {
-        await updateMenuItem(item.id, itemWithType);
+        await updateMenuItem(item.id, itemData);
         showToast('Article modifié avec succès', 'success');
       } else {
-        await createMenuItem(itemWithType);
+        await createMenuItem(itemData);
         showToast('Article créé avec succès', 'success');
       }
       handleCloseItemModal();
@@ -605,6 +608,7 @@ export default function MenuPage() {
             <MenuForm
               item={currentItem}
               itemTypes={itemTypes}
+              tags={tags}
               activeTab={activeTab}
             />
           </AdminFormView>

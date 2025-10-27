@@ -1,34 +1,14 @@
 import { ScrollView, View, StyleSheet } from "react-native";
 import { getStatusColor, getStatusText } from "~/lib/utils";
 import { Status } from "~/types/status.enum";
+import { ItemGroup } from "~/types/kitchen.types";
 import { Text } from "../ui";
 import KitchenItemCard from "./KitchenItemCard";
 
-// 🆕 Interface pour les groupes d'items
-interface KitchenItemGroup {
-  id: string;
-  orderId: string;
-  orderNumber: string;
-  tableName: string;
-  status: Status;
-  items: Array<{
-    id: string;
-    type: 'ITEM' | 'MENU_ITEM';
-    itemName: string;
-    itemType?: string;
-    menuName?: string;
-    menuId?: string;
-    orderLineId?: string;
-    isOverdue: boolean;
-  }>;
-  isOverdue: boolean;
-  createdAt: string;
-}
-
 export default function OrderColumn({ itemGroups = [], status, onStatusChange, onIndividualItemStatusChange }: {
-  itemGroups: KitchenItemGroup[]; 
+  itemGroups: ItemGroup[];
   status: Status;
-  onStatusChange: (itemGroup: KitchenItemGroup, newStatus: Status) => void;
+  onStatusChange: (itemGroup: ItemGroup, newStatus: Status) => void;
   onIndividualItemStatusChange?: (item: any, newStatus: Status) => void;
 }) {
 
@@ -85,7 +65,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 8,
   },
   headerTitle: {
     fontSize: 16,
@@ -98,7 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(42, 46, 51, 0.1)',
     borderRadius: 12,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 0,
     minWidth: 24,
     alignItems: 'center',
   },

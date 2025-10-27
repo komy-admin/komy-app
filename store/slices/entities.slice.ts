@@ -8,6 +8,7 @@ import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { User } from '~/types/user.types';
 import { Status } from '~/types/status.enum';
+import { Tag } from '~/types/tag.types';
 
 /**
  * État unifié pour toutes les entités métier
@@ -24,7 +25,8 @@ export interface EntitiesState {
   items: Record<string, Item>;
   itemTypes: Record<string, ItemType>;
   users: Record<string, User>;
-  
+  tags: Record<string, Tag>;
+
   // État global
   isInitialized: boolean;
   initError: string | null;
@@ -41,6 +43,7 @@ const initialState: EntitiesState = {
   items: {},
   itemTypes: {},
   users: {},
+  tags: {},
   isInitialized: false,
   initError: null,
 };
@@ -442,6 +445,24 @@ const entitiesSlice = createSlice({
       delete state.itemTypes[action.payload.itemTypeId];
     },
 
+    // === TAGS ===
+    setTags: (state, action: PayloadAction<{ tags: Tag[] }>) => {
+      state.tags = normalizeArray(action.payload.tags);
+    },
+    createTag: (state, action: PayloadAction<{ tag: Tag }>) => {
+      const { tag } = action.payload;
+      state.tags[tag.id] = tag;
+    },
+    updateTag: (state, action: PayloadAction<{ tag: Partial<Tag> & { id: string } }>) => {
+      const { tag } = action.payload;
+      if (state.tags[tag.id]) {
+        state.tags[tag.id] = { ...state.tags[tag.id], ...tag };
+      }
+    },
+    deleteTag: (state, action: PayloadAction<{ tagId: string }>) => {
+      delete state.tags[action.payload.tagId];
+    },
+
     // === USERS ===
     setUsers: (state, action: PayloadAction<{ users: User[] }>) => {
       state.users = normalizeArray(action.payload.users);
@@ -598,6 +619,8 @@ interface KitchenItem {
   menuId?: string;
   status: Status;
   orderLineId: string;
+  note?: string; // ✅ Note ajoutée
+  tags?: any[]; // ✅ Tags ajoutés (type simplifié pour éviter import circulaire)
 }
 
 // Selector pour les items de cuisine - combine OrderLines et OrderLineItems pour les besoins de la cuisine
@@ -618,7 +641,9 @@ export const selectAllKitchenItems = createSelector(
           itemType: orderLine.item.itemType?.name,
           itemTypeType: orderLine.item.itemType?.type,
           status: orderLine.status || Status.PENDING,
-          orderLineId: orderLine.id
+          orderLineId: orderLine.id,
+          note: orderLine.note, // ✅ Note de l'OrderLine
+          tags: orderLine.tags  // ✅ Tags de l'OrderLine
         });
         processedIds.add(orderLine.id);
       }
@@ -627,6 +652,8 @@ export const selectAllKitchenItems = createSelector(
         if (orderLine.items && orderLine.items.length > 0) {
           orderLine.items.forEach(menuItem => {
             if (menuItem.item) {
+              // Cast temporaire pour accéder aux propriétés tags/note qui peuvent exister
+              const menuItemWithMeta = menuItem as any;
               kitchenItems.push({
                 id: menuItem.id,
                 type: 'MENU_ITEM',
@@ -637,7 +664,9 @@ export const selectAllKitchenItems = createSelector(
                 menuName: orderLine.menu?.name,
                 menuId: orderLine.menu?.id,
                 status: menuItem.status || orderLine.status || Status.PENDING,
-                orderLineId: orderLine.id
+                orderLineId: orderLine.id,
+                note: menuItemWithMeta.note, // ✅ Note de l'item de menu
+                tags: menuItemWithMeta.tags  // ✅ Tags de l'item de menu
               });
               processedIds.add(menuItem.id);
             }
@@ -654,6 +683,7 @@ export const selectAllKitchenItems = createSelector(
           .find(ol => ol.items?.some(item => item.id === orderLineItem.id));
 
         if (parentOrderLine) {
+          const orderLineItemWithMeta = orderLineItem as any;
           kitchenItems.push({
             id: orderLineItem.id,
             type: 'MENU_ITEM',
@@ -664,7 +694,9 @@ export const selectAllKitchenItems = createSelector(
             menuName: parentOrderLine.menu?.name,
             menuId: parentOrderLine.menu?.id,
             status: orderLineItem.status || Status.PENDING,
-            orderLineId: parentOrderLine.id
+            orderLineId: parentOrderLine.id,
+            note: orderLineItemWithMeta.note, // ✅ Note
+            tags: orderLineItemWithMeta.tags  // ✅ Tags
           });
         }
       }

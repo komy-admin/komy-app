@@ -1,6 +1,5 @@
 import React, { memo, useCallback } from 'react';
-import { View, Pressable, Platform, StyleSheet, ScrollView } from 'react-native';
-import { Text } from '~/components/ui';
+import { View, Pressable, Platform, StyleSheet, ScrollView, Text as RNText } from 'react-native';
 import { Menu as MenuIcon } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
@@ -13,7 +12,7 @@ import { formatPrice } from '~/lib/utils';
 interface MenuCategoryType {
   id: string;
   itemTypeId: string;
-  priceModifier?: number | string;
+  priceModifier?: number;
   isRequired?: boolean;
   maxSelections?: number;
 }
@@ -24,8 +23,17 @@ interface MenuCategoryType {
 interface MenuCategoryItem {
   id: string;
   item?: Item;
-  supplement?: number | string;
+  supplement?: number;
   isAvailable?: boolean;
+}
+
+/**
+ * Type pour une sélection d'item de menu avec tags
+ */
+export interface MenuItemSelection {
+  itemId: string;
+  tags: any[];
+  note?: string;
 }
 
 /**
@@ -33,8 +41,9 @@ interface MenuCategoryItem {
  */
 export interface MenuConfigurationProps {
   menu: Menu;
-  tempMenuSelections: Record<string, string[]>;
-  onUpdateTempMenuSelection: (categoryId: string, itemId: string, isSelected: boolean) => void;
+  tempMenuSelections: Record<string, MenuItemSelection>;
+  onSelectMenuItem: (item: Item, categoryId: string) => void;
+  onDeselectMenuItem: (categoryId: string) => void;
   getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryNameFromItemTypeId?: (itemTypeId: string) => string;
   itemTypes: ItemType[];
@@ -46,8 +55,8 @@ export interface MenuConfigurationProps {
 interface MenuCategoryProps {
   category: MenuCategoryType;
   index: number;
-  selectedItems: string[];
-  onToggleItem: (categoryId: string, itemId: string) => void;
+  selectedItem: MenuItemSelection | null;
+  onToggleItem: (categoryId: string, item: Item) => void;
   getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryName: (itemTypeId: string) => string;
 }
@@ -55,17 +64,17 @@ interface MenuCategoryProps {
 const MenuCategory = memo<MenuCategoryProps>(({
   category,
   index,
-  selectedItems,
+  selectedItem,
   onToggleItem,
   getMenuCategoryItems,
   getCategoryName
 }) => {
   const categoryName = getCategoryName(category.itemTypeId);
-  const hasSupplementPrice = parseFloat(category.priceModifier?.toString() || '0') > 0;
+  const hasSupplementPrice = (category.priceModifier || 0) > 0;
   const menuCategoryItems = getMenuCategoryItems(category.id);
 
-  const handleToggleItem = useCallback((itemId: string) => {
-    onToggleItem(category.id, itemId);
+  const handleToggleItem = useCallback((item: Item) => {
+    onToggleItem(category.id, item);
   }, [category.id, onToggleItem]);
 
   if (!menuCategoryItems || menuCategoryItems.length === 0) {
@@ -74,13 +83,13 @@ const MenuCategory = memo<MenuCategoryProps>(({
         <View style={styles.categoryHeader}>
           <View style={styles.categoryHeaderContent}>
             <View style={styles.categoryNumberBadge}>
-              <Text style={styles.categoryNumberText}>{index + 1}</Text>
+              <RNText style={styles.categoryNumberText}>{index + 1}</RNText>
             </View>
             <View style={styles.categoryHeaderInfo}>
-              <Text style={styles.categoryHeaderTitle}>{categoryName}</Text>
-              <Text style={styles.categoryHeaderSubtitle}>
+              <RNText style={styles.categoryHeaderTitle}>{categoryName}</RNText>
+              <RNText style={styles.categoryHeaderSubtitle}>
                 Aucun article disponible
-              </Text>
+              </RNText>
             </View>
           </View>
         </View>
@@ -94,23 +103,23 @@ const MenuCategory = memo<MenuCategoryProps>(({
       <View style={styles.categoryHeader}>
         <View style={styles.categoryHeaderContent}>
           <View style={styles.categoryNumberBadge}>
-            <Text style={styles.categoryNumberText}>{index + 1}</Text>
+            <RNText style={styles.categoryNumberText}>{index + 1}</RNText>
           </View>
 
           <View style={styles.categoryHeaderInfo}>
-            <Text style={styles.categoryHeaderTitle}>
+            <RNText style={styles.categoryHeaderTitle}>
               {categoryName}
-            </Text>
-            <Text style={styles.categoryHeaderSubtitle}>
-              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItems.length} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
-            </Text>
+            </RNText>
+            <RNText style={styles.categoryHeaderSubtitle}>
+              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItem ? 1 : 0} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
+            </RNText>
           </View>
 
           {hasSupplementPrice && (
             <View style={styles.categorySupplementTag}>
-              <Text style={styles.categorySupplementTagText}>
-                + {category.priceModifier} € de Supplément
-              </Text>
+              <RNText style={styles.categorySupplementTagText}>
+                + {formatPrice(category.priceModifier || 0)} de Supplément
+              </RNText>
             </View>
           )}
         </View>
@@ -124,8 +133,8 @@ const MenuCategory = memo<MenuCategoryProps>(({
             const item = menuCategoryItem?.item;
             if (!item) return null;
 
-            const supplement = parseFloat(String(menuCategoryItem.supplement || '0'));
-            const isSelected = selectedItems.includes(item.id);
+            const supplement = menuCategoryItem.supplement || 0;
+            const isSelected = selectedItem?.itemId === item.id;
             const hasSupplementPrice = supplement > 0;
 
             return (
@@ -135,7 +144,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
                 isSelected={isSelected}
                 supplement={supplement}
                 hasSupplementPrice={hasSupplementPrice}
-                onToggle={() => handleToggleItem(item.id)}
+                onToggle={() => handleToggleItem(item)}
               />
             );
           })}
@@ -175,15 +184,15 @@ const MenuItemCard = memo<MenuItemCardProps>(({
       <View style={styles.menuItemContent}>
         <View style={styles.menuItemInfo}>
           <View style={styles.menuItemNameRow}>
-            <Text style={styles.menuItemName}>
+            <RNText style={styles.menuItemName}>
               {item.name}
-            </Text>
+            </RNText>
 
             {hasSupplementPrice && (
               <View style={styles.menuItemSupplement}>
-                <Text style={styles.menuItemSupplementText}>
+                <RNText style={styles.menuItemSupplementText}>
                   +{formatPrice(supplement)}
-                </Text>
+                </RNText>
               </View>
             )}
           </View>
@@ -195,7 +204,7 @@ const MenuItemCard = memo<MenuItemCardProps>(({
             isSelected && styles.menuItemCheckboxSelected
           ]}>
             {isSelected && (
-              <Text style={styles.menuItemCheckboxIcon}>✓</Text>
+              <RNText style={styles.menuItemCheckboxIcon}>✓</RNText>
             )}
           </View>
         </View>
@@ -216,7 +225,8 @@ MenuItemCard.displayName = 'MenuItemCard';
 export const MenuConfiguration = memo<MenuConfigurationProps>(({
   menu,
   tempMenuSelections,
-  onUpdateTempMenuSelection,
+  onSelectMenuItem,
+  onDeselectMenuItem,
   getMenuCategoryItems,
   getCategoryNameFromItemTypeId,
   itemTypes
@@ -233,11 +243,18 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
     return itemType?.name || 'Catégorie inconnue';
   }, [getCategoryNameFromItemTypeId, itemTypes]);
 
-  const handleToggleItem = useCallback((categoryId: string, itemId: string) => {
-    const selectedItems = tempMenuSelections[categoryId] || [];
-    const isSelected = selectedItems.includes(itemId);
-    onUpdateTempMenuSelection(categoryId, itemId, !isSelected);
-  }, [tempMenuSelections, onUpdateTempMenuSelection]);
+  const handleToggleItem = useCallback((categoryId: string, item: Item) => {
+    const selectedItem = tempMenuSelections[categoryId];
+    const isSelected = selectedItem?.itemId === item.id;
+
+    if (isSelected) {
+      // Désélectionner l'item
+      onDeselectMenuItem(categoryId);
+    } else {
+      // Sélectionner l'item -> ouvrir la modale de customisation
+      onSelectMenuItem(item, categoryId);
+    }
+  }, [tempMenuSelections, onSelectMenuItem, onDeselectMenuItem]);
 
   if (!menu) return null;
 
@@ -250,12 +267,12 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
             <MenuIcon size={20} color="#2A2E33" />
           </View>
           <View style={styles.sectionHeaderText}>
-            <Text style={styles.sectionHeaderTitle}>
+            <RNText style={styles.sectionHeaderTitle}>
               Configuration "{menu.name}"
-            </Text>
-            <Text style={styles.sectionHeaderSubtitle}>
+            </RNText>
+            <RNText style={styles.sectionHeaderSubtitle}>
               Personnalisez votre sélection d'articles
-            </Text>
+            </RNText>
           </View>
         </View>
       </View>
@@ -272,13 +289,13 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
         {menu.categories && menu.categories.length > 0 ? (
           <View style={styles.categoriesContainer}>
             {menu.categories.map((category: MenuCategoryType, index: number) => {
-              const selectedItems = tempMenuSelections[category.id] || [];
+              const selectedItem = tempMenuSelections[category.id] || null;
               return (
                 <MenuCategory
                   key={category.id}
                   category={category}
                   index={index}
-                  selectedItems={selectedItems}
+                  selectedItem={selectedItem}
                   onToggleItem={handleToggleItem}
                   getMenuCategoryItems={getMenuCategoryItems}
                   getCategoryName={getCategoryName}
@@ -288,10 +305,10 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
           </View>
         ) : (
           <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateTitle}>Aucune catégorie disponible</Text>
-            <Text style={styles.emptyStateSubtitle}>
+            <RNText style={styles.emptyStateTitle}>Aucune catégorie disponible</RNText>
+            <RNText style={styles.emptyStateSubtitle}>
               Ce menu n'a pas encore de catégories configurées
-            </Text>
+            </RNText>
           </View>
         )}
       </ScrollView>

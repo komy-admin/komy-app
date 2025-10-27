@@ -28,11 +28,12 @@ import { RootState } from '~/store';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
 import { CustomModal } from '@/components/CustomModal';
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
+import { OrderLine } from '~/types/order-line.types';
 import { Order } from '@/types/order.types';
-import { OrderLine, CreateOrderLineRequest, OrderLineType } from '~/types/order-line.types';
-import { useOrderLines } from '~/hooks/useOrderLines';
-import { useMenus } from '~/hooks/useMenus';
+import { OrderLineType } from '~/types/order-line.types';
 import { Plus, LayoutDashboard } from 'lucide-react-native';
+import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
+import { useOrderLines } from '~/hooks/useOrderLines';
 
 export default function ServicePage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -44,8 +45,7 @@ export default function ServicePage() {
     isValid?: boolean;
   } | null>(null);
 
-  const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
-  const { createOrderWithLines, createOrderLines, deleteOrderLine, deleteOrderLines } = useOrderLines();
+  const { deleteOrderLine, deleteOrderLines } = useOrderLines();
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useSelector(selectAppInitialized);
   const appLoading = useSelector(selectIsAppInitializing);
@@ -54,13 +54,36 @@ export default function ServicePage() {
     currentRoomOrders,
     selectedTableOrder,
     loading,
-    // createOrder, // Non utilisé
     updateOrder,
     updateOrderStatus,
     deleteOrder
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
-  const { activeMenus: allMenus } = useMenus();
+
+  // Stabiliser la référence des initialLines pour éviter les re-renders inutiles
+  const initialLines = useMemo(() => selectedTableOrder?.lines || [], [selectedTableOrder?.id, selectedTableOrder?.lines]);
+
+  // ✅ Hook pour gérer les OrderLines (remplace toute la logique manuelle)
+  const orderLinesManager = useOrderLinesManager({
+    initialLines,
+    mode: orderCreatedFromStart ? 'create' : 'edit',
+    orderId: selectedTableOrder?.id,
+    tableId: selectedTableId!,
+    onSuccess: (updatedOrder) => {
+      isSavingOrderRef.current = { savedOrder: updatedOrder };
+      showToast('Commande mise à jour avec succès', 'success');
+      setShowOrderModal(false);
+      modalActions.openOrderDetail(updatedOrder);
+      setTimeout(() => {
+        isSavingOrderRef.current = false;
+      }, 500);
+      setOrderCreatedFromStart(false);
+    },
+    onError: () => {
+      showToast('Erreur lors de la mise à jour de la commande', 'error');
+      isSavingOrderRef.current = false;
+    },
+  });
 
 
 
@@ -185,7 +208,6 @@ export default function ServicePage() {
     setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
     modalActions.setCameFromOrderDetail(false); // Ne vient PAS de la modal détails
     modalActions.setModalTitle(`Prendre la commande - ${selectedTable?.name}`); // Titre pour nouvelle commande
-    setOrderLines([]); // Réinitialiser les lignes pour une nouvelle commande
     setShowOrderModal(true); // Ouvrir la modal
   };
 
@@ -194,8 +216,6 @@ export default function ServicePage() {
     setOrderCreatedFromStart(false); // Modal ouverte depuis le bouton "Modifier"
     modalActions.setCameFromOrderDetail(true); // Marquer qu'on vient de la modal détails
     modalActions.setModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Modifier la commande"); // Titre stable pour modification
-    setOrderLines([]); // Réinitialiser les lignes draft (les lignes existantes viendront de selectedTableOrder)
-    // La commande courante est déjà disponible via selectedTableOrder
     setShowOrderModal(true); // Ouvrir la modal
   };
 
@@ -210,10 +230,12 @@ export default function ServicePage() {
       const wasSaving = !!isSavingOrderRef.current;
       const wasOrderCreatedFromStart = orderCreatedFromStart;
 
-      // Fermer le formulaire et réinitialiser les lignes
+      // Réinitialiser les lignes avant de fermer
+      orderLinesManager.reset();
+
+      // Fermer le formulaire
       setShowOrderModal(false);
       setOrderCreatedFromStart(false);
-      setOrderLines([]);
 
 
 
@@ -248,7 +270,8 @@ export default function ServicePage() {
       modals.cameFromOrderDetailModal,
       modalActions,
       deleteOrder,
-      showToast
+      showToast,
+      orderLinesManager
     ]);
   };
 
@@ -287,127 +310,6 @@ export default function ServicePage() {
   const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void; isValid?: boolean } | null) => {
     setMenuConfigActions(actions);
   }, []);
-
-  const handleLinesChange = useCallback((newLines: OrderLine[]) => {
-    // Si on est en mode modification, filtrer les lignes déjà existantes
-    let linesToSave = newLines;
-
-    if (selectedTableOrder && selectedTableOrder.lines) {
-      const existingLineIds = new Set(selectedTableOrder.lines.map(l => l.id));
-      // Ne garder que les lignes qui n'ont pas d'ID ou dont l'ID commence par "draft-"
-      linesToSave = newLines.filter(line =>
-        !line.id ||
-        line.id.startsWith('draft-') ||
-        !existingLineIds.has(line.id)
-      );
-    }
-
-    setOrderLines(linesToSave);
-  }, [selectedTableOrder]);
-
-  const getCurrentLines = useCallback((): OrderLine[] => {
-    if (orderCreatedFromStart) {
-      return orderLines; // Mode création : utiliser les lignes draft
-    } else if (selectedTableOrder) {
-      return selectedTableOrder.lines || []; // Mode modification : utiliser les lignes existantes
-    }
-    return [];
-  }, [orderCreatedFromStart, orderLines, selectedTableOrder]);
-
-
-  const convertOrderLinesToApiFormat = useCallback((lines: OrderLine[]): CreateOrderLineRequest[] => {
-    return lines.map(line => {
-      if (line.type === OrderLineType.ITEM) {
-        return {
-          type: line.type,
-          quantity: line.quantity,
-          itemId: line.item!.id,
-          note: line.note || ''
-        };
-      } else if (line.type === OrderLineType.MENU) {
-        // Pour les menus, reconstruire selectedItems à partir des orderLine.items
-        const selectedItems: Record<string, string> = {};
-
-        line.items?.forEach(orderLineItem => {
-          // Trouver la catégorie correspondante dans le menu original
-          const menu = allMenus.find((m: any) => m.id === line.menu?.id);
-          if (menu?.categories) {
-            const category = menu.categories.find((cat: any) => {
-              const categoryName = allItemTypes.find(type => type.id === cat.itemTypeId)?.name;
-              return categoryName === orderLineItem.categoryName;
-            });
-
-            if (category) {
-              selectedItems[category.id] = orderLineItem.item.id;
-            }
-          }
-        });
-
-        return {
-          type: line.type,
-          quantity: line.quantity,
-          menuId: line.menu!.id,
-          selectedItems,
-          note: line.note || ''
-        };
-      }
-
-      // Fallback - ne devrait pas arriver
-      throw new Error(`Type de ligne non supporté: ${line.type}`);
-    });
-  }, [allMenus, allItemTypes]);
-
-  const handleSaveOrder = async () => {
-    try {
-      if (!orderLines || orderLines.length === 0) {
-        showToast('Aucune ligne à sauvegarder', 'info');
-        setOrderCreatedFromStart(false);
-        return true;
-      }
-
-      // Indiquer qu'on est en train de sauvegarder
-      isSavingOrderRef.current = true;
-
-      // Convertir les OrderLine vers le format API
-      const apiData = convertOrderLinesToApiFormat(orderLines);
-
-      let updatedOrder;
-      if (orderCreatedFromStart) {
-        // Mode création : créer order + lignes ensemble
-        updatedOrder = await createOrderWithLines(selectedTableId!, apiData);
-      } else if (selectedTableOrder?.id) {
-        // Mode modification : ajouter lignes à l'order existant
-        updatedOrder = await createOrderLines(selectedTableOrder.id, apiData);
-      }
-
-      if (updatedOrder) {
-        // Stocker le résultat pour useSmartOrderClose
-        isSavingOrderRef.current = { savedOrder: updatedOrder };
-        showToast('Commande mise à jour avec succès.', 'success');
-        // Réinitialiser l'état
-        setOrderLines([]);
-
-        // Fermer la modal de création/modification
-        setShowOrderModal(false);
-
-        // Ouvrir la modal de détails avec la commande mise à jour
-        modalActions.openOrderDetail(updatedOrder);
-
-        // Réinitialiser le flag de sauvegarde après un court délai
-        setTimeout(() => {
-          isSavingOrderRef.current = false;
-        }, 500);
-      }
-
-      // Désactiver le flag orderCreatedFromStart
-      setOrderCreatedFromStart(false);
-      return true;
-    } catch (error) {
-      showToast('Erreur lors de la mise à jour de la commande.', 'error');
-      isSavingOrderRef.current = false;
-      return false;
-    }
-  };
 
 
   const handleStatusUpdate = async (orderLines: OrderLine[], status: Status) => {
@@ -467,7 +369,7 @@ export default function ServicePage() {
     setSelectedTable(null);
   };
 
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   // Fonction pour rediriger vers room_list avec création automatique
   const handleCreateFirstRoom = () => {
     router.push('/(admin)/room/create');
@@ -488,10 +390,15 @@ export default function ServicePage() {
           {/* OrderLinesForm */}
           <View style={{ flex: 1 }}>
             <OrderLinesForm
-              lines={getCurrentLines()}
+              lines={orderLinesManager.orderLines}
               items={allItems.filter(item => item.isActive)}
               itemTypes={allItemTypes}
-              onLinesChange={handleLinesChange}
+              onAddItem={orderLinesManager.addItem}
+              onUpdateItem={orderLinesManager.updateItem}
+              onAddMenu={orderLinesManager.addMenu}
+              onUpdateMenu={orderLinesManager.updateMenu}
+              onDeleteLine={orderLinesManager.deleteLine}
+              onClearAll={orderLinesManager.clearAllLines}
               onConfigurationModeChange={handleConfigurationModeChange}
               onConfigurationActionsChange={handleConfigurationActionsChange}
             />
@@ -516,11 +423,11 @@ export default function ServicePage() {
               </OrderLinesButton>
               <OrderLinesButton
                 variant="primary"
-                onPress={handleSaveOrder}
-                disabled={!orderLines || orderLines.length === 0}
+                onPress={orderLinesManager.save}
+                disabled={!orderLinesManager.hasChanges || orderLinesManager.isProcessing}
                 flex={2}
               >
-                Sauvegarder
+                {orderLinesManager.isProcessing ? 'Sauvegarde...' : 'Sauvegarder'}
               </OrderLinesButton>
             </View>
           )}

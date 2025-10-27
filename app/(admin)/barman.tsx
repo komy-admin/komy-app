@@ -1,100 +1,24 @@
-import React, { useMemo, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
+import { ItemGroup } from "~/types/kitchen.types";
 import OrderColumn from '~/components/Kitchen/OrderColumn';
-import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
+import { useOrders } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
+import { handleOrderStatusError } from '~/lib/errorHandlers';
+import { useItemGrouping } from '~/hooks/useItemGrouping';
+import { filterItemsByArea } from '~/lib/itemFilters';
 
 const AVAILABLE_STATUSES = [
   Status.PENDING,
   Status.INPROGRESS,
   Status.READY,
 ];
-
-interface BarItemGroup {
-  id: string;
-  orderId: string;
-  orderNumber: string;
-  tableName: string;
-  status: Status;
-  items: Array<{
-    id: string;
-    type: 'ITEM' | 'MENU_ITEM';
-    itemName: string;
-    itemType?: string;
-    menuName?: string;
-    menuId?: string;
-    orderLineId?: string;
-    isOverdue: boolean;
-  }>;
-  isOverdue: boolean;
-  createdAt: string;
-}
-
-function useBarItemGrouping(orders: Order[], kitchenItems: any[], overdueOrderItemIds: string[]) {
-  const groupedItems = useMemo(() => {
-    const groupMap = new Map<string, BarItemGroup>();
-
-    const barItems = kitchenItems.filter(item =>
-      item.itemType === 'Boissons' || item.itemType === 'Bar'
-    );
-
-    barItems.forEach(item => {
-      const order = orders.find(o => o.id === item.orderId);
-      if (!order) return;
-
-      const groupKey = `${order.id}-${item.status}`;
-
-      if (!groupMap.has(groupKey)) {
-        groupMap.set(groupKey, {
-          id: groupKey,
-          orderId: order.id,
-          orderNumber: `#${order.id.slice(-4)}`,
-          tableName: order.table?.name || 'Table inconnue',
-          status: item.status,
-          items: [],
-          isOverdue: false,
-          createdAt: order.createdAt
-        });
-      }
-
-      const group = groupMap.get(groupKey)!;
-      const isItemOverdue = overdueOrderItemIds.includes(item.id);
-
-      group.items.push({
-        id: item.id,
-        type: item.type,
-        itemName: item.itemName,
-        itemType: item.itemType,
-        menuName: item.menuName,
-        menuId: item.menuId,
-        orderLineId: item.orderLineId,
-        isOverdue: isItemOverdue
-      });
-
-      // Marquer le groupe comme en retard si au moins un item l'est
-      if (isItemOverdue) {
-        group.isOverdue = true;
-      }
-    });
-
-    // Convertir en array et trier (en retard en premier, puis par date)
-    const sortedGroups = Array.from(groupMap.values()).sort((a, b) => {
-      if (a.isOverdue && !b.isOverdue) return -1;
-      if (!a.isOverdue && b.isOverdue) return 1;
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-
-    return sortedGroups;
-  }, [orders, kitchenItems, overdueOrderItemIds]);
-
-  return groupedItems;
-}
 
 export default function BarmanPage() {
   const router = useRouter();
@@ -111,19 +35,12 @@ export default function BarmanPage() {
 
   const kitchenItems = useSelector(selectAllKitchenItems);
   // Récupérer les commandes en retard depuis le store
-  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
   const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
   // Filtrer les items selon les statuts disponibles au bar
   const filteredBarItems = useMemo(() => {
-    const filtered = kitchenItems.filter(item => {
-      const shouldInclude = AVAILABLE_STATUSES.includes(item.status) &&
-        (item.itemTypeType === 'bar');
-      return shouldInclude;
-    });
-
-    return filtered;
+    return filterItemsByArea(kitchenItems, 'bar', AVAILABLE_STATUSES);
   }, [kitchenItems]);
 
   // Récupérer les commandes qui ont des items au bar
@@ -134,9 +51,9 @@ export default function BarmanPage() {
     return filteredOrders;
   }, [orders, filteredBarItems]);
 
-  const groupedItems = useBarItemGrouping(barOrders, filteredBarItems, overdueOrderItemIds);
+  const groupedItems = useItemGrouping(barOrders, filteredBarItems, overdueOrderItemIds);
 
-  const handleStatusChange = async (itemGroup: BarItemGroup, newStatus: Status) => {
+  const handleStatusChange = async (itemGroup: ItemGroup, newStatus: Status) => {
     try {
       const orderLineIds: string[] = [];
       const orderLineItemIds: string[] = [];
@@ -158,31 +75,13 @@ export default function BarmanPage() {
       }
 
     } catch (error: any) {
-      console.error('Error updating status:', error);
-
-      // Gestion d'erreur spécifique pour le 500
-      if (error.response?.status === 500) {
-        showToast('Erreur serveur temporaire, l\'API est en cours de correction', 'error');
-      } else if (error.response?.status === 404) {
-        showToast('Commande introuvable', 'error');
-      } else if (error.response?.status === 403) {
-        showToast('Vous n\'avez pas les droits pour cette action', 'error');
-      } else {
-        showToast('Impossible de mettre à jour le statut, veuillez réessayer', 'error');
-      }
+      handleOrderStatusError(error, showToast);
     }
   };
 
   // Fonction pour mettre à jour un item individuel
   const handleIndividualItemStatusChange = async (item: any, newStatus: Status) => {
     try {
-      console.log('🔄 [DEBUG] Bar handleIndividualItemStatusChange:', {
-        itemId: item.id,
-        itemType: item.type,
-        itemName: item.itemName,
-        newStatus
-      });
-
       // Déterminer le bon array selon le type d'item
       let orderLineIds: string[] = [];
       let orderLineItemIds: string[] = [];
@@ -210,17 +109,7 @@ export default function BarmanPage() {
       });
 
     } catch (error: any) {
-      console.error('Error updating individual item status:', error);
-
-      if (error.response?.status === 500) {
-        showToast('Erreur serveur temporaire, l\'API est en cours de correction', 'error');
-      } else if (error.response?.status === 404) {
-        showToast('Commande introuvable', 'error');
-      } else if (error.response?.status === 403) {
-        showToast('Vous n\'avez pas les droits pour cette action', 'error');
-      } else {
-        showToast('Impossible de mettre à jour le statut, veuillez réessayer', 'error');
-      }
+      handleOrderStatusError(error, showToast);
     }
   };
 

@@ -94,6 +94,17 @@ export const selectItemTypes = createSelector(
   (itemTypes) => Object.values(itemTypes)
 );
 
+// Tags - Records (pas de transformation)
+export const selectTagsRecord = (state: RootState) => state.entities.tags;
+export const selectTagById = (tagId: string) => (state: RootState) =>
+  state.entities.tags[tagId] || null;
+
+// Tags - Array (mémorisé)
+export const selectTags = createSelector(
+  [selectTagsRecord],
+  (tags) => Object.values(tags)
+);
+
 // Users - Records (pas de transformation)
 export const selectUsersRecord = (state: RootState) => state.entities.users;
 export const selectUserById = (userId: string) => (state: RootState) =>
@@ -320,6 +331,7 @@ export const selectAllOrders = selectOrders;
 export const selectAllMenus = selectMenus;
 export const selectAllItems = selectItems;
 export const selectAllItemTypes = selectItemTypes;
+export const selectAllTags = selectTags;
 export const selectAllUsers = selectUsers;
 
 // Sélecteurs de navigation (depuis session)

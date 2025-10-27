@@ -87,6 +87,13 @@ export const WEBSOCKET_EVENT_MAP = {
   accountconfig: {
     updated: 'updateAccountConfig',
   },
+
+  // Tags
+  tag: {
+    created: 'createTag',
+    updated: 'updateTag',
+    deleted: 'deleteTag',
+  },
 } as const;
 
 // Types pour les événements WebSocket
