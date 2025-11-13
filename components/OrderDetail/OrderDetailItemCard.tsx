@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { DateFormat, formatDate, getStatusColor, getStatusTagColor, getStatusText } from '~/lib/utils';
+import { DateFormat, formatDate, getStatusColor, getStatusTagColor, getStatusText, getStatusBackgroundColor, getTagFieldTypeConfig } from '~/lib/utils';
 import StatusSelector from '~/components/Service/StatusSelector';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { IconButton } from '~/components/ui/IconButton';
@@ -59,7 +59,13 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
 
   return (
     <>
-      <CardWrapper style={[styles.card, { borderLeftColor: getStatusColor(itemStatus) }]} {...cardProps}>
+      <CardWrapper style={[
+        styles.card,
+        {
+          borderColor: getStatusColor(itemStatus),
+          backgroundColor: getStatusBackgroundColor(itemStatus)
+        }
+      ]} {...cardProps}>
         <View style={styles.mainContent}>
           {isMultiSelectMode && (
             <Pressable onPress={onToggleSelection} style={styles.checkboxContainer}>
@@ -81,30 +87,29 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
               )}
             </View>
 
+            <View style={styles.footerInfo}>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
+                <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
+              </View>
+
+              {itemTags.length > 0 && itemTags.map((tag, index) => {
+                const tagConfig = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
+                return (
+                  <View key={index} style={[styles.tag, { backgroundColor: tagConfig.bgColor }]}>
+                    <Text style={[styles.tagText, { color: tagConfig.textColor }]}>
+                      {tag.tagSnapshot.label}: {String(tag.value)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
             {itemNote && (
               <View style={styles.noteContainer}>
                 <Text style={styles.noteLabel}>Note :</Text>
                 <Text style={styles.noteText}>{itemNote}</Text>
               </View>
             )}
-
-            {itemTags.length > 0 && (
-              <View style={styles.tagsContainer}>
-                {itemTags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>
-                      {tag.tagSnapshot.label}: {String(tag.value)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.footerInfo}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
-                <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
-              </View>
-            </View>
           </View>
 
           <View style={styles.priceTimeColumn}>
@@ -180,11 +185,10 @@ OrderDetailItemCard.displayName = 'OrderDetailItemCard';
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
-    borderLeftWidth: 4,
+    borderWidth: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -222,7 +226,7 @@ const styles = StyleSheet.create({
   },
   leftColumn: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: 8,
   },
   nameRow: {
@@ -238,11 +242,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   noteContainer: {
-    padding: 8,
+    padding: 10,
     backgroundColor: '#FEF3C7',
     borderRadius: 7,
-    borderLeftWidth: 3,
-    borderLeftColor: '#F59E0B',
     flexDirection: 'row',
     gap: 5,
   },
@@ -257,13 +259,7 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 15,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-  },
   tag: {
-    backgroundColor: '#E0E7FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 5,
@@ -271,12 +267,12 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#4338CA',
   },
   footerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   statusBadge: {
     paddingHorizontal: 14,

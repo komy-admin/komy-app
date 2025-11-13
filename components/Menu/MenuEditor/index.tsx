@@ -158,7 +158,7 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
   useEffect(() => {
     if (panelVisible && panelCategoryIndex !== null) {
       renderPanel(
-        <SlidePanel visible={true} onClose={handleClosePanel} width={430}>
+        <SlidePanel visible={true} onClose={handleClosePanel} width="35%" minWidth={350} maxWidth={600}>
           <ItemSelectionPanelContent
             availableItems={currentCategoryItems}
             onClose={handleClosePanel}

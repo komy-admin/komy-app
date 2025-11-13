@@ -21,10 +21,10 @@ import {
 import { useSelector } from 'react-redux';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
-import { Plus, LayoutDashboard, X, Edit3, CheckSquare, Square } from 'lucide-react-native';
+import { Plus, LayoutDashboard } from 'lucide-react-native';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useOrderLines } from '~/hooks/useOrderLines';
-import { OrderDetailView } from '~/components/OrderDetail/OrderDetailView';
+import { OrderDetailView, OrderDetailHeader } from '~/components/OrderDetail';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { CustomModal } from '@/components/CustomModal';
@@ -537,6 +537,7 @@ export default function ServicePage() {
                       setShowOrderDetail(true);
                     }}
                     onOrderDelete={handleDeleteOrder}
+                    selectedOrderId={selectedTableOrder?.id}
                   />
                 </>
               )}
@@ -682,109 +683,14 @@ export default function ServicePage() {
                 {showOrderDetail && selectedTableOrder ? (
                   // Afficher les détails de la commande
                   <View style={{ flex: 1, flexDirection: 'column' }}>
-                    {/* Header avec bouton retour et modifier */}
-                    <View style={{
-                      backgroundColor: '#FFFFFF',
-                      borderBottomWidth: 1,
-                      borderBottomColor: '#F3F4F6',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      height: 60,
-                      paddingHorizontal: 4,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.08,
-                      shadowRadius: 8,
-                      elevation: 4,
-                    }}>
-                      {/* Bouton retour */}
-                      <Pressable
-                        onPress={handleCloseOrderDetail}
-                        style={{
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          paddingHorizontal: 24,
-                          paddingVertical: 16,
-                          borderRightWidth: 1,
-                          borderRightColor: '#F3F4F6',
-                          height: '100%',
-                        }}
-                      >
-                        <X size={20} color="#2A2E33" />
-                      </Pressable>
-
-                      {/* Titre */}
-                      <View style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        paddingLeft: 24,
-                        paddingRight: 24,
-                      }}>
-                        <Text style={{
-                          fontSize: 18,
-                          fontWeight: '800',
-                          color: '#2A2E33',
-                          letterSpacing: 0.5,
-                        }}>
-                          {`Commande - ${selectedTableOrder.table?.name || 'Table'}`}
-                        </Text>
-                      </View>
-
-                      {/* Bouton sélection */}
-                      <Pressable
-                        onPress={() => setIsMultiSelectMode(!isMultiSelectMode)}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 8,
-                          paddingHorizontal: 20,
-                          paddingVertical: 10,
-                          borderLeftWidth: 1,
-                          borderLeftColor: '#F3F4F6',
-                          height: '100%',
-                          justifyContent: 'center',
-                          backgroundColor: isMultiSelectMode ? '#EEF2FF' : 'transparent',
-                        }}
-                      >
-                        {isMultiSelectMode ? (
-                          <CheckSquare size={18} color="#4F46E5" strokeWidth={2} />
-                        ) : (
-                          <Square size={18} color="#6B7280" strokeWidth={2} />
-                        )}
-                        <Text style={{
-                          fontSize: 14,
-                          fontWeight: '600',
-                          color: isMultiSelectMode ? '#4F46E5' : '#6B7280',
-                        }}>
-                          Sélection
-                        </Text>
-                      </Pressable>
-
-                      {/* Bouton modifier */}
-                      <Pressable
-                        onPress={handleEditOrder}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 8,
-                          paddingHorizontal: 20,
-                          paddingVertical: 10,
-                          borderLeftWidth: 1,
-                          borderLeftColor: '#F3F4F6',
-                          height: '100%',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Edit3 size={18} color="#6366F1" strokeWidth={2} />
-                        <Text style={{
-                          fontSize: 14,
-                          fontWeight: '600',
-                          color: '#6366F1',
-                        }}>
-                          Modifier
-                        </Text>
-                      </Pressable>
-                    </View>
+                    {/* Header avec bouton retour, sélection et modifier */}
+                    <OrderDetailHeader
+                      title={`Commande - ${selectedTableOrder.table?.name || 'Table'}`}
+                      onBack={handleCloseOrderDetail}
+                      onEdit={handleEditOrder}
+                      isMultiSelectMode={isMultiSelectMode}
+                      onToggleMultiSelectMode={() => setIsMultiSelectMode(!isMultiSelectMode)}
+                    />
 
                     {/* OrderDetailView */}
                     <OrderDetailView

@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ChevronDown, ChevronUp, Menu as MenuIcon } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, hasMenuMixedStatuses } from '~/lib/utils';
+import { getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor } from '~/lib/utils';
 import { OrderDetailItemCard } from './OrderDetailItemCard';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { IconButton } from '~/components/ui/IconButton';
@@ -54,7 +54,10 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
         onPress={toggleExpanded}
         style={[
           styles.header,
-          { borderLeftColor: getStatusColor(itemStatus) }
+          {
+            borderColor: getStatusColor(itemStatus),
+            backgroundColor: getStatusBackgroundColor(itemStatus)
+          }
         ]}
       >
         <View style={styles.headerContent}>
@@ -165,9 +168,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   header: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    borderLeftWidth: 4,
+    borderWidth: 2,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

@@ -422,7 +422,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     if (customizationPanelVisible && itemToCustomize) {
       // Priorité 1 : Customisation d'item normal
       renderPanel(
-        <SlidePanel visible={true} onClose={handleCancelCustomization} width={550}>
+        <SlidePanel visible={true} onClose={handleCancelCustomization} width="35%" minWidth={350} maxWidth={600}>
           <ItemCustomizationPanelContent
             item={itemToCustomize.item}
             availableTags={itemToCustomize.item.tags || []}
@@ -435,7 +435,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     } else if (menuItemPanelVisible && menuItemToCustomize) {
       // Priorité 2 : Customisation d'item de menu
       renderPanel(
-        <SlidePanel visible={true} onClose={handleCancelMenuItemCustomization} width={550}>
+        <SlidePanel visible={true} onClose={handleCancelMenuItemCustomization} width="35%" minWidth={350} maxWidth={600}>
           <ItemCustomizationPanelContent
             item={menuItemToCustomize.item}
             availableTags={menuItemToCustomize.item.tags || []}
@@ -448,7 +448,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     } else if (draftReviewPanelVisible) {
       // Priorité 3 : Panel de revue de la commande
       renderPanel(
-        <SlidePanel visible={true} onClose={handleCloseDraftReview} width={550}>
+        <SlidePanel visible={true} onClose={handleCloseDraftReview} width="35%" minWidth={350} maxWidth={600}>
           <DraftReviewPanelContent
             draftLines={lines}
             onEdit={handleDraftEdit}

@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import { ArrowLeftToLine, Edit3 } from 'lucide-react-native';
+import { X, CheckSquare, Square, Edit3 } from 'lucide-react-native';
 
 // Constantes de style inspirées d'OrderLinesForm
 const COMMON_STYLES = {
@@ -37,12 +37,16 @@ export interface OrderDetailHeaderProps {
   title: string;
   onBack: () => void;
   onEdit: () => void;
+  isMultiSelectMode?: boolean;
+  onToggleMultiSelectMode?: () => void;
 }
 
 export const OrderDetailHeader = memo<OrderDetailHeaderProps>(({
   title,
   onBack,
   onEdit,
+  isMultiSelectMode = false,
+  onToggleMultiSelectMode,
 }) => {
   return (
     <View style={styles.header}>
@@ -51,7 +55,7 @@ export const OrderDetailHeader = memo<OrderDetailHeaderProps>(({
         onPress={onBack}
         style={styles.backButton}
       >
-        <ArrowLeftToLine size={20} color={COMMON_STYLES.colors.primary} />
+        <X size={20} color={COMMON_STYLES.colors.primary} />
       </Pressable>
 
       {/* Titre */}
@@ -61,12 +65,35 @@ export const OrderDetailHeader = memo<OrderDetailHeaderProps>(({
         </Text>
       </View>
 
-      {/* Bouton éditer */}
+      {/* Bouton sélection */}
+      {onToggleMultiSelectMode && (
+        <Pressable
+          onPress={onToggleMultiSelectMode}
+          style={[
+            styles.selectionButton,
+            isMultiSelectMode && styles.selectionButtonActive,
+          ]}
+        >
+          {isMultiSelectMode ? (
+            <CheckSquare size={18} color="#4F46E5" strokeWidth={2} />
+          ) : (
+            <Square size={18} color="#6B7280" strokeWidth={2} />
+          )}
+          <Text style={[
+            styles.selectionText,
+            isMultiSelectMode && styles.selectionTextActive,
+          ]}>
+            Sélection
+          </Text>
+        </Pressable>
+      )}
+
+      {/* Bouton modifier */}
       <Pressable
         onPress={onEdit}
         style={styles.editButton}
       >
-        <Edit3 size={18} color={COMMON_STYLES.colors.accent} strokeWidth={2} />
+        <Edit3 size={18} color="#FFFFFF" strokeWidth={2} />
         <Text style={styles.editText}>Modifier</Text>
       </Pressable>
     </View>
@@ -82,7 +109,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COMMON_STYLES.colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    height: 60,
+    height: 50,
     paddingHorizontal: COMMON_STYLES.spacing.xs,
     ...COMMON_STYLES.shadow,
     ...(Platform.OS === 'web' && {
@@ -114,7 +141,7 @@ const styles = StyleSheet.create({
       fontFamily: 'system-ui, -apple-system, sans-serif',
     })
   },
-  editButton: {
+  selectionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -124,6 +151,31 @@ const styles = StyleSheet.create({
     borderLeftColor: COMMON_STYLES.colors.border,
     height: '100%',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    })
+  },
+  selectionButtonActive: {
+    backgroundColor: '#EEF2FF',
+  },
+  selectionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  selectionTextActive: {
+    color: '#4F46E5',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#6366F1',
+    height: '100%',
+    justifyContent: 'center',
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     })
@@ -131,6 +183,6 @@ const styles = StyleSheet.create({
   editText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COMMON_STYLES.colors.accent,
+    color: '#FFFFFF',
   },
 });
