@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
@@ -35,11 +35,11 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const itemName = orderLine?.item?.name || orderLineItem?.item?.name || 'Article inconnu';
-  const itemNote = orderLine?.note || undefined;
+  const itemNote = orderLine?.note || (orderLineItem as any)?.note || undefined;
   const itemStatus = orderLine?.status || orderLineItem?.status || Status.PENDING;
   const itemTime = orderLine?.updatedAt || orderLineItem?.updatedAt || new Date().toISOString();
   const itemPrice = orderLine?.totalPrice || orderLineItem?.item?.price || 0;
-  const itemTags = orderLine?.tags || [];
+  const itemTags = orderLine?.tags || (orderLineItem as any)?.tags || [];
 
   const handleStatusClick = () => {
     setShowStatusSelector(true);
@@ -80,11 +80,6 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
               <Text style={styles.itemName} numberOfLines={1}>
                 {itemName}
               </Text>
-              {isFromMenu && (
-                <View style={styles.menuBadge}>
-                  <Text style={styles.menuBadgeText}>MENU</Text>
-                </View>
-              )}
             </View>
 
             <View style={styles.footerInfo}>
@@ -92,7 +87,13 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
                 <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
               </View>
 
-              {itemTags.length > 0 && itemTags.map((tag, index) => {
+              {isFromMenu && menuName && (
+                <View style={styles.menuBadge}>
+                  <Text style={styles.menuBadgeText}>MENU : {menuName}</Text>
+                </View>
+              )}
+
+              {itemTags.length > 0 && itemTags.map((tag: any, index: number) => {
                 const tagConfig = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
                 return (
                   <View key={index} style={[styles.tag, { backgroundColor: tagConfig.bgColor }]}>
@@ -102,14 +103,14 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
                   </View>
                 );
               })}
-            </View>
 
-            {itemNote && (
-              <View style={styles.noteContainer}>
-                <Text style={styles.noteLabel}>Note :</Text>
-                <Text style={styles.noteText}>{itemNote}</Text>
-              </View>
-            )}
+              {itemNote && (
+                <View style={styles.noteContainer}>
+                  <Text style={styles.noteLabel}>Note :</Text>
+                  <Text style={styles.noteText} numberOfLines={1} ellipsizeMode="tail">{itemNote}</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           <View style={styles.priceTimeColumn}>
@@ -151,12 +152,6 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
             )}
           </View>
         </View>
-
-        {isFromMenu && menuName && (
-          <View style={styles.menuNameContainer}>
-            <Text style={styles.menuNameText}>🍽️ {menuName}</Text>
-          </View>
-        )}
       </CardWrapper>
 
       <StatusSelector
@@ -186,14 +181,10 @@ OrderDetailItemCard.displayName = 'OrderDetailItemCard';
 const styles = StyleSheet.create({
   card: {
     borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     marginBottom: 8,
     borderWidth: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   mainContent: {
     flexDirection: 'row',
@@ -236,33 +227,35 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   itemName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#1F2937',
     flexShrink: 1,
   },
   noteContainer: {
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     backgroundColor: '#FEF3C7',
-    borderRadius: 7,
+    borderRadius: 6,
     flexDirection: 'row',
     gap: 5,
+    maxWidth: '100%',
   },
   noteLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#92400E',
   },
   noteText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#92400E',
-    flex: 1,
-    lineHeight: 15,
+    flexShrink: 1,
+    minWidth: 0,
   },
   tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   tagText: {
     fontSize: 10,
@@ -272,15 +265,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
   statusBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
     color: '#1A1A1A',
     textTransform: 'uppercase',
@@ -289,15 +282,15 @@ const styles = StyleSheet.create({
   menuBadge: {
     backgroundColor: '#8B5CF6',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 7,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   menuBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#FFFFFF',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   priceTimeColumn: {
     flexDirection: 'column',
@@ -307,7 +300,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   priceText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1F2937',
   },
@@ -317,7 +310,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   timeText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#9CA3AF',
     fontWeight: '500',
   },
@@ -325,17 +318,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  menuNameContainer: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  menuNameText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
-    fontStyle: 'italic',
   },
 });

@@ -145,6 +145,25 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     }
   }, [onDeleteOrderLine, showToast]);
 
+  const handleUpdateMenuStatus = useCallback(async (orderLineItems: OrderLineItem[], newStatus: Status) => {
+    if (!onBulkUpdateStatus) {
+      showToast('Fonctionnalité non disponible', 'warning');
+      return;
+    }
+
+    try {
+      // Collecter tous les IDs des items du menu
+      const orderLineItemIds = orderLineItems.map(item => item.id);
+
+      // Un seul appel API pour tout mettre à jour
+      await onBulkUpdateStatus([], orderLineItemIds, newStatus);
+      showToast('Statut du menu mis à jour avec succès', 'success');
+    } catch (error) {
+      showToast('Erreur lors de la mise à jour du statut', 'error');
+      console.error('Erreur mise à jour menu:', error);
+    }
+  }, [onBulkUpdateStatus, showToast]);
+
   const handleDeleteMenu = useCallback(async (orderLineId: string, menuName: string) => {
     try {
       await onDeleteMenuLine(orderLineId);
@@ -265,6 +284,7 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
                   key={`menu-${menuLine.id}`}
                   menuLine={menuLine}
                   onUpdateItemStatus={onUpdateMenuItemStatus}
+                  onUpdateMenuStatus={handleUpdateMenuStatus}
                   onDelete={() => handleDeleteMenu(menuLine.id, menuLine.menu?.name || 'Menu')}
                   isMultiSelectMode={isMultiSelectMode}
                   selectedItems={selectedItems}

@@ -1,16 +1,17 @@
 import React, { memo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { ChevronDown, ChevronUp, Menu as MenuIcon } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Clock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor } from '~/lib/utils';
-import { OrderDetailItemCard } from './OrderDetailItemCard';
+import { getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { IconButton } from '~/components/ui/IconButton';
+import StatusSelector from '~/components/Service/StatusSelector';
 
 export interface OrderDetailMenuCardProps {
   menuLine: OrderLine;
   onUpdateItemStatus: (orderLineItem: OrderLineItem, newStatus: Status) => void;
+  onUpdateMenuStatus?: (orderLineItems: OrderLineItem[], newStatus: Status) => void;
   onDelete: () => void;
   isMultiSelectMode?: boolean;
   selectedItems?: Set<string>;
@@ -20,6 +21,7 @@ export interface OrderDetailMenuCardProps {
 export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   menuLine,
   onUpdateItemStatus,
+  onUpdateMenuStatus,
   onDelete,
   isMultiSelectMode = false,
   selectedItems = new Set(),
@@ -27,15 +29,48 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStatusSelector, setShowStatusSelector] = useState(false);
+  const [currentItemForStatus, setCurrentItemForStatus] = useState<OrderLineItem | null>(null);
 
   const menuInfo = menuLine.menu;
   const orderItems = menuLine.items || [];
   const statuses = orderItems.map((item) => item.status);
   const itemStatus = getMostImportantStatus(statuses);
   const hasMixed = hasMenuMixedStatuses(statuses);
+  const menuTime = menuLine.updatedAt || new Date().toISOString();
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
+  };
+
+  const handleMenuStatusClick = () => {
+    setCurrentItemForStatus(null); // null = modifier le statut du menu entier
+    setShowStatusSelector(true);
+  };
+
+  const handleItemStatusClick = (item: OrderLineItem) => {
+    setCurrentItemForStatus(item);
+    setShowStatusSelector(true);
+  };
+
+  const handleStatusSelect = (newStatus: Status) => {
+    if (currentItemForStatus) {
+      // Modifier le statut d'un item individuel
+      onUpdateItemStatus(currentItemForStatus, newStatus);
+    } else {
+      // Modifier le statut de tous les items du menu
+      if (onUpdateMenuStatus) {
+        // Utiliser la méthode optimisée (UN SEUL appel API)
+        onUpdateMenuStatus(orderItems, newStatus);
+      } else {
+        // Fallback : appeler onUpdateItemStatus pour chaque item
+        orderItems.forEach((item) => {
+          onUpdateItemStatus(item, newStatus);
+        });
+      }
+    }
+    setShowStatusSelector(false);
+    setCurrentItemForStatus(null);
   };
 
   // Grouper les items par catégorie
@@ -50,54 +85,62 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
 
   return (
     <View style={styles.container}>
-      <Pressable
-        onPress={toggleExpanded}
-        style={[
-          styles.header,
-          {
-            borderColor: getStatusColor(itemStatus),
-            backgroundColor: getStatusBackgroundColor(itemStatus)
-          }
-        ]}
-      >
-        <View style={styles.headerContent}>
-          <View style={[styles.iconContainer, { backgroundColor: getStatusColor(itemStatus) }]}>
-            <MenuIcon size={20} color="#1A1A1A" strokeWidth={2} />
-          </View>
-
-          <View style={styles.headerInfo}>
+      <View style={[
+        styles.card,
+        {
+          borderColor: '#6366F1', // Indigo fixe pour tous les menus
+          backgroundColor: getStatusBackgroundColor(itemStatus)
+        }
+      ]}>
+        {/* Header - toujours visible */}
+        <Pressable onPress={toggleExpanded} style={styles.mainContent}>
+          <View style={styles.leftColumn}>
             <Text style={styles.menuName} numberOfLines={1}>
               {menuInfo?.name || 'Menu'}
             </Text>
 
-            <View style={styles.detailsRow}>
-              <View style={styles.badgesRow}>
-                {hasMixed ? (
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
-                    <Text style={styles.statusMixedText}>MIXTE</Text>
-                  </View>
-                ) : (
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
-                    <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
-                  </View>
-                )}
+            <View style={styles.footerInfo}>
+              {hasMixed ? (
+                <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
+                  <Text style={styles.statusText}>MIXTE</Text>
+                </View>
+              ) : (
+                <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
+                  <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
+                </View>
+              )}
+              <View style={styles.menuBadge}>
+                <Text style={styles.menuBadgeText}>MENU</Text>
               </View>
-
-              <View style={styles.priceCountColumn}>
-                <Text style={styles.menuPrice}>
-                  {((menuLine.totalPrice || 0) / 100).toFixed(2)}€
-                </Text>
-                <Text style={styles.itemCount}>
-                  {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
-                </Text>
-              </View>
+              <Text style={styles.itemCount}>
+                {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
+              </Text>
             </View>
           </View>
 
-          <View style={styles.actionsContainer}>
-            <Pressable onPress={(e) => {
-              e.stopPropagation();
-            }}>
+          <View style={styles.priceTimeColumn}>
+            <Text style={styles.priceText}>
+              {((menuLine.totalPrice || 0) / 100).toFixed(2)}€
+            </Text>
+            <View style={styles.timeContainer}>
+              <Clock size={10} color="#9CA3AF" strokeWidth={2} />
+              <Text style={styles.timeText}>
+                {formatDate(menuTime, DateFormat.TIME)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.actionsColumn}>
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <IconButton
+                iconName="settings"
+                size={50}
+                variant="primary"
+                isTransparent={true}
+                onPress={handleMenuStatusClick}
+              />
+            </Pressable>
+            <Pressable onPress={(e) => e.stopPropagation()}>
               <IconButton
                 iconName="trash"
                 size={50}
@@ -106,7 +149,6 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
                 onPress={() => setShowDeleteDialog(true)}
               />
             </Pressable>
-
             <View style={styles.chevronContainer}>
               {isExpanded ? (
                 <ChevronUp size={20} color="#6B7280" strokeWidth={2.5} />
@@ -115,36 +157,93 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
               )}
             </View>
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
 
-      {isExpanded && (
-        <View style={styles.expandedContent}>
-          {Object.entries(itemsByCategory).map(([categoryName, categoryItems]) => (
-            <View key={categoryName} style={styles.categorySection}>
-              <View style={styles.categoryHeader}>
-                <Text style={styles.categoryTitle}>{categoryName}</Text>
-              </View>
+        {/* Expanded content - rows simples */}
+        {isExpanded && (
+          <View>
+            {Object.entries(itemsByCategory).map(([categoryName, categoryItems]) => (
+              <View key={categoryName}>
+                {/* Category header */}
+                <View style={styles.categoryHeader}>
+                  <Text style={styles.categoryTitle}>{categoryName}</Text>
+                </View>
 
-              <View style={styles.categoryItems}>
-                {categoryItems.map((orderLineItem) => (
-                  <OrderDetailItemCard
-                    key={orderLineItem.id}
-                    orderLineItem={orderLineItem}
-                    isFromMenu={true}
-                    menuName={menuInfo?.name}
-                    onStatusChange={(newStatus) => onUpdateItemStatus(orderLineItem, newStatus)}
-                    onDelete={() => {}}
-                    isMultiSelectMode={isMultiSelectMode}
-                    isSelected={selectedItems.has(orderLineItem.id)}
-                    onToggleSelection={() => onToggleItemSelection?.(orderLineItem.id)}
-                  />
+                {/* Items rows */}
+                {categoryItems.map((item, itemIndex) => (
+                  <View key={item.id}>
+                    <View style={[
+                      styles.itemRow,
+                      { backgroundColor: getStatusBackgroundColor(item.status) }
+                    ]}>
+                      <View style={styles.itemLeftColumn}>
+                        <Text style={styles.itemRowName} numberOfLines={1}>
+                          {item.item?.name || 'Article'}
+                        </Text>
+
+                        <View style={styles.itemFooterInfo}>
+                          <View style={[styles.itemRowStatus, { backgroundColor: getStatusTagColor(item.status) }]}>
+                            <Text style={styles.itemRowStatusText}>{getStatusText(item.status)}</Text>
+                          </View>
+
+                          {(item as any).tags?.length > 0 && (item as any).tags.map((tag: any, tagIndex: number) => {
+                            const tagConfig = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
+                            return (
+                              <View key={tagIndex} style={[styles.itemTag, { backgroundColor: tagConfig.bgColor }]}>
+                                <Text style={[styles.itemTagText, { color: tagConfig.textColor }]}>
+                                  {tag.tagSnapshot.label}: {String(tag.value)}
+                                </Text>
+                              </View>
+                            );
+                          })}
+
+                          {(item as any).note && (
+                            <View style={styles.itemNoteContainer}>
+                              <Text style={styles.itemNoteLabel}>Note :</Text>
+                              <Text style={styles.itemNoteText} numberOfLines={1} ellipsizeMode="tail">
+                                {(item as any).note}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+
+                      <View style={styles.itemRowTime}>
+                        <Clock size={10} color="#9CA3AF" strokeWidth={2} />
+                        <Text style={styles.itemRowTimeText}>
+                          {formatDate(item.updatedAt || new Date().toISOString(), DateFormat.TIME)}
+                        </Text>
+                      </View>
+
+                      <IconButton
+                        iconName="settings"
+                        size={40}
+                        variant="primary"
+                        isTransparent={true}
+                        onPress={() => handleItemStatusClick(item)}
+                      />
+                    </View>
+                    {/* Ligne de séparation sauf pour le dernier item */}
+                    {itemIndex < categoryItems.length - 1 && (
+                      <View style={styles.itemSeparator} />
+                    )}
+                  </View>
                 ))}
               </View>
-            </View>
-          ))}
-        </View>
-      )}
+            ))}
+          </View>
+        )}
+      </View>
+
+      <StatusSelector
+        visible={showStatusSelector}
+        currentStatus={currentItemForStatus?.status || itemStatus}
+        onClose={() => {
+          setShowStatusSelector(false);
+          setCurrentItemForStatus(null);
+        }}
+        onStatusSelect={handleStatusSelect}
+      />
 
       <DeleteConfirmationModal
         isVisible={showDeleteDialog}
@@ -167,119 +266,202 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 8,
   },
-  header: {
+  // Card principale - identique à ItemCard mais border indigo
+  card: {
     borderRadius: 10,
-    borderWidth: 2,
-    overflow: 'hidden',
+    borderWidth: 2, // Même taille que ItemCard
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 0, // Pas de padding bottom pour éviter l'espace quand expanded
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    overflow: 'hidden', // Clippe le contenu pour ne pas déborder sur les bordures
   },
-  headerContent: {
+  mainContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    gap: 10,
+    gap: 12,
+    paddingBottom: 10, // Padding bottom seulement sur le header (quand collapsed)
   },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  headerInfo: {
+  leftColumn: {
     flex: 1,
-    justifyContent: 'space-between',
     gap: 8,
+    minWidth: 0,
   },
   menuName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#1F2937',
+    minWidth: 0,
   },
-  detailsRow: {
+  footerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    flexWrap: 'wrap',
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexShrink: 0,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#1A1A1A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  statusMixedText: {
+  menuBadge: {
+    backgroundColor: '#6366F1', // Indigo pour matcher la border
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  menuBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    letterSpacing: 0.8,
-  },
-  priceCountColumn: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  menuPrice: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   itemCount: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#6B7280',
     fontWeight: '600',
   },
-  actionsContainer: {
+  priceTimeColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 4,
+    flexShrink: 0,
+  },
+  priceText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+  },
+  timeText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  actionsColumn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
   },
   chevronContainer: {
-    padding: 2,
-  },
-  expandedContent: {
-    backgroundColor: '#F9FAFB',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    paddingTop: 8,
-    marginTop: -4,
-  },
-  categorySection: {
-    marginBottom: 8,
+    padding: 4,
   },
   categoryHeader: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 12,
     paddingVertical: 8,
+    marginHorizontal: -12, // Pour aller jusqu'aux bords
+    marginBottom: 0,
   },
   categoryTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#374151',
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  categoryItems: {
-    padding: 10,
+  // Row simple pour chaque item - backgroundColor dynamique
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginHorizontal: -12, // Pour aller jusqu'aux bords
+  },
+  itemLeftColumn: {
+    flex: 1,
+    gap: 8,
+    minWidth: 0,
+  },
+  itemRowName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    minWidth: 0,
+  },
+  itemFooterInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  itemRowStatus: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  itemRowStatusText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  itemTagText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  itemNoteContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 6,
+    flexDirection: 'row',
+    gap: 5,
+    maxWidth: '100%',
+  },
+  itemNoteLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  itemNoteText: {
+    fontSize: 10,
+    color: '#92400E',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  itemRowTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+  },
+  itemRowTimeText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  // Ligne de séparation entre items
+  itemSeparator: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: -12, // Pour aller jusqu'aux bords
   },
 });

@@ -95,6 +95,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
     padding: 14,
     backgroundColor: '#F9FAFB',
@@ -116,6 +117,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
-    flex: 1,
   },
 });
