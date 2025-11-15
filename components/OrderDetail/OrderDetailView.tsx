@@ -49,6 +49,33 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
 
   const isMultiSelectMode = externalMultiSelectMode !== undefined ? externalMultiSelectMode : internalMultiSelectMode;
 
+  // Stocker l'order.id précédent pour détecter les changements
+  const prevOrderIdRef = React.useRef(order.id);
+
+  // Nettoyer la sélection quand on désactive le mode sélection
+  React.useEffect(() => {
+    if (!isMultiSelectMode) {
+      setSelectedItems(new Set());
+    }
+  }, [isMultiSelectMode]);
+
+  // Désactiver le mode sélection quand on change de commande
+  React.useEffect(() => {
+    // Ne se déclenche que si l'order.id a vraiment changé
+    if (prevOrderIdRef.current !== order.id) {
+      if (isMultiSelectMode) {
+        if (externalToggleMultiSelectMode) {
+          externalToggleMultiSelectMode();
+        } else {
+          setInternalMultiSelectMode(false);
+        }
+        setSelectedItems(new Set());
+      }
+      // Mettre à jour la ref
+      prevOrderIdRef.current = order.id;
+    }
+  }, [order.id, isMultiSelectMode, externalToggleMultiSelectMode]);
+
   // Logique de regroupement des items par tab
   const { filteredItems, counts } = useMemo(() => {
     const menuLines = order.lines?.filter((line) => line.type === OrderLineType.MENU) || [];
@@ -255,6 +282,50 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     }
   }, [selectedItems, order.lines, onUpdateItemStatus, onUpdateMenuItemStatus, onBulkUpdateStatus, showToast, toggleMultiSelectMode]);
 
+  // Calculer le nombre total d'items visibles
+  const totalVisibleCount = useMemo(() => {
+    let count = 0;
+    filteredItems.forEach((item) => {
+      if (item.type === 'menu') {
+        const menuLine = item.data as OrderLine;
+        count += menuLine.items?.length || 0;
+      } else {
+        count += 1;
+      }
+    });
+    return count;
+  }, [filteredItems]);
+
+  // Sélectionner/désélectionner tous les items visibles
+  const handleSelectAll = useCallback(() => {
+    const allVisibleIds: string[] = [];
+
+    filteredItems.forEach((item) => {
+      if (item.type === 'menu') {
+        const menuLine = item.data as OrderLine;
+        menuLine.items?.forEach((menuItem) => {
+          allVisibleIds.push(menuItem.id);
+        });
+      } else if ('orderLineItem' in item.data) {
+        const { orderLineItem } = item.data as { orderLineItem: OrderLineItem; menuName: string };
+        allVisibleIds.push(orderLineItem.id);
+      } else {
+        const orderLine = item.data as OrderLine;
+        allVisibleIds.push(orderLine.id);
+      }
+    });
+
+    const allSelected = allVisibleIds.every(id => selectedItems.has(id));
+
+    if (allSelected) {
+      // Désélectionner tout
+      setSelectedItems(new Set());
+    } else {
+      // Sélectionner tout
+      setSelectedItems(new Set(allVisibleIds));
+    }
+  }, [filteredItems, selectedItems]);
+
   return (
     <View style={styles.container}>
       {/* Tabs */}
@@ -268,7 +339,10 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
       {/* Contenu */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isMultiSelectMode && styles.scrollContentWithBar
+        ]}
         showsVerticalScrollIndicator={true}
       >
         {filteredItems.length === 0 ? (
@@ -341,11 +415,13 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
       {isMultiSelectMode && (
         <OrderDetailMultiSelectBar
           selectedCount={selectedItems.size}
+          totalVisibleCount={totalVisibleCount}
           onCancel={() => {
             setSelectedItems(new Set());
             toggleMultiSelectMode();
           }}
           onStatusChange={handleBulkStatusChange}
+          onSelectAll={handleSelectAll}
         />
       )}
 
@@ -375,6 +451,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+  },
+  scrollContentWithBar: {
+    paddingBottom: 90,
   },
   emptyContainer: {
     flex: 1,

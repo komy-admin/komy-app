@@ -83,6 +83,31 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
     return acc;
   }, {} as Record<string, OrderLineItem[]>);
 
+  // Vérifier si tous les items du menu sont sélectionnés
+  const allMenuItemsSelected = orderItems.every(item => selectedItems.has(item.id));
+  const someMenuItemsSelected = orderItems.some(item => selectedItems.has(item.id));
+
+  // Handler pour sélectionner/désélectionner tout le menu
+  const handleToggleMenuSelection = () => {
+    if (!onToggleItemSelection) return;
+
+    if (allMenuItemsSelected) {
+      // Désélectionner tous les items
+      orderItems.forEach(item => {
+        if (selectedItems.has(item.id)) {
+          onToggleItemSelection(item.id);
+        }
+      });
+    } else {
+      // Sélectionner tous les items
+      orderItems.forEach(item => {
+        if (!selectedItems.has(item.id)) {
+          onToggleItemSelection(item.id);
+        }
+      });
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={[
@@ -93,7 +118,23 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
         }
       ]}>
         {/* Header - toujours visible */}
-        <Pressable onPress={toggleExpanded} style={styles.mainContent}>
+        <Pressable
+          onPress={isMultiSelectMode ? handleToggleMenuSelection : toggleExpanded}
+          style={styles.mainContent}
+        >
+          {isMultiSelectMode && (
+            <View style={styles.checkboxContainer}>
+              <View style={[
+                styles.checkbox,
+                allMenuItemsSelected && styles.checkboxSelected,
+                !allMenuItemsSelected && someMenuItemsSelected && styles.checkboxPartial
+              ]}>
+                {allMenuItemsSelected && <Text style={styles.checkboxIcon}>✓</Text>}
+                {!allMenuItemsSelected && someMenuItemsSelected && <Text style={styles.checkboxIcon}>-</Text>}
+              </View>
+            </View>
+          )}
+
           <View style={styles.leftColumn}>
             <Text style={styles.menuName} numberOfLines={1}>
               {menuInfo?.name || 'Menu'}
@@ -131,31 +172,51 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
           </View>
 
           <View style={styles.actionsColumn}>
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <IconButton
-                iconName="settings"
-                size={50}
-                variant="primary"
-                isTransparent={true}
-                onPress={handleMenuStatusClick}
-              />
-            </Pressable>
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <IconButton
-                iconName="trash"
-                size={50}
-                variant="danger"
-                isTransparent={true}
-                onPress={() => setShowDeleteDialog(true)}
-              />
-            </Pressable>
-            <View style={styles.chevronContainer}>
-              {isExpanded ? (
-                <ChevronUp size={20} color="#6B7280" strokeWidth={2.5} />
-              ) : (
-                <ChevronDown size={20} color="#6B7280" strokeWidth={2.5} />
-              )}
-            </View>
+            {!isMultiSelectMode && (
+              <>
+                <Pressable onPress={(e) => e.stopPropagation()}>
+                  <IconButton
+                    iconName="settings"
+                    size={50}
+                    variant="primary"
+                    isTransparent={true}
+                    onPress={handleMenuStatusClick}
+                  />
+                </Pressable>
+                <Pressable onPress={(e) => e.stopPropagation()}>
+                  <IconButton
+                    iconName="trash"
+                    size={50}
+                    variant="danger"
+                    isTransparent={true}
+                    onPress={() => setShowDeleteDialog(true)}
+                  />
+                </Pressable>
+              </>
+            )}
+            {isMultiSelectMode ? (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  toggleExpanded();
+                }}
+                style={styles.chevronContainer}
+              >
+                {isExpanded ? (
+                  <ChevronUp size={20} color="#6B7280" strokeWidth={2.5} />
+                ) : (
+                  <ChevronDown size={20} color="#6B7280" strokeWidth={2.5} />
+                )}
+              </Pressable>
+            ) : (
+              <View style={styles.chevronContainer}>
+                {isExpanded ? (
+                  <ChevronUp size={20} color="#6B7280" strokeWidth={2.5} />
+                ) : (
+                  <ChevronDown size={20} color="#6B7280" strokeWidth={2.5} />
+                )}
+              </View>
+            )}
           </View>
         </Pressable>
 
@@ -170,13 +231,28 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
                 </View>
 
                 {/* Items rows */}
-                {categoryItems.map((item, itemIndex) => (
-                  <View key={item.id}>
-                    <View style={[
-                      styles.itemRow,
-                      { backgroundColor: getStatusBackgroundColor(item.status) }
-                    ]}>
-                      <View style={styles.itemLeftColumn}>
+                {categoryItems.map((item, itemIndex) => {
+                  const ItemWrapper = isMultiSelectMode ? Pressable : View;
+                  const itemProps = isMultiSelectMode ? { onPress: () => onToggleItemSelection?.(item.id) } : {};
+
+                  return (
+                    <View key={item.id}>
+                      <ItemWrapper
+                        style={[
+                          styles.itemRow,
+                          { backgroundColor: getStatusBackgroundColor(item.status) }
+                        ]}
+                        {...itemProps}
+                      >
+                        {isMultiSelectMode && (
+                          <View style={styles.checkboxContainer}>
+                            <View style={[styles.checkbox, selectedItems.has(item.id) && styles.checkboxSelected]}>
+                              {selectedItems.has(item.id) && <Text style={styles.checkboxIcon}>✓</Text>}
+                            </View>
+                          </View>
+                        )}
+
+                        <View style={styles.itemLeftColumn}>
                         <Text style={styles.itemRowName} numberOfLines={1}>
                           {item.item?.name || 'Article'}
                         </Text>
@@ -215,20 +291,23 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
                         </Text>
                       </View>
 
-                      <IconButton
-                        iconName="settings"
-                        size={40}
-                        variant="primary"
-                        isTransparent={true}
-                        onPress={() => handleItemStatusClick(item)}
-                      />
+                        {!isMultiSelectMode && (
+                          <IconButton
+                            iconName="settings"
+                            size={40}
+                            variant="primary"
+                            isTransparent={true}
+                            onPress={() => handleItemStatusClick(item)}
+                          />
+                        )}
+                      </ItemWrapper>
+                      {/* Ligne de séparation sauf pour le dernier item */}
+                      {itemIndex < categoryItems.length - 1 && (
+                        <View style={styles.itemSeparator} />
+                      )}
                     </View>
-                    {/* Ligne de séparation sauf pour le dernier item */}
-                    {itemIndex < categoryItems.length - 1 && (
-                      <View style={styles.itemSeparator} />
-                    )}
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             ))}
           </View>
@@ -265,6 +344,34 @@ OrderDetailMenuCard.displayName = 'OrderDetailMenuCard';
 const styles = StyleSheet.create({
   container: {
     marginBottom: 8,
+  },
+  checkboxContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+  },
+  checkboxPartial: {
+    backgroundColor: '#E0E7FF',
+    borderColor: '#6366F1',
+  },
+  checkboxIcon: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   // Card principale - identique à ItemCard mais border indigo
   card: {

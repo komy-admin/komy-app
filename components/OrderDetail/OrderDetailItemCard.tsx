@@ -127,30 +127,26 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
             </View>
           </View>
 
-          <View style={styles.actionsColumn}>
-            {isMultiSelectMode ? (
-              <View style={{ width: 50 }} />
-            ) : (
-              <>
+          {!isMultiSelectMode && (
+            <View style={styles.actionsColumn}>
+              <IconButton
+                iconName="settings"
+                size={50}
+                variant="primary"
+                isTransparent={true}
+                onPress={handleStatusClick}
+              />
+              {!isFromMenu && (
                 <IconButton
-                  iconName="settings"
+                  iconName="trash"
                   size={50}
-                  variant="primary"
+                  variant="danger"
                   isTransparent={true}
-                  onPress={handleStatusClick}
+                  onPress={handleDeleteClick}
                 />
-                {!isFromMenu && (
-                  <IconButton
-                    iconName="trash"
-                    size={50}
-                    variant="danger"
-                    isTransparent={true}
-                    onPress={handleDeleteClick}
-                  />
-                )}
-              </>
-            )}
-          </View>
+              )}
+            </View>
+          )}
         </View>
       </CardWrapper>
 
@@ -197,9 +193,9 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 5,
     borderWidth: 2,
     borderColor: '#D1D5DB',
     backgroundColor: '#FFFFFF',
@@ -212,7 +208,7 @@ const styles = StyleSheet.create({
   },
   checkboxIcon: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
   },
   leftColumn: {
