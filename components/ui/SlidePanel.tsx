@@ -1,20 +1,53 @@
 import { ReactNode } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 
 interface SlidePanelProps {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
-  width?: number;
+  width?: number | string;
+  minWidth?: number;
+  maxWidth?: number;
 }
 
 /**
  * SlidePanel - Panneau coulissant depuis la droite
  * Optimisé pour Android/iOS - utilise flex au lieu d'absoluteFill
  * Fonctionne sur Web, iOS et Android
+ * Supporte les largeurs en pourcentage (ex: "35%") ou en pixels
+ * Utilise useWindowDimensions pour un responsive dynamique en temps réel
  */
-export function SlidePanel({ visible, onClose, children, width = 400 }: SlidePanelProps) {
+export function SlidePanel({
+  visible,
+  onClose,
+  children,
+  width = 400,
+  minWidth = 350,
+  maxWidth,
+}: SlidePanelProps) {
+  const { width: screenWidth } = useWindowDimensions();
+
   if (!visible) return null;
+
+  // Calculer la largeur finale (se recalcule automatiquement au resize)
+  let computedWidth: number;
+
+  if (typeof width === 'string' && width.endsWith('%')) {
+    // Largeur en pourcentage - responsive dynamique
+    const percentage = parseFloat(width) / 100;
+    computedWidth = screenWidth * percentage;
+  } else {
+    // Largeur en pixels
+    computedWidth = typeof width === 'number' ? width : 400;
+  }
+
+  // Appliquer les contraintes min/max
+  if (minWidth && computedWidth < minWidth) {
+    computedWidth = minWidth;
+  }
+  if (maxWidth && computedWidth > maxWidth) {
+    computedWidth = maxWidth;
+  }
 
   return (
     <View style={styles.container}>
@@ -26,7 +59,7 @@ export function SlidePanel({ visible, onClose, children, width = 400 }: SlidePan
       />
 
       {/* Panel */}
-      <View style={[styles.panel, { width }]}>
+      <View style={[styles.panel, { width: computedWidth }]}>
         {children}
       </View>
     </View>

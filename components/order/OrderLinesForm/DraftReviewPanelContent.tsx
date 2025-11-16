@@ -2,7 +2,37 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText } from 'react-native';
 import { Edit2, Trash2, StickyNote, X, ShoppingBag } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
-import { formatPrice, getFieldTypeConfig, formatTagValue } from '~/lib/utils';
+import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
+
+// ========================================
+// HELPERS
+// ========================================
+
+// Helper: Récupère la couleur pour le badge de prix selon le type de champ
+const getPriceBadgeColor = (fieldType: string): string => {
+  switch (fieldType) {
+    case 'select':
+      return '#BFDBFE'; // Bleu plus foncé
+    case 'multi-select':
+      return '#DDD6FE'; // Violet plus foncé
+    case 'toggle':
+      return '#A7F3D0'; // Vert plus foncé
+    case 'number':
+      return '#FCD34D'; // Jaune plus foncé
+    case 'text':
+      return '#F9A8D4'; // Rose plus foncé
+    default:
+      return '#CBD5E1'; // Gris plus foncé
+  }
+};
+
+// Helper: Formater la valeur d'un tag
+const formatTagValue = (tag: any): string => {
+  if (tag.value === null || tag.value === undefined) return '';
+  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
+  if (Array.isArray(tag.value)) return tag.value.join(', ');
+  return String(tag.value);
+};
 
 interface DraftReviewPanelContentProps {
   draftLines: OrderLine[];
@@ -172,7 +202,11 @@ const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.me
       <View style={styles.itemHeader}>
         <View style={styles.itemMainInfo}>
           <View style={styles.itemNameRow}>
-            <RNText style={[styles.itemName, { fontWeight: '600' }]}>
+            <RNText
+              style={[styles.itemName, { fontWeight: '600' }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {line.item?.name || ''}
             </RNText>
             <View style={styles.itemTypeBadge}>
@@ -220,7 +254,8 @@ const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.me
         <View style={styles.tagsSection}>
           <View style={styles.tagsGrid}>
             {line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => {
-              const config = getFieldTypeConfig(tag.tagSnapshot.fieldType);
+              const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
+              const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
               return (
                 <View key={idx} style={[styles.tagChip, { backgroundColor: config.bgColor, borderColor: config.bgColor }]}>
                   <RNText style={[styles.tagChipLabel, { fontWeight: '600', color: config.textColor }]}>
@@ -230,7 +265,7 @@ const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.me
                     {formatTagValue(tag)}
                   </RNText>
                   {tag.priceModifier != null && tag.priceModifier !== 0 && (
-                    <View style={[styles.tagPriceBadge, { backgroundColor: config.priceBgColor }]}>
+                    <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
                       <RNText style={[styles.tagPriceText, { fontWeight: '700', color: config.textColor }]}>
                         {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
                       </RNText>
@@ -270,7 +305,11 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
       <View style={styles.menuHeader}>
         <View style={styles.menuMainInfo}>
           <View style={styles.menuNameRow}>
-            <RNText style={[styles.menuName, { fontWeight: '700' }]}>
+            <RNText
+              style={[styles.menuName, { fontWeight: '700' }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {line.menu.name || ''}
             </RNText>
             <View style={styles.menuTypeBadge}>
@@ -336,7 +375,8 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
               {itemHasTags && (
                 <View style={styles.menuItemOptionsSection}>
                   {menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => {
-                    const config = getFieldTypeConfig(tag.tagSnapshot.fieldType);
+                    const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
+                    const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
                     return (
                       <View key={tagIdx} style={[styles.tagChip, { backgroundColor: config.bgColor, borderColor: config.bgColor }]}>
                         <RNText style={[styles.tagChipLabel, { fontWeight: '600', color: config.textColor }]}>
@@ -346,7 +386,7 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
                           {formatTagValue(tag)}
                         </RNText>
                         {tag.priceModifier != null && tag.priceModifier !== 0 && (
-                          <View style={[styles.tagPriceBadge, { backgroundColor: config.priceBgColor }]}>
+                          <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
                             <RNText style={[styles.tagPriceText, { fontWeight: '700', color: config.textColor }]}>
                               {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
                             </RNText>
@@ -453,10 +493,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 4,
+    flexWrap: 'nowrap',
   },
   itemName: {
     fontSize: 15,
     color: '#1E293B',
+    flex: 1,
+    minWidth: 0,
   },
   itemPrice: {
     fontSize: 16,
@@ -574,10 +617,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 4,
+    flexWrap: 'nowrap',
   },
   menuName: {
     fontSize: 16,
     color: '#1E293B',
+    flex: 1,
+    minWidth: 0,
   },
   menuPrice: {
     fontSize: 17,
@@ -642,6 +688,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#CBD5E1',
+    flexShrink: 0,
   },
   itemTypeBadgeText: {
     fontSize: 9,
@@ -657,6 +704,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#BFDBFE',
+    flexShrink: 0,
   },
   menuTypeBadgeText: {
     fontSize: 9,
@@ -670,6 +718,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+    flexShrink: 0,
   },
   newBadgeText: {
     fontSize: 9,
