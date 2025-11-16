@@ -11,6 +11,7 @@ import { ConfirmDialog } from '~/components/ui';
 interface OrderCardProps {
   order: Order;
   onDelete?: (order: Order) => void;
+  isSelected?: boolean;
 }
 
 const SWIPE_THRESHOLD = -80;
@@ -42,7 +43,7 @@ const getOrderType = (order: Order): string => {
   return itemTypeName;
 };
 
-export default function OrderCard({ order, onDelete }: OrderCardProps) {
+export default function OrderCard({ order, onDelete, isSelected = false }: OrderCardProps) {
   const mostImportantStatus = getOrderGlobalStatus(order);
   const statusColor = getStatusColor(mostImportantStatus);
   const statusText = getStatusText(mostImportantStatus);
@@ -105,6 +106,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
           style={[
             styles.container,
             { backgroundColor: `${statusColor}80` },
+            isSelected && styles.selectedCard,
           ]}
         >
           <View style={[styles.tableCode, { backgroundColor: statusColor }]}>
@@ -156,6 +158,7 @@ export default function OrderCard({ order, onDelete }: OrderCardProps) {
           style={[
             styles.container,
             { backgroundColor: `${statusColor}80` },
+            isSelected && styles.selectedCard,
             animatedStyles,
           ]}
         >
@@ -243,6 +246,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5E5',
     backgroundColor: 'white',
+  },
+  selectedCard: {
+    borderWidth: 3,
+    borderColor: '#2A2E33',
   },
   tableCode: {
     width: 44,

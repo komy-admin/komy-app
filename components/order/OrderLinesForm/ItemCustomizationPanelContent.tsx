@@ -14,7 +14,7 @@ import { Item } from '~/types/item.types';
 import { Tag } from '~/types/tag.types';
 import { SelectedTag } from '~/types/order-line.types';
 import { StickyNote, Tag as TagIcon, X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash } from 'lucide-react-native';
-import { formatPrice } from '~/lib/utils';
+import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
 
 // Type pour les valeurs des tags (union de tous les types possibles)
 type TagValue = string | number | boolean | string[] | null | undefined;
@@ -34,21 +34,75 @@ interface ItemCustomizationPanelContentProps {
 // HELPERS - Extraits hors du composant pour performance
 // ========================================
 
-// Helper: Récupère l'icône et la couleur selon le type de champ
-const getFieldTypeConfig = (fieldType: string) => {
+// Helper: Récupère l'icône selon le type de champ
+const getFieldTypeIcon = (fieldType: string) => {
   switch (fieldType) {
     case 'select':
-      return { icon: Circle, color: '#3B82F6', bgColor: '#EFF6FF', badgeBgColor: '#DBEAFE', textColor: '#1D4ED8', label: 'Choix unique' };
+      return Circle;
     case 'multi-select':
-      return { icon: CheckSquare, color: '#8B5CF6', bgColor: '#F5F3FF', badgeBgColor: '#EDE9FE', textColor: '#6D28D9', label: 'Multi-choix' };
+      return CheckSquare;
     case 'toggle':
-      return { icon: ToggleLeft, color: '#10B981', bgColor: '#ECFDF5', badgeBgColor: '#D1FAE5', textColor: '#047857', label: 'Oui/Non' };
+      return ToggleLeft;
     case 'number':
-      return { icon: Hash, color: '#F59E0B', bgColor: '#FEF3C7', badgeBgColor: '#FDE68A', textColor: '#D97706', label: 'Nombre' };
+      return Hash;
     case 'text':
-      return { icon: Type, color: '#EC4899', bgColor: '#FCE7F3', badgeBgColor: '#FBCFE8', textColor: '#BE185D', label: 'Texte' };
+      return Type;
     default:
-      return { icon: Circle, color: '#64748B', bgColor: '#F1F5F9', badgeBgColor: '#E2E8F0', textColor: '#475569', label: 'Champ' };
+      return Circle;
+  }
+};
+
+// Helper: Récupère le label selon le type de champ
+const getFieldTypeLabel = (fieldType: string): string => {
+  switch (fieldType) {
+    case 'select':
+      return 'Choix unique';
+    case 'multi-select':
+      return 'Multi-choix';
+    case 'toggle':
+      return 'Oui/Non';
+    case 'number':
+      return 'Nombre';
+    case 'text':
+      return 'Texte';
+    default:
+      return 'Champ';
+  }
+};
+
+// Helper: Récupère la couleur de l'icône selon le type de champ
+const getFieldTypeIconColor = (fieldType: string): string => {
+  switch (fieldType) {
+    case 'select':
+      return '#3B82F6';
+    case 'multi-select':
+      return '#8B5CF6';
+    case 'toggle':
+      return '#10B981';
+    case 'number':
+      return '#F59E0B';
+    case 'text':
+      return '#EC4899';
+    default:
+      return '#64748B';
+  }
+};
+
+// Helper: Récupère la couleur de fond légère selon le type de champ (pour les cards)
+const getFieldTypeLightBgColor = (fieldType: string): string => {
+  switch (fieldType) {
+    case 'select':
+      return '#EFF6FF';
+    case 'multi-select':
+      return '#F5F3FF';
+    case 'toggle':
+      return '#ECFDF5';
+    case 'number':
+      return '#FEF3C7';
+    case 'text':
+      return '#FCE7F3';
+    default:
+      return '#F1F5F9';
   }
 };
 
@@ -333,8 +387,9 @@ interface TagFieldProps {
  * TagCardHeader - Header de la card avec nom du tag et badges
  */
 const TagCardHeader: React.FC<{ tag: Tag }> = ({ tag }) => {
-  const config = getFieldTypeConfig(tag.fieldType);
-  const Icon = config.icon;
+  const Icon = getFieldTypeIcon(tag.fieldType);
+  const colorConfig = getTagFieldTypeConfig(tag.fieldType);
+  const label = getFieldTypeLabel(tag.fieldType);
 
   return (
     <View style={styles.tagCardHeader}>
@@ -344,10 +399,10 @@ const TagCardHeader: React.FC<{ tag: Tag }> = ({ tag }) => {
           {tag.label}
         </RNText>
         <View style={styles.tagHeaderBadges}>
-          <View style={[styles.fieldTypeBadge, { backgroundColor: config.badgeBgColor }]}>
-            <Icon size={10} color={config.textColor} strokeWidth={2.5} />
-            <RNText style={[styles.fieldTypeBadgeText, { color: config.textColor, fontWeight: '600' }]}>
-              {config.label}
+          <View style={[styles.fieldTypeBadge, { backgroundColor: colorConfig.bgColor }]}>
+            <Icon size={10} color={colorConfig.textColor} strokeWidth={2.5} />
+            <RNText style={[styles.fieldTypeBadgeText, { color: colorConfig.textColor, fontWeight: '600' }]}>
+              {label}
             </RNText>
           </View>
           {tag.isRequired && (
@@ -367,14 +422,15 @@ const TagCardHeader: React.FC<{ tag: Tag }> = ({ tag }) => {
  * TagCard - Wrapper de card avec fond coloré selon le type de tag
  */
 const TagCard: React.FC<{ tag: Tag; children: ReactNode }> = ({ tag, children }) => {
-  const config = getFieldTypeConfig(tag.fieldType);
+  const bgColor = getFieldTypeLightBgColor(tag.fieldType);
+  const borderColor = getFieldTypeIconColor(tag.fieldType);
 
   return (
     <View style={[
       styles.tagCard,
       {
-        backgroundColor: config.bgColor,
-        borderColor: config.color,
+        backgroundColor: bgColor,
+        borderColor: borderColor,
       }
     ]}>
       <View style={styles.tagCardContent}>

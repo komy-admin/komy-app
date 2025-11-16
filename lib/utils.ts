@@ -134,6 +134,44 @@ export const getStatusColor = (status: Status) => {
   return colors[status] || colors[Status.ERROR];
 }
 
+/**
+ * Retourne une version très légère de la couleur du statut pour le background des cards
+ * Pré-calculées pour éviter les problèmes de rgba sur React Native
+ */
+export const getStatusBackgroundColor = (status: Status): string => {
+  const colors = {
+    [Status.READY]: '#F5F8FE',      // Bleu très clair
+    [Status.PENDING]: '#FEFAF1',    // Jaune très clair
+    [Status.INPROGRESS]: '#FFF5EE', // Orange très clair
+    [Status.SERVED]: '#F0FAF5',     // Vert très clair
+    [Status.ERROR]: '#FEF5F4',      // Rouge très clair
+    [Status.TERMINATED]: '#FAFAFA', // Gris très clair
+    [Status.DRAFT]: '#FAFAFA',      // Gris très clair
+  };
+  return colors[status] || colors[Status.ERROR];
+}
+
+/**
+ * Retourne la configuration de couleur pour un type de champ de tag
+ * Utilisé pour colorer les tags selon leur type dans les OrderLines
+ */
+export const getTagFieldTypeConfig = (fieldType: string): { bgColor: string; textColor: string } => {
+  switch (fieldType) {
+    case 'select':
+      return { bgColor: '#DBEAFE', textColor: '#1D4ED8' }; // Bleu
+    case 'multi-select':
+      return { bgColor: '#EDE9FE', textColor: '#6D28D9' }; // Violet
+    case 'toggle':
+      return { bgColor: '#D1FAE5', textColor: '#047857' }; // Vert
+    case 'number':
+      return { bgColor: '#FDE68A', textColor: '#D97706' }; // Jaune/Orange
+    case 'text':
+      return { bgColor: '#FBCFE8', textColor: '#BE185D' }; // Rose
+    default:
+      return { bgColor: '#E2E8F0', textColor: '#475569' }; // Gris
+  }
+}
+
 // Version spécifique pour les tags de statut dans les OrderItems (avec DRAFT plus visible)
 export const getStatusTagColor = (status: Status) => {
   const colors = {

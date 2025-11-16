@@ -6,9 +6,10 @@ interface OrderListProps {
   orders: Order[];
   onOrderPress: (order: Order) => void;
   onOrderDelete?: (order: Order) => void;
+  selectedOrderId?: string;
 }
 
-export default function OrderList({ orders, onOrderPress, onOrderDelete }: OrderListProps) {
+export default function OrderList({ orders, onOrderPress, onOrderDelete, selectedOrderId }: OrderListProps) {
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -34,7 +35,11 @@ export default function OrderList({ orders, onOrderPress, onOrderDelete }: Order
           key={order.id}
           onPress={() => onOrderPress(order)}
         >
-          <OrderCard order={order} onDelete={onOrderDelete} />
+          <OrderCard
+            order={order}
+            onDelete={onOrderDelete}
+            isSelected={order.id === selectedOrderId}
+          />
         </Pressable>
       ))}
       {/* Espace en bas pour éviter que le dernier élément soit coupé */}
