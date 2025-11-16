@@ -313,12 +313,14 @@ export default function ServicePage() {
   const reassignRoomTables = useMemo(() => {
     if (!reassignRoomId) return [];
     return enrichedTables.filter(table => {
+      // Filtrer seulement les tables de la room sélectionnée
       if (table.roomId !== reassignRoomId) return false;
-      // Exclure la table qui a déjà la commande
-      const tableOrder = table.orders?.[0];
-      return tableOrder?.id !== selectedTableOrder?.id;
+
+      // Exclure TOUTES les tables qui ont déjà une commande (on ne peut pas assigner à une table occupée)
+      const hasOrder = table.orders && table.orders.length > 0;
+      return !hasOrder;
     });
-  }, [reassignRoomId, enrichedTables, selectedTableOrder]);
+  }, [reassignRoomId, enrichedTables]);
 
   const handleTableReassign = useCallback(async (table: Table | null) => {
     if (!table || !selectedTableOrder || isReassigning) return;
@@ -418,7 +420,7 @@ export default function ServicePage() {
     setSelectedTable(null);
   };
 
-  const { width } = useWindowDimensions();
+  const windowDimensions = useWindowDimensions();
   // Fonction pour rediriger vers room_list avec création automatique
   const handleCreateFirstRoom = () => {
     router.push('/(admin)/room/create');
@@ -514,7 +516,7 @@ export default function ServicePage() {
         <View style={{ flexDirection: 'row', flex: 1 }}>
           <SidePanel
             hideCloseButton={true}
-            width={width / 4}
+            width={windowDimensions.width / 4}
             title="Service"
             onBack={handleDeselectTable}
           >
@@ -743,54 +745,78 @@ export default function ServicePage() {
       <CustomModal
         isVisible={showReassignModal}
         onClose={() => setShowReassignModal(false)}
-        width={800}
-        height={650}
+        width={Math.min(windowDimensions.width * 0.55, 600)}
+        height={Math.min(windowDimensions.height * 0.7, 600)}
         title={isReassigning ? 'Assignation en cours...' : 'Sélectionner une table'}
       >
-        <View style={{ flex: 1, flexDirection: 'column' }}>
-          {/* Tabs des rooms - hauteur fixe */}
+        <View style={{
+          flex: 1,
+          flexDirection: 'column',
+          backgroundColor: '#FFFFFF'
+        }}>
+          {/* Tabs des rooms - hauteur fixe en haut avec zIndex élevé */}
           <View style={{
-            height: 60,
+            height: 54,
             backgroundColor: '#F9FAFB',
             borderBottomWidth: 1,
             borderBottomColor: '#E5E7EB',
+            paddingVertical: 6,
+            zIndex: 10,
+            elevation: 2,
+            shadowColor: 'transparent',
           }}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{
-                alignItems: 'center',
                 paddingHorizontal: 16,
-                height: 60,
+                gap: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                height: '100%',
               }}
+              nestedScrollEnabled={true}
             >
-              {rooms.map((room, index) => (
-                <Pressable
-                  key={`${room.name}-reassign-${index}`}
-                  onPress={() => setReassignRoomId(room.id)}
-                  style={{ marginHorizontal: 4 }}
-                >
-                  <Badge
-                    variant="outline"
-                    active={room.id === reassignRoomId}
-                    size='lg'
+              {rooms.length === 0 ? (
+                <Text style={{ color: '#999' }}>Aucune room disponible</Text>
+              ) : (
+                rooms.map((room, index) => (
+                  <Pressable
+                    key={`${room.name}-reassign-${index}`}
+                    onPress={() => {
+                      console.log('👆 Room clicked:', room.name);
+                      setReassignRoomId(room.id);
+                    }}
                   >
-                    <Text>{room.name}</Text>
-                  </Badge>
-                </Pressable>
-              ))}
+                    <Badge
+                      variant="outline"
+                      active={room.id === reassignRoomId}
+                      size='lg'
+                    >
+                      <Text>{room.name}</Text>
+                    </Badge>
+                  </Pressable>
+                ))
+              )}
             </ScrollView>
           </View>
 
-          {/* Room - prend tout le reste */}
-          <View style={{ flex: 1, padding: 20 }}>
+          {/* Room - prend le reste de l'espace disponible */}
+          <View style={{
+            flex: 1,
+            zIndex: 1,
+            backgroundColor: '#FFFFFF',
+          }}>
             <RoomComponent
               tables={reassignRoomTables}
               editionMode={false}
               isLoading={loading || isReassigning}
               width={reassignRoom?.width}
               height={reassignRoom?.height}
-              containerDimensions={{ width: 760, height: 540 }}
+              containerDimensions={{
+                width: Math.min(windowDimensions.width * 0.65, 660),
+                height: Math.min(windowDimensions.height * 0.55, 500)
+              }}
               onTablePress={handleTableReassign}
               onTableLongPress={handleTableReassign}
               onTableUpdate={() => {}}
