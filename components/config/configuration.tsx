@@ -34,6 +34,7 @@ export default function ConfigurationRestoPage() {
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
   const [itemTypeToDelete, setItemTypeToDelete] = useState<ItemType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCompactSidebar, setIsCompactSidebar] = useState(false);
 
   const { renderPanel, clearPanel } = usePanelPortal();
   const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
@@ -114,6 +115,12 @@ export default function ConfigurationRestoPage() {
     setItemTypeToDelete(null);
   }, []);
 
+  const handleLayoutChange = useCallback((event: any) => {
+    const { width } = event.nativeEvent.layout;
+    // Basculer en mode compact si la largeur est inférieure à 700px
+    setIsCompactSidebar(width < 700);
+  }, []);
+
   const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
     if (editingTag) {
       await updateTag(editingTag.id, tagData);
@@ -185,41 +192,59 @@ export default function ConfigurationRestoPage() {
   }, [sidePanelVisible, activeTab, editingTag, editingItemType]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={handleLayoutChange}>
       <View style={styles.content}>
         {/* Sidebar Navigation */}
-        <View style={styles.sidebar}>
+        <View style={[styles.sidebar, isCompactSidebar && styles.sidebarCompact]}>
           <TouchableOpacity
-            style={[styles.sidebarTab, activeTab === 'item-types' && styles.sidebarTabActive]}
+            style={[
+              styles.sidebarTab,
+              isCompactSidebar && styles.sidebarTabCompact,
+              activeTab === 'item-types' && styles.sidebarTabActive
+            ]}
             onPress={() => setActiveTab('item-types')}
             activeOpacity={1}
           >
             <Utensils size={20} color={activeTab === 'item-types' ? '#6366F1' : '#64748B'} strokeWidth={2} />
-            <Text style={[styles.sidebarTabText, activeTab === 'item-types' && styles.sidebarTabTextActive]}>
-              Types d'articles
-            </Text>
+            {!isCompactSidebar && (
+              <Text style={[styles.sidebarTabText, activeTab === 'item-types' && styles.sidebarTabTextActive]}>
+                Types d'articles
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.sidebarTab, activeTab === 'tags' && styles.sidebarTabActive]}
+            style={[
+              styles.sidebarTab,
+              isCompactSidebar && styles.sidebarTabCompact,
+              activeTab === 'tags' && styles.sidebarTabActive
+            ]}
             onPress={() => setActiveTab('tags')}
             activeOpacity={1}
           >
             <TagsIcon size={20} color={activeTab === 'tags' ? '#A855F7' : '#64748B'} strokeWidth={2} />
-            <Text style={[styles.sidebarTabText, activeTab === 'tags' && styles.sidebarTabTextActive]}>
-              Tags personnalisés
-            </Text>
+            {!isCompactSidebar && (
+              <Text style={[styles.sidebarTabText, activeTab === 'tags' && styles.sidebarTabTextActive]}>
+                Tags personnalisés
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.sidebarTab, activeTab === 'views' && styles.sidebarTabActive]}
+            style={[
+              styles.sidebarTab,
+              isCompactSidebar && styles.sidebarTabCompact,
+              activeTab === 'views' && styles.sidebarTabActive
+            ]}
             onPress={() => setActiveTab('views')}
             activeOpacity={1}
           >
             <Eye size={20} color={activeTab === 'views' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
-            <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
-              Activation modules
-            </Text>
+            {!isCompactSidebar && (
+              <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
+                Activation modules
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -620,10 +645,16 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 240,
     backgroundColor: '#FFFFFF',
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
     borderRightWidth: 1,
     borderRightColor: '#E2E8F0',
     padding: 16,
     gap: 8,
+  },
+  sidebarCompact: {
+    width: 72,
+    padding: 8,
   },
   sidebarTab: {
     flexDirection: 'row',
@@ -631,6 +662,11 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     gap: 12,
+  },
+  sidebarTabCompact: {
+    justifyContent: 'center',
+    padding: 14,
+    gap: 0,
   },
   sidebarTabActive: {
     backgroundColor: '#F1F5F9',
