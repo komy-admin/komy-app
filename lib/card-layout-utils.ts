@@ -40,6 +40,7 @@ export const calculateOptimalCardWidth = ({
   // Trouver le nombre optimal de colonnes
   // On cherche le MAXIMUM de colonnes qui respecte MIN_CARD_WIDTH
   let bestColumns = 1;
+  let foundValidConfig = false;
 
   for (let cols = 1; cols <= 10; cols++) {
     const totalGaps = gap * (cols - 1);
@@ -48,11 +49,18 @@ export const calculateOptimalCardWidth = ({
     // Accepter si >= MIN et <= MAX
     if (width >= minCardWidth && width <= maxCardWidth) {
       bestColumns = cols;
+      foundValidConfig = true;
     }
     // Si on descend sous MIN, on arrête (on a trouvé le max)
     else if (width < minCardWidth) {
       break;
     }
+  }
+
+  // Si aucune configuration valide trouvée (zone morte entre 241-371px)
+  // et que la largeur dépasse maxCardWidth, forcer au moins 2 colonnes
+  if (!foundValidConfig && availableWidth > maxCardWidth) {
+    bestColumns = Math.max(2, Math.floor(availableWidth / minCardWidth));
   }
 
   // Calculer la largeur exacte pour remplir l'espace

@@ -1,5 +1,5 @@
-import { memo, useCallback, useMemo, useState } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent } from 'react-native';
+import { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent, Dimensions } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
@@ -46,10 +46,11 @@ const OrderItemCard = memo<OrderItemRowProps>(({
 
   // Mémoiser le style dynamique pour éviter la création d'un nouvel objet à chaque render
   const dynamicStyle = useMemo(() => ({
-    flexBasis: cardWidth,
-    flexGrow: 1,
-    flexShrink: 0,
+    width: cardWidth,
+    minWidth: cardWidth,
     maxWidth: cardWidth,
+    flexShrink: 0,
+    flexGrow: 0,
     borderColor: colors.itemColor
   }), [cardWidth, colors.itemColor]);
 
@@ -106,12 +107,54 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   onOpenCustomization
 }) => {
   // État pour stocker la largeur réelle du container
-  const [containerWidth, setContainerWidth] = useState<number>(0);
+  // Initialisation avec une estimation basée sur la largeur de la fenêtre
+  // pour éviter le flash visuel au premier render
+  const [containerWidth, setContainerWidth] = useState<number>(() => {
+    const windowWidth = Dimensions.get('window').width;
+    // Soustraire le padding du gridContainer (paddingHorizontal: 16 * 2)
+    return Math.max(0, windowWidth - 32);
+  });
+
+  // État pour gérer le fade-in après le premier layout
+  const [isLayoutReady, setIsLayoutReady] = useState(false);
+
+  // Ref pour gérer le requestAnimationFrame et éviter les race conditions
+  const layoutTimeoutRef = useRef<number | null>(null);
+
+  // Réinitialiser isLayoutReady quand le type d'item change
+  useEffect(() => {
+    setIsLayoutReady(false);
+    // Nettoyer tout requestAnimationFrame en attente
+    if (layoutTimeoutRef.current !== null) {
+      cancelAnimationFrame(layoutTimeoutRef.current);
+      layoutTimeoutRef.current = null;
+    }
+  }, [activeItemType]);
 
   // Callback pour mesurer la largeur - mise à jour IMMÉDIATE sans debounce
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
     setContainerWidth(width);
+
+    // Nettoyer le précédent timeout si existant
+    if (layoutTimeoutRef.current !== null) {
+      cancelAnimationFrame(layoutTimeoutRef.current);
+    }
+
+    // Marquer le layout comme prêt après la stabilisation
+    layoutTimeoutRef.current = requestAnimationFrame(() => {
+      setIsLayoutReady(true);
+      layoutTimeoutRef.current = null;
+    });
+  }, []);
+
+  // Cleanup à la destruction du composant
+  useEffect(() => {
+    return () => {
+      if (layoutTimeoutRef.current !== null) {
+        cancelAnimationFrame(layoutTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Articles filtrés par type actif - mémorisé pour performance
@@ -154,7 +197,13 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
         nestedScrollEnabled={true}
         bounces={false}
       >
-        <View style={styles.itemsGrid} onLayout={handleLayout}>
+        <View
+          style={[
+            styles.itemsGrid,
+            { opacity: isLayoutReady ? 1 : 0 }
+          ]}
+          onLayout={handleLayout}
+        >
           {filteredItems.map((item) => (
             <OrderItemCard
               key={item.id}
@@ -193,6 +242,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
   emptyContainer: {
     flex: 1,

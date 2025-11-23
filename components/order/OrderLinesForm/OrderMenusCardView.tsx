@@ -1,5 +1,5 @@
-import { memo, useMemo, useCallback, useState } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent } from 'react-native';
+import { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent, Dimensions } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
@@ -35,10 +35,11 @@ const OrderMenuRow = memo<OrderMenuRowProps>(({
 
   // Mémoiser le style dynamique pour éviter la création d'un nouvel objet à chaque render
   const dynamicStyle = useMemo(() => ({
-    flexBasis: cardWidth,
-    flexGrow: 1,
-    flexShrink: 0,
+    width: cardWidth,
+    minWidth: cardWidth,
     maxWidth: cardWidth,
+    flexShrink: 0,
+    flexGrow: 0,
     borderColor: '#6366F1'
   }), [cardWidth]);
 
@@ -96,12 +97,51 @@ export const OrderMenusCardView = memo<OrderMenusCardViewProps>(({
   handleMenuAdd
 }) => {
   // État pour stocker la largeur réelle du container
-  const [containerWidth, setContainerWidth] = useState<number>(0);
+  // Initialisation avec la largeur de la fenêtre pour éviter le flash visuel
+  const [containerWidth, setContainerWidth] = useState<number>(() => {
+    return Dimensions.get('window').width;
+  });
+
+  // État pour gérer le fade-in après le premier layout
+  const [isLayoutReady, setIsLayoutReady] = useState(false);
+
+  // Ref pour gérer le requestAnimationFrame et éviter les race conditions
+  const layoutTimeoutRef = useRef<number | null>(null);
+
+  // Réinitialiser isLayoutReady quand les menus changent
+  useEffect(() => {
+    setIsLayoutReady(false);
+    // Nettoyer tout requestAnimationFrame en attente
+    if (layoutTimeoutRef.current !== null) {
+      cancelAnimationFrame(layoutTimeoutRef.current);
+      layoutTimeoutRef.current = null;
+    }
+  }, [activeMenus.length]);
 
   // Callback pour mesurer la largeur - mise à jour IMMÉDIATE sans debounce
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
     setContainerWidth(width);
+
+    // Nettoyer le précédent timeout si existant
+    if (layoutTimeoutRef.current !== null) {
+      cancelAnimationFrame(layoutTimeoutRef.current);
+    }
+
+    // Marquer le layout comme prêt après la stabilisation
+    layoutTimeoutRef.current = requestAnimationFrame(() => {
+      setIsLayoutReady(true);
+      layoutTimeoutRef.current = null;
+    });
+  }, []);
+
+  // Cleanup à la destruction du composant
+  useEffect(() => {
+    return () => {
+      if (layoutTimeoutRef.current !== null) {
+        cancelAnimationFrame(layoutTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Menus filtrés - seulement les actifs
@@ -140,7 +180,13 @@ export const OrderMenusCardView = memo<OrderMenusCardViewProps>(({
       nestedScrollEnabled={true}
       bounces={false}
     >
-      <View style={styles.contentContainer} onLayout={handleLayout}>
+      <View
+        style={[
+          styles.contentContainer,
+          { opacity: isLayoutReady ? 1 : 0 }
+        ]}
+        onLayout={handleLayout}
+      >
         {filteredMenus.map((menu) => (
           <OrderMenuRow
             key={menu.id}
