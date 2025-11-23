@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText } from 'react-native';
-import { Edit2, Trash2, StickyNote, X, ShoppingBag } from 'lucide-react-native';
+import { Edit2, Trash2, X, ShoppingBag } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
 
@@ -198,22 +198,19 @@ const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.me
       styles.itemCard,
       isNewDraft && styles.itemCardNew
     ]}>
-      {/* Header */}
-      <View style={styles.itemHeader}>
-        <View style={styles.itemMainInfo}>
-          <View style={styles.itemNameRow}>
+      <View style={styles.mainContent}>
+        <View style={styles.leftColumn}>
+          <View style={styles.nameRow}>
             <RNText
-              style={[styles.itemName, { fontWeight: '600' }]}
+              style={[styles.itemName, { fontWeight: '700' }]}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
               {line.item?.name || ''}
             </RNText>
-            <View style={styles.itemTypeBadge}>
-              <RNText style={[styles.itemTypeBadgeText, { fontWeight: '600' }]}>
-                À LA CARTE
-              </RNText>
-            </View>
+          </View>
+
+          <View style={styles.footerInfo}>
             {isNewDraft && (
               <View style={styles.newBadge}>
                 <RNText style={[styles.newBadgeText, { fontWeight: '700' }]}>
@@ -221,12 +218,47 @@ const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.me
                 </RNText>
               </View>
             )}
+
+            {hasTags && line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => {
+              const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
+              const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
+              return (
+                <View key={idx} style={[styles.tag, { backgroundColor: config.bgColor }]}>
+                  <RNText style={[styles.tagLabel, { color: config.textColor, fontWeight: '600' }]}>
+                    {tag.tagSnapshot.label}:
+                  </RNText>
+                  <RNText style={[styles.tagValue, { color: config.textColor, fontWeight: '500' }]}>
+                    {formatTagValue(tag)}
+                  </RNText>
+                  {tag.priceModifier != null && tag.priceModifier !== 0 && (
+                    <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
+                      <RNText style={[styles.tagPriceText, { color: config.textColor, fontWeight: '700' }]}>
+                        {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
+                      </RNText>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+
+            {hasNote && (
+              <View style={styles.noteContainer}>
+                <RNText style={styles.noteLabel}>Note :</RNText>
+                <RNText style={styles.noteText} numberOfLines={1} ellipsizeMode="tail">
+                  {line.note || ''}
+                </RNText>
+              </View>
+            )}
           </View>
-          <RNText style={[styles.itemPrice, { fontWeight: '700' }]}>
+        </View>
+
+        <View style={styles.priceTimeColumn}>
+          <RNText style={[styles.itemPrice, { fontWeight: '800' }]}>
             {formatPrice(line.totalPrice || 0)}
           </RNText>
         </View>
-        <View style={styles.itemActions}>
+
+        <View style={styles.actionsColumn}>
           <Pressable
             style={styles.editButton}
             onPress={() => onEdit(index)}
@@ -238,45 +270,6 @@ const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.me
           </Pressable>
         </View>
       </View>
-
-      {/* Note */}
-      {hasNote && (
-        <View style={styles.noteSection}>
-          <View style={styles.noteContent}>
-            <StickyNote size={12} color="#F59E0B" strokeWidth={2} />
-            <RNText style={styles.noteText}>{line.note || ''}</RNText>
-          </View>
-        </View>
-      )}
-
-      {/* Tags */}
-      {hasTags && (
-        <View style={styles.tagsSection}>
-          <View style={styles.tagsGrid}>
-            {line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => {
-              const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
-              const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
-              return (
-                <View key={idx} style={[styles.tagChip, { backgroundColor: config.bgColor, borderColor: config.bgColor }]}>
-                  <RNText style={[styles.tagChipLabel, { fontWeight: '600', color: config.textColor }]}>
-                    {tag.tagSnapshot.label}:
-                  </RNText>
-                  <RNText style={[styles.tagChipValue, { fontWeight: '500', color: config.textColor }]}>
-                    {formatTagValue(tag)}
-                  </RNText>
-                  {tag.priceModifier != null && tag.priceModifier !== 0 && (
-                    <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
-                      <RNText style={[styles.tagPriceText, { fontWeight: '700', color: config.textColor }]}>
-                        {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
-                      </RNText>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
     </View>
   );
 });
@@ -302,9 +295,9 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
       isNewDraft && styles.menuCardNew
     ]}>
       {/* Header */}
-      <View style={styles.menuHeader}>
-        <View style={styles.menuMainInfo}>
-          <View style={styles.menuNameRow}>
+      <View style={styles.mainContent}>
+        <View style={styles.leftColumn}>
+          <View style={styles.nameRow}>
             <RNText
               style={[styles.menuName, { fontWeight: '700' }]}
               numberOfLines={1}
@@ -312,8 +305,11 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
             >
               {line.menu.name || ''}
             </RNText>
-            <View style={styles.menuTypeBadge}>
-              <RNText style={[styles.menuTypeBadgeText, { fontWeight: '600' }]}>
+          </View>
+
+          <View style={styles.footerInfo}>
+            <View style={styles.menuBadge}>
+              <RNText style={[styles.menuBadgeText, { fontWeight: '700' }]}>
                 MENU
               </RNText>
             </View>
@@ -324,12 +320,19 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
                 </RNText>
               </View>
             )}
+            <RNText style={styles.itemCount}>
+              {line.items.length} article{line.items.length > 1 ? 's' : ''}
+            </RNText>
           </View>
-          <RNText style={[styles.menuPrice, { fontWeight: '700' }]}>
+        </View>
+
+        <View style={styles.priceTimeColumn}>
+          <RNText style={[styles.menuPrice, { fontWeight: '800' }]}>
             {formatPrice(line.totalPrice || 0)}
           </RNText>
         </View>
-        <View style={styles.itemActions}>
+
+        <View style={styles.actionsColumn}>
           {onEditMenu && (
             <Pressable style={styles.editButton} onPress={() => onEditMenu(line)}>
               <Edit2 size={16} color="#3B82F6" strokeWidth={2} />
@@ -349,7 +352,7 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
 
           return (
             <View key={idx} style={styles.menuItemRow}>
-              <View style={styles.menuItemHeader}>
+              <View style={styles.menuItemContent}>
                 <RNText style={[styles.menuItemCategory, { fontWeight: '600', textTransform: 'uppercase' }]}>
                   {menuItem.categoryName}
                 </RNText>
@@ -361,42 +364,43 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
                     +{formatPrice(menuItem.supplementPrice)}
                   </RNText>
                 )}
-              </View>
 
-              {/* Note de l'item */}
-              {itemHasNote && (
-                <View style={styles.menuItemNoteSection}>
-                  <StickyNote size={12} color="#F59E0B" strokeWidth={2} />
-                  <RNText style={styles.menuItemNoteText}>{menuItem.note}</RNText>
-                </View>
-              )}
+                {/* Tags et note inline */}
+                {(itemHasTags || itemHasNote) && (
+                  <View style={styles.menuItemFooter}>
+                    {itemHasTags && menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => {
+                      const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
+                      const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
+                      return (
+                        <View key={tagIdx} style={[styles.tag, { backgroundColor: config.bgColor }]}>
+                          <RNText style={[styles.tagLabel, { fontWeight: '600', color: config.textColor }]}>
+                            {tag.tagSnapshot.label}:
+                          </RNText>
+                          <RNText style={[styles.tagValue, { fontWeight: '500', color: config.textColor }]}>
+                            {formatTagValue(tag)}
+                          </RNText>
+                          {tag.priceModifier != null && tag.priceModifier !== 0 && (
+                            <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
+                              <RNText style={[styles.tagPriceText, { fontWeight: '700', color: config.textColor }]}>
+                                {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
+                              </RNText>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
 
-              {/* Options de l'item */}
-              {itemHasTags && (
-                <View style={styles.menuItemOptionsSection}>
-                  {menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => {
-                    const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
-                    const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
-                    return (
-                      <View key={tagIdx} style={[styles.tagChip, { backgroundColor: config.bgColor, borderColor: config.bgColor }]}>
-                        <RNText style={[styles.tagChipLabel, { fontWeight: '600', color: config.textColor }]}>
-                          {tag.tagSnapshot.label}:
+                    {itemHasNote && (
+                      <View style={styles.noteContainer}>
+                        <RNText style={styles.noteLabel}>Note :</RNText>
+                        <RNText style={styles.noteText} numberOfLines={1} ellipsizeMode="tail">
+                          {menuItem.note}
                         </RNText>
-                        <RNText style={[styles.tagChipValue, { fontWeight: '500', color: config.textColor }]}>
-                          {formatTagValue(tag)}
-                        </RNText>
-                        {tag.priceModifier != null && tag.priceModifier !== 0 && (
-                          <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
-                            <RNText style={[styles.tagPriceText, { fontWeight: '700', color: config.textColor }]}>
-                              {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
-                            </RNText>
-                          </View>
-                        )}
                       </View>
-                    );
-                  })}
-                </View>
-              )}
+                    )}
+                  </View>
+                )}
+              </View>
             </View>
           );
         })}
@@ -404,10 +408,12 @@ const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEdi
 
       {/* Note globale du menu */}
       {hasNote && (
-        <View style={styles.noteSection}>
-          <View style={styles.noteContent}>
-            <StickyNote size={12} color="#F59E0B" strokeWidth={2} />
-            <RNText style={styles.noteText}>{line.note || ''}</RNText>
+        <View style={styles.menuNoteSection}>
+          <View style={styles.noteContainer}>
+            <RNText style={styles.noteLabel}>Note :</RNText>
+            <RNText style={styles.noteText} numberOfLines={1} ellipsizeMode="tail">
+              {line.note || ''}
+            </RNText>
           </View>
         </View>
       )}
@@ -465,50 +471,210 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Card commune (Item et Menu)
+  mainContent: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  leftColumn: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  footerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  priceTimeColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    alignSelf: 'center',
+    gap: 4,
+  },
+  actionsColumn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
   // Item Card
   itemCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
   },
   itemCardNew: {
     backgroundColor: '#FEF3C7',
     borderColor: '#F59E0B',
-    borderWidth: 2,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  itemMainInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  itemNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-    flexWrap: 'nowrap',
   },
   itemName: {
-    fontSize: 15,
-    color: '#1E293B',
-    flex: 1,
-    minWidth: 0,
+    fontSize: 16,
+    color: '#1F2937',
+    flexShrink: 1,
   },
   itemPrice: {
     fontSize: 16,
-    color: '#059669',
+    color: '#1F2937',
   },
-  itemActions: {
+
+  // Menu Card
+  menuCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 0,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#6366F1', // Indigo pour les menus
+  },
+  menuCardNew: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  menuName: {
+    fontSize: 16,
+    color: '#1F2937',
+    flexShrink: 1,
+  },
+  menuPrice: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  menuBadge: {
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  menuBadgeText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  itemCount: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+
+  // Menu Items Section
+  menuItemsSection: {
+    marginTop: 12,
+    gap: 0,
+  },
+  menuItemRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    marginHorizontal: -12,
+  },
+  menuItemContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 3,
+  },
+  menuItemCategory: {
+    fontSize: 10,
+    color: '#64748B',
+    letterSpacing: 0.5,
+  },
+  menuItemName: {
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  menuItemSupplement: {
+    fontSize: 12,
+    color: '#F59E0B',
+  },
+  menuItemFooter: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
+    marginTop: 6,
   },
+  menuNoteSection: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    marginHorizontal: -12,
+  },
+
+  // Tags
+  tag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  tagLabel: {
+    fontSize: 10,
+  },
+  tagValue: {
+    fontSize: 10,
+  },
+  tagPriceBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  tagPriceText: {
+    fontSize: 10,
+  },
+
+  // Note inline
+  noteContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 6,
+    flexDirection: 'row',
+    gap: 5,
+    maxWidth: '100%',
+    flexShrink: 1,
+  },
+  noteLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  noteText: {
+    fontSize: 10,
+    color: '#92400E',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+
+  // New Badge
+  newBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  newBadgeText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+
+  // Actions
   editButton: {
     width: 32,
     height: 32,
@@ -528,202 +694,6 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-
-  // Note Section
-  noteSection: {
-    marginTop: 10,
-  },
-  noteContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FFFBEB',
-    borderRadius: 6,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  noteText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#92400E',
-    fontStyle: 'italic',
-    lineHeight: 16,
-  },
-
-  // Tags Section
-  tagsSection: {
-    marginTop: 10,
-  },
-  tagsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    gap: 6,
-  },
-  tagChipLabel: {
-    fontSize: 12,
-  },
-  tagChipValue: {
-    fontSize: 12,
-  },
-  tagPriceBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  tagPriceText: {
-    fontSize: 10,
-  },
-
-  // Menu Card
-  menuCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-    borderLeftWidth: 2,
-  },
-  menuCardNew: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
-  },
-  menuHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  menuMainInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  menuNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-    flexWrap: 'nowrap',
-  },
-  menuName: {
-    fontSize: 16,
-    color: '#1E293B',
-    flex: 1,
-    minWidth: 0,
-  },
-  menuPrice: {
-    fontSize: 17,
-    color: '#059669',
-  },
-  menuItemsSection: {
-    gap: 10,
-  },
-  menuItemRow: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  menuItemHeader: {
-    gap: 3,
-  },
-  menuItemCategory: {
-    fontSize: 10,
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  menuItemName: {
-    fontSize: 14,
-    color: '#1E293B',
-  },
-  menuItemSupplement: {
-    fontSize: 12,
-    color: '#F59E0B',
-    marginTop: 2,
-  },
-  menuItemNoteSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
-    backgroundColor: '#FFFBEB',
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  menuItemNoteText: {
-    fontSize: 12,
-    color: '#92400E',
-    fontStyle: 'italic',
-    flex: 1,
-  },
-  menuItemOptionsSection: {
-    marginTop: 8,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-
-  // Item Type Badge (À LA CARTE)
-  itemTypeBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    flexShrink: 0,
-  },
-  itemTypeBadgeText: {
-    fontSize: 9,
-    color: '#64748B',
-    letterSpacing: 0.3,
-  },
-
-  // Menu Type Badge (MENU)
-  menuTypeBadge: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    flexShrink: 0,
-  },
-  menuTypeBadgeText: {
-    fontSize: 9,
-    color: '#3B82F6',
-    letterSpacing: 0.3,
-  },
-
-  // New Badge
-  newBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  newBadgeText: {
-    fontSize: 9,
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
   },
 
   // Footer
