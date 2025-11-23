@@ -93,9 +93,28 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         }
       }
 
+      // 🎯 AUTO-AJOUT: Si des champs sont remplis mais non validés, les ajouter automatiquement
+      let finalOptions = [...options];
+      if (needsOptions && newOptionLabel.trim()) {
+        const generatedValue = newOptionLabel.trim().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, '');
+
+        const autoAddedOption: Partial<TagOption> = {
+          value: generatedValue,
+          label: newOptionLabel.trim(),
+          priceModifier: newOptionPrice ? parseFloat(newOptionPrice) : null,
+          isDefault: finalOptions.length === 0,
+          position: finalOptions.length,
+        };
+
+        finalOptions = [...finalOptions, autoAddedOption];
+      }
+
       // 💰 Convertir euros -> centimes pour l'envoi API
       const optionsInCents = needsOptions
-        ? options.map(opt => ({
+        ? finalOptions.map(opt => ({
             ...opt,
             priceModifier: opt.priceModifier != null ? eurosToCents(Number(opt.priceModifier)) : null
           }))
@@ -269,6 +288,8 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                       onChangeText={setNewOptionLabel}
                       placeholder="Nom de l'option"
                       placeholderTextColor="#94A3B8"
+                      onSubmitEditing={handleAddOption}
+                      returnKeyType="done"
                     />
                     <TextInput
                       style={[styles.formInput, styles.optionPriceInput]}
@@ -277,18 +298,21 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                       placeholder="Prix €"
                       keyboardType="decimal-pad"
                       placeholderTextColor="#94A3B8"
+                      onSubmitEditing={handleAddOption}
+                      returnKeyType="done"
                     />
                   </View>
                   <TouchableOpacity
                     style={[
                       styles.addOptionButton,
+                      newOptionLabel.trim() && styles.addOptionButtonActive,
                       !newOptionLabel.trim() && styles.addOptionButtonDisabled
                     ]}
                     onPress={handleAddOption}
                     disabled={!newOptionLabel.trim()}
                     activeOpacity={0.7}
                   >
-                    <Plus size={20} color={newOptionLabel.trim() ? '#A855F7' : '#CBD5E1'} strokeWidth={2} />
+                    <Plus size={20} color={newOptionLabel.trim() ? '#FFFFFF' : '#CBD5E1'} strokeWidth={2.5} />
                   </TouchableOpacity>
                 </View>
               </>
@@ -302,9 +326,9 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.saveButton, (!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0)) && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0 && !newOptionLabel.trim())) && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0)}
+          disabled={!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0 && !newOptionLabel.trim())}
         >
           <Check size={20} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.saveButtonText}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</Text>
@@ -461,6 +485,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     backgroundColor: '#F8F4FF',
+  },
+  addOptionButtonActive: {
+    backgroundColor: '#A855F7',
   },
   addOptionButtonDisabled: {
     backgroundColor: '#F1F5F9',
