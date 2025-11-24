@@ -357,6 +357,12 @@ export default function KitchenItemCard({
 
       {/* Items groupés par catégorie */}
       <View style={styles.content}>
+        {/* Tag RETARD collé à la première catégorie */}
+        {itemGroup.isOverdue && (
+          <View style={styles.overdueIndicator}>
+            <RNText style={styles.overdueText}>RETARD</RNText>
+          </View>
+        )}
         {itemsByCategory.map(([category, items], categoryIndex) => (
           <View
             key={category}
@@ -393,7 +399,9 @@ export default function KitchenItemCard({
                         {item.itemName}
                       </RNText>
                       {item.type === 'MENU_ITEM' && item.menuName && (
-                        <RNText style={styles.menuBadge}>Menu: {item.menuName}</RNText>
+                        <RNText style={[styles.menuBadge, item.isOverdue && styles.menuBadgeOverdue]}>
+                          Menu: {item.menuName}
+                        </RNText>
                       )}
                     </View>
 
@@ -440,13 +448,6 @@ export default function KitchenItemCard({
           </View>
         ))}
       </View>
-
-      {/* Indicateur de retard */}
-      {itemGroup.isOverdue && (
-        <View style={styles.overdueIndicator}>
-          <RNText style={styles.overdueText}>RETARD</RNText>
-        </View>
-      )}
     </View>
   );
 }
@@ -477,16 +478,17 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
     backgroundColor: '#FAFAFA',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-    gap: 6,
+    gap: 4,
   },
   headerInfo: {
     flexDirection: 'row',
@@ -523,6 +525,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     alignItems: 'center',
     marginLeft: 4,
+    flexShrink: 0,
   },
   itemCountText: {
     fontSize: 11,
@@ -538,6 +541,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    flexShrink: 0,
   },
   actionButtonForward: {
     backgroundColor: '#2A2E33',
@@ -545,7 +549,7 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingTop: 6,
+    paddingTop: 0,
     paddingBottom: 6,
   },
 
@@ -638,6 +642,11 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
   },
+  menuBadgeOverdue: {
+    color: '#DC2626',
+    backgroundColor: '#FEE2E2',
+    fontWeight: '700',
+  },
 
   itemTapIndicator: {
     marginLeft: 8,
@@ -692,19 +701,16 @@ const styles = StyleSheet.create({
   },
 
   overdueIndicator: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
     backgroundColor: '#DC2626',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    width: '100%',
   },
   overdueText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
 });

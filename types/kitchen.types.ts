@@ -25,4 +25,5 @@ export interface ItemGroup {
   }>;
   isOverdue: boolean;
   createdAt: string;
+  updatedAt?: string;
 }

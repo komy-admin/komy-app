@@ -88,11 +88,29 @@ export const useAlertMonitor = () => {
             if (dateToCheck) {
               const lineDate = new Date(dateToCheck);
               const diffMinutes = Math.floor((now.getTime() - lineDate.getTime()) / (1000 * 60));
-              
+
               if (diffMinutes >= reminderMinutes) {
                 overdueOrderItemIds.push(line.id);
               }
             }
+          }
+
+          // Vérifier aussi les items de menu (OrderLineItems) si c'est un menu
+          if (line.type === 'MENU' && line.items && line.items.length > 0) {
+            line.items.forEach(menuItem => {
+              if (menuItem.status && [Status.PENDING, Status.INPROGRESS, Status.READY].includes(menuItem.status)) {
+                // Utiliser updatedAt si disponible, sinon createdAt
+                const dateToCheck = menuItem.updatedAt || menuItem.createdAt;
+                if (dateToCheck) {
+                  const itemDate = new Date(dateToCheck);
+                  const diffMinutes = Math.floor((now.getTime() - itemDate.getTime()) / (1000 * 60));
+
+                  if (diffMinutes >= reminderMinutes) {
+                    overdueOrderItemIds.push(menuItem.id);
+                  }
+                }
+              }
+            });
           }
         });
       }

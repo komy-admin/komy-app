@@ -34,7 +34,8 @@ export function useItemGrouping(
           status: item.status,
           items: [],
           isOverdue: false,
-          createdAt: order.createdAt
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt
         });
       }
 
