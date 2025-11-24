@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, Image, Animated } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useRouter, useSegments } from 'expo-router';
 import { RootState } from '~/store';
@@ -12,91 +12,6 @@ interface AppInitializerProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
-
-// Composant d'animation ripple synchronisé avec le logo
-const RippleWave: React.FC = () => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const createRipple = () => {
-      // Démarrer l'onde
-      opacityAnim.setValue(0.3);
-      scaleAnim.setValue(1);
-
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1.8,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    };
-
-    // Première onde après 2000ms (après le premier cycle complet du logo)
-    setTimeout(createRipple, 2000);
-
-    // Ensuite, créer une onde toutes les 2000ms (synchronisé avec chaque diminution)
-    const interval = setInterval(() => {
-      createRipple();
-    }, 2000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-
-  return (
-    <Animated.View
-      style={[
-        styles.rippleWave,
-        {
-          transform: [{ scale: scaleAnim }],
-          opacity: opacityAnim,
-        },
-      ]}
-    />
-  );
-};
-
-// Composant d'animation du logo
-const LogoPulse: React.FC = () => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const animate = () => {
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.2,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]).start(animate); // Répéter l'animation
-    };
-
-    animate();
-  }, []);
-
-  return (
-    <Animated.View style={[styles.logoAnimated, { transform: [{ scale: scaleAnim }] }]}>
-      <Image
-        source={require('../assets/images/logo_komy_png/logo_name.png')}
-        style={styles.logoImage}
-        resizeMode="contain"
-      />
-    </Animated.View>
-  );
-};
 
 export const AppInitializer: React.FC<AppInitializerProps> = ({
   children,
@@ -148,13 +63,13 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
   if (!appInitialized || isAppInitializing) {
     return fallback || (
       <View style={styles.container}>
-        {/* Logo avec effet d'onde ripple */}
+        {/* Logo statique */}
         <View style={styles.logoContainer}>
-          {/* Logo avec pulsation */}
-          <LogoPulse />
-
-          {/* Onde ripple synchronisée */}
-          <RippleWave />
+          <Image
+            source={require('../assets/images/logo_komy_png/logo_name.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Barre de progression */}
@@ -210,30 +125,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    width: 300,
-    height: 300,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
-  },
-  rippleWave: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 2,
-    borderColor: 'rgba(0, 0, 0, 0.2)',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  logoAnimated: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
+    marginBottom: 40,
   },
   logoImage: {
     width: 200,
     height: 200,
-    tintColor: undefined,
   },
   progressContainer: {
     width: '80%',
