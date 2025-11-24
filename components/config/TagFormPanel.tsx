@@ -152,13 +152,19 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
   return (
     <View style={styles.panelContent}>
       <View style={styles.panelHeader}>
-        <View>
-          <Text style={styles.panelTitle}>{tag ? 'Modifier le tag' : 'Nouveau tag'}</Text>
-          <Text style={styles.panelSubtitle}>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.panelTitle} numberOfLines={1} ellipsizeMode="tail">
+            {tag ? 'Modifier le tag' : 'Nouveau tag'}
+          </Text>
+          <Text style={styles.panelSubtitle} numberOfLines={2} ellipsizeMode="tail">
             {tag ? 'Modifier les paramètres du tag' : 'Sélectionnez un type de champ pour commencer'}
           </Text>
         </View>
-        <TouchableOpacity onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onCancel}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <X size={24} color="#64748B" strokeWidth={2} />
         </TouchableOpacity>
       </View>
@@ -350,6 +356,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     gap: 16,
+  },
+  headerTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  closeButton: {
+    flexShrink: 0,
   },
   panelTitle: {
     fontSize: 18,

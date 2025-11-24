@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, useWindowDimensions } from 'react-native';
 import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useTags } from '~/hooks/useTags';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
+import { useScrollToTop } from '~/hooks/useScrollToTop';
+import { ScrollToTopButton } from '~/components/ui/ScrollToTopButton';
 import { ItemType } from '~/types/item-type.types';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { SlidePanel } from '~/components/ui/SlidePanel';
@@ -27,6 +29,7 @@ const getTagFieldTypeLabel = (fieldType: TagFieldType): string => {
 };
 
 export default function ConfigurationRestoPage() {
+  const { height: screenHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<TabType>('item-types');
   const [sidePanelVisible, setSidePanelVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
@@ -249,7 +252,7 @@ export default function ConfigurationRestoPage() {
         </View>
 
         {/* Main Content */}
-        <View style={styles.mainContent}>
+        <View style={[styles.mainContent, isCompactSidebar ? styles.mainContentCompact : styles.mainContentNormal]}>
           {activeTab === 'item-types' && (
             <ItemTypesTab
               itemTypes={itemTypes}
@@ -316,6 +319,8 @@ interface ItemTypesTabProps {
 }
 
 const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType, onEditItemType, onDeleteItemType }) => {
+  const { scrollViewRef, handleScroll, scrollToTop, isVisible, fadeAnim } = useScrollToTop({ threshold: 80 });
+
   return (
     <View style={styles.tabContent}>
       <View style={styles.tabHeader}>
@@ -329,7 +334,13 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.tagsList} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.tagsList}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {itemTypes.length === 0 ? (
           <View style={styles.emptyState}>
             <Utensils size={48} color="#CBD5E1" strokeWidth={1.5} />
@@ -351,6 +362,8 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
           ))
         )}
       </ScrollView>
+
+      <ScrollToTopButton isVisible={isVisible} fadeAnim={fadeAnim} onPress={scrollToTop} />
     </View>
   );
 };
@@ -364,6 +377,8 @@ interface TagsTabProps {
 }
 
 const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDeleteTag }) => {
+  const { scrollViewRef, handleScroll, scrollToTop, isVisible, fadeAnim } = useScrollToTop({ threshold: 80 });
+
   return (
     <View style={styles.tabContent}>
       <View style={styles.tabHeader}>
@@ -377,7 +392,13 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.tagsList} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.tagsList}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {tags.length === 0 ? (
           <View style={styles.emptyState}>
             <TagsIcon size={48} color="#CBD5E1" strokeWidth={1.5} />
@@ -399,6 +420,8 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
           ))
         )}
       </ScrollView>
+
+      <ScrollToTopButton isVisible={isVisible} fadeAnim={fadeAnim} onPress={scrollToTop} />
     </View>
   );
 };
@@ -635,14 +658,23 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, onEdit, onDelete }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
   },
   content: {
-    flex: 1,
+    height: '100%',
     flexDirection: 'row',
   },
   sidebar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
     width: 240,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 1,
@@ -651,6 +683,7 @@ const styles = StyleSheet.create({
     borderRightColor: '#E2E8F0',
     padding: 16,
     gap: 8,
+    zIndex: 10,
   },
   sidebarCompact: {
     width: 72,
@@ -681,7 +714,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mainContent: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+  },
+  mainContentNormal: {
+    left: 240,
+  },
+  mainContentCompact: {
+    left: 72,
   },
   tabContent: {
     flex: 1,
