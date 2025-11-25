@@ -121,12 +121,9 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
   activeItemType,
   onOpenCustomization
 }) => {
-  // Articles filtrés par type actif
-  const filteredItems = useMemo(() => {
-    return items.filter(item =>
-      item.itemTypeId === activeItemType && item.isActive
-    );
-  }, [items, activeItemType]);
+  // Les items reçus sont déjà filtrés par le hook useOrderLinesForm (activeItems)
+  // Pas besoin de re-filtrer ici
+  const filteredItems = items;
 
   // Si aucun article disponible
   if (filteredItems.length === 0) {

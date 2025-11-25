@@ -587,6 +587,11 @@ const ItemTypeListItem: React.FC<ItemTypeListItemProps> = ({ itemType, onEdit, o
                 {isBar ? 'Bar' : 'Cuisine'}
               </Text>
             </View>
+            <View style={[styles.tagBadge, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}>
+              <Text style={[styles.tagBadgeText, { color: '#64748B' }]}>
+                Priorité {itemType.priorityOrder || 0}
+              </Text>
+            </View>
           </View>
         </View>
         <View style={styles.tagItemActions}>

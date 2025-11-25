@@ -75,8 +75,11 @@ export const useOrderLinesForm = ({
   
   // Filtrer les items actifs par type
   const activeItems = items.filter(item => {
-    if (activeItemType === '') return item.isActive;
-    return item.isActive && item.itemType?.id === activeItemType;
+    if (!item.isActive) return false;
+    if (activeItemType === '') return true;
+    // Utiliser itemType.id en priorité, sinon itemTypeId
+    const itemTypeId = item.itemType?.id || item.itemTypeId;
+    return itemTypeId === activeItemType;
   });
   
   // Initialisation des itemTypes (une seule fois)

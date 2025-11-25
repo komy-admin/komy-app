@@ -108,61 +108,21 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
 }) => {
   // État pour stocker la largeur réelle du container
   // Initialisation avec une estimation basée sur la largeur de la fenêtre
-  // pour éviter le flash visuel au premier render
   const [containerWidth, setContainerWidth] = useState<number>(() => {
     const windowWidth = Dimensions.get('window').width;
     // Soustraire le padding du gridContainer (paddingHorizontal: 16 * 2)
     return Math.max(0, windowWidth - 32);
   });
 
-  // État pour gérer le fade-in après le premier layout
-  const [isLayoutReady, setIsLayoutReady] = useState(false);
-
-  // Ref pour gérer le requestAnimationFrame et éviter les race conditions
-  const layoutTimeoutRef = useRef<number | null>(null);
-
-  // Réinitialiser isLayoutReady quand le type d'item change
-  useEffect(() => {
-    setIsLayoutReady(false);
-    // Nettoyer tout requestAnimationFrame en attente
-    if (layoutTimeoutRef.current !== null) {
-      cancelAnimationFrame(layoutTimeoutRef.current);
-      layoutTimeoutRef.current = null;
-    }
-  }, [activeItemType]);
-
-  // Callback pour mesurer la largeur - mise à jour IMMÉDIATE sans debounce
+  // Callback pour mesurer la largeur
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
     setContainerWidth(width);
-
-    // Nettoyer le précédent timeout si existant
-    if (layoutTimeoutRef.current !== null) {
-      cancelAnimationFrame(layoutTimeoutRef.current);
-    }
-
-    // Marquer le layout comme prêt après la stabilisation
-    layoutTimeoutRef.current = requestAnimationFrame(() => {
-      setIsLayoutReady(true);
-      layoutTimeoutRef.current = null;
-    });
   }, []);
 
-  // Cleanup à la destruction du composant
-  useEffect(() => {
-    return () => {
-      if (layoutTimeoutRef.current !== null) {
-        cancelAnimationFrame(layoutTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Articles filtrés par type actif - mémorisé pour performance
-  const filteredItems = useMemo(() => {
-    return items.filter(item =>
-      item.itemTypeId === activeItemType && item.isActive
-    );
-  }, [items, activeItemType]);
+  // Les items reçus sont déjà filtrés par le hook useOrderLinesForm (activeItems)
+  // Pas besoin de re-filtrer ici
+  const filteredItems = items;
 
   // Calcul de la largeur optimale des cartes
   // containerWidth mesure itemsGrid directement (déjà sans padding)
@@ -198,10 +158,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
         bounces={false}
       >
         <View
-          style={[
-            styles.itemsGrid,
-            { opacity: isLayoutReady ? 1 : 0 }
-          ]}
+          style={styles.itemsGrid}
           onLayout={handleLayout}
         >
           {filteredItems.map((item) => (

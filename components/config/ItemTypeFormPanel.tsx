@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import { X, Check, ChefHat, Wine } from 'lucide-react-native';
 import { ItemType } from '~/types/item-type.types';
+import { useItemTypes } from '~/hooks/useItemTypes';
 
 interface ItemTypeFormPanelProps {
   itemType: ItemType | null;
@@ -10,12 +11,28 @@ interface ItemTypeFormPanelProps {
 }
 
 export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, onSave, onCancel }) => {
+  const { itemTypes } = useItemTypes();
   const [name, setName] = useState(itemType?.name || '');
   const [type, setType] = useState<'kitchen' | 'bar'>(itemType?.type === 'bar' ? 'bar' : 'kitchen');
 
+  // Calculer le nombre de positions disponibles
+  // En création : N+1 (pour permettre d'insérer à la fin)
+  // En édition : N (on peut réorganiser parmi les existants)
+  const totalPositions = itemType
+    ? itemTypes.length  // En édition : peut choisir parmi 1 à N
+    : itemTypes.length + 1;  // En création : peut choisir parmi 1 à N+1
+
+  const [priorityOrder, setPriorityOrder] = useState<number>(
+    itemType?.priorityOrder || totalPositions  // Par défaut : dernière position
+  );
+
   const handleSave = () => {
     if (!name.trim()) return;
-    onSave({ name: name.trim(), type });
+    onSave({
+      name: name.trim(),
+      type,
+      priorityOrder
+    });
   };
 
   return (
@@ -85,6 +102,79 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Ordre de priorité */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Ordre de priorité</Text>
+          <Text style={styles.formHelpText}>
+            {itemType
+              ? "Changer la position réorganisera automatiquement les autres types"
+              : "Les types suivants seront décalés automatiquement"}
+          </Text>
+          <View style={styles.priorityGrid}>
+            {Array.from({ length: totalPositions }, (_, i) => i + 1).map((position) => {
+              // Trouver quel type occupe actuellement cette position
+              const typeAtPosition = itemTypes.find(it => it.priorityOrder === position);
+              const isCurrentPosition = itemType?.priorityOrder === position;
+
+              return (
+                <TouchableOpacity
+                  key={position}
+                  style={[
+                    styles.priorityButton,
+                    priorityOrder === position && styles.priorityButtonActive,
+                    isCurrentPosition && !priorityOrder && styles.priorityButtonCurrent
+                  ]}
+                  onPress={() => setPriorityOrder(position)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.priorityButtonText,
+                      priorityOrder === position && styles.priorityButtonTextActive
+                    ]}
+                  >
+                    {position}
+                  </Text>
+                  {typeAtPosition && !itemType && (
+                    <Text style={styles.priorityButtonLabel} numberOfLines={1}>
+                      {typeAtPosition.name}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {priorityOrder && (
+            <View style={styles.priorityFeedbackCard}>
+              <View style={styles.priorityFeedbackHeader}>
+                <View style={styles.priorityBadge}>
+                  <Text style={styles.priorityBadgeText}>
+                    {priorityOrder === 1 && "1ère priorité"}
+                    {priorityOrder === 2 && "2ème priorité"}
+                    {priorityOrder === 3 && "3ème priorité"}
+                    {priorityOrder > 3 && `${priorityOrder}ème priorité`}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.priorityFeedbackContent}>
+                {/* <Text style={styles.priorityFeedbackTitle}>
+                  {itemType ? "Réorganisation" : "Insertion"}
+                </Text>
+                <Text style={styles.priorityFeedbackDescription}>
+                  {itemType
+                    ? `Ce type prendra la position ${priorityOrder}. Les autres types seront automatiquement réorganisés pour maintenir l'ordre.`
+                    : `Ce type sera inséré en position ${priorityOrder}. Les types suivants seront décalés vers le bas.`}
+                </Text> */}
+                {/* <View style={styles.priorityFeedbackDivider} /> */}
+                <Text style={styles.priorityFeedbackUsage}>
+                  <Text style={styles.priorityFeedbackUsageBold}>Affichage :</Text> Les types seront affichés dans cet ordre partout dans l'application.{'\n'}
+                  <Text style={styles.priorityFeedbackUsageBold}>Autogestion :</Text> Détermine l'ordre de préparation en cuisine/bar.
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <View style={styles.panelFooter}>
@@ -132,7 +222,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1E293B',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  formHelpText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 8,
   },
   formInput: {
     height: 44,
@@ -184,6 +279,102 @@ const styles = StyleSheet.create({
   radioLabelActive: {
     color: '#1E293B',
     fontWeight: '500',
+  },
+  priorityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  priorityButton: {
+    minWidth: 48,
+    height: 48,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  priorityButtonActive: {
+    borderColor: '#A855F7',
+    backgroundColor: '#F8F4FF',
+  },
+  priorityButtonCurrent: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+  priorityButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  priorityButtonTextActive: {
+    color: '#A855F7',
+  },
+  priorityButtonLabel: {
+    fontSize: 9,
+    color: '#94A3B8',
+    marginTop: 2,
+    maxWidth: 60,
+    textAlign: 'center',
+  },
+  priorityFeedbackCard: {
+    marginTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    overflow: 'hidden',
+  },
+  priorityFeedbackHeader: {
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#BFDBFE',
+  },
+  priorityBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  priorityBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  priorityFeedbackContent: {
+    padding: 16,
+  },
+  priorityFeedbackTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  priorityFeedbackDescription: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  priorityFeedbackDivider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 12,
+  },
+  priorityFeedbackUsage: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  priorityFeedbackUsageBold: {
+    fontWeight: '600',
+    color: '#1E293B',
   },
   panelFooter: {
     flexDirection: 'row',

@@ -88,10 +88,17 @@ export const selectItemTypesRecord = (state: RootState) => state.entities.itemTy
 export const selectItemTypeById = (typeId: string) => (state: RootState) =>
   state.entities.itemTypes[typeId] || null;
 
-// ItemTypes - Array (mémorisé)
+// ItemTypes - Array (mémorisé et trié par priorité)
 export const selectItemTypes = createSelector(
   [selectItemTypesRecord],
-  (itemTypes) => Object.values(itemTypes)
+  (itemTypes) => Object.values(itemTypes).sort((a, b) => {
+    // Tri par priorityOrder croissant (plus petit en premier)
+    if (a.priorityOrder !== b.priorityOrder) {
+      return (a.priorityOrder || 0) - (b.priorityOrder || 0);
+    }
+    // Si même priorité, trier par nom
+    return a.name.localeCompare(b.name);
+  })
 );
 
 // Tags - Records (pas de transformation)
