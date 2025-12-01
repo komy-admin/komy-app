@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 
 interface SlidePanelProps {
@@ -27,26 +27,32 @@ export function SlidePanel({
 }: SlidePanelProps) {
   const { width: screenWidth } = useWindowDimensions();
 
-  if (!visible) return null;
+  // Mémoïser le calcul de largeur pour éviter les recalculs inutiles
+  const computedWidth = useMemo(() => {
+    let calculatedWidth: number;
 
-  // Calculer la largeur finale (se recalcule automatiquement au resize)
-  let computedWidth: number;
+    if (typeof width === 'string' && width.endsWith('%')) {
+      // Largeur en pourcentage - responsive dynamique
+      const percentage = parseFloat(width) / 100;
+      calculatedWidth = screenWidth * percentage;
+    } else {
+      // Largeur en pixels
+      calculatedWidth = typeof width === 'number' ? width : 400;
+    }
 
-  if (typeof width === 'string' && width.endsWith('%')) {
-    // Largeur en pourcentage - responsive dynamique
-    const percentage = parseFloat(width) / 100;
-    computedWidth = screenWidth * percentage;
-  } else {
-    // Largeur en pixels
-    computedWidth = typeof width === 'number' ? width : 400;
-  }
+    // Appliquer les contraintes min/max
+    if (minWidth && calculatedWidth < minWidth) {
+      calculatedWidth = minWidth;
+    }
+    if (maxWidth && calculatedWidth > maxWidth) {
+      calculatedWidth = maxWidth;
+    }
 
-  // Appliquer les contraintes min/max
-  if (minWidth && computedWidth < minWidth) {
-    computedWidth = minWidth;
-  }
-  if (maxWidth && computedWidth > maxWidth) {
-    computedWidth = maxWidth;
+    return calculatedWidth;
+  }, [width, screenWidth, minWidth, maxWidth]);
+
+  if (!visible) {
+    return null;
   }
 
   return (

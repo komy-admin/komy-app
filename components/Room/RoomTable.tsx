@@ -59,6 +59,7 @@ import Animated, {
   useAnimatedStyle,
   runOnJS,
   withSpring,
+  SharedValue,
 } from 'react-native-reanimated';
 
 interface TableViewProps {
@@ -71,14 +72,14 @@ interface TableViewProps {
   editionMode: boolean;
   positionValid: boolean;
   CELL_SIZE: number;
-  currentZoom: number;
+  currentZoomScale: SharedValue<number>; // ⚡ SharedValue direct (pas number)
   isSelected: boolean;
   onPress: (table: Table) => void;
   onLongPress: (table: Table) => void;
   onUpdate: (id: string, updates: Partial<Table>) => void;
 }
 
-export const RoomTable: React.FC<TableViewProps> = ({
+const RoomTable: React.FC<TableViewProps> = ({
   table,
   tables,
   roomWidth,
@@ -88,7 +89,7 @@ export const RoomTable: React.FC<TableViewProps> = ({
   editionMode,
   positionValid,
   CELL_SIZE,
-  currentZoom,
+  currentZoomScale,
   isSelected,
   onPress,
   onLongPress,
@@ -153,6 +154,11 @@ export const RoomTable: React.FC<TableViewProps> = ({
   const cachedTableHeightInCells = useSharedValue(0);
   const cachedMaxX = useSharedValue(0);
   const cachedMaxY = useSharedValue(0);
+
+  // 🔍 ZOOM SCALE (pour compenser le zoom de la Room sur grandes grilles)
+  // ⚡ v2.4: Utilisation directe de currentZoomScale (SharedValue), pas de sync nécessaire
+  // Sur grille 30x30, zoom ~0.5-0.6 → sans compensation, table ne suit pas le doigt
+  const zoomScale = currentZoomScale;
 
   // Vérifier si une position est valide (dans les limites et sans collision)
   const isValidPosition = useCallback((x: number, y: number, w: number, h: number) => {
@@ -533,7 +539,9 @@ export const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
-        const rawWidth = startWidth.value + event.translationX;
+        // 🔍 Compenser le zoom pour que le resize suive le curseur
+        const compensatedTranslationX = event.translationX / zoomScale.value;
+        const rawWidth = startWidth.value + compensatedTranslationX;
         // Snap to grid pendant le resize
         const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
         width.value = snappedWidth;
@@ -581,8 +589,10 @@ export const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
+        // 🔍 Compenser le zoom pour que le resize suive le curseur
+        const compensatedTranslationX = event.translationX / zoomScale.value;
         // 📏 Calculer la nouvelle largeur (tirer vers gauche = réduire translationX)
-        const rawWidth = startWidth.value - event.translationX;
+        const rawWidth = startWidth.value - compensatedTranslationX;
         const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
 
         // ⚠️ IMPORTANT : Utiliser startWidth comme référence (pas currentWidth)
@@ -616,7 +626,9 @@ export const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
-        const rawHeight = startHeight.value + event.translationY;
+        // 🔍 Compenser le zoom pour que le resize suive le curseur
+        const compensatedTranslationY = event.translationY / zoomScale.value;
+        const rawHeight = startHeight.value + compensatedTranslationY;
         const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
         height.value = snappedHeight;
       })
@@ -638,7 +650,9 @@ export const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
-        const rawHeight = startHeight.value - event.translationY;
+        // 🔍 Compenser le zoom pour que le resize suive le curseur
+        const compensatedTranslationY = event.translationY / zoomScale.value;
+        const rawHeight = startHeight.value - compensatedTranslationY;
         const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
         const deltaHeight = snappedHeight - startHeight.value; // Utiliser startHeight comme référence
 
@@ -709,12 +723,16 @@ export const RoomTable: React.FC<TableViewProps> = ({
       .onUpdate((event) => {
         'worklet';
         // 👆 Mouvement direct SANS snap (suit exactement le doigt)
-        translateX.value = event.translationX;
-        translateY.value = event.translationY;
+        // 🔍 Diviser par zoomScale pour compenser le zoom sur grandes grilles
+        const compensatedTranslationX = event.translationX / zoomScale.value;
+        const compensatedTranslationY = event.translationY / zoomScale.value;
+
+        translateX.value = compensatedTranslationX;
+        translateY.value = compensatedTranslationY;
 
         // 👻 Calculs optimisés pour le fantôme (preview de la position snappée)
-        const snappedGridX = Math.round((currentX.value + event.translationX) / CELL_SIZE);
-        const snappedGridY = Math.round((currentY.value + event.translationY) / CELL_SIZE);
+        const snappedGridX = Math.round((currentX.value + compensatedTranslationX) / CELL_SIZE);
+        const snappedGridY = Math.round((currentY.value + compensatedTranslationY) / CELL_SIZE);
 
         // Contraindre dans les limites de la room
         const constrainedX = Math.max(0, Math.min(snappedGridX, cachedMaxX.value));
@@ -884,6 +902,28 @@ export const RoomTable: React.FC<TableViewProps> = ({
   );
 };
 
+// 🚀 OPTIMISATION: React.memo pour éviter re-renders inutiles
+const RoomTableMemoized = React.memo(RoomTable, (prevProps, nextProps) => {
+  // Comparaison granulaire: re-render seulement si ces props changent
+  return (
+    prevProps.table.id === nextProps.table.id &&
+    prevProps.table.xStart === nextProps.table.xStart &&
+    prevProps.table.yStart === nextProps.table.yStart &&
+    prevProps.table.width === nextProps.table.width &&
+    prevProps.table.height === nextProps.table.height &&
+    prevProps.table.name === nextProps.table.name &&
+    prevProps.table.seats === nextProps.table.seats &&
+    prevProps.status === nextProps.status &&
+    prevProps.isEditing === nextProps.isEditing &&
+    prevProps.positionValid === nextProps.positionValid &&
+    prevProps.isSelected === nextProps.isSelected
+    // ⚡ currentZoomScale est une SharedValue (référence stable, pas besoin de comparer)
+    // Note: on ignore tables, callbacks et autres props stables
+  );
+});
+
+RoomTableMemoized.displayName = 'RoomTable';
+
 const styles = StyleSheet.create({
   innerContainer: {
     width: '100%',
@@ -973,3 +1013,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 });
+
+// 🚀 Export de la version memoïzée pour optimisation des re-renders
+export { RoomTableMemoized as RoomTable };

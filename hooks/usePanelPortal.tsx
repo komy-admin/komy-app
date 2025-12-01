@@ -104,7 +104,6 @@ export function PanelPortalProvider({ children }: { children: ReactNode }) {
 
     // Si la route a changé et qu'un panel est ouvert, le fermer
     if (currentPath !== previousPath && panelRef.current) {
-      console.log('🔒 [PanelPortal] Navigation détectée - fermeture automatique du panel');
       clearPanel();
     }
 

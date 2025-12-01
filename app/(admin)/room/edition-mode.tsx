@@ -1,24 +1,61 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * 🏗️ ROOM EDITION MODE - Point d'entrée principal pour l'édition des rooms
+ *
+ * ARCHITECTURE:
+ * ├── RoomComponent (~/components/Room/Room.tsx)
+ * │   └── Composant principal de visualisation et interaction avec la grille
+ * │       ├── useRoomDimensions → Calcul dimensions et zoom optimal
+ * │       ├── useRoomZoom → Gestion pan, pinch, wheel zoom
+ * │       ├── useRoomValidation → Validation O(1) positions et collisions
+ * │       └── RoomContext.Provider → Partage CELL_SIZE, currentZoom, editionMode
+ * │
+ * ├── RoomTable (~/components/Room/RoomTable.tsx)
+ * │   └── Table individuelle draggable/resizable avec React.memo (95%+ re-renders évités)
+ * │
+ * ├── TableEditorSidebar (~/components/Room/TableEditorSidebar.tsx)
+ * │   └── Sidebar responsive (25% width) pour éditer nom/couverts d'une table
+ * │
+ * ├── RoomCard (~/components/Room/RoomCard.tsx)
+ * │   └── Card flottante affichant infos room + bouton "Ajouter table"
+ * │
+ * └── DeleteConfirmationModal (~/components/ui/DeleteConfirmationModal.tsx)
+ *     └── Modale de confirmation avant suppression table
+ *
+ * HOOKS REDUX:
+ * ├── useRooms() → Gestion state rooms (currentRoom, setCurrentRoom, loading)
+ * ├── useTables() → Gestion state tables filtrées par room (currentRoomTables, selectedTable)
+ * └── useTableEditor() → CRUD optimisé (createTableFast, updateTableFast, deleteTableFast)
+ *
+ * UTILS:
+ * ├── generateTableName() → Génère nom auto "Table 1", "Table 2"...
+ * └── findAvailablePosition() → Trouve espace libre dans grille pour nouvelle table
+ *
+ * FLUX DRAG & DROP:
+ * User drag table → RoomTable.onUpdate() → handleTableUpdate()
+ * → useTableEditor.updateTableFast() → PATCH /api/table/:id → Redux update
+ * → WebSocket broadcast → Re-render optimisé (React.memo)
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from "react-native";
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
-import { Badge, Button } from "~/components/ui";
+import { Badge } from "~/components/ui";
 import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
 import { RoomCard } from '~/components/Room/RoomCard';
-import { CustomModal } from '~/components/CustomModal';
+import { TableEditorSidebar } from '~/components/Room/TableEditorSidebar';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
-import TableForm from '~/components/form/TableForm';
 import { useToast } from '~/components/ToastProvider';
-import { useRooms, useTables, useRestaurant } from '~/hooks/useRestaurant';
+import { useRooms, useTables } from '~/hooks/useRestaurant';
 import { useTableEditor } from '~/hooks/useTableEditor';
+import { generateTableName, findAvailablePosition } from '~/lib/room-utils';
 import { ArrowLeftToLine } from 'lucide-react-native';
 
 export default function RoomEditionMode() {
   const router = useRouter();
   const { showToast } = useToast();
-
 
   // Utilisation des hooks Redux
   const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading } = useRooms();
@@ -29,7 +66,6 @@ export default function RoomEditionMode() {
 
   // Variables d'état local pour l'UI seulement
   const [isCreatingTable, setIsCreatingTable] = useState(false);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
   // Définir la première room comme currentRoom si aucune n'est sélectionnée
@@ -66,13 +102,9 @@ export default function RoomEditionMode() {
     setSelectedTable(table?.id || null);
   }, [selectedTable?.id, setSelectedTable]);
 
-  const handleEditTable = () => {
-    setIsEditModalVisible(true);
-  };
-
-  const handleDeleteTable = () => {
+  const handleDeleteTable = useCallback(() => {
     setIsDeleteModalVisible(true);
-  };
+  }, []);
 
   const handleConfirmDelete = async () => {
     if (!selectedTable?.id) return;
@@ -89,66 +121,19 @@ export default function RoomEditionMode() {
     }
   };
 
-  const handleSaveTable = async (updates: Partial<Table>) => {
+  const handleSaveTable = useCallback(async (updates: Partial<Table>) => {
     if (!selectedTable?.id) return;
 
     try {
       await updateTableFast(selectedTable.id, updates);
-      setIsEditModalVisible(false);
+      setSelectedTable(null); // Fermer le panel
       showToast('Table modifiée avec succès', 'success');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de la table:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la sauvegarde de la table';
       showToast(errorMessage, 'error');
     }
-  };
-
-  // Fonction utilitaire pour générer un nom de table
-  const generateTableName = useCallback(() => {
-    const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-    return `${letter}${number}`;
-  }, []);
-
-  // Fonction utilitaire pour trouver une position valide (optimisée)
-  const findAvailablePosition = useCallback((tableSize = 2) => {
-    if (!currentRoom) return null;
-
-    // Créer une grille d'occupation pour optimiser la recherche
-    const grid = Array(currentRoom.height).fill(null).map(() => Array(currentRoom.width).fill(false));
-
-    // Marquer les zones occupées par les tables existantes
-    currentRoomTables.forEach(table => {
-      for (let y = table.yStart; y < table.yStart + table.height; y++) {
-        for (let x = table.xStart; x < table.xStart + table.width; x++) {
-          if (grid[y] && grid[y][x] !== undefined) {
-            grid[y][x] = true;
-          }
-        }
-      }
-    });
-
-    // Chercher une position libre en vérifiant la grille
-    for (let y = 0; y <= currentRoom.height - tableSize; y++) {
-      for (let x = 0; x <= currentRoom.width - tableSize; x++) {
-        let canPlace = true;
-
-        // Vérifier si la zone est libre
-        for (let dy = 0; dy < tableSize && canPlace; dy++) {
-          for (let dx = 0; dx < tableSize && canPlace; dx++) {
-            if (grid[y + dy]?.[x + dx]) {
-              canPlace = false;
-            }
-          }
-        }
-
-        if (canPlace) {
-          return { x, y };
-        }
-      }
-    }
-    return null;
-  }, [currentRoom, currentRoomTables]);
+  }, [selectedTable?.id, updateTableFast, setSelectedTable, showToast]);
 
   const handleAddTable = useCallback(async () => {
     if (!currentRoom?.id || isCreatingTable || isCreateOperationInProgress()) return;
@@ -156,13 +141,9 @@ export default function RoomEditionMode() {
     setIsCreatingTable(true);
 
     try {
-      // Désélectionner la table courante avant d'ajouter une nouvelle
-      setSelectedTable(null);
-
-      const position = findAvailablePosition(2);
+      const position = findAvailablePosition(currentRoom, currentRoomTables, 2);
       if (!position) {
         showToast("Pas d'espace disponible pour une nouvelle table", 'error');
-        setIsCreatingTable(false);
         return;
       }
 
@@ -179,8 +160,8 @@ export default function RoomEditionMode() {
       // Utiliser le hook dédié pour la création haute performance
       const newTable = await createTableFast(tableToCreate);
 
-      // Sélectionner la nouvelle table
-      handleTablePress(newTable);
+      // Sélectionner directement la nouvelle table (transition fluide du sidebar)
+      setSelectedTable(newTable.id);
       showToast('Table créée avec succès', 'success');
 
     } catch (error) {
@@ -190,7 +171,7 @@ export default function RoomEditionMode() {
     } finally {
       setIsCreatingTable(false);
     }
-  }, [currentRoom?.id, isCreatingTable, isCreateOperationInProgress, findAvailablePosition, generateTableName, createTableFast, handleTablePress, showToast, setSelectedTable]);
+  }, [currentRoom, currentRoomTables, isCreatingTable, isCreateOperationInProgress, createTableFast, showToast, setSelectedTable]);
 
   const handleChangeRoom = useCallback((room: Room) => {
     if (!room.id) return;
@@ -247,54 +228,45 @@ export default function RoomEditionMode() {
         </ScrollView>
       </View>
 
-      {currentRoom && (
-        <View style={{
-          flex: 1,
-          zIndex: 1,
-          elevation: 0,
-          // overflow: 'visible' pour permettre gestures partout
-          // Le flash est déjà géré par isGridReady dans Room.tsx
-        }}>
-          <RoomComponent
-            key={currentRoom.id}
-            tables={currentRoomTables}
-            editingTableId={selectedTable?.id}
-            editionMode={true}
-            width={currentRoom.width}
-            height={currentRoom.height}
-            isLoading={roomsLoading}
-            onTablePress={handleTablePress}
-            onTableLongPress={handleTablePress}
-            onTableUpdate={handleTableUpdate}
-            onEditTable={handleEditTable}
-            onDeleteTable={handleDeleteTable}
-          />
-        </View>
-      )}
-
-      <View style={styles.cardContainer} pointerEvents="box-none">
+      {/* Layout flex: RoomComponent + Sidebar */}
+      <View style={styles.contentContainer}>
+        {/* Zone de la grille - Prend l'espace restant */}
         {currentRoom && (
-          <RoomCard
-            roomName={currentRoom.name}
-            capacity={{ current: currentRoomTables.length }}
-            EditMode={handleAddTable}
+          <View style={styles.roomContainer}>
+            <RoomComponent
+              key={currentRoom.id}
+              tables={currentRoomTables}
+              editingTableId={selectedTable?.id}
+              editionMode={true}
+              width={currentRoom.width}
+              height={currentRoom.height}
+              isLoading={roomsLoading}
+              onTablePress={handleTablePress}
+              onTableLongPress={handleTablePress}
+              onTableUpdate={handleTableUpdate}
+            />
+
+            {/* RoomCard par-dessus la grille */}
+            <View style={styles.cardContainer} pointerEvents="box-none">
+              <RoomCard
+                roomName={currentRoom.name}
+                capacity={{ current: currentRoomTables.length }}
+                EditMode={handleAddTable}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Sidebar d'édition - Largeur fixe, pousse le RoomComponent */}
+        {selectedTable && (
+          <TableEditorSidebar
+            table={selectedTable}
+            onSave={handleSaveTable}
+            onDelete={handleDeleteTable}
+            onClose={() => setSelectedTable(null)}
           />
         )}
       </View>
-
-      <CustomModal
-        isVisible={isEditModalVisible}
-        onClose={() => setIsEditModalVisible(false)}
-        width={600}
-        height={450}
-        title="Modifier la table"
-      >
-        <TableForm
-          table={selectedTable}
-          onSave={handleSaveTable}
-          onCancel={() => setIsEditModalVisible(false)}
-        />
-      </CustomModal>
 
       <DeleteConfirmationModal
         isVisible={isDeleteModalVisible}
@@ -342,9 +314,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: '100%',
   },
+  // Nouveau layout flex
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'row', // Layout horizontal
+  },
+  roomContainer: {
+    flex: 1, // Prend tout l'espace disponible (réduit automatiquement si sidebar)
+    position: 'relative',
+  },
   cardContainer: {
     position: 'absolute',
-    bottom: 5,
+    bottom: 0,
     right: 10,
     left: 10,
     alignItems: 'center',
