@@ -1,9 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { View, StyleSheet, Text, TextInput, Pressable, Platform, ScrollView } from 'react-native';
 import { NumberInput } from '~/components/ui/number-input';
-import { useKeyboardDismiss } from '~/hooks/useKeyboardDismiss';
-import { KEYBOARD_AWARE_CONFIG_SMOOTH } from '~/constants/keyboardConfig';
 
 export interface MenuFilterState {
   name: string;
@@ -30,21 +27,18 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
 
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = () => {
-    return filters.name !== '' || 
-           filters.minPrice !== null || 
+    return filters.name !== '' ||
+           filters.minPrice !== null ||
            filters.maxPrice !== null ||
            filters.status !== null;
   };
 
-  const { handleScrollBeginDrag, scrollViewRef } = useKeyboardDismiss();
-
   return (
-    <KeyboardAwareScrollView
-      ref={scrollViewRef}
+    <ScrollView
       style={styles.filterContainer}
       contentContainerStyle={styles.filterContent}
-      {...KEYBOARD_AWARE_CONFIG_SMOOTH}
-      onScrollBeginDrag={handleScrollBeginDrag}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       {/* Nom de l'article */}
       <View style={styles.filterGroup}>
@@ -143,7 +137,7 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
           </Text>
         </Pressable>
       </View>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 };
 

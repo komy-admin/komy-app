@@ -1,8 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { useKeyboardDismiss } from '~/hooks/useKeyboardDismiss';
-import { KEYBOARD_AWARE_CONFIG_SMOOTH } from '~/constants/keyboardConfig';
+import { View, StyleSheet, Text, TextInput, Pressable, Platform, ScrollView } from 'react-native';
 
 export interface TeamFilterState {
   firstName: string;
@@ -29,21 +26,18 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
 
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = () => {
-    return filters.firstName !== '' || 
-           filters.lastName !== '' || 
+    return filters.firstName !== '' ||
+           filters.lastName !== '' ||
            filters.email !== '' ||
            filters.phone !== '';
   };
 
-  const { handleScrollBeginDrag, scrollViewRef } = useKeyboardDismiss();
-
   return (
-    <KeyboardAwareScrollView
-      ref={scrollViewRef}
+    <ScrollView
       style={styles.filterContainer}
       contentContainerStyle={styles.filterContent}
-      {...KEYBOARD_AWARE_CONFIG_SMOOTH}
-      onScrollBeginDrag={handleScrollBeginDrag}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       {/* Prénom */}
       <View style={styles.filterGroup}>
@@ -114,7 +108,7 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
           </Text>
         </Pressable>
       </View>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 };
 

@@ -1,5 +1,4 @@
-import { View, StyleSheet, Platform, Modal, Image } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { View, StyleSheet, Platform, Modal, Image, ScrollView } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { sessionService } from '~/services/SessionService';
@@ -58,16 +57,12 @@ export default function LoginScreen() {
 
   return (
     <>
-      <KeyboardAwareScrollView
+      <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"
-        enableOnAndroid={true}
-        enableAutomaticScroll={true}
-        extraScrollHeight={Platform.OS === 'android' ? 20 : 20}
-        enableResetScrollToCoords={false}
       >
         <View style={styles.contentContainer}>
           <Image
@@ -124,7 +119,7 @@ export default function LoginScreen() {
             <Text style={styles.loginButtonText}>Se connecter</Text>
           </Button>
         </View>
-      </KeyboardAwareScrollView>
+      </ScrollView>
       <Modal
         visible={showQrScanner}
         animationType="slide"

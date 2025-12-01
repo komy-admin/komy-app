@@ -1,9 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { View, StyleSheet, Text, TextInput, Pressable, Platform, ScrollView } from 'react-native';
 import { NumberInput } from '~/components/ui/number-input';
-import { useKeyboardDismiss } from '~/hooks/useKeyboardDismiss';
-import { KEYBOARD_AWARE_CONFIG_LONG } from '~/constants/keyboardConfig';
 
 export interface RoomFilterState {
   name: string;
@@ -33,24 +30,21 @@ export const RoomFilters: React.FC<RoomFiltersProps> = ({
 
   // Vérifier si des filtres sont actifs
   const hasActiveFilters = () => {
-    return filters.name !== '' || 
-           filters.minWidth !== null || 
+    return filters.name !== '' ||
+           filters.minWidth !== null ||
            filters.maxWidth !== null ||
-           filters.minHeight !== null || 
+           filters.minHeight !== null ||
            filters.maxHeight !== null ||
-           filters.minTables !== null || 
+           filters.minTables !== null ||
            filters.maxTables !== null;
   };
 
-  const { handleScrollBeginDrag, scrollViewRef } = useKeyboardDismiss({ delayReset: 15 });
-
   return (
-    <KeyboardAwareScrollView
-      ref={scrollViewRef}
+    <ScrollView
       style={styles.filterContainer}
       contentContainerStyle={styles.filterContent}
-      {...KEYBOARD_AWARE_CONFIG_LONG}
-      onScrollBeginDrag={handleScrollBeginDrag}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       {/* Nom de la salle */}
       <View style={styles.filterGroup}>
@@ -175,7 +169,7 @@ export const RoomFilters: React.FC<RoomFiltersProps> = ({
           </Text>
         </Pressable>
       </View>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 };
 
