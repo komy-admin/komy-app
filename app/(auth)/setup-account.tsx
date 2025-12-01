@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
-  KeyboardAvoidingView,
   ScrollView,
   Pressable,
 } from 'react-native';
@@ -216,11 +215,7 @@ export default function SetupAccountScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+    <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
@@ -346,7 +341,7 @@ export default function SetupAccountScreen() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

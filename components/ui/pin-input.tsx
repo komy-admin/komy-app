@@ -57,7 +57,7 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
     if (autoFocus) {
       const timer = setTimeout(() => {
         inputRef.current?.focus();
-      }, 300);
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [autoFocus]);
@@ -72,16 +72,6 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
       lastCompletedValueRef.current = '';
     }
   }, [value, length, onComplete]);
-
-  // Re-focus after error
-  useEffect(() => {
-    if (error && value === '' && !disabled) {
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 400);
-      return () => clearTimeout(timer);
-    }
-  }, [error, value, disabled]);
 
   const handleChange = (text: string) => {
     const filtered = text.replace(/[^0-9]/g, '').slice(0, length);

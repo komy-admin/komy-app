@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
-  KeyboardAvoidingView,
   ScrollView,
   Pressable,
 } from 'react-native';
@@ -194,11 +193,7 @@ export default function PinVerificationScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+    <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
@@ -289,7 +284,7 @@ export default function PinVerificationScreen() {
           )}
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

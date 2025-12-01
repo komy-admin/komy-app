@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
-  KeyboardAvoidingView,
   ScrollView,
 } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
@@ -113,11 +112,7 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+    <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
@@ -231,7 +226,7 @@ export default function ResetPasswordScreen() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
