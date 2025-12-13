@@ -98,7 +98,7 @@ export const useKeyboardDebug = (role: UserRole = 'DEFAULT'): UseKeyboardDebugRe
     platform: {
       os: Platform.OS,
       version: Platform.Version,
-      isTablet: Platform.isPad || false,
+      isTablet: (Platform.OS === 'ios' && (Platform as any).isPad) || false,
       supportsInteractiveDismiss: keyboard.config.enableGestureDismiss,
     },
   };

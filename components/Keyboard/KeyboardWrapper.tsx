@@ -7,7 +7,8 @@
 
 import React from 'react';
 import { View, ScrollView, Platform } from 'react-native';
-import { isWeb, createKeyboardComponent, logKeyboardEvent } from '~/utils/keyboard.utils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isWeb, logKeyboardEvent } from '~/utils/keyboard.utils';
 import type {
   KeyboardProviderProps,
   KeyboardAvoidingViewProps,
@@ -181,15 +182,10 @@ export const KeyboardStickyViewWrapper: React.FC<KeyboardStickyViewProps> = ({
 };
 
 /**
- * KeyboardToolbar Wrapper
- *
- * On Web: Not rendered (no toolbar needed)
- * On Native: Uses react-native-keyboard-controller KeyboardToolbar
- *
- * Note: Using legacy API for now, can be upgraded to compound API later
+ * Internal KeyboardToolbar component that uses hooks properly
  */
-export const KeyboardToolbarWrapper: React.FC<KeyboardToolbarProps> = ({
-  insets,
+const KeyboardToolbarInternal: React.FC<KeyboardToolbarProps> = ({
+  insets: providedInsets,
   opacity = 'EE',
   theme,
   showArrows = true,
@@ -199,28 +195,46 @@ export const KeyboardToolbarWrapper: React.FC<KeyboardToolbarProps> = ({
   onDoneCallback,
   ...props
 }) => {
-  if (isWeb()) {
-    return null;
-  }
+  // Always call hook unconditionally (required by React rules)
+  const safeAreaInsets = useSafeAreaInsets();
+
+  // Use provided insets or fallback to safe area insets
+  const insets = providedInsets || safeAreaInsets;
 
   try {
     const { KeyboardToolbar } = require('react-native-keyboard-controller');
-    const { useSafeAreaInsets } = require('react-native-safe-area-context');
-
-    // Use provided insets or get from safe area
-    const safeInsets = insets || useSafeAreaInsets();
 
     return (
-      <KeyboardToolbar insets={safeInsets} opacity={opacity} theme={theme} {...props}>
-        {showArrows && <KeyboardToolbar.Prev onPress={onPrevCallback} />}
-        {showArrows && <KeyboardToolbar.Next onPress={onNextCallback} />}
-        <KeyboardToolbar.Done text={doneText} onPress={onDoneCallback} />
-      </KeyboardToolbar>
+      <KeyboardToolbar
+        insets={insets}
+        opacity={opacity}
+        theme={theme}
+        showArrows={showArrows}
+        doneText={doneText}
+        onNextCallback={onNextCallback}
+        onPrevCallback={onPrevCallback}
+        onDoneCallback={onDoneCallback}
+        {...props}
+      />
     );
   } catch (error) {
     logKeyboardEvent('error', 'Failed to load KeyboardToolbar', error);
     return null;
   }
+};
+
+/**
+ * KeyboardToolbar Wrapper
+ *
+ * On Web: Not rendered (no toolbar needed)
+ * On Native: Uses react-native-keyboard-controller KeyboardToolbar
+ */
+export const KeyboardToolbarWrapper: React.FC<KeyboardToolbarProps> = (props) => {
+  if (isWeb()) {
+    return null;
+  }
+
+  return <KeyboardToolbarInternal {...props} />;
 };
 
 /**

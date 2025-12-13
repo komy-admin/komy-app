@@ -47,16 +47,6 @@ export const KeyboardSafeFormView: React.FC<KeyboardSafeFormViewProps> = ({
   const finalBehavior = behavior ?? config.behavior;
   const finalVerticalOffset = keyboardVerticalOffset ?? config.verticalOffset;
 
-  if (debugMode && __DEV__) {
-    console.log('[KeyboardSafeFormView] Config:', {
-      role,
-      behavior: finalBehavior,
-      verticalOffset: finalVerticalOffset,
-      showToolbar: shouldShowToolbar,
-      config,
-    });
-  }
-
   return (
     <>
       <KeyboardAvoidingViewWrapper

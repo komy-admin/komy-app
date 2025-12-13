@@ -8,7 +8,7 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import { PortalHost } from '@rn-primitives/portal';
 import { store, RootState } from '~/store';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
@@ -23,6 +23,7 @@ import {
 import { ToastProvider } from '@/components/ToastProvider';
 import { AppInitializer } from '~/components/AppInitializer';
 import { PanelPortalProvider } from '~/hooks/usePanelPortal';
+import { KeyboardProviderWrapper } from '~/components/Keyboard';
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -261,13 +262,19 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ToastProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <Provider store={store}>
-            <SocketProvider>
-              <PanelPortalProvider>
-                <RootLayoutNav />
-              </PanelPortalProvider>
-            </SocketProvider>
-          </Provider>
+          <KeyboardProviderWrapper
+            statusBarTranslucent={true}
+            navigationBarTranslucent={Platform.OS === 'android'}
+            preload={true}
+          >
+            <Provider store={store}>
+              <SocketProvider>
+                <PanelPortalProvider>
+                  <RootLayoutNav />
+                </PanelPortalProvider>
+              </SocketProvider>
+            </Provider>
+          </KeyboardProviderWrapper>
         </GestureHandlerRootView>
       </ToastProvider>
     </SafeAreaProvider>

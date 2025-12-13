@@ -1,4 +1,4 @@
-import { View, StyleSheet, Platform, Modal, Image, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, Modal, Image, useWindowDimensions, Pressable, Keyboard } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { sessionService } from '~/services/SessionService';
@@ -6,6 +6,7 @@ import { Link, useRouter } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
@@ -13,6 +14,14 @@ export default function LoginScreen() {
   const [showQrScanner, setShowQrScanner] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
+  const { width, height } = useWindowDimensions();
+
+  // Detect landscape mode
+  const isLandscape = width > height;
+
+  // Adjust offset based on orientation
+  // In landscape, keyboard takes more vertical space
+  const keyboardBottomOffset = isLandscape ? 150 : 80;
 
   const handleLogin = async () => {
     try {
@@ -57,15 +66,20 @@ export default function LoginScreen() {
 
   return (
     <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        keyboardDismissMode="on-drag"
+      <Pressable
+        style={styles.pressableContainer}
+        onPress={Keyboard.dismiss}
       >
-        <View style={styles.contentContainer}>
-          <Image
+        <KeyboardSafeFormView
+          role="AUTH"
+          showToolbar={false}
+          behavior="padding"
+          keyboardVerticalOffset={keyboardBottomOffset}
+          style={styles.container}
+        >
+          <View style={styles.fullWrapper}>
+            <View style={styles.contentContainer}>
+            <Image
             source={require('../../assets/images/logo_komy_png/logo_name.png')}
             style={styles.logo}
             resizeMode="contain"
@@ -93,6 +107,7 @@ export default function LoginScreen() {
             placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
             autoCorrect={false}
+            returnKeyType="next"
           />
 
           <TextInput
@@ -105,6 +120,8 @@ export default function LoginScreen() {
             placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
             autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
           />
 
           <View style={styles.forgotPasswordContainer}>
@@ -115,11 +132,14 @@ export default function LoginScreen() {
             </Link>
           </View>
 
-          <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Se connecter</Text>
-          </Button>
-        </View>
-      </ScrollView>
+              <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
+                <Text style={styles.loginButtonText}>Se connecter</Text>
+              </Button>
+            </View>
+          </View>
+        </KeyboardSafeFormView>
+      </Pressable>
+
       <Modal
         visible={showQrScanner}
         animationType="slide"
@@ -136,18 +156,19 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  pressableContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  scrollContainer: {
-    flexGrow: 1,
+  fullWrapper: {
+    flex: 1,
     justifyContent: 'center',
-    paddingVertical: 20,
   },
   contentContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 20,
     maxWidth: 480,

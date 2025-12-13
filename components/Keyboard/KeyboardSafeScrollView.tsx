@@ -41,15 +41,6 @@ export const KeyboardSafeScrollView: React.FC<KeyboardSafeScrollViewProps> = ({
   const finalBottomOffset = bottomOffset ?? calculateBottomOffset(config.bottomOffset);
   const finalExtraSpace = extraKeyboardSpace ?? 0;
 
-  if (debugMode && __DEV__) {
-    console.log('[KeyboardSafeScrollView] Config:', {
-      role,
-      bottomOffset: finalBottomOffset,
-      extraKeyboardSpace: finalExtraSpace,
-      config,
-    });
-  }
-
   return (
     <KeyboardAwareScrollViewWrapper
       bottomOffset={finalBottomOffset}

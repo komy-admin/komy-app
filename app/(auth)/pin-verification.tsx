@@ -4,8 +4,9 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
-  ScrollView,
   Pressable,
+  Keyboard,
+  useWindowDimensions,
 } from 'react-native';
 import { Button, Text, PinInput } from '~/components/ui';
 import type { PinInputRef } from '~/components/ui';
@@ -16,6 +17,7 @@ import { useRouter, Link } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 export default function PinVerificationScreen() {
   const [pin, setPin] = useState('');
@@ -38,6 +40,11 @@ export default function PinVerificationScreen() {
   const requiresPin = useSelector(selectRequiresPin);
   const isSetupMode = useSelector(selectRequiresPinSetup);
   const authToken = useSelector(selectAuthToken); // Auth token for PIN verification
+
+  // Keyboard management - landscape detection
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const keyboardBottomOffset = isLandscape ? 150 : 80;
 
   useEffect(() => {
     // Reset error state ONLY when user starts typing a new PIN
@@ -193,13 +200,19 @@ export default function PinVerificationScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <Pressable
+      style={styles.pressableContainer}
+      onPress={Keyboard.dismiss}
+    >
+      <KeyboardSafeFormView
+        role="AUTH"
+        showToolbar={false}
+        behavior="padding"
+        keyboardVerticalOffset={keyboardBottomOffset}
+        style={styles.container}
       >
-        <View style={styles.contentContainer}>
+        <View style={styles.fullWrapper}>
+          <View style={styles.contentContainer}>
           <View style={styles.headerContainer}>
             <RNText style={styles.title}>
               {isSetupMode ? 'Créer votre code PIN' : 'Entrez votre code PIN'}
@@ -282,21 +295,24 @@ export default function PinVerificationScreen() {
               </Text>
             </View>
           )}
+          </View>
         </View>
-      </ScrollView>
-    </View>
+      </KeyboardSafeFormView>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  pressableContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  scrollContainer: {
-    flexGrow: 1,
+  fullWrapper: {
+    flex: 1,
     justifyContent: 'center',
-    minHeight: '100%',
   },
   contentContainer: {
     alignItems: 'center',

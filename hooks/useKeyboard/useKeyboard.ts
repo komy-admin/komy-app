@@ -196,7 +196,7 @@ export const useKeyboard = (
       platform: {
         os: Platform.OS,
         version: Platform.Version,
-        isTablet: Platform.isPad || false,
+        isTablet: (Platform.OS === 'ios' && (Platform as any).isPad) || false,
         supportsInteractiveDismiss: config.enableGestureDismiss,
       },
     };

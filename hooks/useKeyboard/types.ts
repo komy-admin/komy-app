@@ -6,10 +6,15 @@
 
 import type { ViewProps, ViewStyle } from 'react-native';
 import type {
-  KeyboardBehavior,
-  KeyboardStateType,
-  UserRole,
+  KeyboardBehavior as _KeyboardBehavior,
+  KeyboardStateType as _KeyboardStateType,
+  UserRole as _UserRole,
 } from '~/constants/keyboard.constants';
+
+// Re-export types from constants
+export type KeyboardBehavior = _KeyboardBehavior;
+export type KeyboardStateType = _KeyboardStateType;
+export type UserRole = _UserRole;
 
 /**
  * Keyboard event data structure
@@ -244,7 +249,7 @@ export interface KeyboardSafeScrollViewProps extends KeyboardAwareScrollViewProp
   debugMode?: boolean;
 }
 
-export interface KeyboardSafeFormViewProps extends KeyboardAvoidingViewProps {
+export interface KeyboardSafeFormViewProps extends Omit<KeyboardAvoidingViewProps, 'role'> {
   role?: UserRole;
   showToolbar?: boolean;
   debugMode?: boolean;
