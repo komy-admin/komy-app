@@ -1,10 +1,10 @@
 import { View, ScrollView, useWindowDimensions, Text, StyleSheet, Share, Clipboard, Platform } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
-import { AdminFormView, useAdminFormView } from "~/components/admin/AdminFormView";
+import { AdminFormView, useAdminFormView, AdminFormViewRef } from "~/components/admin/AdminFormView";
 import { FormHeader } from '~/components/admin/FormHeader';
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { CustomModal } from "~/components/CustomModal";
@@ -20,10 +20,16 @@ import { useUsers } from '~/hooks/useRestaurant';
 import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
 import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 export default function TeamPage() {
   const router = useRouter();
   const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+
+  // Refs pour accéder à handleSave depuis les boutons fixes
+  const quickFormRef = useRef<AdminFormViewRef>(null);
+  const fullFormRef = useRef<AdminFormViewRef>(null);
+  const editFormRef = useRef<AdminFormViewRef>(null);
 
   // Rediriger si la vue est désactivée
   useEffect(() => {
@@ -312,6 +318,158 @@ export default function TeamPage() {
     },
   ];
 
+  // Si la modal est visible, afficher SEULEMENT AdminFormView (pas de position absolute)
+  if (canModifyUsers && teamFormView.isVisible) {
+    // Déterminer quelle ref utiliser pour les boutons
+    const currentFormRef = teamFormView.mode === 'create'
+      ? (creationMode === 'quick' ? quickFormRef : fullFormRef)
+      : editFormRef;
+
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+        {/* FormHeader - FIXE en haut */}
+        <FormHeader
+          title={
+            teamFormView.mode === 'edit'
+              ? `Modification de "${selectedUser?.firstName} ${selectedUser?.lastName}"`
+              : "Créer un utilisateur"
+          }
+          onBack={teamFormView.close}
+        />
+
+        {/* KeyboardAvoidingView SEULEMENT autour du contenu scrollable */}
+        <KeyboardSafeFormView
+          role="ADMIN"
+          showToolbar={false}
+          behavior="padding"
+          keyboardVerticalOffset={150}
+          style={{ flex: 1 }}
+        >
+          {teamFormView.mode === 'create' ? (
+            // Create mode with tabs
+            <Tabs
+              value={creationMode}
+              onValueChange={(value) => setCreationMode(value as 'quick' | 'full')}
+              style={{ flex: 1 }}
+            >
+              {/* Tabs Navigation - FIXE */}
+              <View style={styles.tabsHeader}>
+                <TabsList style={styles.tabsList}>
+                  <TabsTrigger value="quick" style={styles.tabTrigger}>
+                    <Text style={{ color: creationMode === 'quick' ? '#2A2E33' : '#A0A0A0' }}>
+                      Création rapide
+                    </Text>
+                  </TabsTrigger>
+                  <TabsTrigger value="full" style={styles.tabTrigger}>
+                    <Text style={{ color: creationMode === 'full' ? '#2A2E33' : '#A0A0A0' }}>
+                      Formulaire complet
+                    </Text>
+                  </TabsTrigger>
+                </TabsList>
+              </View>
+
+              {/* Contenu des tabs - SCROLLABLE */}
+              <TabsContent value="quick" style={{ flex: 1 }}>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <AdminFormView
+                    ref={quickFormRef}
+                    visible={true}
+                    mode={teamFormView.mode}
+                    onClose={teamFormView.close}
+                    onCancel={teamFormView.close}
+                    onSave={handleQuickCreateSubmit}
+                    disableGlobalScroll={true}
+                    hideHeaderAndActions={true}
+                  >
+                    <QuickTeamForm
+                      activeTab={activeTab}
+                      onQuickCreate={createQuickUser}
+                    />
+                  </AdminFormView>
+                </ScrollView>
+              </TabsContent>
+
+              <TabsContent value="full" style={{ flex: 1 }}>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <AdminFormView
+                    ref={fullFormRef}
+                    visible={true}
+                    mode={teamFormView.mode}
+                    onClose={teamFormView.close}
+                    onCancel={teamFormView.close}
+                    onSave={handleSaveUser}
+                    disableGlobalScroll={true}
+                    hideHeaderAndActions={true}
+                  >
+                    <TeamForm
+                      user={selectedUser}
+                      activeTab={activeTab}
+                    />
+                  </AdminFormView>
+                </ScrollView>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            // Edit mode - SCROLLABLE
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <AdminFormView
+                ref={editFormRef}
+                visible={true}
+                mode={teamFormView.mode}
+                onClose={teamFormView.close}
+                onCancel={teamFormView.close}
+                onSave={handleSaveUser}
+                disableGlobalScroll={true}
+                hideHeaderAndActions={true}
+              >
+                <TeamForm
+                  user={selectedUser}
+                  activeTab={activeTab}
+                />
+              </AdminFormView>
+            </ScrollView>
+          )}
+        </KeyboardSafeFormView>
+
+        {/* Boutons FIXES en bas - HORS KeyboardAvoidingView (recouverts par keyboard) */}
+        <View style={styles.footerActions}>
+          <Button
+            onPress={teamFormView.close}
+            style={styles.cancelButton}
+          >
+            <Text style={styles.cancelButtonText}>Annuler</Text>
+          </Button>
+          <Button
+            onPress={() => currentFormRef.current?.handleSave()}
+            style={styles.saveButton}
+            disabled={currentFormRef.current?.isSaving}
+          >
+            <Text style={styles.saveButtonText}>
+              {currentFormRef.current?.isSaving
+                ? 'Sauvegarde...'
+                : teamFormView.mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
+            </Text>
+          </Button>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <SidePanel
@@ -454,96 +612,6 @@ export default function TeamPage() {
           </TabsContent>
         </Tabs>
       </View>
-
-      {/* Modal de création/modification - cachée pour les managers */}
-      {canModifyUsers && teamFormView.isVisible && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1000,
-          backgroundColor: '#FFFFFF'
-        }}>
-          <FormHeader
-            title={
-              teamFormView.mode === 'edit'
-                ? `Modification de "${selectedUser?.firstName} ${selectedUser?.lastName}"`
-                : "Créer un utilisateur"
-            }
-            onBack={teamFormView.close}
-          />
-
-          {teamFormView.mode === 'create' ? (
-            // Create mode with tabs
-            <Tabs
-              value={creationMode}
-              onValueChange={(value) => setCreationMode(value as 'quick' | 'full')}
-              style={{ flex: 1 }}
-            >
-              <View style={styles.tabsHeader}>
-                <TabsList style={styles.tabsList}>
-                  <TabsTrigger value="quick" style={styles.tabTrigger}>
-                    <Text style={{ color: creationMode === 'quick' ? '#2A2E33' : '#A0A0A0' }}>
-                      Création rapide
-                    </Text>
-                  </TabsTrigger>
-                  <TabsTrigger value="full" style={styles.tabTrigger}>
-                    <Text style={{ color: creationMode === 'full' ? '#2A2E33' : '#A0A0A0' }}>
-                      Formulaire complet
-                    </Text>
-                  </TabsTrigger>
-                </TabsList>
-              </View>
-
-              <TabsContent value="quick" style={{ flex: 1 }}>
-                <AdminFormView
-                  visible={true}
-                  mode={teamFormView.mode}
-                  onClose={teamFormView.close}
-                  onCancel={teamFormView.close}
-                  onSave={handleQuickCreateSubmit}
-                >
-                  <QuickTeamForm
-                    activeTab={activeTab}
-                    onQuickCreate={createQuickUser}
-                  />
-                </AdminFormView>
-              </TabsContent>
-
-              <TabsContent value="full" style={{ flex: 1 }}>
-                <AdminFormView
-                  visible={true}
-                  mode={teamFormView.mode}
-                  onClose={teamFormView.close}
-                  onCancel={teamFormView.close}
-                  onSave={handleSaveUser}
-                >
-                  <TeamForm
-                    user={selectedUser}
-                    activeTab={activeTab}
-                  />
-                </AdminFormView>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            // Edit mode
-            <AdminFormView
-              visible={true}
-              mode={teamFormView.mode}
-              onClose={teamFormView.close}
-              onCancel={teamFormView.close}
-              onSave={handleSaveUser}
-            >
-              <TeamForm
-                user={selectedUser}
-                activeTab={activeTab}
-              />
-            </AdminFormView>
-          )}
-        </View>
-      )}
 
       {/* Modal de suppression - cachée pour les managers */}
       {canModifyUsers && (
@@ -717,5 +785,56 @@ const styles = StyleSheet.create({
     width: 180,
     minWidth: 180,
     height: '100%',
+  },
+
+  // Footer actions (boutons fixes en bas)
+  footerActions: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  saveButton: {
+    flex: 2,
+    backgroundColor: '#2A2E33',
+    borderRadius: 12,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#2A2E33',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
 });

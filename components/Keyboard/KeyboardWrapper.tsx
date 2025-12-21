@@ -105,42 +105,90 @@ export const KeyboardAvoidingViewWrapper: React.FC<KeyboardAvoidingViewProps> = 
 };
 
 /**
- * KeyboardAwareScrollView Wrapper
+ * KeyboardAwareScrollView Wrapper - Native Version
  *
- * On Web: Regular ScrollView
- * On Native: Uses react-native-keyboard-controller KeyboardAwareScrollView
+ * ⚠️ WARNING: KeyboardAwareScrollView has known Reanimated issues on Android
+ * Prefer using KeyboardAvoidingView + ScrollView for stable behavior
+ * See KEYBOARD_SOLUTION.md for recommended approach
+ *
+ * Accepts animatedRef created by parent (KeyboardSafeScrollView)
+ * and passes it to react-native-keyboard-controller's KeyboardAwareScrollView
  */
-export const KeyboardAwareScrollViewWrapper: React.FC<KeyboardAwareScrollViewProps> = ({
-  children,
-  bottomOffset = 0,
-  extraKeyboardSpace = 0,
-  disableScrollOnKeyboardHide = false,
-  enabled = true,
-  ...props
-}) => {
-  if (isWeb() || !enabled) {
-    return <ScrollView {...props}>{children}</ScrollView>;
-  }
+const KeyboardAwareScrollViewNative = React.forwardRef<any, KeyboardAwareScrollViewProps>(
+  (
+    {
+      children,
+      bottomOffset = 0,
+      extraKeyboardSpace = 0,
+      disableScrollOnKeyboardHide = false,
+      enabled = true,
+      ...props
+    },
+    ref
+  ) => {
+    try {
+      const { KeyboardAwareScrollView } = require('react-native-keyboard-controller');
 
-  try {
-    const { KeyboardAwareScrollView } = require('react-native-keyboard-controller');
+      if (__DEV__) {
+        logKeyboardEvent('debug', '[KeyboardWrapper] Native: rendering KeyboardAwareScrollView', {
+          bottomOffset,
+          extraKeyboardSpace,
+          enabled,
+          hasRef: !!ref,
+        });
+      }
 
-    return (
-      <KeyboardAwareScrollView
-        bottomOffset={bottomOffset}
-        extraKeyboardSpace={extraKeyboardSpace}
-        disableScrollOnKeyboardHide={disableScrollOnKeyboardHide}
-        enabled={enabled}
-        {...props}
-      >
-        {children}
-      </KeyboardAwareScrollView>
-    );
-  } catch (error) {
-    logKeyboardEvent('error', 'Failed to load KeyboardAwareScrollView', error);
-    return <ScrollView {...props}>{children}</ScrollView>;
+      return (
+        <KeyboardAwareScrollView
+          ref={ref} // ✅ Pass the animatedRef from parent
+          bottomOffset={bottomOffset}
+          extraKeyboardSpace={extraKeyboardSpace}
+          disableScrollOnKeyboardHide={disableScrollOnKeyboardHide}
+          enabled={enabled}
+          {...props}
+        >
+          {children}
+        </KeyboardAwareScrollView>
+      );
+    } catch (error) {
+      logKeyboardEvent('error', '[KeyboardWrapper] Failed to load native keyboard components', error);
+      // Fallback to regular ScrollView
+      return <ScrollView {...props}>{children}</ScrollView>;
+    }
   }
-};
+);
+
+KeyboardAwareScrollViewNative.displayName = 'KeyboardAwareScrollViewNative';
+
+/**
+ * KeyboardAwareScrollView Wrapper - Web Version
+ *
+ * Simple ScrollView with forwardRef support
+ */
+const KeyboardAwareScrollViewWeb = React.forwardRef<ScrollView, KeyboardAwareScrollViewProps>(
+  ({ children, bottomOffset, extraKeyboardSpace, disableScrollOnKeyboardHide, enabled = true, ...props }, ref) => {
+    if (!enabled) {
+      return <View {...props}>{children}</View>;
+    }
+
+    if (__DEV__) {
+      logKeyboardEvent('debug', '[KeyboardWrapper] Web: using regular ScrollView', { enabled });
+    }
+
+    return <ScrollView ref={ref} {...props}>{children}</ScrollView>;
+  }
+);
+
+KeyboardAwareScrollViewWeb.displayName = 'KeyboardAwareScrollViewWeb';
+
+/**
+ * KeyboardAwareScrollView Wrapper - Main Export
+ *
+ * Conditionally exports Native or Web version
+ */
+export const KeyboardAwareScrollViewWrapper = isWeb()
+  ? KeyboardAwareScrollViewWeb
+  : KeyboardAwareScrollViewNative;
 
 /**
  * KeyboardStickyView Wrapper

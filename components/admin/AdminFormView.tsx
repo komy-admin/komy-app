@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, Dimensions, ScrollView } from 'react-native';
 import { ArrowLeftToLine } from 'lucide-react-native';
 import { Button } from '~/components/ui';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 // ✅ Composants extraits avec styles originaux préservés
 const PrimaryActionButton = ({ children, disabled, style, ...props }: any) => (
@@ -260,9 +262,10 @@ export interface AdminFormViewProps {
   isLoading?: boolean;
   children: React.ReactNode;
   backgroundColor?: string;
-  scrollViewRef?: React.RefObject<ScrollView | null>;
+  scrollViewRef?: React.RefObject<any>; // KeyboardAwareScrollView type
   hideHeaderAndActions?: boolean; // Masque le header et les actions pour des interfaces personnalisées
   disableGlobalScroll?: boolean; // Désactive le ScrollView global pour permettre du contenu statique
+  stickyActions?: boolean; // Rend les boutons fixes en bas (sticky) au lieu de dans le flux
   // Props pour la configuration de menu (quand hideHeaderAndActions=true)
   configurationActions?: {
     onCancel: () => void;
@@ -273,7 +276,13 @@ export interface AdminFormViewProps {
   };
 }
 
-export function AdminFormView({
+// Expose handleSave via ref pour les boutons externes
+export interface AdminFormViewRef {
+  handleSave: () => Promise<void>;
+  isSaving: boolean;
+}
+
+export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewProps>(({
   visible,
   mode,
   onClose,
@@ -285,8 +294,9 @@ export function AdminFormView({
   scrollViewRef,
   hideHeaderAndActions = false,
   disableGlobalScroll = false,
+  stickyActions = false,
   configurationActions
-}: AdminFormViewProps) {
+}, ref) => {
   const [isSaving, setIsSaving] = React.useState(false);
   const [confirmationModal, setConfirmationModal] = React.useState<AdminConfirmationModal | null>(null);
   const formRef = React.useRef<AdminFormRef>(null);
@@ -318,6 +328,12 @@ export function AdminFormView({
     }
   }, [onSave, onClose]);
 
+  // Expose handleSave via ref
+  React.useImperativeHandle(ref, () => ({
+    handleSave,
+    isSaving,
+  }), [handleSave, isSaving]);
+
   // Créer le contexte pour les confirmations
   const confirmationContext = React.useMemo(() => ({
     showConfirmation: (config: Omit<AdminConfirmationModal, 'isVisible'>) => {
@@ -341,66 +357,91 @@ export function AdminFormView({
     return null;
   }
 
+
   return (
     <View style={[styles.container, { backgroundColor }]}>
       {/* Contenu du formulaire - ScrollView conditionnel */}
       {disableGlobalScroll ? (
         <View style={[
-          styles.scrollView, 
-          { paddingBottom: 115 }
+          styles.scrollView,
+          { paddingBottom: stickyActions && onSave ? 95 : 0 }
         ]}>
           {childWithRef}
         </View>
       ) : (
-        <ScrollView 
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          overScrollMode="never"
-          scrollEventThrottle={16}
+        <KeyboardSafeFormView
+          role="ADMIN"
+          showToolbar={false}
+          behavior="padding"
+          keyboardVerticalOffset={150}
+          style={styles.keyboardSafeFormView}
         >
-          {childWithRef}
-        </ScrollView>
-      )}
-      
-      {/* Boutons de configuration - Rendus séparément pour éviter les conflits de state */}
-      {hideHeaderAndActions && configurationActions && (
-        <View style={styles.stickyActions}>
-          <View style={styles.actionsContainer}>
-            <ConfigCancelButton
-              onPress={configurationActions.onCancel}
-              style={{ flex: 1 }}
-            >
-              {configurationActions.cancelLabel || 'Annuler'}
-            </ConfigCancelButton>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {childWithRef}
 
-            <ConfigActionButton
-              onPress={configurationActions.onConfirm}
-              backgroundColor={configurationActions.confirmButtonColor || '#059669'}
-              style={{ flex: 2 }}
-            >
-              {configurationActions.confirmLabel || 'Confirmer'}
-            </ConfigActionButton>
-          </View>
-        </View>
+            {/* Boutons de configuration - DANS LE FLUX comme login/pin */}
+            {hideHeaderAndActions && configurationActions && (
+              <View style={styles.actionsInFlow}>
+                <ConfigCancelButton
+                  onPress={configurationActions.onCancel}
+                  style={{ flex: 1 }}
+                >
+                  {configurationActions.cancelLabel || 'Annuler'}
+                </ConfigCancelButton>
+
+                <ConfigActionButton
+                  onPress={configurationActions.onConfirm}
+                  backgroundColor={configurationActions.confirmButtonColor || '#059669'}
+                  style={{ flex: 2 }}
+                >
+                  {configurationActions.confirmLabel || 'Confirmer'}
+                </ConfigActionButton>
+              </View>
+            )}
+
+            {/* Boutons AdminFormView normaux - DANS LE FLUX comme login/pin */}
+            {onSave && !hideHeaderAndActions && (
+              <View style={styles.actionsInFlow}>
+                <PrimaryActionButton
+                  onPress={handleSave}
+                  disabled={isLoading || isSaving}
+                >
+                  {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
+                </PrimaryActionButton>
+
+                <SecondaryActionButton
+                  onPress={onCancel || onClose}
+                  disabled={isLoading || isSaving}
+                >
+                  Annuler
+                </SecondaryActionButton>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardSafeFormView>
       )}
 
-      {/* Boutons AdminFormView normaux - Rendus séparément */}
-      {onSave && !hideHeaderAndActions && (
+      {/* Boutons sticky en bas (quand stickyActions=true) */}
+      {stickyActions && onSave && !hideHeaderAndActions && (
         <View style={styles.stickyActions}>
           <View style={styles.actionsContainer}>
             <PrimaryActionButton
               onPress={handleSave}
               disabled={isLoading || isSaving}
+              style={{ flex: 2 }}
             >
               {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
             </PrimaryActionButton>
-            
-            <SecondaryActionButton 
+
+            <SecondaryActionButton
               onPress={onCancel || onClose}
               disabled={isLoading || isSaving}
+              style={{ flex: 1 }}
             >
               Annuler
             </SecondaryActionButton>
@@ -433,7 +474,9 @@ export function AdminFormView({
       )}
     </View>
   );
-}
+});
+
+AdminFormView.displayName = 'AdminFormView';
 
 // Hook utilitaire pour la gestion des states d'AdminFormView
 export function useAdminFormView() {
@@ -469,6 +512,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  keyboardSafeFormView: {
+    flex: 1,
+  },
+
   scrollView: {
     flex: 1,
     backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
@@ -477,9 +524,26 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: COMMON_STYLES.spacing.lg,
-    paddingBottom: 100, // Espace pour les boutons sticky réduit
+    paddingBottom: COMMON_STYLES.spacing.lg, // Marge normale en bas
   },
-  
+
+  scrollContentSimple: {
+    padding: COMMON_STYLES.spacing.lg,
+    paddingBottom: COMMON_STYLES.spacing.lg,
+    // ❌ PAS de flexGrow: 1 - laisse le contenu à sa taille naturelle
+  },
+
+  // Boutons dans le flux (comme login/pin qui fonctionnent)
+  actionsInFlow: {
+    flexDirection: 'row',
+    gap: COMMON_STYLES.spacing.md,
+    marginTop: COMMON_STYLES.spacing.xl,
+    paddingTop: COMMON_STYLES.spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: COMMON_STYLES.colors.border,
+  },
+
+  // Ancien style sticky (conservé si besoin pour d'autres usages)
   stickyActions: {
     position: 'absolute',
     bottom: 0,
