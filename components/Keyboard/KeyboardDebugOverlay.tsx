@@ -126,10 +126,6 @@ export const KeyboardDebugOverlay: React.FC<KeyboardDebugOverlayProps> = ({
             <View style={styles.separator} />
             <DebugRow label="Role" value={keyboard.config.role} />
             <DebugRow label="Behavior" value={keyboard.config.behavior} />
-            <DebugRow
-              label="Toolbar"
-              value={keyboard.config.enableToolbar ? 'YES' : 'NO'}
-            />
 
             {/* Footer */}
             <View style={styles.footer}>

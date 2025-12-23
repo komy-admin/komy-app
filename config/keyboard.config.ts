@@ -20,7 +20,6 @@ const DEFAULT_CONFIG: KeyboardConfig = {
   behavior: KEYBOARD_BEHAVIOR.PADDING,
   verticalOffset: KEYBOARD_OFFSETS.DEFAULT.vertical,
   bottomOffset: KEYBOARD_OFFSETS.DEFAULT.bottom,
-  enableToolbar: false,
   enableGestureDismiss: false,
   enableDebug: KEYBOARD_FEATURES.ENABLE_DEBUG_OVERLAY,
 };
@@ -34,7 +33,6 @@ const AUTH_CONFIG: KeyboardConfig = {
   behavior: KEYBOARD_BEHAVIOR.PADDING,
   verticalOffset: KEYBOARD_OFFSETS.AUTH.vertical,
   bottomOffset: KEYBOARD_OFFSETS.AUTH.bottom,
-  enableToolbar: true, // Enable for email → password navigation
   enableGestureDismiss: isInteractiveDismissSupported(),
   enableDebug: __DEV__,
 };
@@ -48,7 +46,6 @@ const SERVER_CONFIG: KeyboardConfig = {
   behavior: KEYBOARD_BEHAVIOR.PADDING,
   verticalOffset: KEYBOARD_OFFSETS.SERVER.vertical,
   bottomOffset: KEYBOARD_OFFSETS.SERVER.bottom,
-  enableToolbar: true, // Enable toolbar for form navigation
   enableGestureDismiss: isInteractiveDismissSupported(),
   enableDebug: __DEV__,
 };
@@ -62,7 +59,6 @@ const ADMIN_CONFIG: KeyboardConfig = {
   behavior: KEYBOARD_BEHAVIOR.PADDING,
   verticalOffset: KEYBOARD_OFFSETS.ADMIN.vertical,
   bottomOffset: KEYBOARD_OFFSETS.ADMIN.bottom,
-  enableToolbar: true, // Enable toolbar for complex forms
   enableGestureDismiss: isInteractiveDismissSupported(),
   enableDebug: __DEV__,
 };
@@ -76,7 +72,6 @@ const COOK_CONFIG: KeyboardConfig = {
   behavior: KEYBOARD_BEHAVIOR.PADDING,
   verticalOffset: KEYBOARD_OFFSETS.COOK.vertical,
   bottomOffset: KEYBOARD_OFFSETS.COOK.bottom,
-  enableToolbar: false, // No inputs, read-only screen
   enableGestureDismiss: false, // No keyboard, no dismiss needed
   enableDebug: __DEV__,
 };
@@ -90,7 +85,6 @@ const BARMAN_CONFIG: KeyboardConfig = {
   behavior: KEYBOARD_BEHAVIOR.PADDING,
   verticalOffset: KEYBOARD_OFFSETS.BARMAN.vertical,
   bottomOffset: KEYBOARD_OFFSETS.BARMAN.bottom,
-  enableToolbar: false, // No inputs, button-based UI
   enableGestureDismiss: false, // No keyboard, no dismiss needed
   enableDebug: __DEV__,
 };
@@ -181,20 +175,7 @@ export const getRecommendedConfig = (options: {
     // No keyboard interaction needed
     config = {
       ...config,
-      enableToolbar: false,
       enableGestureDismiss: false,
-    };
-  } else if (hasComplexForm && hasMultipleInputs) {
-    // Complex forms benefit from toolbar
-    config = {
-      ...config,
-      enableToolbar: true,
-    };
-  } else if (hasMultipleInputs) {
-    // Multiple inputs might benefit from toolbar
-    config = {
-      ...config,
-      enableToolbar: true,
     };
   }
 

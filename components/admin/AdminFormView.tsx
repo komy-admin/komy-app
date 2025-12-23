@@ -1,11 +1,45 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, Dimensions, ScrollView } from 'react-native';
-import { ArrowLeftToLine } from 'lucide-react-native';
-import { Button } from '~/components/ui';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+/**
+ * AdminFormView Component
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * PATTERN B: Admin Forms (Long forms with ScrollView)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * AdminFormView is a CONTENT CONTAINER that:
+ * - Provides form structure and action buttons
+ * - Does NOT manage keyboard (parent handles it)
+ * - Is always used with external KeyboardSafeFormView + ScrollView
+ *
+ * IMPORTANT: Keyboard management is ALWAYS handled by the parent screen!
+ *
+ * Usage pattern (see team.tsx):
+ * ```tsx
+ * <KeyboardSafeFormView role="ADMIN">
+ *   <ScrollView keyboardShouldPersistTaps="handled">
+ *     <AdminFormView
+ *       mode="edit"
+ *       onSave={handleSave}
+ *       hideHeaderAndActions={true}  // Parent manages header/footer
+ *     >
+ *       <TeamForm />
+ *     </AdminFormView>
+ *   </ScrollView>
+ * </KeyboardSafeFormView>
+ * ```
+ *
+ * For comparison with Pattern A (short auth forms), see: login.tsx, pin-verification.tsx
+ * ════════════════════════════════════════════════════════════════════════════
+ */
 
-// ✅ Composants extraits avec styles originaux préservés
+import React from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { Button } from '~/components/ui';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+
+// ════════════════════════════════════════════════════════════════════════════
+// Action Button Components
+// ════════════════════════════════════════════════════════════════════════════
+
 const PrimaryActionButton = ({ children, disabled, style, ...props }: any) => (
   <Button
     disabled={disabled}
@@ -164,62 +198,28 @@ const ConfigCancelButton = ({ children, disabled, style, ...props }: any) => (
   </Button>
 );
 
-// ✅ Constantes de style consolidées
+// ════════════════════════════════════════════════════════════════════════════
+// Style Constants
+// ════════════════════════════════════════════════════════════════════════════
+
 const COMMON_STYLES = {
-  shadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  borderRadius: {
-    small: 8,
-    medium: 12,
-    large: 16,
-  },
   spacing: {
-    xs: 4,
-    sm: 8,
     md: 16,
     lg: 24,
     xl: 32,
   },
   colors: {
-    primary: '#2A2E33',
-    primaryHover: '#1A1E23',
-    secondary: '#6B7280',
-    background: '#FFFFFF',
     backgroundSecondary: '#F9FAFB',
     border: '#F3F4F6',
-    borderSecondary: '#E5E7EB',
-  },
-  typography: {
-    title: {
-      fontSize: 18,
-      fontWeight: '800' as const,
-      color: '#2A2E33',
-      letterSpacing: 0.5,
-    },
-    buttonPrimary: {
-      fontSize: 16,
-      fontWeight: '700' as const,
-      color: '#FFFFFF',
-      letterSpacing: 0.5,
-    },
-    buttonSecondary: {
-      fontSize: 16,
-      fontWeight: '600' as const,
-      color: '#6B7280',
-      letterSpacing: 0.3,
-    },
   },
 };
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+
+// ════════════════════════════════════════════════════════════════════════════
+// TypeScript Interfaces
+// ════════════════════════════════════════════════════════════════════════════
 
 export type AdminFormViewMode = 'create' | 'edit';
 
-// Interface standardisée pour tous les formulaires admin
 export interface AdminFormData<T = any> {
   data: T;
   isValid: boolean;
@@ -227,20 +227,17 @@ export interface AdminFormData<T = any> {
   hasChanges?: boolean;
 }
 
-// Interface pour les formulaires qui peuvent être contrôlés par AdminFormView
 export interface AdminFormRef<T = any> {
   getFormData: () => AdminFormData<T>;
   resetForm?: () => void;
   validateForm?: () => boolean;
 }
 
-// Interface pour le contexte de confirmation
 export interface AdminConfirmationContext {
   showConfirmation: (config: Omit<AdminConfirmationModal, 'isVisible' | 'isLoading'>) => void;
   hideConfirmation: () => void;
 }
 
-// Interface pour la modal de confirmation intégrée - Compatible avec DeleteConfirmationModal
 export interface AdminConfirmationModal {
   isVisible: boolean;
   entityName: string;
@@ -249,9 +246,6 @@ export interface AdminConfirmationModal {
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 }
-
-// Note: Le système de panel global a été déplacé vers usePanelPortal hook
-// Voir ~/hooks/usePanelPortal.tsx pour rendre des panels au niveau root
 
 export interface AdminFormViewProps {
   visible: boolean;
@@ -262,25 +256,25 @@ export interface AdminFormViewProps {
   isLoading?: boolean;
   children: React.ReactNode;
   backgroundColor?: string;
-  scrollViewRef?: React.RefObject<any>; // KeyboardAwareScrollView type
-  hideHeaderAndActions?: boolean; // Masque le header et les actions pour des interfaces personnalisées
-  disableGlobalScroll?: boolean; // Désactive le ScrollView global pour permettre du contenu statique
-  stickyActions?: boolean; // Rend les boutons fixes en bas (sticky) au lieu de dans le flux
-  // Props pour la configuration de menu (quand hideHeaderAndActions=true)
+  hideHeaderAndActions?: boolean; // For custom interfaces (parent manages header/footer)
+  // Props for configuration screens (when hideHeaderAndActions=true)
   configurationActions?: {
     onCancel: () => void;
     onConfirm: () => void;
     cancelLabel?: string;
     confirmLabel?: string;
-    confirmButtonColor?: string; // Couleur personnalisée pour le bouton de confirmation
+    confirmButtonColor?: string;
   };
 }
 
-// Expose handleSave via ref pour les boutons externes
 export interface AdminFormViewRef {
   handleSave: () => Promise<void>;
   isSaving: boolean;
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Main Component
+// ════════════════════════════════════════════════════════════════════════════
 
 export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewProps>(({
   visible,
@@ -291,15 +285,16 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
   isLoading = false,
   children,
   backgroundColor = '#FFFFFF',
-  scrollViewRef,
   hideHeaderAndActions = false,
-  disableGlobalScroll = false,
-  stickyActions = false,
   configurationActions
 }, ref) => {
   const [isSaving, setIsSaving] = React.useState(false);
   const [confirmationModal, setConfirmationModal] = React.useState<AdminConfirmationModal | null>(null);
   const formRef = React.useRef<AdminFormRef>(null);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Form Save Handler
+  // ═══════════════════════════════════════════════════════════════════════════
 
   const handleSave = React.useCallback(async () => {
     if (!onSave || !formRef.current) return;
@@ -308,7 +303,6 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
     const formData = getFormData();
 
     if (!formData.isValid) {
-      // Appeler la méthode de validation du formulaire pour afficher les erreurs
       if (formRef.current.validateForm) {
         formRef.current.validateForm();
       }
@@ -328,13 +322,16 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
     }
   }, [onSave, onClose]);
 
-  // Expose handleSave via ref
+  // Expose handleSave via ref for external buttons
   React.useImperativeHandle(ref, () => ({
     handleSave,
     isSaving,
   }), [handleSave, isSaving]);
 
-  // Créer le contexte pour les confirmations
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Confirmation Modal Context
+  // ═══════════════════════════════════════════════════════════════════════════
+
   const confirmationContext = React.useMemo(() => ({
     showConfirmation: (config: Omit<AdminConfirmationModal, 'isVisible'>) => {
       setConfirmationModal({ ...config, isVisible: true });
@@ -344,7 +341,10 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
     }
   }), []);
 
-  // Clone l'enfant pour lui passer la ref et le context de confirmation
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Child with Context
+  // ═══════════════════════════════════════════════════════════════════════════
+
   const childWithRef = React.isValidElement(children)
     ? React.cloneElement(children, {
         ref: formRef,
@@ -352,104 +352,60 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
       } as any)
     : children;
 
-  // Return conditionnel APRÈS tous les hooks (Rules of Hooks)
+  // Early return if not visible (after all hooks - Rules of Hooks)
   if (!visible) {
     return null;
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Render
+  // ═══════════════════════════════════════════════════════════════════════════
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Contenu du formulaire - ScrollView conditionnel */}
-      {disableGlobalScroll ? (
-        <View style={[
-          styles.scrollView,
-          { paddingBottom: stickyActions && onSave ? 95 : 0 }
-        ]}>
-          {childWithRef}
-        </View>
-      ) : (
-        <KeyboardSafeFormView
-          role="ADMIN"
-          showToolbar={false}
-          behavior="padding"
-          keyboardVerticalOffset={150}
-          style={styles.keyboardSafeFormView}
-        >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+      {/* Form Content */}
+      {childWithRef}
+
+      {/* Configuration Actions (for config screens like login/pin) */}
+      {hideHeaderAndActions && configurationActions && (
+        <View style={styles.actionsInFlow}>
+          <ConfigCancelButton
+            onPress={configurationActions.onCancel}
+            style={{ flex: 1 }}
           >
-            {childWithRef}
+            {configurationActions.cancelLabel || 'Annuler'}
+          </ConfigCancelButton>
 
-            {/* Boutons de configuration - DANS LE FLUX comme login/pin */}
-            {hideHeaderAndActions && configurationActions && (
-              <View style={styles.actionsInFlow}>
-                <ConfigCancelButton
-                  onPress={configurationActions.onCancel}
-                  style={{ flex: 1 }}
-                >
-                  {configurationActions.cancelLabel || 'Annuler'}
-                </ConfigCancelButton>
-
-                <ConfigActionButton
-                  onPress={configurationActions.onConfirm}
-                  backgroundColor={configurationActions.confirmButtonColor || '#059669'}
-                  style={{ flex: 2 }}
-                >
-                  {configurationActions.confirmLabel || 'Confirmer'}
-                </ConfigActionButton>
-              </View>
-            )}
-
-            {/* Boutons AdminFormView normaux - DANS LE FLUX comme login/pin */}
-            {onSave && !hideHeaderAndActions && (
-              <View style={styles.actionsInFlow}>
-                <PrimaryActionButton
-                  onPress={handleSave}
-                  disabled={isLoading || isSaving}
-                >
-                  {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
-                </PrimaryActionButton>
-
-                <SecondaryActionButton
-                  onPress={onCancel || onClose}
-                  disabled={isLoading || isSaving}
-                >
-                  Annuler
-                </SecondaryActionButton>
-              </View>
-            )}
-          </ScrollView>
-        </KeyboardSafeFormView>
-      )}
-
-      {/* Boutons sticky en bas (quand stickyActions=true) */}
-      {stickyActions && onSave && !hideHeaderAndActions && (
-        <View style={styles.stickyActions}>
-          <View style={styles.actionsContainer}>
-            <PrimaryActionButton
-              onPress={handleSave}
-              disabled={isLoading || isSaving}
-              style={{ flex: 2 }}
-            >
-              {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
-            </PrimaryActionButton>
-
-            <SecondaryActionButton
-              onPress={onCancel || onClose}
-              disabled={isLoading || isSaving}
-              style={{ flex: 1 }}
-            >
-              Annuler
-            </SecondaryActionButton>
-          </View>
+          <ConfigActionButton
+            onPress={configurationActions.onConfirm}
+            backgroundColor={configurationActions.confirmButtonColor || '#059669'}
+            style={{ flex: 2 }}
+          >
+            {configurationActions.confirmLabel || 'Confirmer'}
+          </ConfigActionButton>
         </View>
       )}
 
-      {/* Modal de confirmation intégrée utilisant DeleteConfirmationModal */}
+      {/* Standard AdminFormView Actions */}
+      {onSave && !hideHeaderAndActions && (
+        <View style={styles.actionsInFlow}>
+          <PrimaryActionButton
+            onPress={handleSave}
+            disabled={isLoading || isSaving}
+          >
+            {isLoading || isSaving ? 'Sauvegarde...' : mode === 'create' ? 'Confirmer la création' : 'Enregistrer les modifications'}
+          </PrimaryActionButton>
+
+          <SecondaryActionButton
+            onPress={onCancel || onClose}
+            disabled={isLoading || isSaving}
+          >
+            Annuler
+          </SecondaryActionButton>
+        </View>
+      )}
+
+      {/* Confirmation Modal */}
       {confirmationModal && (
         <DeleteConfirmationModal
           isVisible={confirmationModal.isVisible}
@@ -478,25 +434,28 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
 
 AdminFormView.displayName = 'AdminFormView';
 
-// Hook utilitaire pour la gestion des states d'AdminFormView
+// ════════════════════════════════════════════════════════════════════════════
+// Utility Hook
+// ════════════════════════════════════════════════════════════════════════════
+
 export function useAdminFormView() {
   const [isVisible, setIsVisible] = React.useState(false);
   const [mode, setMode] = React.useState<AdminFormViewMode>('create');
-  
+
   const openCreate = React.useCallback(() => {
     setMode('create');
     setIsVisible(true);
   }, []);
-  
+
   const openEdit = React.useCallback(() => {
     setMode('edit');
     setIsVisible(true);
   }, []);
-  
+
   const close = React.useCallback(() => {
     setIsVisible(false);
   }, []);
-  
+
   return {
     isVisible,
     mode,
@@ -506,73 +465,22 @@ export function useAdminFormView() {
   };
 }
 
-// ✅ Styles simplifiés avec consolidation des constantes
+// ════════════════════════════════════════════════════════════════════════════
+// Styles
+// ════════════════════════════════════════════════════════════════════════════
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-
-  keyboardSafeFormView: {
-    flex: 1,
-  },
-
-  scrollView: {
-    flex: 1,
     backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
-  },
-
-  scrollContent: {
-    flexGrow: 1,
     padding: COMMON_STYLES.spacing.lg,
-    paddingBottom: COMMON_STYLES.spacing.lg, // Marge normale en bas
   },
 
-  scrollContentSimple: {
-    padding: COMMON_STYLES.spacing.lg,
-    paddingBottom: COMMON_STYLES.spacing.lg,
-    // ❌ PAS de flexGrow: 1 - laisse le contenu à sa taille naturelle
-  },
-
-  // Boutons dans le flux (comme login/pin qui fonctionnent)
   actionsInFlow: {
     flexDirection: 'row',
     gap: COMMON_STYLES.spacing.md,
     marginTop: COMMON_STYLES.spacing.xl,
     paddingTop: COMMON_STYLES.spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: COMMON_STYLES.colors.border,
-  },
-
-  // Ancien style sticky (conservé si besoin pour d'autres usages)
-  stickyActions: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-      web: {
-        boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.1)',
-      },
-    }),
-  },
-
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: COMMON_STYLES.spacing.md,
-    paddingTop: COMMON_STYLES.spacing.md,
-    paddingHorizontal: COMMON_STYLES.spacing.xl,
-    paddingBottom: COMMON_STYLES.spacing.md,
     borderTopWidth: 1,
     borderTopColor: COMMON_STYLES.colors.border,
   },

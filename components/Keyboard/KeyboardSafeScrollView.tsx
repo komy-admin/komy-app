@@ -1,15 +1,53 @@
 /**
  * KeyboardSafeScrollView Component
  *
- * ⚠️ WARNING: This component uses KeyboardAwareScrollView which has known issues
- * with Reanimated Shared Values on Android causing "useEffect dependencies changed size" errors
- * and blocking scroll functionality.
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⚠️ WARNING: Known Issues with Reanimated on Android
+ * ════════════════════════════════════════════════════════════════════════════
  *
- * ✅ RECOMMENDED: Use KeyboardSafeFormView instead for stable keyboard management
- * See KEYBOARD_SOLUTION.md for working implementation
+ * This component uses KeyboardAwareScrollView which has known issues with
+ * Reanimated Shared Values on Android causing "useEffect dependencies changed size"
+ * errors and blocking scroll functionality.
  *
- * Pre-configured KeyboardAwareScrollView with Fork'it defaults
- * Automatically applies role-based configuration
+ * ════════════════════════════════════════════════════════════════════════════
+ * ✅ RECOMMENDED PATTERN: KeyboardSafeFormView + ScrollView
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * For admin forms (Pattern B - long scrollable forms):
+ *
+ * @example
+ *   <KeyboardSafeFormView role="ADMIN">
+ *     <ScrollView
+ *       keyboardShouldPersistTaps="handled"
+ *       contentContainerStyle={​{ flexGrow: 1 }}
+ *     >
+ *       <AdminFormView>
+ *         Form content
+ *       </AdminFormView>
+ *     </ScrollView>
+ *   </KeyboardSafeFormView>
+ *
+ * See team.tsx for reference implementation (FormTabContent helper)
+ * See KEYBOARD_SOLUTION.md for detailed documentation
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * When to Use Each Component
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Pattern A (Short Auth Forms):
+ * - Use: KeyboardSafeFormView (no ScrollView)
+ * - Examples: login.tsx, pin-verification.tsx
+ * - Characteristics: 2-4 inputs, centered content, dismissible via tap
+ *
+ * Pattern B (Long Admin Forms):
+ * - Use: KeyboardSafeFormView + ScrollView
+ * - Examples: team.tsx, room.tsx, menu.tsx
+ * - Characteristics: 10+ inputs, full-screen, scroll to navigate
+ *
+ * ⚠️ DO NOT USE KeyboardSafeScrollView for new code
+ * It's kept for backward compatibility only
+ *
+ * ════════════════════════════════════════════════════════════════════════════
  */
 
 import React from 'react';

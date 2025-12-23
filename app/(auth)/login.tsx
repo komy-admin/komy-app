@@ -1,4 +1,4 @@
-import { View, StyleSheet, Platform, Modal, Image, useWindowDimensions, Pressable, Keyboard } from 'react-native';
+import { View, StyleSheet, Modal, Image, Platform } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
 import { useState } from 'react';
 import { sessionService } from '~/services/SessionService';
@@ -6,7 +6,7 @@ import { Link, useRouter } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
@@ -14,14 +14,6 @@ export default function LoginScreen() {
   const [showQrScanner, setShowQrScanner] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
-  const { width, height } = useWindowDimensions();
-
-  // Detect landscape mode
-  const isLandscape = width > height;
-
-  // Adjust offset based on orientation
-  // In landscape, keyboard takes more vertical space
-  const keyboardBottomOffset = isLandscape ? 150 : 80;
 
   const handleLogin = async () => {
     try {
@@ -66,79 +58,68 @@ export default function LoginScreen() {
 
   return (
     <>
-      <Pressable
-        style={styles.pressableContainer}
-        onPress={Keyboard.dismiss}
-      >
-        <KeyboardSafeFormView
-          role="AUTH"
-          showToolbar={false}
-          behavior="padding"
-          keyboardVerticalOffset={keyboardBottomOffset}
-          style={styles.container}
-        >
-          <View style={styles.fullWrapper}>
-            <View style={styles.contentContainer}>
+      <AuthScreenLayout>
+        <View style={styles.fullWrapper}>
+          <View style={styles.contentContainer}>
             <Image
-            source={require('../../assets/images/logo_komy_png/logo_name.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+              source={require('../../assets/images/logo_komy_png/logo_name.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
 
-          <View style={styles.qrButtonContainer}>
-            <Button
-              variant="outline"
-              style={styles.qrButton}
-              onPress={() => setShowQrScanner(true)}
-            >
-              <View style={styles.qrButtonContent}>
-                <QrCode size={20} color="#1F2937" strokeWidth={2} />
-                <Text style={styles.qrButtonText}>Connexion via QR code</Text>
-              </View>
-            </Button>
-          </View>
-
-          <TextInput
-            id="LoginId"
-            value={loginId}
-            onChangeText={setLoginId}
-            placeholder="Identifiant"
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="next"
-          />
-
-          <TextInput
-            id="LoginPassword"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Mot de passe"
-            secureTextEntry
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="done"
-            onSubmitEditing={handleLogin}
-          />
-
-          <View style={styles.forgotPasswordContainer}>
-            <Link href="/forgot-credentials?type=password" asChild>
-              <Text style={styles.forgotPasswordText}>
-                Mot de passe oublié ?
-              </Text>
-            </Link>
-          </View>
-
-              <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
-                <Text style={styles.loginButtonText}>Se connecter</Text>
+            <View style={styles.qrButtonContainer}>
+              <Button
+                variant="outline"
+                style={styles.qrButton}
+                onPress={() => setShowQrScanner(true)}
+              >
+                <View style={styles.qrButtonContent}>
+                  <QrCode size={20} color="#1F2937" strokeWidth={2} />
+                  <Text style={styles.qrButtonText}>Connexion via QR code</Text>
+                </View>
               </Button>
             </View>
+
+            <TextInput
+              id="LoginId"
+              value={loginId}
+              onChangeText={setLoginId}
+              placeholder="Identifiant"
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+            />
+
+            <TextInput
+              id="LoginPassword"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Mot de passe"
+              secureTextEntry
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+            />
+
+            <View style={styles.forgotPasswordContainer}>
+              <Link href="/forgot-credentials?type=password" asChild>
+                <Text style={styles.forgotPasswordText}>
+                  Mot de passe oublié ?
+                </Text>
+              </Link>
+            </View>
+
+            <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
+              <Text style={styles.loginButtonText}>Se connecter</Text>
+            </Button>
           </View>
-        </KeyboardSafeFormView>
-      </Pressable>
+        </View>
+      </AuthScreenLayout>
 
       <Modal
         visible={showQrScanner}
@@ -156,13 +137,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  pressableContainer: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
   fullWrapper: {
     flex: 1,
     justifyContent: 'center',
@@ -179,15 +153,6 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     marginBottom: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 48,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-    lineHeight: 40,
   },
   qrButtonContainer: {
     width: '100%',
@@ -221,47 +186,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#1F2937',
-  },
-  dividerContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginHorizontal: 16,
-    fontWeight: '500',
-  },
-  qrResultContainer: {
-    width: '100%',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#6366F1',
-  },
-  qrResultLabel: {
-    fontSize: 14,
-    color: '#6366F1',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  qrResultText: {
-    fontSize: 14,
-    color: '#1F2937',
-    fontFamily: Platform.select({
-      ios: 'Menlo',
-      android: 'monospace',
-      default: 'monospace',
-    }),
   },
   input: {
     width: '100%',

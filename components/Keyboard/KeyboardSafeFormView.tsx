@@ -1,35 +1,28 @@
 /**
  * KeyboardSafeFormView Component
  *
- * Pre-configured KeyboardAvoidingView with optional toolbar
- * Ideal for forms with multiple inputs
+ * Pre-configured KeyboardAvoidingView for forms with multiple inputs
  */
 
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { KeyboardAvoidingViewWrapper, KeyboardToolbarWrapper } from './KeyboardWrapper';
+import { StyleSheet } from 'react-native';
+import { KeyboardAvoidingViewWrapper } from './KeyboardWrapper';
 import { useKeyboardConfig } from '~/hooks/useKeyboard';
 import type { KeyboardSafeFormViewProps } from '~/hooks/useKeyboard/types';
-import { KEYBOARD_TOOLBAR } from '~/constants/keyboard.constants';
 
 /**
  * KeyboardSafeFormView
  *
- * Form container that handles keyboard avoidance and optionally
- * shows a toolbar for input navigation
+ * Form container that handles keyboard avoidance
  *
  * @example
- * ```tsx
- * <KeyboardSafeFormView role="ADMIN" showToolbar>
- *   <TextInput placeholder="Item name" />
- *   <TextInput placeholder="Item price" />
- *   <TextInput placeholder="Item description" />
- * </KeyboardSafeFormView>
- * ```
+ *   <KeyboardSafeFormView role="ADMIN">
+ *     <TextInput placeholder="Item name" />
+ *     <TextInput placeholder="Item price" />
+ *   </KeyboardSafeFormView>
  */
 export const KeyboardSafeFormView: React.FC<KeyboardSafeFormViewProps> = ({
   role = 'DEFAULT',
-  showToolbar,
   debugMode = false,
   behavior,
   keyboardVerticalOffset,
@@ -40,27 +33,20 @@ export const KeyboardSafeFormView: React.FC<KeyboardSafeFormViewProps> = ({
   // Get role-based configuration
   const { config } = useKeyboardConfig(role);
 
-  // Determine if toolbar should be shown
-  const shouldShowToolbar = showToolbar ?? config.enableToolbar;
-
   // Use config values or prop overrides
   const finalBehavior = behavior ?? config.behavior;
   const finalVerticalOffset = keyboardVerticalOffset ?? config.verticalOffset;
 
   return (
-    <>
-      <KeyboardAvoidingViewWrapper
-        behavior={finalBehavior}
-        keyboardVerticalOffset={finalVerticalOffset}
-        enabled={true}
-        style={[styles.container, style]}
-        {...props}
-      >
-        {children}
-      </KeyboardAvoidingViewWrapper>
-
-      {shouldShowToolbar && <KeyboardToolbarWrapper />}
-    </>
+    <KeyboardAvoidingViewWrapper
+      behavior={finalBehavior}
+      keyboardVerticalOffset={finalVerticalOffset}
+      enabled={true}
+      style={[styles.container, style]}
+      {...props}
+    >
+      {children}
+    </KeyboardAvoidingViewWrapper>
   );
 };
 

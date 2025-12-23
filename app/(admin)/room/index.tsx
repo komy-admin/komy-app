@@ -11,6 +11,8 @@ import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
 import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { useAdminFormView } from '~/components/admin/AdminFormView';
+import { RoomFormModal } from '~/components/admin/RoomFormModal';
 
 export default function RoomListPage() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -23,22 +25,30 @@ export default function RoomListPage() {
 
 
   // Utilisation des hooks Redux
-  const { rooms, loading, error, deleteRoom, setCurrentRoom } = useRooms();
+  const { rooms, loading, error, deleteRoom, setCurrentRoom, createRoom, updateRoom } = useRooms();
   const { tables } = useTables();
 
   // State pour le filtrage
   const [filters, setFilters] = useState<RoomFilterState>(createEmptyFilters());
+
+  // State pour le formulaire de salle
+  const roomFormView = useAdminFormView();
+  const [currentRoomForEdit, setCurrentRoomForEdit] = useState<Room | null>(null);
 
   // Filtrage des salles
   const filteredRooms = filterRooms(rooms, filters);
 
 
   const handleCreateRoom = () => {
-    router.push('/(admin)/room/create');
+    setCurrentRoomForEdit(null);
+    roomFormView.openCreate();
   };
 
   const handleEditRoom = (id: string) => {
-    router.push(`/(admin)/room/${id}`);
+    const room = rooms.find(room => room.id === id);
+    if (!room) return;
+    setCurrentRoomForEdit(room);
+    roomFormView.openEdit();
   };
 
   const handleDeleteRoom = (id: string) => {
@@ -71,7 +81,45 @@ export default function RoomListPage() {
     setRoomToDelete(null);
   };
 
-  const navigateToRoomEditionMode = (roomId: string) => {
+  const handleSaveRoom = async (getFormData: () => any) => {
+    try {
+      const formResult = getFormData();
+      if (!formResult.isValid) return false;
+
+      const roomData = formResult.data;
+      if (roomFormView.mode === 'edit' && currentRoomForEdit?.id) {
+        await updateRoom(currentRoomForEdit.id, roomData);
+        showToast('Salle modifiée avec succès', 'success');
+      } else {
+        await createRoom(roomData);
+        showToast('Salle créée avec succès', 'success');
+      }
+      handleCloseRoomModal();
+      return true;
+    } catch (err: any) {
+      console.error('Error saving room:', err);
+      const errorMessage = err?.response?.data?.message || 'Erreur lors de la sauvegarde';
+      showToast(errorMessage, 'error');
+      return false;
+    }
+  };
+
+  const handleCloseRoomModal = () => {
+    roomFormView.close();
+    setCurrentRoomForEdit(null);
+  };
+
+  const navigateToRoomEditionMode = () => {
+    if (!currentRoomForEdit?.id) return;
+    handleCloseRoomModal();
+    setCurrentRoom(currentRoomForEdit.id);
+    router.push({
+      pathname: "/(admin)/room/edition-mode",
+      params: { roomId: currentRoomForEdit.id }
+    });
+  };
+
+  const navigateToRoomEditionModeFromAction = (roomId: string) => {
     const room = rooms.find(room => room.id === roomId);
     if (!room) return;
     setCurrentRoom(roomId);
@@ -91,7 +139,7 @@ export default function RoomListPage() {
       {
         label: 'Mode édition',
         icon: <Edit2 size={16} color="#4F46E5" />,
-        onPress: () => navigateToRoomEditionMode(room.id ? room.id : '')
+        onPress: () => navigateToRoomEditionModeFromAction(room.id ? room.id : '')
       },
       {
         label: 'Supprimer',
@@ -142,6 +190,20 @@ export default function RoomListPage() {
   const handleClearFilters = () => {
     setFilters(createEmptyFilters());
   };
+
+  // Early return for room form modal (full screen)
+  if (roomFormView.isVisible) {
+    return (
+      <RoomFormModal
+        visible={roomFormView.isVisible}
+        mode={roomFormView.mode}
+        room={currentRoomForEdit}
+        onClose={handleCloseRoomModal}
+        onSave={handleSaveRoom}
+        onNavigateToEditionMode={roomFormView.mode === 'edit' ? navigateToRoomEditionMode : undefined}
+      />
+    );
+  }
 
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>

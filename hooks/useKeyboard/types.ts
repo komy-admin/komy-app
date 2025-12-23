@@ -47,7 +47,6 @@ export interface KeyboardConfig {
   behavior: KeyboardBehavior;
   verticalOffset: number;
   bottomOffset: number;
-  enableToolbar: boolean;
   enableGestureDismiss: boolean;
   enableDebug: boolean;
 }
@@ -197,23 +196,6 @@ export interface KeyboardStickyViewProps extends ViewProps {
 }
 
 /**
- * Props for KeyboardToolbar wrapper
- */
-export interface KeyboardToolbarProps extends ViewProps {
-  insets?: {
-    left: number;
-    right: number;
-  };
-  opacity?: string;
-  theme?: any;
-  showArrows?: boolean;
-  doneText?: string;
-  onNextCallback?: () => void;
-  onPrevCallback?: () => void;
-  onDoneCallback?: () => void;
-}
-
-/**
  * Props for OverKeyboardView wrapper
  */
 export interface OverKeyboardViewProps {
@@ -251,7 +233,6 @@ export interface KeyboardSafeScrollViewProps extends KeyboardAwareScrollViewProp
 
 export interface KeyboardSafeFormViewProps extends Omit<KeyboardAvoidingViewProps, 'role'> {
   role?: UserRole;
-  showToolbar?: boolean;
   debugMode?: boolean;
 }
 

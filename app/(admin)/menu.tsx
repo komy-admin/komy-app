@@ -1,7 +1,7 @@
 import { useWindowDimensions, View, ScrollView, Text, Pressable } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { Item } from "~/types/item.types";
 import { Menu } from "~/types/menu.types";
 import { MenuForm } from "~/components/form/MenuForm";
@@ -13,10 +13,10 @@ import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
 import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
-import { MenuEditor } from '~/components/Menu/MenuEditor';
-import { AdminFormView, useAdminFormView } from '~/components/admin/AdminFormView';
-import { FormHeader } from '~/components/admin/FormHeader';
+import { useAdminFormView } from '~/components/admin/AdminFormView';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { ItemFormModal } from '~/components/admin/ItemFormModal';
+import { MenuFormModal } from '~/components/admin/MenuFormModal';
 import { formatPrice } from '~/lib/utils';
 
 export default function MenuPage() {
@@ -37,9 +37,6 @@ export default function MenuPage() {
   const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
-
-  // Référence pour le scroll automatique du menu editor
-  const menuScrollViewRef = useRef<ScrollView>(null);
 
 
   const { showToast } = useToast();
@@ -401,6 +398,61 @@ export default function MenuPage() {
     }
   ];
 
+  // Render item form modal when visible
+  if (itemFormView.isVisible) {
+    return (
+      <ItemFormModal
+        visible={itemFormView.isVisible}
+        mode={itemFormView.mode}
+        item={currentItem}
+        itemTypes={itemTypes}
+        tags={tags}
+        activeTab={activeTab}
+        onClose={handleCloseItemModal}
+        onSave={async (getFormData) => {
+          const formData = getFormData();
+          if (!formData.isValid) return false;
+
+          try {
+            await handleSaveItem(formData.data);
+            return true;
+          } catch (error) {
+            console.error('Erreur lors de la sauvegarde de l\'article:', error);
+            return false;
+          }
+        }}
+      />
+    );
+  }
+
+  // Render menu form modal when visible
+  if (menuFormView.isVisible) {
+    return (
+      <MenuFormModal
+        visible={menuFormView.isVisible}
+        mode={menuFormView.mode}
+        menu={currentMenu}
+        items={items}
+        itemTypes={itemTypes}
+        onClose={handleCloseMenuModal}
+        onCreateMenuCategoryItem={createMenuCategoryItem}
+        onLoadMenuCategoryItems={loadMenuCategoryItems}
+        onSave={async (getFormData) => {
+          const formData = getFormData();
+          if (!formData.isValid) return false;
+
+          try {
+            await handleBulkMenuSave(formData.data);
+            return true;
+          } catch (error) {
+            console.error('Erreur lors de la sauvegarde du menu:', error);
+            return false;
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <SidePanel
@@ -564,109 +616,6 @@ export default function MenuPage() {
           </TabsContent>
         </Tabs>
       </View>
-
-      {/* Vue formulaire pour les items */}
-      {itemFormView.isVisible && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1000,
-          backgroundColor: '#FFFFFF'
-        }}>
-          <FormHeader
-            title={
-              itemFormView.mode === 'create'
-                ? "Création d'un article"
-                : currentItem
-                  ? `Modification de "${currentItem.name}"`
-                  : "Modifier l'article"
-            }
-            onBack={handleCloseItemModal}
-          />
-
-          <AdminFormView
-            visible={true}
-            mode={itemFormView.mode}
-            onClose={handleCloseItemModal}
-            onCancel={handleCloseItemModal}
-            onSave={async (getFormData) => {
-              const formData = getFormData();
-              if (!formData.isValid) return false;
-
-              try {
-                await handleSaveItem(formData.data);
-                return true;
-              } catch (error) {
-                console.error('Erreur lors de la sauvegarde de l\'article:', error);
-                return false;
-              }
-            }}
-          >
-            <MenuForm
-              item={currentItem}
-              itemTypes={itemTypes}
-              tags={tags}
-              activeTab={activeTab}
-            />
-          </AdminFormView>
-        </View>
-      )}
-
-      {/* Vue formulaire pour les menus */}
-      {menuFormView.isVisible && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1000,
-          backgroundColor: '#FFFFFF'
-        }}>
-          <FormHeader
-            title={
-              menuFormView.mode === 'create'
-                ? "Création d'un menu"
-                : currentMenu
-                  ? `Modification de "${currentMenu.name}"`
-                  : "Modifier le menu"
-            }
-            onBack={handleCloseMenuModal}
-          />
-
-          <AdminFormView
-            visible={true}
-            mode={menuFormView.mode}
-            onClose={handleCloseMenuModal}
-            onCancel={handleCloseMenuModal}
-            scrollViewRef={menuScrollViewRef}
-            onSave={async (getFormData) => {
-              const formData = getFormData();
-              if (!formData.isValid) return false;
-
-              try {
-                await handleBulkMenuSave(formData.data);
-                return true;
-              } catch (error) {
-                console.error('Erreur lors de la sauvegarde du menu:', error);
-                return false;
-              }
-            }}
-          >
-            <MenuEditor
-              menu={currentMenu}
-              items={items}
-              itemTypes={itemTypes}
-              onCreateMenuCategoryItem={createMenuCategoryItem}
-              onLoadMenuCategoryItems={loadMenuCategoryItems}
-              scrollViewRef={menuScrollViewRef}
-            />
-          </AdminFormView>
-        </View>
-      )}
 
       {/* Modal de suppression des items */}
       <DeleteConfirmationModal

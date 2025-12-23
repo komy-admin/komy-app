@@ -37,7 +37,6 @@ export type {
   KeyboardAvoidingViewProps,
   KeyboardAwareScrollViewProps,
   KeyboardStickyViewProps,
-  KeyboardToolbarProps,
   OverKeyboardViewProps,
   KeyboardGestureAreaProps,
   KeyboardExtenderProps,

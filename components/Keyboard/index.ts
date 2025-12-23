@@ -10,7 +10,6 @@ export {
   KeyboardAvoidingViewWrapper,
   KeyboardAwareScrollViewWrapper,
   KeyboardStickyViewWrapper,
-  KeyboardToolbarWrapper,
   OverKeyboardViewWrapper,
   KeyboardGestureAreaWrapper,
   KeyboardExtenderWrapper,

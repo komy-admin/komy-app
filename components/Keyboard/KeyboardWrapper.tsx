@@ -1,20 +1,108 @@
 /**
  * Keyboard Wrapper Components
  *
+ * ════════════════════════════════════════════════════════════════════════════
  * Platform-aware wrappers around react-native-keyboard-controller components
- * Provides fallbacks for Web and graceful degradation
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * This file provides platform-aware wrappers for keyboard management components
+ * with graceful fallbacks for Web and error handling.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * Usage in Pattern A (Short Auth Forms)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Pattern A uses KeyboardAvoidingViewWrapper without ScrollView:
+ *
+ * @example
+ *   <Pressable onPress={Keyboard.dismiss}>
+ *     <KeyboardSafeFormView role="AUTH">
+ *       <View style={​{ flex: 1, justifyContent: 'center' }}>
+ *         2-4 inputs, centered
+ *       </View>
+ *     </KeyboardSafeFormView>
+ *   </Pressable>
+ *
+ * Components used:
+ * - KeyboardProviderWrapper (root level)
+ * - KeyboardAvoidingViewWrapper (via KeyboardSafeFormView)
+ *
+ * See: login.tsx, pin-verification.tsx
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * Usage in Pattern B (Long Admin Forms)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Pattern B uses KeyboardAvoidingViewWrapper + ScrollView:
+ *
+ * @example
+ *   <KeyboardSafeFormView role="ADMIN">
+ *     <ScrollView
+ *       keyboardShouldPersistTaps="handled"
+ *       contentContainerStyle={​{ flexGrow: 1 }}
+ *     >
+ *       <AdminFormView>
+ *         10+ inputs, scrollable
+ *       </AdminFormView>
+ *     </ScrollView>
+ *   </KeyboardSafeFormView>
+ *
+ * Components used:
+ * - KeyboardProviderWrapper (root level)
+ * - KeyboardAvoidingViewWrapper (via KeyboardSafeFormView)
+ * - Regular ScrollView (NOT KeyboardAwareScrollViewWrapper - known issues)
+ *
+ * ⚠️ DO NOT use KeyboardAwareScrollViewWrapper in Pattern B
+ * It has Reanimated issues on Android. Use regular ScrollView instead.
+ *
+ * See: team.tsx (FormTabContent helper), room.tsx, menu.tsx
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * Component Reference
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * KeyboardProviderWrapper:
+ *   - Required at root level of app
+ *   - Web: pass-through, Native: initializes keyboard controller
+ *
+ * KeyboardAvoidingViewWrapper:
+ *   - Core component for keyboard avoidance (behavior: "padding")
+ *   - Web: regular View, Native: uses keyboard-controller
+ *   - Used in both Pattern A and Pattern B
+ *
+ * KeyboardAwareScrollViewWrapper:
+ *   - ⚠️ DEPRECATED: Known Reanimated issues
+ *   - Use regular ScrollView + KeyboardAvoidingViewWrapper instead
+ *
+ *
+ * KeyboardStickyViewWrapper:
+ *   - Sticks content above keyboard
+ *   - Works in Pattern A (no ScrollView)
+ *   - ⚠️ Does NOT work in Pattern B (conflicts with ScrollView)
+ *
+ * OverKeyboardViewWrapper:
+ *   - Displays content over keyboard
+ *   - Used for tooltips, dropdowns
+ *
+ * KeyboardGestureAreaWrapper:
+ *   - Swipe-to-dismiss keyboard (Android 11+ only)
+ *   - Optional enhancement
+ *
+ * KeyboardExtenderWrapper:
+ *   - Extends keyboard area
+ *   - Rarely used
+ *
+ * ════════════════════════════════════════════════════════════════════════════
  */
 
 import React from 'react';
 import { View, ScrollView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isWeb, logKeyboardEvent } from '~/utils/keyboard.utils';
 import type {
   KeyboardProviderProps,
   KeyboardAvoidingViewProps,
   KeyboardAwareScrollViewProps,
   KeyboardStickyViewProps,
-  KeyboardToolbarProps,
   OverKeyboardViewProps,
   KeyboardGestureAreaProps,
   KeyboardExtenderProps,
@@ -227,62 +315,6 @@ export const KeyboardStickyViewWrapper: React.FC<KeyboardStickyViewProps> = ({
       </View>
     );
   }
-};
-
-/**
- * Internal KeyboardToolbar component that uses hooks properly
- */
-const KeyboardToolbarInternal: React.FC<KeyboardToolbarProps> = ({
-  insets: providedInsets,
-  opacity = 'EE',
-  theme,
-  showArrows = true,
-  doneText = 'Done',
-  onNextCallback,
-  onPrevCallback,
-  onDoneCallback,
-  ...props
-}) => {
-  // Always call hook unconditionally (required by React rules)
-  const safeAreaInsets = useSafeAreaInsets();
-
-  // Use provided insets or fallback to safe area insets
-  const insets = providedInsets || safeAreaInsets;
-
-  try {
-    const { KeyboardToolbar } = require('react-native-keyboard-controller');
-
-    return (
-      <KeyboardToolbar
-        insets={insets}
-        opacity={opacity}
-        theme={theme}
-        showArrows={showArrows}
-        doneText={doneText}
-        onNextCallback={onNextCallback}
-        onPrevCallback={onPrevCallback}
-        onDoneCallback={onDoneCallback}
-        {...props}
-      />
-    );
-  } catch (error) {
-    logKeyboardEvent('error', 'Failed to load KeyboardToolbar', error);
-    return null;
-  }
-};
-
-/**
- * KeyboardToolbar Wrapper
- *
- * On Web: Not rendered (no toolbar needed)
- * On Native: Uses react-native-keyboard-controller KeyboardToolbar
- */
-export const KeyboardToolbarWrapper: React.FC<KeyboardToolbarProps> = (props) => {
-  if (isWeb()) {
-    return null;
-  }
-
-  return <KeyboardToolbarInternal {...props} />;
 };
 
 /**
