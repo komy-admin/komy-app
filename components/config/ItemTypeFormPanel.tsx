@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { X, Check, ChefHat, Wine } from 'lucide-react-native';
 import { ItemType } from '~/types/item-type.types';
 import { useItemTypes } from '~/hooks/useItemTypes';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 interface ItemTypeFormPanelProps {
   itemType: ItemType | null;
@@ -44,11 +45,24 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.panelForm}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+      {/* KeyboardSafeFormView - Pattern B (ADMIN) avec optimisations GPU */}
+      <KeyboardSafeFormView
+        role="ADMIN"
+        behavior="padding"
+        keyboardVerticalOffset={150}
+        style={styles.keyboardView}
       >
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={Platform.OS === 'android'}
+          scrollEventThrottle={16}
+          overScrollMode="never"
+          bounces={false}
+          directionalLockEnabled={true}
+        >
         {/* Nom du type */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Nom du type</Text>
@@ -175,7 +189,8 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
             </View>
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardSafeFormView>
 
       <View style={styles.panelFooter}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
@@ -198,6 +213,10 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
+  keyboardView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   panelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -210,10 +229,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1E293B',
-  },
-  panelForm: {
-    flex: 1,
-    padding: 20,
   },
   formGroup: {
     marginBottom: 20,

@@ -15,6 +15,7 @@ import { Tag } from '~/types/tag.types';
 import { SelectedTag } from '~/types/order-line.types';
 import { StickyNote, Tag as TagIcon, X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash } from 'lucide-react-native';
 import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 // Type pour les valeurs des tags (union de tous les types possibles)
 type TagValue = string | number | boolean | string[] | null | undefined;
@@ -236,7 +237,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
 
   return (
     <View style={styles.panelContent}>
-      {/* Header */}
+      {/* Header - FIXED at top */}
       <View style={styles.panelHeader}>
         <View>
           <RNText style={[styles.panelTitle, { fontWeight: '600' }]}>
@@ -251,13 +252,19 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
         </TouchableOpacity>
       </View>
 
-      {/* Form */}
-      <ScrollView
-        style={styles.panelForm}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
+      {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
+      <KeyboardSafeFormView
+        role="ADMIN"
+        behavior="padding"
+        keyboardVerticalOffset={150}
+        style={styles.keyboardView}
       >
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Banner Article sélectionné - Compact */}
         <View style={[
           styles.selectedItemBanner,
@@ -328,9 +335,10 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
             ))}
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardSafeFormView>
 
-      {/* Footer avec résumé des prix */}
+      {/* Footer - FIXED at bottom */}
       <View style={styles.panelFooter}>
         {/* Résumé des prix à gauche */}
         <View style={styles.footerPriceContainer}>
@@ -688,9 +696,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
   },
-  panelForm: {
+  keyboardView: {
     flex: 1,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
   },
   // Banner article sélectionné - Compact (style ItemSelectionPanel)
   selectedItemBanner: {

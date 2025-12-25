@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { X, Check, Plus, Trash2 } from 'lucide-react-native';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { eurosToCents, centsToEuros } from '~/lib/utils';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 interface TagFormPanelProps {
   tag: Tag | null;
@@ -175,12 +176,24 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         </View>
       )}
 
-      <ScrollView
-        style={styles.panelForm}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
+      {/* KeyboardSafeFormView - Pattern B (ADMIN) avec optimisations GPU */}
+      <KeyboardSafeFormView
+        role="ADMIN"
+        behavior="padding"
+        keyboardVerticalOffset={150}
+        style={styles.keyboardView}
       >
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={Platform.OS === 'android'}
+          scrollEventThrottle={16}
+          overScrollMode="never"
+          bounces={false}
+          directionalLockEnabled={true}
+        >
         {/* Étape 1: Sélection du type de champ (avant configuration) */}
         {!showConfiguration && (
           <View style={styles.formGroup}>
@@ -325,7 +338,8 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
             )}
           </>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardSafeFormView>
 
       <View style={styles.panelFooter}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
@@ -347,6 +361,10 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
 const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   panelHeader: {
     flexDirection: 'row',
@@ -374,10 +392,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     lineHeight: 18,
-  },
-  panelForm: {
-    flex: 1,
-    padding: 20,
   },
   formGroup: {
     marginBottom: 20,
