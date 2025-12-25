@@ -7,7 +7,6 @@
 export { useKeyboard } from './useKeyboard';
 export { useKeyboardConfig } from './useKeyboardConfig';
 export { useKeyboardDebug, togglePersistentDebugMode, isPersistentDebugMode } from './useKeyboardDebug';
-export { useKeyboardVisibility } from './useKeyboardVisibility';
 
 export type {
   // Main types
@@ -25,7 +24,6 @@ export type {
   UseKeyboardReturn,
   UseKeyboardConfigReturn,
   UseKeyboardDebugReturn,
-  UseKeyboardVisibilityReturn,
 
   // Controller types
   KeyboardController,
@@ -35,14 +33,6 @@ export type {
   // Component prop types
   KeyboardProviderProps,
   KeyboardAvoidingViewProps,
-  KeyboardAwareScrollViewProps,
-  KeyboardStickyViewProps,
-  OverKeyboardViewProps,
-  KeyboardGestureAreaProps,
-  KeyboardExtenderProps,
-
-  // Custom component prop types
-  KeyboardSafeScrollViewProps,
   KeyboardSafeFormViewProps,
   KeyboardDebugOverlayProps,
 

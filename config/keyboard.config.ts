@@ -110,20 +110,6 @@ export const getKeyboardConfig = (role?: UserRole): KeyboardConfig => {
 };
 
 /**
- * Merge custom config with role defaults
- */
-export const mergeKeyboardConfig = (
-  role: UserRole,
-  customConfig: Partial<KeyboardConfig>
-): KeyboardConfig => {
-  const baseConfig = getKeyboardConfig(role);
-  return {
-    ...baseConfig,
-    ...customConfig,
-  };
-};
-
-/**
  * Validate keyboard configuration
  */
 export const validateKeyboardConfig = (config: KeyboardConfig): boolean => {
@@ -150,46 +136,4 @@ export const validateKeyboardConfig = (config: KeyboardConfig): boolean => {
   }
 
   return true;
-};
-
-/**
- * Get recommended config based on screen characteristics
- */
-export const getRecommendedConfig = (options: {
-  hasMultipleInputs?: boolean;
-  hasComplexForm?: boolean;
-  isReadOnly?: boolean;
-  role?: UserRole;
-}): KeyboardConfig => {
-  const {
-    hasMultipleInputs = false,
-    hasComplexForm = false,
-    isReadOnly = false,
-    role = 'DEFAULT',
-  } = options;
-
-  let config = getKeyboardConfig(role);
-
-  // Override based on screen characteristics
-  if (isReadOnly) {
-    // No keyboard interaction needed
-    config = {
-      ...config,
-      enableGestureDismiss: false,
-    };
-  }
-
-  return config;
-};
-
-/**
- * Export configurations for easy access
- */
-export {
-  DEFAULT_CONFIG,
-  AUTH_CONFIG,
-  SERVER_CONFIG,
-  ADMIN_CONFIG,
-  COOK_CONFIG,
-  BARMAN_CONFIG,
 };

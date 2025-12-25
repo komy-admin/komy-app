@@ -25,8 +25,8 @@ export const KEYBOARD_OFFSETS = {
     bottom: 30,
   },
   SERVER: {
-    vertical: 60, // Account for potential header
-    bottom: 50, // Space for toolbar
+    vertical: 60,
+    bottom: 50,
   },
   ADMIN: {
     vertical: 60,
@@ -47,24 +47,6 @@ export const KEYBOARD_OFFSETS = {
 } as const;
 
 /**
- * Toolbar configuration
- */
-export const KEYBOARD_TOOLBAR = {
-  HEIGHT: 45,
-  OPACITY: 'EE' as const, // Slight transparency
-  INSET_PADDING: 16,
-} as const;
-
-/**
- * Animation durations (ms)
- */
-export const KEYBOARD_ANIMATION_DURATION = {
-  IOS_DEFAULT: 250,
-  ANDROID_DEFAULT: 200,
-  INSTANT: 0,
-} as const;
-
-/**
  * Debug overlay configuration
  */
 export const KEYBOARD_DEBUG = {
@@ -76,37 +58,6 @@ export const KEYBOARD_DEBUG = {
 } as const;
 
 /**
- * Platform-specific defaults
- */
-export const PLATFORM_DEFAULTS = {
-  IOS: {
-    statusBarTranslucent: true,
-    navigationBarTranslucent: false,
-    behavior: KEYBOARD_BEHAVIOR.PADDING,
-  },
-  ANDROID: {
-    statusBarTranslucent: true,
-    navigationBarTranslucent: true,
-    behavior: KEYBOARD_BEHAVIOR.PADDING,
-  },
-  WEB: {
-    // Web doesn't use keyboard controller
-    statusBarTranslucent: false,
-    navigationBarTranslucent: false,
-    behavior: KEYBOARD_BEHAVIOR.PADDING,
-  },
-} as const;
-
-/**
- * Get platform-specific defaults
- */
-export const getPlatformDefaults = () => {
-  if (Platform.OS === 'ios') return PLATFORM_DEFAULTS.IOS;
-  if (Platform.OS === 'android') return PLATFORM_DEFAULTS.ANDROID;
-  return PLATFORM_DEFAULTS.WEB;
-};
-
-/**
  * Keyboard state constants
  */
 export const KEYBOARD_STATE = {
@@ -115,16 +66,6 @@ export const KEYBOARD_STATE = {
   OPEN: 'open',
   CLOSING: 'closing',
 } as const;
-
-/**
- * Input types that typically show numeric keyboard
- */
-export const NUMERIC_INPUT_TYPES = [
-  'numeric',
-  'number-pad',
-  'decimal-pad',
-  'phone-pad',
-] as const;
 
 /**
  * Z-index layers for keyboard components
