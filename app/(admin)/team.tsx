@@ -1,12 +1,12 @@
 import { View, ScrollView, useWindowDimensions, Text } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import { useState, useMemo, useEffect } from "react";
+import { SlidePanel } from "~/components/ui/SlidePanel";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
-import { useAdminFormView } from "~/components/admin/AdminFormView";
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
-import { TeamFormModal } from "~/components/admin/TeamFormModal";
+import { ModeSelection, QuickFormContent, FullFormContent } from "~/components/admin/TeamForm";
 import { UserQrModal } from "~/components/admin/UserQrModal";
 import { useToast } from '~/components/ToastProvider';
 import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
@@ -17,6 +17,21 @@ import { useUsers } from '~/hooks/useRestaurant';
 import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
 import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
+
+// Constantes en dehors du composant pour éviter les re-créations
+const TEAM_TABLE_COLUMNS = [
+  { label: 'Profil', key: 'profil', width: '20%' },
+  { label: 'Prénom', key: 'firstName', width: '20%' },
+  { label: 'Nom', key: 'lastName', width: '20%' },
+  { label: 'Email', key: 'email', width: '20%' },
+  { label: 'Téléphone', key: 'phone', width: '20%' },
+];
+
+// Filtrer les profils affichables (exclure superadmin et admin)
+const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
+  profile => !['superadmin', 'admin'].includes(profile)
+);
 
 export default function TeamPage() {
   const router = useRouter();
@@ -35,8 +50,10 @@ export default function TeamPage() {
   const [teamFilters, setTeamFilters] = useState<TeamFilterState>(createEmptyTeamFilters());
 
   // Form State
-  const teamFormView = useAdminFormView();
+  const [isFormPanelVisible, setIsFormPanelVisible] = useState(false);
+  const [formMode, setFormMode] = useState<'selection' | 'quick' | 'full' | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { renderPanel, clearPanel } = usePanelPortal();
 
   // Delete Modal State
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -55,10 +72,8 @@ export default function TeamPage() {
   const canModifyUsers = user?.profil && ['superadmin', 'admin'].includes(user.profil);
   const isManager = user?.profil === 'manager';
 
-
   // Utilisation des hooks Redux (seulement si autorisé)
   const { users, loading, error, createUser, createQuickUser, updateUser, deleteUser, getUsersByProfile } = useUsers();
-
 
   // Filtrer les utilisateurs avec les filtres appliqués
   const filteredUsers = useMemo(() => {
@@ -74,39 +89,21 @@ export default function TeamPage() {
   }, [users, activeTab, teamFilters, getUsersByProfile]);
 
   // Gestion des filtres
-  const handleFiltersChange = (filters: TeamFilterState) => {
+  const handleFiltersChange = useCallback((filters: TeamFilterState) => {
     setTeamFilters(filters);
-  };
+  }, []);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setTeamFilters(createEmptyTeamFilters());
     setActiveTab('all');
-  };
+  }, []);
 
   const handleCreateUser = () => {
     // Les managers ne peuvent pas créer d'utilisateurs
     if (isManager) return;
     setSelectedUser(null);
-    teamFormView.openCreate();
-  };
-
-  const handleQuickCreateSubmit = async (getFormData: () => any) => {
-    try {
-      const formResult = getFormData();
-      if (!formResult.isValid) {
-        return false;
-      }
-
-      const { profil, displayName } = formResult.data;
-      await createQuickUser(profil, displayName);
-      showToast('Utilisateur créé avec succès', 'success');
-      handleCloseModal();
-      return true;
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Erreur lors de la création de l\'utilisateur';
-      showToast(errorMessage, 'error');
-      return false;
-    }
+    setFormMode('selection'); // Afficher la sélection du mode
+    setIsFormPanelVisible(true);
   };
 
   const handleEditUser = (id: string) => {
@@ -115,38 +112,51 @@ export default function TeamPage() {
     const user = users.find(user => user.id === id);
     if (!user) return;
     setSelectedUser(user);
-    teamFormView.openEdit();
+    setFormMode('full'); // Édition = toujours mode complet
+    setIsFormPanelVisible(true);
   };
 
-  const handleCloseModal = () => {
-    teamFormView.close();
+  const handleCloseFormPanel = useCallback(() => {
+    setIsFormPanelVisible(false);
+    setFormMode(null);
     setSelectedUser(null);
+    clearPanel();
+  }, [clearPanel]);
+
+  const handleSelectQuickMode = () => {
+    setFormMode('quick');
   };
 
-  const handleSaveUser = async (getFormData: () => any) => {
-    try {
-      const formResult = getFormData();
-      if (!formResult.isValid) {
-        return false;
-      }
+  const handleSelectFullMode = () => {
+    setFormMode('full');
+  };
 
-      const user = formResult.data;
-      if (user.id) {
-        await updateUser(user.id, user);
+  const handleQuickSave = async (profil: UserProfile, displayName: string) => {
+    try {
+      await createQuickUser(profil, displayName);
+      showToast('Utilisateur créé avec succès', 'success');
+      handleCloseFormPanel();
+    } catch (err: any) {
+      console.error('Error creating quick user:', err);
+      const errorMessage = err?.message || 'Erreur lors de la création de l\'utilisateur';
+      showToast(errorMessage, 'error');
+    }
+  };
+
+  const handleSaveUser = async (userData: Partial<User>) => {
+    try {
+      if (selectedUser?.id) {
+        await updateUser(selectedUser.id, userData);
         showToast('Utilisateur modifié avec succès', 'success');
       } else {
-        await createUser(user);
+        await createUser(userData as User);
         showToast('Utilisateur créé avec succès', 'success');
       }
-      handleCloseModal();
-      return true;
+      handleCloseFormPanel();
     } catch (err: any) {
       console.error('Error saving user:', err);
-
-      // Afficher le message d'erreur spécifique si disponible
       const errorMessage = err?.message || 'Erreur lors de la sauvegarde de l\'utilisateur';
       showToast(errorMessage, 'error');
-      return false;
     }
   };
 
@@ -184,7 +194,53 @@ export default function TeamPage() {
     setQrModalVisible(true);
   };
 
-  const getUserActions = (user: User): ActionItem[] => {
+  // Synchroniser le panel avec le portal global
+  useEffect(() => {
+    if (isFormPanelVisible && formMode) {
+      let panelContent;
+
+      if (formMode === 'selection') {
+        // Écran de sélection du mode
+        panelContent = (
+          <ModeSelection
+            onSelectQuick={handleSelectQuickMode}
+            onSelectFull={handleSelectFullMode}
+            onCancel={handleCloseFormPanel}
+          />
+        );
+      } else if (formMode === 'quick') {
+        // Formulaire de création rapide
+        panelContent = (
+          <QuickFormContent
+            onSave={handleQuickSave}
+            onCancel={handleCloseFormPanel}
+            activeTab={activeTab}
+          />
+        );
+      } else {
+        // Formulaire complet (création ou édition)
+        panelContent = (
+          <FullFormContent
+            user={selectedUser}
+            onSave={handleSaveUser}
+            onCancel={handleCloseFormPanel}
+            activeTab={activeTab}
+          />
+        );
+      }
+
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseFormPanel} width={500}>
+          {panelContent}
+        </SlidePanel>
+      );
+    } else {
+      clearPanel();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFormPanelVisible, formMode, selectedUser, activeTab]);
+
+  const getUserActions = useCallback((user: User): ActionItem[] => {
     const actions: ActionItem[] = [];
 
     // Seuls admin et superadmin peuvent modifier
@@ -192,7 +248,7 @@ export default function TeamPage() {
       actions.push({
         label: 'Modifier',
         icon: <Edit2 size={16} color="#4F46E5" />,
-        onPress: () => handleEditUser(user.id ? user.id : '')
+        onPress: () => handleEditUser(user.id)
       });
     }
 
@@ -209,74 +265,32 @@ export default function TeamPage() {
         label: 'Supprimer',
         icon: <Trash size={16} color="#ef4444" />,
         type: 'destructive',
-        onPress: () => handleDeleteUser(user.id ? user.id : '')
+        onPress: () => handleDeleteUser(user.id)
       });
     }
 
     return actions;
-  };
+  }, [canModifyUsers]);
 
   const { width } = useWindowDimensions();
 
-  const teamTableColumns = [
-    {
-      label: 'Profil',
-      key: 'profil',
-      width: '20%',
-    },
-    {
-      label: 'Prénom',
-      key: 'firstName',
-      width: '20%',
-    },
-    {
-      label: 'Nom',
-      key: 'lastName',
-      width: '20%',
-    },
-    {
-      label: 'Email',
-      key: 'email',
-      width: '20%',
-    },
-    {
-      label: 'Téléphone',
-      key: 'phone',
-      width: '20%',
-    },
-  ];
-
-  // Render team form modal when visible (only for admins/superadmins)
-  if (canModifyUsers && teamFormView.isVisible) {
-    return (
-      <TeamFormModal
-        visible={teamFormView.isVisible}
-        mode={teamFormView.mode}
-        user={selectedUser}
-        activeTab={activeTab}
-        onClose={handleCloseModal}
-        onSaveQuick={handleQuickCreateSubmit}
-        onSaveFull={handleSaveUser}
-      />
-    );
-  }
-
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      <SidePanel
-        title="Filtrage"
-        width={width / 4}
-        isCollapsed={isPanelCollapsed}
-        onCollapsedChange={setIsPanelCollapsed}
-      >
-        <TeamFilters
-          filters={teamFilters}
-          onFiltersChange={handleFiltersChange}
-          onClearFilters={handleClearFilters}
-        />
-      </SidePanel>
+    <>
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        <SidePanel
+          title="Filtrage"
+          width={width / 4}
+          isCollapsed={isPanelCollapsed}
+          onCollapsedChange={setIsPanelCollapsed}
+        >
+          <TeamFilters
+            filters={teamFilters}
+            onFiltersChange={handleFiltersChange}
+            onClearFilters={handleClearFilters}
+          />
+        </SidePanel>
 
-      <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Tabs
           style={{ flex: 1, backgroundColor: '#FFFFFF' }}
           value={activeTab}
@@ -320,20 +334,18 @@ export default function TeamPage() {
                     Tous
                   </Text>
                 </TabsTrigger>
-                {Object.values(UserProfile)
-                  .filter(type => !['superadmin', 'admin'].includes(type))
-                  .map((type) => (
-                    <TabsTrigger
-                      key={type}
-                      value={type}
-                      className="flex-row h-full"
-                      style={{ width: 100, minWidth: 100 }}
-                    >
-                      <Text style={{ color: activeTab === type ? '#2A2E33' : '#A0A0A0' }}>
-                        {getUserProfileText(type)}
-                      </Text>
-                    </TabsTrigger>
-                  ))}
+                {DISPLAYABLE_PROFILES.map((type) => (
+                  <TabsTrigger
+                    key={type}
+                    value={type}
+                    className="flex-row h-full"
+                    style={{ width: 100, minWidth: 100 }}
+                  >
+                    <Text style={{ color: activeTab === type ? '#2A2E33' : '#A0A0A0' }}>
+                      {getUserProfileText(type)}
+                    </Text>
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </ScrollView>
 
@@ -390,7 +402,7 @@ export default function TeamPage() {
             ) : (
               <ForkTable
                 data={filteredUsers}
-                columns={teamTableColumns}
+                columns={TEAM_TABLE_COLUMNS}
                 onRowPress={canModifyUsers ? handleEditUser : undefined}
                 onRowDelete={canModifyUsers ? handleDeleteUser : undefined}
                 useActionMenu={true}
@@ -402,6 +414,7 @@ export default function TeamPage() {
             )}
           </TabsContent>
         </Tabs>
+        </View>
       </View>
 
       {/* Modal de suppression - cachée pour les managers */}
@@ -425,6 +438,8 @@ export default function TeamPage() {
           setSelectedUserForQr(null);
         }}
       />
-    </View>
+
+      {/* Panel rendu via usePanelPortal - pas de rendu local */}
+    </>
   );
 }
