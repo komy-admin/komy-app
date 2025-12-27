@@ -36,11 +36,11 @@ export function CustomModal({
 
   React.useEffect(() => {
     if (isVisible) {
-      opacity.value = withTiming(1, { duration: 200 });
-      scale.value = withTiming(1, { duration: 200 });
+      opacity.value = withTiming(1, { duration: 100 });
+      scale.value = withTiming(1, { duration: 100 });
     } else {
-      opacity.value = withTiming(0, { duration: 150 });
-      scale.value = withTiming(0.95, { duration: 150 });
+      opacity.value = withTiming(0, { duration: 50 });
+      scale.value = withTiming(0.95, { duration: 50 });
     }
   }, [isVisible]);
 

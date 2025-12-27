@@ -87,10 +87,8 @@ export const useTableEditor = () => {
         throw new Error('Erreur inconnue lors de la création de la table');
       }
     } finally {
-      // Délai pour permettre à Redux de propager avant la prochaine opération
-      setTimeout(() => {
-        createOperationInProgress.current = false;
-      }, 250);
+      // Reset immédiat du verrou pour éviter les blocages (cohérent avec update/delete)
+      createOperationInProgress.current = false;
     }
   }, [dispatch]);
 
@@ -156,11 +154,6 @@ export const useTableEditor = () => {
       await tableApiService.delete(tableId);
       dispatch(entitiesActions.deleteTable({ tableId }));
     } catch (error) {
-      console.error('Erreur lors de la suppression de table:', {
-        error,
-        tableId,
-        timestamp: new Date().toISOString()
-      });
       throw error;
     } finally {
       // Reset immédiat du verrou pour éviter les blocages

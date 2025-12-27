@@ -101,8 +101,10 @@ const Room: React.FC<RoomProps> = ({
   }, [width, height, isLoading, containerDimensions, resetTransform]);
 
   useEffect(() => {
-    if (isGridReady && tables.length > 0) {
-      setVisibleTables(tables);
+    if (isGridReady) {
+      setVisibleTables(tables); // ✅ Accepte aussi les tableaux vides
+    } else {
+      setVisibleTables([]); // Vider si grille pas prête
     }
   }, [isGridReady, tables]);
 

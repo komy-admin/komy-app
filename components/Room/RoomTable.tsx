@@ -826,12 +826,13 @@ const RoomTable: React.FC<TableViewProps> = ({
   }, [positionValid, isEditing]);
 
   const tableStyle = useMemo(() => ({
-    backgroundColor: !editionMode && status ? getStatusColor(status) : '#D9D9D9',
+    // ✅ Appliquer les couleurs de status même en editionMode si une commande existe
+    backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
     ...(isEditing
       ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' as const }
       : (status ? getStatusBorderStyle(status, table) : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const })
     ),
-  }), [status, isEditing, table]);
+  }), [status, isEditing, table, editionMode]);
 
   // 🎨 Style pour le conteneur avec curseur et texte non sélectionnable (web)
   const containerStyle = useMemo(() => ({

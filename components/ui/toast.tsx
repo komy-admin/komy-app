@@ -1,5 +1,5 @@
-import { View, Text, Animated, StyleSheet, Dimensions, Platform } from 'react-native';
-import React, { useEffect, useRef } from 'react';
+import { Text, Animated, StyleSheet, Platform } from 'react-native';
+import { useEffect, useRef } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -11,12 +11,12 @@ interface ToastProps {
   onHide?: () => void;
 }
 
-export function Toast({ 
-  visible, 
-  message, 
-  type = 'info', 
+export function Toast({
+  visible,
+  message,
+  type = 'info',
   duration = 3000,
-  onHide 
+  onHide
 }: ToastProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
@@ -74,16 +74,18 @@ export function Toast({
     }
   };
 
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <Animated.View
       style={[
         styles.container,
         {
-          opacity,
-          transform: [{ translateY }],
+          opacity: 1,
           backgroundColor: getBackgroundColor(),
+          transform: [{ translateY: 0 }],
         },
       ]}
     >
@@ -104,15 +106,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 1000,
+    zIndex: 99999,
   },
   message: {
     color: '#FFFFFF',

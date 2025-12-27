@@ -155,7 +155,6 @@ export abstract class BaseApiService<T> {
     try {
       await this.axiosInstance.delete(`${this.endpoint}/${id}`);
     } catch (error) {
-      console.error(`Error in delete for ${this.endpoint}/${id}:`, error);
       throw error;
     }
   }

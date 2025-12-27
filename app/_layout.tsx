@@ -252,7 +252,6 @@ function RootLayoutNav() {
           <Stack.Screen name="(barman)" />
         </Stack>
       </AppInitializer>
-      <PortalHost />
     </SafeAreaView>
   );
 }
@@ -276,6 +275,8 @@ export default function RootLayout() {
             </Provider>
           </KeyboardProviderWrapper>
         </GestureHandlerRootView>
+        {/* ✅ PortalHost au niveau root pour que les Portals fonctionnent partout */}
+        <PortalHost />
       </ToastProvider>
     </SafeAreaProvider>
   );

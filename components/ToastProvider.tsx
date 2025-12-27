@@ -13,9 +13,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [type, setType] = useState<ToastType>('info');
 
   const showToast = useCallback((newMessage: string, newType: ToastType = 'info') => {
-    setMessage(newMessage);
-    setType(newType);
-    setVisible(true);
+    // Reset pour forcer le re-render
+    setVisible(false);
+
+    setTimeout(() => {
+      setMessage(newMessage);
+      setType(newType);
+      setVisible(true);
+    }, 10);
   }, []);
 
   return (
