@@ -1,5 +1,5 @@
 import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Button, ForkTable } from '~/components/ui';
 import { CreditCard as Edit2, UtensilsCrossed, Trash } from 'lucide-react-native';
@@ -11,8 +11,9 @@ import { SidePanel } from '~/components/SidePanel';
 import { RoomFilters, RoomFilterState } from '~/components/filters/RoomFilters';
 import { filterRooms, createEmptyFilters } from '~/utils/roomFilters';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
-import { useAdminFormView } from '~/components/admin/AdminFormView';
-import { RoomFormModal } from '~/components/admin/RoomFormModal';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { SlidePanel } from '~/components/ui/SlidePanel';
+import { RoomFormContent } from '~/components/admin/RoomForm';
 
 export default function RoomListPage() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -23,33 +24,33 @@ export default function RoomListPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-
-  // Utilisation des hooks Redux
+  // Redux hooks
   const { rooms, loading, error, deleteRoom, setCurrentRoom, createRoom, updateRoom } = useRooms();
   const { tables } = useTables();
 
-  // State pour le filtrage
+  // Filter state
   const [filters, setFilters] = useState<RoomFilterState>(createEmptyFilters());
 
-  // State pour le formulaire de salle
-  const roomFormView = useAdminFormView();
-  const [currentRoomForEdit, setCurrentRoomForEdit] = useState<Room | null>(null);
+  // Form panel state
+  const { renderPanel, clearPanel } = usePanelPortal();
+  const [isFormPanelVisible, setIsFormPanelVisible] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
   // Filtrage des salles
   const filteredRooms = filterRooms(rooms, filters);
 
 
-  const handleCreateRoom = () => {
-    setCurrentRoomForEdit(null);
-    roomFormView.openCreate();
-  };
+  const handleCreateRoom = useCallback(() => {
+    setSelectedRoom(null);
+    setIsFormPanelVisible(true);
+  }, []);
 
-  const handleEditRoom = (id: string) => {
+  const handleEditRoom = useCallback((id: string) => {
     const room = rooms.find(room => room.id === id);
     if (!room) return;
-    setCurrentRoomForEdit(room);
-    roomFormView.openEdit();
-  };
+    setSelectedRoom(room);
+    setIsFormPanelVisible(true);
+  }, [rooms]);
 
   const handleDeleteRoom = (id: string) => {
     const room = rooms.find(room => room.id === id);
@@ -81,43 +82,38 @@ export default function RoomListPage() {
     setRoomToDelete(null);
   };
 
-  const handleSaveRoom = async (getFormData: () => any) => {
+  const handleSaveRoom = useCallback(async (roomData: Partial<Room>) => {
     try {
-      const formResult = getFormData();
-      if (!formResult.isValid) return false;
-
-      const roomData = formResult.data;
-      if (roomFormView.mode === 'edit' && currentRoomForEdit?.id) {
-        await updateRoom(currentRoomForEdit.id, roomData);
+      if (selectedRoom?.id) {
+        await updateRoom(selectedRoom.id, roomData);
         showToast('Salle modifiée avec succès', 'success');
       } else {
         await createRoom(roomData);
         showToast('Salle créée avec succès', 'success');
       }
-      handleCloseRoomModal();
-      return true;
+      setIsFormPanelVisible(false);
+      setSelectedRoom(null);
     } catch (err: any) {
       console.error('Error saving room:', err);
       const errorMessage = err?.response?.data?.message || 'Erreur lors de la sauvegarde';
       showToast(errorMessage, 'error');
-      return false;
     }
-  };
+  }, [selectedRoom, updateRoom, createRoom, showToast]);
 
-  const handleCloseRoomModal = () => {
-    roomFormView.close();
-    setCurrentRoomForEdit(null);
-  };
+  const handleCloseFormPanel = useCallback(() => {
+    setIsFormPanelVisible(false);
+    setSelectedRoom(null);
+  }, []);
 
-  const navigateToRoomEditionMode = () => {
-    if (!currentRoomForEdit?.id) return;
-    handleCloseRoomModal();
-    setCurrentRoom(currentRoomForEdit.id);
+  const navigateToRoomEditionMode = useCallback(() => {
+    if (!selectedRoom?.id) return;
+    handleCloseFormPanel();
+    setCurrentRoom(selectedRoom.id);
     router.push({
       pathname: "/(admin)/room/edition-mode",
-      params: { roomId: currentRoomForEdit.id }
+      params: { roomId: selectedRoom.id }
     });
-  };
+  }, [selectedRoom, router, setCurrentRoom, handleCloseFormPanel]);
 
   const navigateToRoomEditionModeFromAction = (roomId: string) => {
     const room = rooms.find(room => room.id === roomId);
@@ -183,27 +179,30 @@ export default function RoomListPage() {
   ];
 
 
-  const handleFiltersChange = (newFilters: RoomFilterState) => {
+  const handleFiltersChange = useCallback((newFilters: RoomFilterState) => {
     setFilters(newFilters);
-  };
+  }, []);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setFilters(createEmptyFilters());
-  };
+  }, []);
 
-  // Early return for room form modal (full screen)
-  if (roomFormView.isVisible) {
-    return (
-      <RoomFormModal
-        visible={roomFormView.isVisible}
-        mode={roomFormView.mode}
-        room={currentRoomForEdit}
-        onClose={handleCloseRoomModal}
-        onSave={handleSaveRoom}
-        onNavigateToEditionMode={roomFormView.mode === 'edit' ? navigateToRoomEditionMode : undefined}
-      />
-    );
-  }
+  // Sync panel with global portal
+  useEffect(() => {
+    if (isFormPanelVisible) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseFormPanel} width={500}>
+          <RoomFormContent
+            room={selectedRoom}
+            onSave={handleSaveRoom}
+            onCancel={handleCloseFormPanel}
+          />
+        </SlidePanel>
+      );
+    } else {
+      clearPanel();
+    }
+  }, [isFormPanelVisible, selectedRoom, renderPanel, clearPanel, handleCloseFormPanel, handleSaveRoom]);
 
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>

@@ -1,0 +1,1 @@
+export { RoomFormContent } from './RoomFormContent';

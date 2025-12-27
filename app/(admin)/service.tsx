@@ -423,7 +423,7 @@ export default function ServicePage() {
   const windowDimensions = useWindowDimensions();
   // Fonction pour rediriger vers room_list avec création automatique
   const handleCreateFirstRoom = () => {
-    router.push('/(admin)/room/create');
+    router.push('/(admin)/room');
   };
 
   return (
