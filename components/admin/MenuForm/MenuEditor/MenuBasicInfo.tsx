@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo, useState } from 'react';
 import { View, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { FileText } from 'lucide-react-native';
 import { Text } from '~/components/ui';
@@ -11,11 +11,13 @@ interface MenuBasicInfoProps {
   onUpdateField: (field: keyof MenuFormData, value: any) => void;
 }
 
-export const MenuBasicInfo = memo<MenuBasicInfoProps>(({ 
-  formData, 
-  errors, 
-  onUpdateField 
+export const MenuBasicInfo = memo<MenuBasicInfoProps>(({
+  formData,
+  errors,
+  onUpdateField
 }) => {
+  // State pour la hauteur auto-resizable du champ description
+  const [descriptionHeight, setDescriptionHeight] = useState(44);
   return (
     <View style={styles.section}>
       <SectionHeader
@@ -109,8 +111,16 @@ export const MenuBasicInfo = memo<MenuBasicInfoProps>(({
             placeholder="Ex: Un menu complet avec entrée, plat et dessert..."
             placeholderTextColor="#A0A0A0"
             multiline
-            numberOfLines={3}
-            style={[styles.input, styles.textArea]}
+            scrollEnabled={false}
+            onContentSizeChange={(event) => {
+              // Ajuster la hauteur selon le contenu, minimum 44px
+              setDescriptionHeight(Math.max(44, event.nativeEvent.contentSize.height));
+            }}
+            style={[
+              styles.input,
+              styles.textArea,
+              { height: descriptionHeight }
+            ]}
           />
         </View>
       </View>
@@ -203,11 +213,11 @@ const styles = StyleSheet.create({
         minHeight: 44,
       },
       android: {
-        height: 80,
+        minHeight: 44,
         paddingTop: 12,
       },
       web: {
-        height: 80,
+        minHeight: 44,
         paddingTop: 12,
         resize: 'vertical' as any,
       },
