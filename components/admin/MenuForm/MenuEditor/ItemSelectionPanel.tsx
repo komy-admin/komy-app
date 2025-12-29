@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { X, Check, Search } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 /**
  * Props pour le contenu du panel de sélection d'articles
@@ -105,12 +106,24 @@ export function ItemSelectionPanelContent({
           </TouchableOpacity>
         </View>
 
-        {/* Form */}
-        <ScrollView
-          style={styles.panelForm}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
+        {/* Form - Wrapped with KeyboardSafeFormView for keyboard handling */}
+        <KeyboardSafeFormView
+          role="ADMIN"
+          behavior="padding"
+          keyboardVerticalOffset={150}
+          style={styles.keyboardView}
         >
+          <ScrollView
+            style={styles.panelForm}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={Platform.OS === 'android'}
+            scrollEventThrottle={16}
+            overScrollMode="never"
+            bounces={false}
+            directionalLockEnabled={true}
+          >
           {/* Étape 1: Sélection d'article (mode add seulement, avant configuration) */}
           {mode === 'add' && !showConfiguration && (
             <>
@@ -237,7 +250,8 @@ export function ItemSelectionPanelContent({
               </View>
             </>
           )}
-        </ScrollView>
+          </ScrollView>
+        </KeyboardSafeFormView>
 
         {/* Footer */}
         <View style={styles.panelFooter}>
@@ -266,6 +280,10 @@ export function ItemSelectionPanelContent({
 const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   panelHeader: {
     flexDirection: 'row',
