@@ -1,6 +1,7 @@
 import { useWindowDimensions, View, ScrollView, Text } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
+import { KeyboardSafeFormView } from "~/components/Keyboard";
 import { useState, useMemo } from "react";
 import { Item } from "~/types/item.types";
 import { Menu } from "~/types/menu.types";
@@ -460,11 +461,18 @@ export default function MenuPage() {
         isCollapsed={isPanelCollapsed}
         onCollapsedChange={setIsPanelCollapsed}
       >
-        <MenuFilters
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          onClearFilters={handleClearFilters}
-        />
+        <KeyboardSafeFormView
+          role="FILTER"
+          behavior="padding"
+          keyboardVerticalOffset={200}
+          style={{ flex: 1 }}
+        >
+          <MenuFilters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onClearFilters={handleClearFilters}
+          />
+        </KeyboardSafeFormView>
       </SidePanel>
       <View style={{ flex: 1 }}>
         <Tabs

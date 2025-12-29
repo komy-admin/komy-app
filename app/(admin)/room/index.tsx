@@ -2,6 +2,7 @@ import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Button, ForkTable } from '~/components/ui';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 import { CreditCard as Edit2, UtensilsCrossed, Trash } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { useToast } from '~/components/ToastProvider';
@@ -207,11 +208,18 @@ export default function RoomListPage() {
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
       <SidePanel title="Filtrage" width={width / 4} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
-        <RoomFilters
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          onClearFilters={handleClearFilters}
-        />
+        <KeyboardSafeFormView
+          role="FILTER"
+          behavior="padding"
+          keyboardVerticalOffset={200}
+          style={{ flex: 1 }}
+        >
+          <RoomFilters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onClearFilters={handleClearFilters}
+          />
+        </KeyboardSafeFormView>
       </SidePanel>
 
       <View style={{ flex: 1 }}>

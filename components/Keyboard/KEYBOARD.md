@@ -69,9 +69,9 @@ fork-it-app/
 
 ---
 
-## 🎯 Deux Patterns d'utilisation
+## 🎯 Trois Patterns d'utilisation
 
-Fork'it utilise **deux patterns distincts** selon le type d'interface:
+Fork'it utilise **trois patterns distincts** selon le type d'interface:
 
 ### Pattern A: Écrans d'authentification (Login, PIN)
 
@@ -180,8 +180,68 @@ export const AdminFormLayout = ({ title, onSave, onCancel, children }) => {
 
 **Écrans utilisant Pattern B:**
 - `app/(admin)/team.tsx` - Gestion d'équipe
-- `app/(admin)/menu.tsx` - Configuration menu
 - `app/(admin)/room/index.tsx` - Gestion de salles
+
+---
+
+### Pattern C: Panneaux de filtres latéraux (Menu, Room)
+
+**Caractéristiques:**
+- ✅ Inputs dans un panneau latéral (SidePanel)
+- ✅ Zone principale adjacente qui NE DOIT PAS bouger
+- ✅ Structure en row (flexDirection: 'row')
+- ✅ ScrollView dans le panneau
+- ✅ Offset vertical élevé (120px)
+
+**Architecture:**
+```
+View (row)
+  ├─ SidePanel (width fixe - ex: width/4)
+  │   └─ KeyboardSafeFormView (role="FILTER")
+  │       └─ FilterComponent (avec ScrollView)
+  │           └─ Inputs de filtrage
+  └─ View (flex: 1 - zone principale)
+      └─ Liste/Tableau (NE BOUGE PAS)
+```
+
+**Exemple complet:**
+```tsx
+// app/(admin)/menu.tsx
+import { KeyboardSafeFormView } from '~/components/Keyboard';
+
+export default function MenuPage() {
+  return (
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      {/* Panneau de filtres - GÈRE le keyboard */}
+      <SidePanel width={width / 4}>
+        <KeyboardSafeFormView
+          role="FILTER"
+          behavior="padding"
+          keyboardVerticalOffset={200}
+          style={{ flex: 1 }}
+        >
+          <MenuFilters />
+        </KeyboardSafeFormView>
+      </SidePanel>
+
+      {/* Zone principale - NE BOUGE PAS */}
+      <View style={{ flex: 1 }}>
+        <ForkTable data={items} />
+      </View>
+    </View>
+  );
+}
+```
+
+**Pourquoi ça fonctionne :**
+1. **SidePanel a une width fixe** → ne peut pas déborder sur la zone adjacente
+2. **KeyboardAvoidingView est À L'INTÉRIEUR** du SidePanel → affecte seulement ce conteneur
+3. **Zone principale dans un View séparé** avec `flex: 1` → totalement isolé
+4. **Architecture row** : Les enfants d'une row sont indépendants visuellement
+
+**Écrans utilisant Pattern C:**
+- `app/(admin)/menu.tsx` - Configuration menu avec filtres latéraux
+- `app/(admin)/room/index.tsx` - Gestion de salles avec filtres latéraux
 
 ---
 
@@ -194,6 +254,7 @@ Le module utilise un système de **rôles** pour adapter automatiquement les off
 | `AUTH` | 20px | 30px | ✅ (Android 11+) | Login, PIN |
 | `ADMIN` | 60px | 50px | ✅ (Android 11+) | Forms admin |
 | `SERVER` | 60px | 50px | ✅ (Android 11+) | Prise de commande |
+| `FILTER` | 200px | 50px | ✅ (Android 11+) | Panneaux de filtres latéraux |
 | `COOK` | 20px | 20px | ❌ | Interface cuisine (read-only) |
 | `BARMAN` | 20px | 20px | ❌ | Interface bar (boutons) |
 | `DEFAULT` | 0px | 0px | ❌ | Fallback |
@@ -244,6 +305,18 @@ import { KeyboardSafeFormView } from '~/components/Keyboard';
 - [ ] Formulaires complexes (création/édition)
 
 **Exemple type:** Formulaire de création d'utilisateur avec 15+ champs
+
+---
+
+### ✅ Utiliser Pattern C (Filter) si:
+
+- [ ] Inputs dans un panneau latéral (SidePanel)
+- [ ] Zone principale adjacente qui ne doit pas bouger
+- [ ] Structure en row (deux zones côte à côte)
+- [ ] Filtres de recherche ou configuration
+- [ ] Le panneau a une width fixe
+
+**Exemple type:** Panneau de filtres latéral avec liste de résultats adjacente
 
 ---
 

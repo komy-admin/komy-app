@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
   filterContent: {
     padding: 16,
     gap: 16,
-    paddingBottom: Platform.OS === 'android' ? 120 : 60,
   },
   filterGroup: {
     gap: 8,

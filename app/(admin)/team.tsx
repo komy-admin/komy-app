@@ -2,6 +2,7 @@ import { View, ScrollView, useWindowDimensions, Text } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
+import { KeyboardSafeFormView } from "~/components/Keyboard";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
@@ -283,11 +284,18 @@ export default function TeamPage() {
           isCollapsed={isPanelCollapsed}
           onCollapsedChange={setIsPanelCollapsed}
         >
-          <TeamFilters
-            filters={teamFilters}
-            onFiltersChange={handleFiltersChange}
-            onClearFilters={handleClearFilters}
-          />
+          <KeyboardSafeFormView
+            role="FILTER"
+            behavior="padding"
+            keyboardVerticalOffset={200}
+            style={{ flex: 1 }}
+          >
+            <TeamFilters
+              filters={teamFilters}
+              onFiltersChange={handleFiltersChange}
+              onClearFilters={handleClearFilters}
+            />
+          </KeyboardSafeFormView>
         </SidePanel>
 
         <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

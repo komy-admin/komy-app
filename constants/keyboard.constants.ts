@@ -32,6 +32,10 @@ export const KEYBOARD_OFFSETS = {
     vertical: 60,
     bottom: 50,
   },
+  FILTER: {
+    vertical: 200,
+    bottom: 50,
+  },
   COOK: {
     vertical: 20,
     bottom: 20,

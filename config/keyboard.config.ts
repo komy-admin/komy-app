@@ -90,6 +90,19 @@ const BARMAN_CONFIG: KeyboardConfig = {
 };
 
 /**
+ * Filter panels configuration
+ * Side panels with search/filter inputs
+ */
+const FILTER_CONFIG: KeyboardConfig = {
+  role: 'FILTER',
+  behavior: KEYBOARD_BEHAVIOR.PADDING,
+  verticalOffset: KEYBOARD_OFFSETS.FILTER.vertical,
+  bottomOffset: KEYBOARD_OFFSETS.FILTER.bottom,
+  enableGestureDismiss: isInteractiveDismissSupported(),
+  enableDebug: __DEV__,
+};
+
+/**
  * Configuration registry
  */
 export const KEYBOARD_CONFIGS: Record<UserRole, KeyboardConfig> = {
@@ -97,6 +110,7 @@ export const KEYBOARD_CONFIGS: Record<UserRole, KeyboardConfig> = {
   AUTH: AUTH_CONFIG,
   SERVER: SERVER_CONFIG,
   ADMIN: ADMIN_CONFIG,
+  FILTER: FILTER_CONFIG,
   COOK: COOK_CONFIG,
   BARMAN: BARMAN_CONFIG,
 };

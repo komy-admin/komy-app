@@ -180,11 +180,7 @@ const styles = StyleSheet.create({
     }),
   },
   content: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRightWidth: 1,
     borderRightColor: '#E5E7EB',
