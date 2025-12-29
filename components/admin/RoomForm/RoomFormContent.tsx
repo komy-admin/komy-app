@@ -43,13 +43,13 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
 
       case 'width':
         if (!formData.width) return 'La largeur est obligatoire';
-        if (formData.width < 5) return 'La largeur minimum est de 5';
+        if (formData.width < 15) return 'La largeur minimum est de 15';
         if (formData.width > 50) return 'La largeur maximum est de 50';
         return null;
 
       case 'height':
         if (!formData.height) return 'La hauteur est obligatoire';
-        if (formData.height < 5) return 'La hauteur minimum est de 5';
+        if (formData.height < 15) return 'La hauteur minimum est de 15';
         if (formData.height > 50) return 'La hauteur maximum est de 50';
         return null;
 
@@ -82,11 +82,11 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
     // Name required (min 2 characters)
     if (!formData.name.trim() || formData.name.trim().length < 2) return false;
 
-    // Width required (5-50)
-    if (!formData.width || formData.width < 5 || formData.width > 50) return false;
+    // Width required (15-50)
+    if (!formData.width || formData.width < 15 || formData.width > 50) return false;
 
-    // Height required (5-50)
-    if (!formData.height || formData.height < 5 || formData.height > 50) return false;
+    // Height required (15-50)
+    if (!formData.height || formData.height < 15 || formData.height > 50) return false;
 
     return true;
   };
@@ -164,62 +164,65 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
             )}
           </View>
 
-          {/* Width */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Largeur (en unités) *</Text>
-            <Text style={styles.formHelpText}>
-              Largeur de la salle pour la visualisation (5-50)
-            </Text>
-            <NumberInput
-              value={formData.width}
-              onChangeText={(value) => {
-                markFieldAsTouched('width');
-                setFormData(prev => ({ ...prev, width: value || 15 }));
-              }}
-              placeholder="Largeur (5-50)"
-              decimalPlaces={0}
-              min={5}
-              max={50}
-              style={[
-                styles.formInput,
-                getFieldError('width') && styles.formInputError
-              ]}
-            />
-            {getFieldError('width') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('width')}</Text>
-                <Text style={styles.exampleText}>Valeur recommandée : 15-30 unités</Text>
-              </View>
-            )}
-          </View>
+          {/* Dimensions Row */}
+          <View style={styles.dimensionsRow}>
+            {/* Width */}
+            <View style={[styles.formGroup, styles.dimensionField]}>
+              <Text style={styles.formLabel}>Largeur *</Text>
+              <Text style={styles.formHelpText}>
+                Largeur de la salle (15-50)
+              </Text>
+              <NumberInput
+                value={formData.width}
+                onChangeText={(value) => {
+                  markFieldAsTouched('width');
+                  setFormData(prev => ({ ...prev, width: value || 15 }));
+                }}
+                placeholder="Largeur (15-50)"
+                decimalPlaces={0}
+                min={15}
+                max={50}
+                style={[
+                  styles.formInput,
+                  getFieldError('width') && styles.formInputError
+                ]}
+              />
+              {getFieldError('width') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('width')}</Text>
+                  <Text style={styles.exampleText}>Recommandé : 15-30</Text>
+                </View>
+              )}
+            </View>
 
-          {/* Height */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Hauteur (en unités) *</Text>
-            <Text style={styles.formHelpText}>
-              Hauteur de la salle pour la visualisation (5-50)
-            </Text>
-            <NumberInput
-              value={formData.height}
-              onChangeText={(value) => {
-                markFieldAsTouched('height');
-                setFormData(prev => ({ ...prev, height: value || 15 }));
-              }}
-              placeholder="Hauteur (5-50)"
-              decimalPlaces={0}
-              min={5}
-              max={50}
-              style={[
-                styles.formInput,
-                getFieldError('height') && styles.formInputError
-              ]}
-            />
-            {getFieldError('height') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('height')}</Text>
-                <Text style={styles.exampleText}>Valeur recommandée : 15-30 unités</Text>
-              </View>
-            )}
+            {/* Height */}
+            <View style={[styles.formGroup, styles.dimensionField]}>
+              <Text style={styles.formLabel}>Hauteur *</Text>
+              <Text style={styles.formHelpText}>
+                Hauteur de la salle (15-50)
+              </Text>
+              <NumberInput
+                value={formData.height}
+                onChangeText={(value) => {
+                  markFieldAsTouched('height');
+                  setFormData(prev => ({ ...prev, height: value || 15 }));
+                }}
+                placeholder="Hauteur (15-50)"
+                decimalPlaces={0}
+                min={15}
+                max={50}
+                style={[
+                  styles.formInput,
+                  getFieldError('height') && styles.formInputError
+                ]}
+              />
+              {getFieldError('height') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('height')}</Text>
+                  <Text style={styles.exampleText}>Recommandé : 15-30</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Info Card */}
@@ -286,6 +289,14 @@ const styles = StyleSheet.create({
     color: '#2A2E33',
   },
   formGroup: {
+    marginBottom: 20,
+  },
+  dimensionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dimensionField: {
+    flex: 1,
     marginBottom: 20,
   },
   formLabel: {
