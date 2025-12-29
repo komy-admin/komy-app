@@ -261,7 +261,7 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
         <ScrollView
           style={{ flex: 1, marginTop: 20 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20}}
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={Platform.OS === 'android'}
           scrollEventThrottle={16}
@@ -288,159 +288,162 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
             </View>
           </View>
 
-          {/* Prénom */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Prénom *</Text>
-            <TextInput
-              value={formData.firstName}
-              onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
-              onBlur={() => markFieldAsTouched('firstName')}
-              placeholder="Prénom"
-              placeholderTextColor="#A0A0A0"
-              style={[
-                styles.formInput,
-                getFieldError('firstName') && styles.formInputError
-              ]}
-              autoComplete="off"
-            />
-            {getFieldError('firstName') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('firstName')}</Text>
-                <Text style={styles.exampleText}>Exemple : Jean, Marie, Pierre</Text>
-              </View>
-            )}
+          {/* Prénom + Nom */}
+          <View style={styles.formRow}>
+            <View style={styles.formGroupInRow}>
+              <Text style={styles.formLabel}>Prénom *</Text>
+              <TextInput
+                value={formData.firstName}
+                onChangeText={(text: string) => setFormData(prev => ({ ...prev, firstName: text }))}
+                onBlur={() => markFieldAsTouched('firstName')}
+                placeholder="Prénom"
+                placeholderTextColor="#A0A0A0"
+                style={[
+                  styles.formInput,
+                  getFieldError('firstName') && styles.formInputError
+                ]}
+                autoComplete="off"
+              />
+              {getFieldError('firstName') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('firstName')}</Text>
+                  <Text style={styles.exampleText}>Ex: Jean, Marie</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.formGroupInRow}>
+              <Text style={styles.formLabel}>Nom *</Text>
+              <TextInput
+                value={formData.lastName}
+                onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
+                onBlur={() => markFieldAsTouched('lastName')}
+                placeholder="Nom"
+                placeholderTextColor="#A0A0A0"
+                style={[
+                  styles.formInput,
+                  getFieldError('lastName') && styles.formInputError
+                ]}
+                autoComplete="off"
+              />
+              {getFieldError('lastName') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('lastName')}</Text>
+                  <Text style={styles.exampleText}>Ex: Dupont, Martin</Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Nom */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Nom *</Text>
-            <TextInput
-              value={formData.lastName}
-              onChangeText={(text: string) => setFormData(prev => ({ ...prev, lastName: text }))}
-              onBlur={() => markFieldAsTouched('lastName')}
-              placeholder="Nom"
-              placeholderTextColor="#A0A0A0"
-              style={[
-                styles.formInput,
-                getFieldError('lastName') && styles.formInputError
-              ]}
-              autoComplete="off"
-            />
-            {getFieldError('lastName') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('lastName')}</Text>
-                <Text style={styles.exampleText}>Exemple : Dupont, Martin, Bernard</Text>
-              </View>
-            )}
+          {/* Email + Téléphone */}
+          <View style={styles.formRow}>
+            <View style={styles.formGroupInRow}>
+              <Text style={styles.formLabel}>Email *</Text>
+              <TextInput
+                value={formData.email}
+                onChangeText={(text: string) => setFormData(prev => ({ ...prev, email: text }))}
+                onBlur={() => markFieldAsTouched('email')}
+                placeholder="Email"
+                placeholderTextColor="#A0A0A0"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={[
+                  styles.formInput,
+                  getFieldError('email') && styles.formInputError
+                ]}
+                autoComplete="off"
+                {...(Platform.OS === 'web' ? {
+                  autoFill: 'off',
+                  'data-form-type': 'other',
+                } : {})}
+              />
+              {getFieldError('email') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('email')}</Text>
+                  <Text style={styles.exampleText}>Ex: jean@restaurant.fr</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.formGroupInRow}>
+              <Text style={styles.formLabel}>Téléphone</Text>
+              <TextInput
+                value={formData.phone}
+                onChangeText={(text: string) => setFormData(prev => ({ ...prev, phone: text }))}
+                onBlur={() => markFieldAsTouched('phone')}
+                placeholder="Téléphone (optionnel)"
+                placeholderTextColor="#A0A0A0"
+                keyboardType="phone-pad"
+                style={[
+                  styles.formInput,
+                  getFieldError('phone') && styles.formInputError
+                ]}
+                autoComplete="off"
+              />
+              {getFieldError('phone') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('phone')}</Text>
+                  <Text style={styles.exampleText}>Ex: 0612345678</Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Email */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Email *</Text>
-            <TextInput
-              value={formData.email}
-              onChangeText={(text: string) => setFormData(prev => ({ ...prev, email: text }))}
-              onBlur={() => markFieldAsTouched('email')}
-              placeholder="Email"
-              placeholderTextColor="#A0A0A0"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={[
-                styles.formInput,
-                getFieldError('email') && styles.formInputError
-              ]}
-              autoComplete="off"
-              {...(Platform.OS === 'web' ? {
-                autoFill: 'off',
-                'data-form-type': 'other',
-              } : {})}
-            />
-            {getFieldError('email') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('email')}</Text>
-                <Text style={styles.exampleText}>Exemple : jean.dupont@restaurant.fr</Text>
-              </View>
-            )}
-          </View>
+          {/* Identifiant + Mot de passe */}
+          <View style={styles.formRow}>
+            <View style={styles.formGroupInRow}>
+              <Text style={styles.formLabel}>Identifiant *</Text>
+              <TextInput
+                value={formData.loginId}
+                onChangeText={(text: string) => setFormData(prev => ({ ...prev, loginId: text }))}
+                onBlur={() => markFieldAsTouched('loginId')}
+                placeholder="Identifiant"
+                placeholderTextColor="#A0A0A0"
+                autoCapitalize="none"
+                style={[
+                  styles.formInput,
+                  getFieldError('loginId') && styles.formInputError
+                ]}
+                autoComplete="off"
+                {...(Platform.OS === 'web' ? {
+                  autoFill: 'off',
+                  'data-form-type': 'other',
+                } : {})}
+              />
+              {getFieldError('loginId') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('loginId')}</Text>
+                  <Text style={styles.exampleText}>Ex: jdupont, chef01</Text>
+                </View>
+              )}
+            </View>
 
-          {/* Téléphone */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Téléphone</Text>
-            <TextInput
-              value={formData.phone}
-              onChangeText={(text: string) => setFormData(prev => ({ ...prev, phone: text }))}
-              onBlur={() => markFieldAsTouched('phone')}
-              placeholder="Téléphone (optionnel)"
-              placeholderTextColor="#A0A0A0"
-              keyboardType="phone-pad"
-              style={[
-                styles.formInput,
-                getFieldError('phone') && styles.formInputError
-              ]}
-              autoComplete="off"
-            />
-            {getFieldError('phone') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('phone')}</Text>
-                <Text style={styles.exampleText}>Exemple : 0612345678, +33612345678</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Identifiant */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Identifiant *</Text>
-            <TextInput
-              value={formData.loginId}
-              onChangeText={(text: string) => setFormData(prev => ({ ...prev, loginId: text }))}
-              onBlur={() => markFieldAsTouched('loginId')}
-              placeholder="Identifiant"
-              placeholderTextColor="#A0A0A0"
-              autoCapitalize="none"
-              style={[
-                styles.formInput,
-                getFieldError('loginId') && styles.formInputError
-              ]}
-              autoComplete="off"
-              {...(Platform.OS === 'web' ? {
-                autoFill: 'off',
-                'data-form-type': 'other',
-              } : {})}
-            />
-            {getFieldError('loginId') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('loginId')}</Text>
-                <Text style={styles.exampleText}>Exemple : jdupont, chef01, serveur_jean</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Mot de passe */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Mot de passe {!user && '*'}</Text>
-            <TextInput
-              value={formData.password}
-              onChangeText={handlePasswordChange}
-              onBlur={() => markFieldAsTouched('password')}
-              placeholder={user ? "Modifier le mot de passe" : "Mot de passe"}
-              placeholderTextColor="#A0A0A0"
-              secureTextEntry
-              style={[
-                styles.formInput,
-                getFieldError('password') && styles.formInputError
-              ]}
-              autoComplete="new-password"
-              {...(Platform.OS === 'web' ? {
-                autoFill: 'off',
-                'data-form-type': 'other',
-              } : {})}
-            />
-            {getFieldError('password') && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('password')}</Text>
-                <Text style={styles.exampleText}>Minimum 8 caractères (lettres, chiffres, symboles)</Text>
-              </View>
-            )}
+            <View style={styles.formGroupInRow}>
+              <Text style={styles.formLabel}>Mot de passe {!user && '*'}</Text>
+              <TextInput
+                value={formData.password}
+                onChangeText={handlePasswordChange}
+                onBlur={() => markFieldAsTouched('password')}
+                placeholder={user ? "Modifier le mot de passe" : "Mot de passe"}
+                placeholderTextColor="#A0A0A0"
+                secureTextEntry
+                style={[
+                  styles.formInput,
+                  getFieldError('password') && styles.formInputError
+                ]}
+                autoComplete="new-password"
+                {...(Platform.OS === 'web' ? {
+                  autoFill: 'off',
+                  'data-form-type': 'other',
+                } : {})}
+              />
+              {getFieldError('password') && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{getFieldError('password')}</Text>
+                  <Text style={styles.exampleText}>Min 8 caractères</Text>
+                </View>
+              )}
+            </View>
           </View>
         </ScrollView>
       </KeyboardSafeFormView>
@@ -485,6 +488,14 @@ const styles = StyleSheet.create({
   },
   formGroup: {
     marginBottom: 20,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  formGroupInRow: {
+    flex: 1,
   },
   sectionHeader: {
     flexDirection: 'row',
