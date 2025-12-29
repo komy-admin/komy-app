@@ -4,7 +4,7 @@ import {
   MenuCategoryFormData,
   LocalMenuCategoryItem,
   CategoryItemFormData
-} from '~/components/Menu/MenuEditor/MenuEditor.types';
+} from '@/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';

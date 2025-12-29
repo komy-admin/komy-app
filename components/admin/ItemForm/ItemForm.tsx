@@ -7,7 +7,7 @@ import { ItemType } from '~/types/item-type.types';
 import { Tag } from '~/types/tag.types';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { useToast } from '~/components/ToastProvider';
-import { AdminFormRef, AdminFormData } from '~/components/admin/AdminFormView';
+import { AdminFormRef, AdminFormData } from '@/components/admin/AdminForm/AdminFormView';
 import { SectionHeader } from '~/components/admin/SectionHeader';
 import { FileText, Tags } from 'lucide-react-native';
 import { centsToEuros, eurosToCents } from '~/lib/utils';
@@ -21,7 +21,7 @@ interface MenuFormProps {
   activeTab: string;
 }
 
-export const MenuForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
+export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
   item,
   itemTypes,
   tags,

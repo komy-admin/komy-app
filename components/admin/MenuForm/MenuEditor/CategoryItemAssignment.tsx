@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Plus, Package } from 'lucide-react-native';
-import { LocalMenuCategoryItem } from './MenuEditor.types';
+import { LocalMenuCategoryItem } from '~/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 import { Item } from '~/types/item.types';
 import { IconButton } from '~/components/ui/IconButton';
 

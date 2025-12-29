@@ -2,7 +2,7 @@ import { ScrollView } from 'react-native';
 import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
-import { AdminFormRef, AdminConfirmationContext } from '~/components/admin/AdminFormView';
+import { AdminFormRef, AdminConfirmationContext } from '@/components/admin/AdminForm/AdminFormView';
 
 export interface MenuEditorProps {
   menu?: Menu | null;

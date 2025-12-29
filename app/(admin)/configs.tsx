@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { ConfigSidebar } from '~/components/admin/ConfigSideBar';
 import PersonalInfoPage from '~/components/config/personal';

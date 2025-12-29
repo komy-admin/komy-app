@@ -3,7 +3,7 @@ import { View, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { FileText } from 'lucide-react-native';
 import { Text } from '~/components/ui';
 import { SectionHeader } from '~/components/admin/SectionHeader';
-import { MenuFormData } from './MenuEditor.types';
+import { MenuFormData } from '~/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 
 interface MenuBasicInfoProps {
   formData: MenuFormData;

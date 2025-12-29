@@ -27,9 +27,9 @@
 
 import React, { useRef } from 'react';
 import { ScrollView } from 'react-native';
-import { AdminFormLayout } from './AdminFormLayout';
-import { AdminFormView, AdminFormViewRef } from './AdminFormView';
-import { MenuEditor } from '~/components/Menu/MenuEditor';
+import { AdminFormLayout } from '~/components/admin/AdminForm/AdminFormLayout';
+import { AdminFormView, AdminFormViewRef } from '../AdminForm/AdminFormView';
+import { MenuEditor } from '@/components/admin/MenuForm';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';

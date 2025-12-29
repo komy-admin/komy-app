@@ -26,9 +26,9 @@
 
 import React, { useRef } from 'react';
 import { ScrollView } from 'react-native';
-import { AdminFormLayout } from './AdminFormLayout';
-import { AdminFormView, AdminFormViewRef } from './AdminFormView';
-import { MenuForm } from '~/components/form/MenuForm';
+import { AdminFormLayout } from '~/components/admin/AdminForm/AdminFormLayout';
+import { AdminFormView, AdminFormViewRef } from '../AdminForm/AdminFormView';
+import { ItemForm } from '~/components/admin/ItemForm/ItemForm'
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { Tag } from '~/types/tag.types';
@@ -111,7 +111,7 @@ export const ItemFormModal: React.FC<ItemFormModalProps> = ({
           onSave={onSave}
           hideHeaderAndActions={true}
         >
-          <MenuForm item={item} itemTypes={itemTypes} tags={tags} activeTab={activeTab} />
+          <ItemForm item={item} itemTypes={itemTypes} tags={tags} activeTab={activeTab} />
         </AdminFormView>
       </ScrollView>
     </AdminFormLayout>

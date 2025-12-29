@@ -1,22 +1,21 @@
-import { useWindowDimensions, View, ScrollView, Text, Pressable } from "react-native";
+import { useWindowDimensions, View, ScrollView, Text } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
 import { SidePanel } from "~/components/SidePanel";
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Item } from "~/types/item.types";
 import { Menu } from "~/types/menu.types";
-import { MenuForm } from "~/components/form/MenuForm";
 import { useToast } from '~/components/ToastProvider';
-import { useMenu, useRestaurant } from '~/hooks/useRestaurant';
+import { useMenu } from '~/hooks/useRestaurant';
 import { useMenus } from '~/hooks/useMenus';
 import { useTags } from '~/hooks/useTags';
 import { MenuFilters, MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, createEmptyMenuFilters } from '~/utils/menuFilters';
 import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
-import { useAdminFormView } from '~/components/admin/AdminFormView';
+import { useAdminFormView } from '@/components/admin/AdminForm/AdminFormView';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
-import { ItemFormModal } from '~/components/admin/ItemFormModal';
-import { MenuFormModal } from '~/components/admin/MenuFormModal';
+import { ItemFormModal } from '@/components/admin/ItemForm/ItemFormModal';
+import { MenuFormModal } from '@/components/admin/MenuForm/MenuFormModal';
 import { formatPrice } from '~/lib/utils';
 
 export default function MenuPage() {

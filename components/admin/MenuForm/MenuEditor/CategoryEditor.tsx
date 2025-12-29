@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
-import { MenuCategoryFormData } from './MenuEditor.types';
+import { MenuCategoryFormData } from '~/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 import { ItemType } from '~/types/item-type.types';
 import { IconButton } from '~/components/ui/IconButton';
 import { SelectButton } from '~/components/ui/select-button';

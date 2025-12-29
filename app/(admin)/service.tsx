@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View, useWindowDimensions, Platform } from "reac
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Text, Button } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
 import OrderList from "~/components/Service/OrderList";

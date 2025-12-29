@@ -1,6 +1,5 @@
 import { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
 import { ItemGroup } from "~/types/kitchen.types";
 import OrderColumn from '~/components/Kitchen/OrderColumn';

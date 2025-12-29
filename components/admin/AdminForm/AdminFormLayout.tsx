@@ -40,7 +40,7 @@
 
 import React from 'react';
 import { View, Text as RNText, Pressable, StyleSheet, Platform } from 'react-native';
-import { FormHeader } from './FormHeader';
+import { FormHeader } from '~/components/admin/AdminForm/FormHeader';
 import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 export interface AdminFormLayoutProps {

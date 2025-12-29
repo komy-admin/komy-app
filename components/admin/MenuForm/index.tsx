@@ -1,17 +1,17 @@
-import React, { forwardRef, useImperativeHandle, useState, useCallback, useEffect, useMemo } from 'react';
+import { forwardRef, useImperativeHandle, useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { Plus, Settings } from 'lucide-react-native';
 import { Text } from '~/components/ui';
 import { SectionHeader } from '~/components/admin/SectionHeader';
-import { MenuBasicInfo } from './MenuBasicInfo';
-import { CategoryEditor } from './CategoryEditor';
-import { CategoryItemAssignment } from './CategoryItemAssignment';
-import { ItemSelectionPanelContent } from './ItemSelectionPanel';
+import { MenuBasicInfo } from '~/components/admin/MenuForm/MenuEditor/MenuBasicInfo';
+import { CategoryEditor } from '~/components/admin/MenuForm/MenuEditor/CategoryEditor';
+import { CategoryItemAssignment } from '~/components/admin/MenuForm/MenuEditor/CategoryItemAssignment';
+import { ItemSelectionPanelContent } from '~/components/admin/MenuForm/MenuEditor/ItemSelectionPanel';
 import { SlidePanel } from '~/components/ui/SlidePanel';
-import { MenuEditorProps, MenuEditorRef, LocalMenuCategoryItem } from './MenuEditor.types';
+import { MenuEditorProps, MenuEditorRef, LocalMenuCategoryItem } from '~/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 import { useMenuEditor } from '~/hooks/menu/useMenuEditor';
 import { useToast } from '~/components/ToastProvider';
-import { AdminFormData } from '~/components/admin/AdminFormView';
+import { AdminFormData } from '@/components/admin/AdminForm/AdminFormView';
 import { Menu } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 
@@ -286,7 +286,7 @@ export const MenuEditor = forwardRef<MenuEditorRef, MenuEditorProps>(({
 
 MenuEditor.displayName = 'MenuEditor';
 
-export type { MenuEditorProps, MenuEditorRef } from './MenuEditor.types';
+export type { MenuEditorProps, MenuEditorRef } from './MenuEditor/MenuEditor.types';
 
 const styles = StyleSheet.create({
   container: {
