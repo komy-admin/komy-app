@@ -8,7 +8,7 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import { PortalHost } from '@rn-primitives/portal';
 import { store, RootState } from '~/store';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppState, AppStateStatus, Platform } from 'react-native';
+import { AppState, AppStateStatus, Platform, Keyboard, Dimensions } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
@@ -234,6 +234,16 @@ function RootLayoutNav() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Fermer le clavier automatiquement lors d'un changement d'orientation
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', () => {
+      // Dismiss keyboard on orientation change
+      Keyboard.dismiss();
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   if (!fontsLoaded) {
     return null;
