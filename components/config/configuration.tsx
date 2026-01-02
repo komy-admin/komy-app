@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useTags } from '~/hooks/useTags';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
-import { useScrollToTop } from '~/hooks/useScrollToTop';
-import { ScrollToTopButton } from '~/components/ui/ScrollToTopButton';
 import { ItemType } from '~/types/item-type.types';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { SlidePanel } from '~/components/ui/SlidePanel';
@@ -29,7 +27,6 @@ const getTagFieldTypeLabel = (fieldType: TagFieldType): string => {
 };
 
 export default function ConfigurationRestoPage() {
-  const { height: screenHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<TabType>('item-types');
   const [sidePanelVisible, setSidePanelVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
@@ -319,8 +316,6 @@ interface ItemTypesTabProps {
 }
 
 const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType, onEditItemType, onDeleteItemType }) => {
-  const { scrollViewRef, handleScroll, scrollToTop, isVisible, fadeAnim } = useScrollToTop({ threshold: 80 });
-
   return (
     <View style={styles.tabContent}>
       <View style={styles.tabHeader}>
@@ -335,11 +330,8 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
       </View>
 
       <ScrollView
-        ref={scrollViewRef}
         style={styles.tagsList}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
       >
         {itemTypes.length === 0 ? (
           <View style={styles.emptyState}>
@@ -363,7 +355,6 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
         )}
       </ScrollView>
 
-      <ScrollToTopButton isVisible={isVisible} fadeAnim={fadeAnim} onPress={scrollToTop} />
     </View>
   );
 };
@@ -377,8 +368,6 @@ interface TagsTabProps {
 }
 
 const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDeleteTag }) => {
-  const { scrollViewRef, handleScroll, scrollToTop, isVisible, fadeAnim } = useScrollToTop({ threshold: 80 });
-
   return (
     <View style={styles.tabContent}>
       <View style={styles.tabHeader}>
@@ -393,11 +382,8 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
       </View>
 
       <ScrollView
-        ref={scrollViewRef}
         style={styles.tagsList}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
       >
         {tags.length === 0 ? (
           <View style={styles.emptyState}>
@@ -421,7 +407,6 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
         )}
       </ScrollView>
 
-      <ScrollToTopButton isVisible={isVisible} fadeAnim={fadeAnim} onPress={scrollToTop} />
     </View>
   );
 };
