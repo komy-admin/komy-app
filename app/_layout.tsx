@@ -8,7 +8,7 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import { PortalHost } from '@rn-primitives/portal';
 import { store, RootState } from '~/store';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppState, AppStateStatus, Platform, Keyboard, Dimensions } from 'react-native';
+import { AppState, AppStateStatus, Platform, Keyboard, Dimensions, TouchableWithoutFeedback, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
@@ -249,8 +249,8 @@ function RootLayoutNav() {
     return null;
   }
 
-  return (
-    <SafeAreaView className="flex-1 bg-background">
+  const content = (
+    <View style={{ flex: 1 }}>
       <AuthenticationGate />
       <AppInitializer>
         <Stack screenOptions={{ headerShown: false }}>
@@ -261,6 +261,18 @@ function RootLayoutNav() {
           <Stack.Screen name="(barman)" />
         </Stack>
       </AppInitializer>
+    </View>
+  );
+
+  return (
+    <SafeAreaView className="flex-1 bg-background">
+      {Platform.OS !== 'web' ? (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          {content}
+        </TouchableWithoutFeedback>
+      ) : (
+        content
+      )}
     </SafeAreaView>
   );
 }
