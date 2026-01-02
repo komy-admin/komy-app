@@ -1,11 +1,12 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity, Modal } from 'react-native';
+import { useState, useRef, useCallback, useMemo } from 'react';
+import { View, StyleSheet, Platform, TouchableOpacity, Modal, TextInput as RNTextInput, LayoutChangeEvent } from 'react-native';
 import { TextInput, Text } from '~/components/ui';
 import { ListFilter, Search, X } from 'lucide-react-native';
 import { OrderFilterState } from '~/components/filters/OrderFilters';
 import { FilterTooltip } from './FilterTooltip';
 import { getActiveFiltersCount } from '~/utils/orderFilters';
 
+// Types
 interface SearchBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -14,48 +15,91 @@ interface SearchBarProps {
   onClearFilters: () => void;
 }
 
-export function SearchBar({ 
-  searchQuery, 
-  onSearchChange, 
-  filters, 
-  onFiltersChange, 
-  onClearFilters 
+interface ButtonLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Constantes
+const TOOLTIP_OFFSET = 8;
+const ARROW_TOP_POSITION = 20;
+const ARROW_LEFT_POSITION = -8;
+
+export function SearchBar({
+  searchQuery,
+  onSearchChange,
+  filters,
+  onFiltersChange,
+  onClearFilters
 }: SearchBarProps) {
   const [showFilters, setShowFilters] = useState(false);
-  const [filterButtonLayout, setFilterButtonLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [buttonLayout, setButtonLayout] = useState<ButtonLayout | null>(null);
   const filterButtonRef = useRef<View>(null);
-  const searchInputRef = useRef<any>(null);
+  const searchInputRef = useRef<RNTextInput>(null);
   const activeFiltersCount = useMemo(() => getActiveFiltersCount(filters), [filters]);
 
-  const handleOpenFilters = () => {
-    if (filterButtonRef.current) {
-      filterButtonRef.current.measure((_x: number, _y: number, width: number, height: number, pageX: number, pageY: number) => {
-        setFilterButtonLayout({ x: pageX, y: pageY, width, height });
-        setShowFilters(true);
-      });
+  // Fonction utilitaire pour capturer la position du bouton sur web
+  const captureWebButtonPosition = useCallback(() => {
+    if (Platform.OS === 'web' && filterButtonRef.current) {
+      const element = filterButtonRef.current as any;
+      if (element.getBoundingClientRect) {
+        const rect = element.getBoundingClientRect();
+        setButtonLayout({
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+          height: rect.height
+        });
+      }
     }
-  };
+  }, []);
 
-  const handleCloseFilters = () => {
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    if (Platform.OS === 'web') {
+      // Web: capturer via getBoundingClientRect ou fallback sur nativeEvent
+      captureWebButtonPosition();
+    } else {
+      // Mobile: utiliser measureInWindow
+      const eventTarget = event.target as any;
+      if (eventTarget?.measureInWindow) {
+        eventTarget.measureInWindow((pageX: number, pageY: number, w: number, h: number) => {
+          setButtonLayout({ x: pageX, y: pageY, width: w, height: h });
+        });
+      }
+    }
+  }, [captureWebButtonPosition]);
+
+  const handleOpenFilters = useCallback(() => {
+    // Sur web, toujours capturer la position avant d'ouvrir
+    if (Platform.OS === 'web') {
+      captureWebButtonPosition();
+      // Utiliser setTimeout pour s'assurer que le state est mis à jour avant d'ouvrir
+      setTimeout(() => setShowFilters(true), 0);
+    } else if (buttonLayout) {
+      // Sur mobile, ouvrir seulement si on a la position
+      setShowFilters(true);
+    }
+  }, [buttonLayout, captureWebButtonPosition]);
+
+  const handleCloseFilters = useCallback(() => {
     setShowFilters(false);
-  };
+  }, []);
 
   const handleClearSearch = useCallback(() => {
     onSearchChange('');
   }, [onSearchChange]);
 
   const handleContainerPress = useCallback(() => {
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
+    searchInputRef.current?.focus();
   }, []);
-
 
   return (
     <>
       <View style={styles.container}>
         {/* Champ de recherche */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.searchContainer}
           onPress={handleContainerPress}
           activeOpacity={1}
@@ -104,45 +148,44 @@ export function SearchBar({
           )}
         </TouchableOpacity>
 
-        {/* Bouton filtres (à droite) */}
-        <TouchableOpacity
-          ref={filterButtonRef}
-          style={[
-            styles.iconButton,
-            activeFiltersCount > 0 && {
-              borderColor: '#2A2E33',
-              backgroundColor: '#FFFFFF',
-            }
-          ]}
-          onPress={handleOpenFilters}
-          activeOpacity={0.7}
-        >
-          <ListFilter 
-            size={18} 
-            color="#374151" 
-            strokeWidth={1.5} 
-          />
-          {activeFiltersCount > 0 && (
-            <View style={styles.badge}>
-              <Text 
-                style={[
-                  styles.badgeText,
-                  Platform.select({
-                    web: {
-                      fontSize: 11,
-                      lineHeight: 10,
-                    }
-                  })
-                ]}
-              >
-                {activeFiltersCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Bouton filtres (à droite) avec Modal */}
+        <View onLayout={handleLayout} collapsable={false}>
+          <TouchableOpacity
+            ref={filterButtonRef}
+            style={[
+              styles.iconButton,
+              activeFiltersCount > 0 && styles.iconButtonActive
+            ]}
+            onPress={handleOpenFilters}
+            activeOpacity={0.7}
+          >
+            <ListFilter
+              size={18}
+              color="#374151"
+              strokeWidth={1.5}
+            />
+            {activeFiltersCount > 0 && (
+              <View style={styles.badge}>
+                <Text
+                  style={[
+                    styles.badgeText,
+                    Platform.select({
+                      web: {
+                        fontSize: 11,
+                        lineHeight: 10,
+                      }
+                    })
+                  ]}
+                >
+                  {activeFiltersCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Infobulle de filtres à droite de l'icône */}
+      {/* Modal avec tooltip de filtres */}
       {showFilters && (
         <Modal
           visible={showFilters}
@@ -155,13 +198,15 @@ export function SearchBar({
             activeOpacity={1}
             onPress={handleCloseFilters}
           >
-            <View style={[
-              styles.tooltipContainer,
-              filterButtonLayout && {
-                top: filterButtonLayout.y - 8,
-                left: filterButtonLayout.x + filterButtonLayout.width + 8,
-              }
-            ]}>
+            <View
+              style={[
+                styles.tooltipContainer,
+                buttonLayout && {
+                  top: buttonLayout.y,
+                  left: buttonLayout.x + buttonLayout.width + TOOLTIP_OFFSET,
+                }
+              ]}
+            >
               <TouchableOpacity activeOpacity={1}>
                 <View style={styles.tooltip}>
                   {/* Flèche pointant vers le bouton filtres */}
@@ -322,13 +367,13 @@ const styles = StyleSheet.create({
   },
   tooltipArrow: {
     position: 'absolute',
-    top: 20,
-    left: -8,
+    top: ARROW_TOP_POSITION,
+    left: ARROW_LEFT_POSITION,
     width: 0,
     height: 0,
-    borderTopWidth: 8,
-    borderBottomWidth: 8,
-    borderRightWidth: 8,
+    borderTopWidth: TOOLTIP_OFFSET,
+    borderBottomWidth: TOOLTIP_OFFSET,
+    borderRightWidth: TOOLTIP_OFFSET,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     borderRightColor: '#FFFFFF',
