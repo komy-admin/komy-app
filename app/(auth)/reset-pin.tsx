@@ -14,6 +14,7 @@ import { useDispatch } from 'react-redux';
 import { sessionActions } from '~/store';
 import { storageService } from '~/lib/storageService';
 import * as Haptics from 'expo-haptics';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 export default function ResetPinScreen() {
   const [pin, setPin] = useState('');
@@ -114,7 +115,7 @@ export default function ResetPinScreen() {
       // If token is invalid or expired
       if (error.response?.status === 400 || error.response?.status === 404) {
         setTimeout(() => {
-          router.replace('/forgot-pin');
+          router.replace('/forgot-credentials?type=pin');
         }, 2000);
       }
     } finally {
@@ -135,63 +136,76 @@ export default function ResetPinScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardSafeFormView
+        role="AUTH"
+        behavior="padding"
+        keyboardVerticalOffset={150}
+        style={styles.keyboardView}
       >
-        <View style={styles.contentContainer}>
-          <View style={styles.headerContainer}>
-            <RNText style={styles.title}>
-              {step === 'enter' ? 'Nouveau code PIN' : 'Confirmer le code PIN'}
-            </RNText>
-            <Text style={styles.subtitle}>
-              {step === 'enter'
-                ? 'Créez un nouveau code PIN à 4 chiffres'
-                : 'Entrez à nouveau votre code PIN pour confirmer'}
-            </Text>
-          </View>
-
-          <View style={styles.pinContainer}>
-            <PinInput
-              value={step === 'enter' ? pin : confirmPin}
-              onChange={step === 'enter' ? setPin : setConfirmPin}
-              onComplete={handlePinComplete}
-              error={error}
-              disabled={isLoading}
-              autoFocus
-              secure={false} // Show digits for setup
-            />
-          </View>
-
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
-                Les codes PIN ne correspondent pas. Veuillez réessayer.
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={Platform.OS === 'android'}
+          scrollEventThrottle={16}
+          overScrollMode="never"
+          bounces={false}
+          directionalLockEnabled={true}
+        >
+          <View style={styles.contentContainer}>
+            <View style={styles.headerContainer}>
+              <RNText style={styles.title}>
+                {step === 'enter' ? 'Nouveau code PIN' : 'Confirmer le code PIN'}
+              </RNText>
+              <Text style={styles.subtitle}>
+                {step === 'enter'
+                  ? 'Créez un nouveau code PIN à 4 chiffres'
+                  : 'Entrez à nouveau votre code PIN pour confirmer'}
               </Text>
             </View>
-          )}
 
-          <View style={styles.buttonContainer}>
-            <Button
-              variant="outline"
-              onPress={handleBack}
-              disabled={isLoading}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>
-                {step === 'confirm' ? 'Retour' : 'Annuler'}
+            <View style={styles.pinContainer}>
+              <PinInput
+                value={step === 'enter' ? pin : confirmPin}
+                onChange={step === 'enter' ? setPin : setConfirmPin}
+                onComplete={handlePinComplete}
+                error={error}
+                disabled={isLoading}
+                autoFocus
+                secure={false} // Show digits for setup
+              />
+            </View>
+
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>
+                  Les codes PIN ne correspondent pas. Veuillez réessayer.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.buttonContainer}>
+              <Button
+                variant="outline"
+                onPress={handleBack}
+                disabled={isLoading}
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelButtonText}>
+                  {step === 'confirm' ? 'Retour' : 'Annuler'}
+                </Text>
+              </Button>
+            </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>
+                ℹ️ Mémorisez bien ce nouveau code PIN. Il remplacera votre ancien code.
               </Text>
-            </Button>
+            </View>
           </View>
-
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>
-              ℹ️ Mémorisez bien ce nouveau code PIN. Il remplacera votre ancien code.
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardSafeFormView>
     </View>
   );
 }
@@ -201,14 +215,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  keyboardView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-    minHeight: '100%',
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   contentContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 60,
     maxWidth: 480,

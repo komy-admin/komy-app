@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   StyleSheet,
   Platform,
   Text as RNText,
-  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
-import { Button, Text, TextInput } from '~/components/ui';
+import { Button, TextInput } from '~/components/ui';
 import { authApiService } from '~/api/auth.api';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Mail } from 'lucide-react-native';
+import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 type CredentialType = 'pin' | 'password';
 
@@ -59,11 +60,9 @@ export default function ForgotCredentialsScreen() {
   };
 
   const handleBack = () => {
-    if (isPin) {
-      router.back();
-    } else {
-      router.replace('/login');
-    }
+    // Always redirect to a specific route instead of router.back()
+    // to avoid "GO_BACK" navigation errors on web
+    router.replace('/login');
   };
 
   const handleNewRequest = () => {
@@ -72,31 +71,27 @@ export default function ForgotCredentialsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <AuthScreenLayout>
+      <View style={styles.fullWrapper}>
         <View style={styles.contentContainer}>
-          <Button
-            variant="ghost"
+          <TouchableOpacity
             onPress={handleBack}
             style={styles.backButton}
+            activeOpacity={0.7}
           >
             <ChevronLeft size={24} color="#1F2937" />
-            <Text style={styles.backButtonText}>Retour</Text>
-          </Button>
+            <RNText style={styles.backButtonText}>Retour</RNText>
+          </TouchableOpacity>
 
           <View style={styles.headerContainer}>
             <RNText style={styles.title}>
               {title}
             </RNText>
-            <Text style={styles.subtitle}>
+            <RNText style={styles.subtitle}>
               {isSubmitted
                 ? `Un email de réinitialisation a été envoyé`
                 : subtitle}
-            </Text>
+            </RNText>
           </View>
 
           {!isSubmitted ? (
@@ -121,25 +116,28 @@ export default function ForgotCredentialsScreen() {
                 disabled={isLoading || !email}
                 style={styles.submitButton}
               >
-                <Text style={styles.submitButtonText}>
+                <RNText style={styles.submitButtonText}>
                   {isLoading ? 'Envoi en cours...' : 'Envoyer le lien'}
-                </Text>
+                </RNText>
               </Button>
             </>
           ) : (
             <View style={styles.successContainer}>
               <View style={styles.successIcon}>
-                <Text style={styles.successEmoji}>✉️</Text>
+                <Mail size={56} color="#6366F1" strokeWidth={1.5} />
               </View>
 
-              <Text style={styles.successText}>
-                Si un compte existe avec l'adresse email <Text style={styles.emailHighlight}>{email}</Text>,
-                vous recevrez un lien pour réinitialiser votre {isPin ? 'PIN' : 'mot de passe'}.
-              </Text>
+              <View style={styles.successTextContainer}>
+                <RNText style={styles.successText}>
+                  Si un compte existe avec l'adresse email{' '}
+                  <RNText style={styles.emailHighlight}>{email}</RNText>
+                  {', '}vous recevrez un lien pour réinitialiser votre {isPin ? 'PIN' : 'mot de passe'}.
+                </RNText>
+              </View>
 
-              <Text style={styles.successHint}>
+              <RNText style={styles.successHint}>
                 Vérifiez votre boîte de réception et vos spams.
-              </Text>
+              </RNText>
 
               <View style={styles.actionButtons}>
                 <Button
@@ -147,9 +145,9 @@ export default function ForgotCredentialsScreen() {
                   onPress={handleBack}
                   style={[styles.submitButton]}
                 >
-                  <Text style={styles.submitButtonText}>
+                  <RNText style={styles.submitButtonText}>
                     Retour à la connexion
-                  </Text>
+                  </RNText>
                 </Button>
 
                 <Button
@@ -157,40 +155,36 @@ export default function ForgotCredentialsScreen() {
                   onPress={handleNewRequest}
                   style={[styles.submitButton, styles.secondaryButton]}
                 >
-                  <Text style={styles.secondaryButtonText}>
+                  <RNText style={styles.secondaryButtonText}>
                     Nouvel envoi
-                  </Text>
+                  </RNText>
                 </Button>
               </View>
             </View>
           )}
 
           <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>
+            <RNText style={styles.infoText}>
               ℹ️ {isPin
                 ? `Le lien de réinitialisation est valide pendant 1 heure`
                 : `Le lien de réinitialisation est valide pendant 24 heures`}
-            </Text>
+            </RNText>
           </View>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+    </AuthScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  fullWrapper: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContainer: {
-    flexGrow: 1,
     justifyContent: 'center',
-    minHeight: '100%',
   },
   contentContainer: {
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingVertical: 20,
     maxWidth: 480,
     alignSelf: 'center',
     width: '100%',
@@ -202,6 +196,11 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingVertical: 8,
     paddingRight: 16,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+    }),
   },
   backButtonText: {
     fontSize: 16,
@@ -210,7 +209,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
@@ -246,13 +245,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
     elevation: 3,
   },
   submitButtonText: {
@@ -261,20 +253,33 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   successContainer: {
+    width: '100%',
     alignItems: 'center',
   },
   successIcon: {
     marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  successEmoji: {
-    fontSize: 48,
+  successTextContainer: {
+    width: '100%',
+    marginBottom: 12,
   },
   successText: {
     fontSize: 16,
     color: '#1F2937',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 12,
+    ...Platform.select({
+      web: {
+        lineHeight: 24,
+      },
+      ios: {
+        lineHeight: 24,
+      },
+      android: {
+        lineHeight: 24,
+      },
+    }),
   },
   emailHighlight: {
     fontWeight: '600',
@@ -284,15 +289,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 20,
     marginBottom: 32,
+    ...Platform.select({
+      web: {
+        lineHeight: 20,
+      },
+      ios: {
+        lineHeight: 20,
+      },
+      android: {
+        lineHeight: 20,
+      },
+    }),
   },
   actionButtons: {
     width: '100%',
-    gap: 12,
+    ...Platform.select({
+      web: {
+        gap: 12,
+      },
+      default: {
+        // Android & iOS: use marginBottom instead of gap
+      },
+    }),
   },
   secondaryButton: {
-    marginTop: 12,
+    ...Platform.select({
+      web: {
+        marginTop: 0,
+      },
+      default: {
+        marginTop: 12,
+      },
+    }),
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',

@@ -34,7 +34,6 @@ export { ErrorBoundary } from 'expo-router';
 
 import { HOME_ROUTES, PROTECTED_ROUTES, LOGIN_ROUTE, getHomeRoute, ProtectedRoutes } from '~/constants/routes';
 const EXCLUDED_ROUTES = [
-  '/(auth)/forgot-password',
   '/(auth)/reset-password',
   '/(auth)/setup-account',
   '/(auth)/reset-pin',

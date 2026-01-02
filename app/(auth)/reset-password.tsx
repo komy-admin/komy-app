@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { ChevronLeft, Lock, Eye, EyeOff } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -113,119 +114,132 @@ export default function ResetPasswordScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardSafeFormView
+        role="AUTH"
+        behavior="padding"
+        keyboardVerticalOffset={150}
+        style={styles.keyboardView}
       >
-        <View style={styles.contentContainer}>
-          <Button
-            variant="ghost"
-            onPress={handleBack}
-            style={styles.backButton}
-          >
-            <ChevronLeft size={24} color="#1F2937" />
-            <Text style={styles.backButtonText}>Retour</Text>
-          </Button>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={Platform.OS === 'android'}
+          scrollEventThrottle={16}
+          overScrollMode="never"
+          bounces={false}
+          directionalLockEnabled={true}
+        >
+          <View style={styles.contentContainer}>
+            <Button
+              variant="ghost"
+              onPress={handleBack}
+              style={styles.backButton}
+            >
+              <ChevronLeft size={24} color="#1F2937" />
+              <Text style={styles.backButtonText}>Retour</Text>
+            </Button>
 
-          <View style={styles.headerContainer}>
-            <View style={styles.iconContainer}>
-              <Lock size={48} color="#6366F1" />
+            <View style={styles.headerContainer}>
+              <View style={styles.iconContainer}>
+                <Lock size={48} color="#6366F1" />
+              </View>
+              <RNText style={styles.title}>
+                Nouveau mot de passe
+              </RNText>
+              <Text style={styles.subtitle}>
+                Créez un nouveau mot de passe sécurisé pour votre compte
+              </Text>
             </View>
-            <RNText style={styles.title}>
-              Nouveau mot de passe
-            </RNText>
-            <Text style={styles.subtitle}>
-              Créez un nouveau mot de passe sécurisé pour votre compte
-            </Text>
-          </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Mot de passe</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                id="password"
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Entrez votre nouveau mot de passe"
-                secureTextEntry={!showPassword}
-                style={styles.input}
-                placeholderTextColor="#9CA3AF"
-                editable={!isLoading}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <Button
-                variant="ghost"
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color="#6B7280" />
-                ) : (
-                  <Eye size={20} color="#6B7280" />
-                )}
-              </Button>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Mot de passe</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  id="password"
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Entrez votre nouveau mot de passe"
+                  secureTextEntry={!showPassword}
+                  style={styles.input}
+                  placeholderTextColor="#9CA3AF"
+                  editable={!isLoading}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Button
+                  variant="ghost"
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#6B7280" />
+                  ) : (
+                    <Eye size={20} color="#6B7280" />
+                  )}
+                </Button>
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Confirmer le mot de passe</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirmez votre nouveau mot de passe"
+                  secureTextEntry={!showConfirmPassword}
+                  style={styles.input}
+                  placeholderTextColor="#9CA3AF"
+                  editable={!isLoading}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Button
+                  variant="ghost"
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeButton}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} color="#6B7280" />
+                  ) : (
+                    <Eye size={20} color="#6B7280" />
+                  )}
+                </Button>
+              </View>
+            </View>
+
+            <View style={styles.requirementsContainer}>
+              <Text style={styles.requirementsTitle}>Le mot de passe doit :</Text>
+              <Text style={[styles.requirement, password.length >= 6 && styles.requirementMet]}>
+                • Contenir au moins 6 caractères
+              </Text>
+              <Text style={[styles.requirement, password === confirmPassword && password.length > 0 && styles.requirementMet]}>
+                • Correspondre à la confirmation
+              </Text>
+            </View>
+
+            <Button
+              variant="default"
+              onPress={handleResetPassword}
+              disabled={isLoading || !password || !confirmPassword}
+              style={styles.submitButton}
+            >
+              <Text style={styles.submitButtonText}>
+                {isLoading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
+              </Text>
+            </Button>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>
+                ℹ️ Après la réinitialisation, vous devrez vous connecter avec votre nouveau mot de passe.
+              </Text>
             </View>
           </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirmer le mot de passe</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                id="confirmPassword"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Confirmez votre nouveau mot de passe"
-                secureTextEntry={!showConfirmPassword}
-                style={styles.input}
-                placeholderTextColor="#9CA3AF"
-                editable={!isLoading}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <Button
-                variant="ghost"
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeButton}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color="#6B7280" />
-                ) : (
-                  <Eye size={20} color="#6B7280" />
-                )}
-              </Button>
-            </View>
-          </View>
-
-          <View style={styles.requirementsContainer}>
-            <Text style={styles.requirementsTitle}>Le mot de passe doit :</Text>
-            <Text style={[styles.requirement, password.length >= 6 && styles.requirementMet]}>
-              • Contenir au moins 6 caractères
-            </Text>
-            <Text style={[styles.requirement, password === confirmPassword && password.length > 0 && styles.requirementMet]}>
-              • Correspondre à la confirmation
-            </Text>
-          </View>
-
-          <Button
-            variant="default"
-            onPress={handleResetPassword}
-            disabled={isLoading || !password || !confirmPassword}
-            style={styles.submitButton}
-          >
-            <Text style={styles.submitButtonText}>
-              {isLoading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
-            </Text>
-          </Button>
-
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>
-              ℹ️ Après la réinitialisation, vous devrez vous connecter avec votre nouveau mot de passe.
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardSafeFormView>
     </View>
   );
 }
@@ -235,10 +249,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  keyboardView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-    minHeight: '100%',
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   contentContainer: {
     paddingHorizontal: 24,
