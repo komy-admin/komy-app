@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useTags } from '~/hooks/useTags';
@@ -29,7 +29,6 @@ const getTagFieldTypeLabel = (fieldType: TagFieldType): string => {
 };
 
 export default function ConfigurationRestoPage() {
-  const { height: screenHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<TabType>('item-types');
   const [sidePanelVisible, setSidePanelVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
@@ -46,6 +45,8 @@ export default function ConfigurationRestoPage() {
     teamEnabled,
     kitchenEnabled,
     barEnabled,
+    kitchenViewMode,
+    barViewMode,
     updateConfig,
     isLoading: configLoading
   } = useAccountConfig();
@@ -245,7 +246,7 @@ export default function ConfigurationRestoPage() {
             <Eye size={20} color={activeTab === 'views' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
             {!isCompactSidebar && (
               <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
-                Activation modules
+                Gestion Module
               </Text>
             )}
           </TouchableOpacity>
@@ -274,6 +275,8 @@ export default function ConfigurationRestoPage() {
               teamEnabled={teamEnabled}
               kitchenEnabled={kitchenEnabled}
               barEnabled={barEnabled}
+              kitchenViewMode={kitchenViewMode}
+              barViewMode={barViewMode}
               updateConfig={updateConfig}
               configLoading={configLoading}
             />
@@ -431,30 +434,52 @@ interface ViewsTabProps {
   teamEnabled: boolean;
   kitchenEnabled: boolean;
   barEnabled: boolean;
-  updateConfig: (config: { teamEnabled?: boolean; kitchenEnabled?: boolean; barEnabled?: boolean }) => Promise<any>;
+  kitchenViewMode: 'columns' | 'tickets';
+  barViewMode: 'columns' | 'tickets';
+  updateConfig: (config: {
+    teamEnabled?: boolean;
+    kitchenEnabled?: boolean;
+    barEnabled?: boolean;
+    kitchenViewMode?: 'columns' | 'tickets';
+    barViewMode?: 'columns' | 'tickets';
+  }) => Promise<any>;
   configLoading: boolean;
 }
 
-const ViewsTab: React.FC<ViewsTabProps> = ({ teamEnabled, kitchenEnabled, barEnabled, updateConfig, configLoading }) => {
+const ViewsTab: React.FC<ViewsTabProps> = ({
+  teamEnabled,
+  kitchenEnabled,
+  barEnabled,
+  kitchenViewMode,
+  barViewMode,
+  updateConfig,
+  configLoading
+}) => {
   const { showToast } = useToast();
   const [localTeamEnabled, setLocalTeamEnabled] = useState(teamEnabled);
   const [localKitchenEnabled, setLocalKitchenEnabled] = useState(kitchenEnabled);
   const [localBarEnabled, setLocalBarEnabled] = useState(barEnabled);
+  const [localKitchenViewMode, setLocalKitchenViewMode] = useState<'columns' | 'tickets'>(kitchenViewMode);
+  const [localBarViewMode, setLocalBarViewMode] = useState<'columns' | 'tickets'>(barViewMode);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     setLocalTeamEnabled(teamEnabled);
     setLocalKitchenEnabled(kitchenEnabled);
     setLocalBarEnabled(barEnabled);
-  }, [teamEnabled, kitchenEnabled, barEnabled]);
+    setLocalKitchenViewMode(kitchenViewMode);
+    setLocalBarViewMode(barViewMode);
+  }, [teamEnabled, kitchenEnabled, barEnabled, kitchenViewMode, barViewMode]);
 
   useEffect(() => {
     const changed =
       localTeamEnabled !== teamEnabled ||
       localKitchenEnabled !== kitchenEnabled ||
-      localBarEnabled !== barEnabled;
+      localBarEnabled !== barEnabled ||
+      localKitchenViewMode !== kitchenViewMode ||
+      localBarViewMode !== barViewMode;
     setHasChanges(changed);
-  }, [localTeamEnabled, localKitchenEnabled, localBarEnabled, teamEnabled, kitchenEnabled, barEnabled]);
+  }, [localTeamEnabled, localKitchenEnabled, localBarEnabled, localKitchenViewMode, localBarViewMode, teamEnabled, kitchenEnabled, barEnabled, kitchenViewMode, barViewMode]);
 
   const handleSaveChanges = async () => {
     if (!hasChanges) return;
@@ -463,7 +488,9 @@ const ViewsTab: React.FC<ViewsTabProps> = ({ teamEnabled, kitchenEnabled, barEna
       await updateConfig({
         teamEnabled: localTeamEnabled,
         kitchenEnabled: localKitchenEnabled,
-        barEnabled: localBarEnabled
+        barEnabled: localBarEnabled,
+        kitchenViewMode: localKitchenViewMode,
+        barViewMode: localBarViewMode
       });
       setHasChanges(false);
       showToast('Configuration des vues sauvegardée avec succès', 'success');
@@ -477,7 +504,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({ teamEnabled, kitchenEnabled, barEna
     <View style={styles.tabContent}>
       <View style={styles.tabHeader}>
         <View>
-          <Text style={styles.tabTitle}>Activation modules</Text>
+          <Text style={styles.tabTitle}>Gestion Module</Text>
           <Text style={styles.tabSubtitle}>Activer ou désactiver les modules de l'application</Text>
         </View>
         {hasChanges && (
@@ -531,6 +558,27 @@ const ViewsTab: React.FC<ViewsTabProps> = ({ teamEnabled, kitchenEnabled, barEna
               disabled={configLoading}
             />
           </View>
+
+          {/* Mode d'affichage Cuisine - affiché seulement si activé */}
+          {localKitchenEnabled && (
+            <View style={styles.viewModeSection}>
+              <Text style={styles.viewModeTitle}>Mode d'affichage</Text>
+              <View style={styles.viewModeOptions}>
+                <ViewModeMockup
+                  type="tickets"
+                  isSelected={localKitchenViewMode === 'tickets'}
+                  onSelect={() => setLocalKitchenViewMode('tickets')}
+                  disabled={configLoading}
+                />
+                <ViewModeMockup
+                  type="columns"
+                  isSelected={localKitchenViewMode === 'columns'}
+                  onSelect={() => setLocalKitchenViewMode('columns')}
+                  disabled={configLoading}
+                />
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Vue Bar */}
@@ -551,6 +599,27 @@ const ViewsTab: React.FC<ViewsTabProps> = ({ teamEnabled, kitchenEnabled, barEna
               disabled={configLoading}
             />
           </View>
+
+          {/* Mode d'affichage Bar - affiché seulement si activé */}
+          {localBarEnabled && (
+            <View style={styles.viewModeSection}>
+              <Text style={styles.viewModeTitle}>Mode d'affichage</Text>
+              <View style={styles.viewModeOptions}>
+                <ViewModeMockup
+                  type="tickets"
+                  isSelected={localBarViewMode === 'tickets'}
+                  onSelect={() => setLocalBarViewMode('tickets')}
+                  disabled={configLoading}
+                />
+                <ViewModeMockup
+                  type="columns"
+                  isSelected={localBarViewMode === 'columns'}
+                  onSelect={() => setLocalBarViewMode('columns')}
+                  disabled={configLoading}
+                />
+              </View>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -658,6 +727,111 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, onEdit, onDelete }) => {
         </View>
       </View>
     </View>
+  );
+};
+
+// View Mode Mockup Component
+interface ViewModeMockupProps {
+  type: 'columns' | 'tickets';
+  isSelected: boolean;
+  onSelect: () => void;
+  disabled?: boolean;
+}
+
+const ViewModeMockup: React.FC<ViewModeMockupProps> = ({ type, isSelected, onSelect, disabled }) => {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.mockupContainer,
+        isSelected && styles.mockupContainerSelected
+      ]}
+      onPress={onSelect}
+      disabled={disabled}
+      activeOpacity={0.7}
+    >
+      <View style={styles.mockupContent}>
+        {type === 'columns' ? (
+          // Maquette Columns : 3 colonnes avec mini cards
+          <>
+            <View style={styles.mockupColumnsView}>
+              {/* Colonne EN ATTENTE */}
+              <View style={styles.mockupColumn}>
+                <View style={[styles.mockupColumnHeader, { backgroundColor: '#FEF3C7' }]}>
+                  <View style={styles.mockupColumnHeaderLine} />
+                </View>
+                <View style={styles.mockupColumnCards}>
+                  <View style={[styles.mockupCard, { backgroundColor: '#FFFBEB' }]} />
+                  <View style={[styles.mockupCard, { backgroundColor: '#FFFBEB' }]} />
+                </View>
+              </View>
+
+              {/* Colonne EN COURS */}
+              <View style={styles.mockupColumn}>
+                <View style={[styles.mockupColumnHeader, { backgroundColor: '#FFD1AD' }]}>
+                  <View style={styles.mockupColumnHeaderLine} />
+                </View>
+                <View style={styles.mockupColumnCards}>
+                  <View style={[styles.mockupCard, { backgroundColor: '#FFF8F0' }]} />
+                </View>
+              </View>
+
+              {/* Colonne PRÊT */}
+              <View style={styles.mockupColumn}>
+                <View style={[styles.mockupColumnHeader, { backgroundColor: '#DBEAFE' }]}>
+                  <View style={styles.mockupColumnHeaderLine} />
+                </View>
+                <View style={styles.mockupColumnCards}>
+                  <View style={[styles.mockupCard, { backgroundColor: '#DBEAFE' }]} />
+                </View>
+              </View>
+            </View>
+            <Text style={styles.mockupLabel}>Vue Colonnes</Text>
+          </>
+        ) : (
+          // Maquette Tickets : rangée horizontale de tickets
+          <>
+            <View style={styles.mockupTicketsView}>
+              <View style={[styles.mockupTicket, { backgroundColor: '#FFF8F0' }]}>
+                <View style={styles.mockupTicketHeader} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+              </View>
+              <View style={[styles.mockupTicket, { backgroundColor: '#FFFBEB' }]}>
+                <View style={styles.mockupTicketHeader} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+              </View>
+              <View style={[styles.mockupTicket, { backgroundColor: '#DBEAFE' }]}>
+                <View style={styles.mockupTicketHeader} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+              </View>
+              <View style={[styles.mockupTicket, styles.mockupTicketPartial, { backgroundColor: '#FEE2E2' }]}>
+                <View style={styles.mockupTicketHeader} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+                <View style={styles.mockupTicketLine} />
+              </View>
+            </View>
+            <Text style={styles.mockupLabel}>Vue Tickets</Text>
+          </>
+        )}
+      </View>
+
+      {/* Checkmark si sélectionné */}
+      {isSelected && (
+        <View style={styles.mockupCheckmark}>
+          <Check size={16} color="#FFFFFF" strokeWidth={3} />
+        </View>
+      )}
+    </TouchableOpacity>
   );
 };
 
@@ -914,5 +1088,124 @@ const styles = StyleSheet.create({
   viewCardDescription: {
     fontSize: 14,
     color: '#64748B',
+  },
+  // View mode section styles
+  viewModeSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  viewModeTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  viewModeOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  // Mockup container styles
+  mockupContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    position: 'relative',
+    minHeight: 140,
+  },
+  mockupContainerSelected: {
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+  },
+  mockupContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  mockupLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  mockupCheckmark: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Columns mockup styles
+  mockupColumnsView: {
+    flexDirection: 'row',
+    gap: 4,
+    flex: 1,
+  },
+  mockupColumn: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  mockupColumnHeader: {
+    height: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  mockupColumnHeaderLine: {
+    width: '80%',
+    height: 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    borderRadius: 1,
+  },
+  mockupColumnCards: {
+    padding: 3,
+    gap: 3,
+  },
+  mockupCard: {
+    height: 20,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  // Tickets mockup styles
+  mockupTicketsView: {
+    flexDirection: 'row',
+    gap: 4,
+    flex: 1,
+    overflow: 'hidden',
+  },
+  mockupTicket: {
+    width: 38,
+    borderRadius: 4,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    gap: 3,
+    flexShrink: 0,
+  },
+  mockupTicketPartial: {
+    opacity: 0.5,
+  },
+  mockupTicketHeader: {
+    height: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    borderRadius: 2,
+    width: '80%',
+  },
+  mockupTicketLine: {
+    height: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 1,
+    width: '100%',
   },
 });
