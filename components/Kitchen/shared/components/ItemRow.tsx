@@ -44,8 +44,8 @@ export function ItemRow({ item, isLastItem, showStatusBadge = false, showBackgro
               {item.itemName}
             </RNText>
 
-            {item.type === 'MENU_ITEM' && item.menuName && (
-              <RNText style={styles.menuBadge}>Menu: {item.menuName}</RNText>
+            {item.type === 'MENU_ITEM' && (
+              <RNText style={styles.menuBadge}>Menu</RNText>
             )}
           </View>
 
@@ -132,10 +132,9 @@ const styles = StyleSheet.create({
   },
   menuBadge: {
     fontSize: 10,
-    color: '#7C3AED',
-    fontWeight: '500',
-    fontStyle: 'italic',
-    backgroundColor: '#F3E8FF',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    backgroundColor: '#7C3AED',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
