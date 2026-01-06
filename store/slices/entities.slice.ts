@@ -621,6 +621,8 @@ interface KitchenItem {
   orderLineId: string;
   note?: string; // ✅ Note ajoutée
   tags?: any[]; // ✅ Tags ajoutés (type simplifié pour éviter import circulaire)
+  createdAt: string; // Date de création de l'item
+  updatedAt?: string; // Date de dernière mise à jour de l'item
 }
 
 // Selector pour les items de cuisine - combine OrderLines et OrderLineItems pour les besoins de la cuisine
@@ -643,7 +645,9 @@ export const selectAllKitchenItems = createSelector(
           status: orderLine.status || Status.PENDING,
           orderLineId: orderLine.id,
           note: orderLine.note, // ✅ Note de l'OrderLine
-          tags: orderLine.tags  // ✅ Tags de l'OrderLine
+          tags: orderLine.tags,  // ✅ Tags de l'OrderLine
+          createdAt: orderLine.createdAt, // ✅ Date de création de l'item
+          updatedAt: orderLine.updatedAt  // ✅ Date de mise à jour de l'item
         });
         processedIds.add(orderLine.id);
       }
@@ -666,7 +670,9 @@ export const selectAllKitchenItems = createSelector(
                 status: menuItem.status || orderLine.status || Status.PENDING,
                 orderLineId: orderLine.id,
                 note: menuItemWithMeta.note, // ✅ Note de l'item de menu
-                tags: menuItemWithMeta.tags  // ✅ Tags de l'item de menu
+                tags: menuItemWithMeta.tags,  // ✅ Tags de l'item de menu
+                createdAt: menuItemWithMeta.createdAt || orderLine.createdAt, // ✅ Date de création
+                updatedAt: menuItemWithMeta.updatedAt || orderLine.updatedAt  // ✅ Date de mise à jour
               });
               processedIds.add(menuItem.id);
             }
@@ -696,7 +702,9 @@ export const selectAllKitchenItems = createSelector(
             status: orderLineItem.status || Status.PENDING,
             orderLineId: parentOrderLine.id,
             note: orderLineItemWithMeta.note, // ✅ Note
-            tags: orderLineItemWithMeta.tags  // ✅ Tags
+            tags: orderLineItemWithMeta.tags,  // ✅ Tags
+            createdAt: orderLineItemWithMeta.createdAt || parentOrderLine.createdAt, // ✅ Date de création
+            updatedAt: orderLineItemWithMeta.updatedAt || parentOrderLine.updatedAt  // ✅ Date de mise à jour
           });
         }
       }

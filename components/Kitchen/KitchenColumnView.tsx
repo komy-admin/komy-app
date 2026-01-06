@@ -3,13 +3,12 @@ import { getStatusColor, getStatusText } from "~/lib/utils";
 import { Status } from "~/types/status.enum";
 import { ItemGroup } from "~/types/kitchen.types";
 import { Text } from "../ui";
-import KitchenItemCard from "./KitchenItemCard";
+import KitchenCardColumn from "./cards/variants/KitchenCardColumn";
 
-export default function OrderColumn({ itemGroups = [], status, onStatusChange, onIndividualItemStatusChange }: {
+export default function KitchenColumnView({ itemGroups = [], status, onStatusChange }: {
   itemGroups: ItemGroup[];
   status: Status;
   onStatusChange: (itemGroup: ItemGroup, newStatus: Status) => void;
-  onIndividualItemStatusChange?: (item: any, newStatus: Status) => void;
 }) {
 
   return (
@@ -30,11 +29,11 @@ export default function OrderColumn({ itemGroups = [], status, onStatusChange, o
       >
         {itemGroups && itemGroups.length > 0 ? (
           itemGroups.map((itemGroup) => (
-            <KitchenItemCard 
-              key={itemGroup.id} 
-              itemGroup={itemGroup} 
+            <KitchenCardColumn
+              key={itemGroup.id}
+              itemGroup={itemGroup}
+              status={status}
               onStatusChange={onStatusChange}
-              onIndividualItemStatusChange={onIndividualItemStatusChange}
             />
           ))
         ) : (

@@ -3,7 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { OrderLine, OrderLineType } from "~/types/order-line.types";
 import { Status } from "~/types/status.enum";
-import OrderColumn from '~/components/Kitchen/OrderColumn';
+import KitchenColumnView from '~/components/Kitchen/KitchenColumnView';
+import { KitchenTicketView } from '~/components/Kitchen/KitchenTicketView';
 import { useRestaurant, useOrders } from '~/hooks/useRestaurant';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useSelector } from 'react-redux';
@@ -11,106 +12,28 @@ import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 import { getMostImportantStatus } from '~/lib/utils';
 import { selectAllKitchenItems } from '~/store/slices/entities.slice';
-
-const AVAILABLE_STATUSES = [
-  Status.PENDING,
-  Status.INPROGRESS,
-  Status.READY,
-];
-
-// 🆕 Interface pour les groupes d'items par table/commande
-interface KitchenItemGroup {
-  id: string; // format: orderId-status
-  orderId: string;
-  orderNumber: string;
-  tableName: string;
-  status: Status;
-  items: Array<{
-    id: string;
-    type: 'ITEM' | 'MENU_ITEM';
-    itemName: string;
-    itemType?: string;
-    menuName?: string;
-    menuId?: string;
-    orderLineId?: string;
-    isOverdue: boolean;
-  }>;
-  isOverdue: boolean;
-  createdAt: string;
-}
-
-function useKitchenItemGrouping(orders: Order[], kitchenItems: any[], overdueOrderItemIds: string[]) {
-  const groupedItems = useMemo(() => {
-    const groupMap = new Map<string, KitchenItemGroup>();
-
-    kitchenItems.forEach(item => {
-      const order = orders.find(o => o.id === item.orderId);
-      if (!order) return;
-
-      const groupKey = `${order.id}-${item.status}`;
-
-      if (!groupMap.has(groupKey)) {
-        groupMap.set(groupKey, {
-          id: groupKey,
-          orderId: order.id,
-          orderNumber: order.orderNumber || `#${order.id.slice(-4)}`,
-          tableName: order.table?.name || 'Table inconnue',
-          status: item.status, // ✅ Utiliser le vrai statut de l'item
-          items: [],
-          isOverdue: false,
-          createdAt: order.createdAt
-        });
-      }
-
-      const group = groupMap.get(groupKey)!;
-      const isItemOverdue = overdueOrderItemIds.includes(item.id);
-      
-      group.items.push({
-        id: item.id,
-        type: item.type,
-        itemName: item.itemName,
-        itemType: item.itemType,
-        menuName: item.menuName,
-        menuId: item.menuId,
-        orderLineId: item.orderLineId,
-        isOverdue: isItemOverdue
-      });
-
-      // Marquer le groupe comme en retard si au moins un item l'est
-      if (isItemOverdue) {
-        group.isOverdue = true;
-      }
-    });
-
-    // Convertir en array et trier (en retard en premier, puis par date)
-    const sortedGroups = Array.from(groupMap.values()).sort((a, b) => {
-      if (a.isOverdue && !b.isOverdue) return -1;
-      if (!a.isOverdue && b.isOverdue) return 1;
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-
-    return sortedGroups;
-  }, [orders, kitchenItems, overdueOrderItemIds]);
-
-  return groupedItems;
-}
+import { CARD_VARIANTS } from '~/components/Kitchen/cards/config/card-variants.config';
+import { useAccountConfig } from '~/hooks/useAccountConfig';
+import { filterItemsByArea } from '~/lib/itemFilters';
+import { useItemGrouping } from '~/hooks/useItemGrouping';
+import { ItemGroup } from '~/types/kitchen.types';
 
 export default function CookKitchenPage() {
-  // Utilisation des hooks Redux uniquement  
+  const { kitchenViewMode } = useAccountConfig();
   const { orders, loading, error, updateOrderStatus } = useOrders();
   const { updateOrderLineItemStatus } = useOrderLines();
-  // Récupérer les commandes en retard depuis le store
-  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
   const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
-  
+  // Déterminer le variant actif selon le mode de vue (config account)
+  const currentVariant = kitchenViewMode === 'tickets' ? CARD_VARIANTS.ticket : CARD_VARIANTS.column;
+
   const kitchenItems = useSelector(selectAllKitchenItems);
 
-  // Filtrer les items selon les statuts disponibles en cuisine
+  // Filtrer les items selon les statuts du variant actif
   const filteredKitchenItems = useMemo(() => {
-    return kitchenItems.filter(item => AVAILABLE_STATUSES.includes(item.status));
-  }, [kitchenItems]);
+    return filterItemsByArea(kitchenItems, 'kitchen', currentVariant.availableStatuses);
+  }, [kitchenItems, currentVariant.availableStatuses]);
 
   // Récupérer les commandes qui ont des items en cuisine
   const kitchenOrders = useMemo(() => {
@@ -118,9 +41,9 @@ export default function CookKitchenPage() {
     return orders.filter(order => orderIds.includes(order.id));
   }, [orders, filteredKitchenItems]);
 
-  const groupedItems = useKitchenItemGrouping(kitchenOrders, filteredKitchenItems, overdueOrderItemIds || []);
+  const groupedItems = useItemGrouping(kitchenOrders, filteredKitchenItems, overdueOrderItemIds || []);
 
-  const handleStatusChange = async (itemGroup: KitchenItemGroup, newStatus: Status) => {
+  const handleStatusChange = async (itemGroup: ItemGroup, newStatus: Status) => {
     try {
       console.log('🔄 [DEBUG] Cook handleStatusChange (new):', {
         groupId: itemGroup.id,
@@ -243,17 +166,24 @@ export default function CookKitchenPage() {
         <Text style={styles.headerTitle}>Cuisine</Text>
         <Text style={styles.headerSubtitle}>Gestion des commandes en temps réel</Text>
       </View>
-      <View style={styles.columnsContainer}>
-        {AVAILABLE_STATUSES.map((status, index) => (
-          <OrderColumn
-            key={status}
-            itemGroups={groupedItems.filter(group => group.status === status)}
-            status={status}
-            onStatusChange={handleStatusChange}
-            onIndividualItemStatusChange={handleIndividualItemStatusChange}
-          />
-        ))}
-      </View>
+
+      {kitchenViewMode === 'tickets' ? (
+        <KitchenTicketView
+          itemGroups={groupedItems}
+          onStatusChange={handleStatusChange}
+        />
+      ) : (
+        <View style={styles.columnsContainer}>
+          {currentVariant.availableStatuses.map((status) => (
+            <KitchenColumnView
+              key={status}
+              itemGroups={groupedItems.filter(group => group.status === status)}
+              status={status}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }

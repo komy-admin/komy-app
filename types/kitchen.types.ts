@@ -22,6 +22,8 @@ export interface ItemGroup {
     isOverdue: boolean;
     note?: string;
     tags?: any[];
+    createdAt?: string;
+    updatedAt?: string;
   }>;
   isOverdue: boolean;
   createdAt: string;
