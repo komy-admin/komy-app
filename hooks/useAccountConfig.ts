@@ -27,7 +27,10 @@ export const useAccountConfig = () => {
         reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
         teamEnabled: accountConfig.teamEnabled,
         kitchenEnabled: accountConfig.kitchenEnabled,
-        barEnabled: accountConfig.barEnabled
+        barEnabled: accountConfig.barEnabled,
+        // View modes avec valeurs par défaut si absents
+        kitchenViewMode: accountConfig.kitchenViewMode || 'tickets',
+        barViewMode: accountConfig.barViewMode || 'tickets'
       }));
       return accountConfig;
     } catch (err) {
@@ -48,6 +51,8 @@ export const useAccountConfig = () => {
     teamEnabled?: boolean;
     kitchenEnabled?: boolean;
     barEnabled?: boolean;
+    kitchenViewMode?: 'columns' | 'tickets';
+    barViewMode?: 'columns' | 'tickets';
   }) => {
     setIsLoading(true);
     setError(null);
@@ -64,7 +69,9 @@ export const useAccountConfig = () => {
         reminderNotificationsEnabled: updatedConfig.reminderNotificationsEnabled,
         teamEnabled: updatedConfig.teamEnabled,
         kitchenEnabled: updatedConfig.kitchenEnabled,
-        barEnabled: updatedConfig.barEnabled
+        barEnabled: updatedConfig.barEnabled,
+        kitchenViewMode: updatedConfig.kitchenViewMode || 'tickets',
+        barViewMode: updatedConfig.barViewMode || 'tickets'
       }));
       return updatedConfig;
     } catch (err) {
@@ -97,18 +104,22 @@ export const useAccountConfig = () => {
     config,
     isLoading,
     error,
-    
+
     // Actions
     loadConfig,
     updateConfig,
-    
+
     // Valeurs directes
     reminderMinutes: config?.reminderMinutes ?? 15,
     reminderNotificationsEnabled: config?.reminderNotificationsEnabled ?? false,
     teamEnabled: config?.teamEnabled ?? true,
     kitchenEnabled: config?.kitchenEnabled ?? true,
     barEnabled: config?.barEnabled ?? true,
-    
+
+    // View modes simplifiés
+    kitchenViewMode: config?.kitchenViewMode ?? 'tickets',
+    barViewMode: config?.barViewMode ?? 'tickets',
+
     // Compatibilité avec l'ancien code
     isAlertEnabled,
     alertValue,

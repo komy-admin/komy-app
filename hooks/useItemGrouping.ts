@@ -53,7 +53,9 @@ export function useItemGrouping(
         isOverdue: isItemOverdue,
         note: item.note,
         tags: item.tags,
-        status: item.status
+        status: item.status,
+        createdAt: item.createdAt, // ✅ Date de création de l'item
+        updatedAt: item.updatedAt  // ✅ Date de mise à jour de l'item
       });
 
       // Marquer le groupe comme en retard si au moins un item l'est

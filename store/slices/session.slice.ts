@@ -4,6 +4,8 @@ import { storageService } from '~/lib/storageService';
 import { uploadProfileImage } from '../thunks/uploadProfileImage.thunk';
 
 // Types pour les payloads des actions
+type ViewMode = 'columns' | 'tickets';
+
 interface AccountConfigPayload {
   id: string;
   reminderMinutes: number;
@@ -11,6 +13,9 @@ interface AccountConfigPayload {
   teamEnabled: boolean;
   kitchenEnabled: boolean;
   barEnabled: boolean;
+  // View modes
+  kitchenViewMode: ViewMode;
+  barViewMode: ViewMode;
 }
 
 // Utilitaire pour les timestamps
@@ -67,6 +72,8 @@ export interface SessionState {
     teamEnabled: boolean;
     kitchenEnabled: boolean;
     barEnabled: boolean;
+    kitchenViewMode: ViewMode;
+    barViewMode: ViewMode;
   } | null;
   overdueOrderIds: string[];
   overdueOrderItemIds: string[];

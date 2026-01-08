@@ -2,97 +2,67 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
-import OrderColumn from '~/components/Kitchen/OrderColumn';
+import KitchenColumnView from '~/components/Kitchen/KitchenColumnView';
+import { KitchenTicketView } from '~/components/Kitchen/KitchenTicketView';
 import { OrderLine, OrderItem } from '~/types/order-line.types';
 import { useOrders, useRestaurant } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
-import { selectAllOrderItems } from '~/store/slices/entities.slice';
+import { selectAllOrderItems, selectAllKitchenItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
-
-const AVAILABLE_STATUSES = [
-  Status.PENDING,
-  Status.INPROGRESS,
-  Status.READY,
-];
-
-function useOrderGrouping(orders: Order[], orderItems: OrderItem[], overdueOrderIds: string[], overdueOrderItemIds: string[]) {
-  const groupedOrders = useMemo(() => {
-    const orderMap = new Map();
-
-    orderItems.forEach(item => {
-      const order = orders.find(o => o.id === item.orderId);
-      if (!order) return;
-
-      const key = `${order.id}-${item.status}`;
-
-      if (!orderMap.has(key)) {
-        // Vérifier si au moins un orderItem de ce groupe est en retard
-        const hasOverdueItems = orderItems
-          .filter((oi: OrderItem) => oi.orderId === order.id && oi.status === item.status)
-          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
-
-        orderMap.set(key, {
-          ...order,
-          status: item.status,
-          orderItems: [item],
-          isOverdue: hasOverdueItems
-        });
-      } else {
-        orderMap.get(key).orderItems.push(item);
-        // Recalculer si le groupe a des items en retard
-        const hasOverdueItems = orderMap.get(key).orderItems
-          .some((oi: OrderItem) => overdueOrderItemIds.includes(oi.id));
-        orderMap.get(key).isOverdue = hasOverdueItems;
-      }
-    });
-
-    // Trier pour mettre les commandes en retard en premier
-    const sortedEntries = Array.from(orderMap.entries()).sort(([, a], [, b]) => {
-      if (a.isOverdue && !b.isOverdue) return -1;
-      if (!a.isOverdue && b.isOverdue) return 1;
-      return 0;
-    });
-
-    return new Map(sortedEntries);
-  }, [orders, orderItems, overdueOrderIds, overdueOrderItemIds]);
-
-  return groupedOrders;
-}
+import { CARD_VARIANTS } from '~/components/Kitchen/cards/config/card-variants.config';
+import { useAccountConfig } from '~/hooks/useAccountConfig';
+import { useItemGrouping } from '~/hooks/useItemGrouping';
+import { filterItemsByArea } from '~/lib/itemFilters';
+import { ItemGroup } from '~/types/kitchen.types';
 
 export default function BarmanKitchenPage() {
-  // Utilisation des hooks Redux uniquement
+  const { barViewMode } = useAccountConfig();
   const { orders, loading, error, updateOrderStatus } = useOrders();
-  const orderItems = useSelector((state: RootState) => selectAllOrderItems(state));
-  // Récupérer les commandes en retard depuis le store
-  const overdueOrderIds = useSelector((state: RootState) => state.session.overdueOrderIds);
+  const kitchenItems = useSelector(selectAllKitchenItems);
   const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
+  // Déterminer le variant actif selon le mode de vue (config account)
+  const currentVariant = barViewMode === 'tickets' ? CARD_VARIANTS.ticket : CARD_VARIANTS.column;
 
-  // Filtrer les commandes et items selon les statuts disponibles en cuisine
-  const kitchenOrders = useMemo(() => {
-    return orders.filter(order =>
-      order.lines?.some(line => line.status && AVAILABLE_STATUSES.includes(line.status)) || false
-    );
-  }, [orders]);
+  // Filtrer les items selon les statuts du variant actif
+  const filteredBarItems = useMemo(() => {
+    return filterItemsByArea(kitchenItems, 'bar', currentVariant.availableStatuses);
+  }, [kitchenItems, currentVariant.availableStatuses]);
 
-  const kitchenOrderItems = useMemo(() => {
-    return orderItems.filter(item => item.status && AVAILABLE_STATUSES.includes(item.status));
-  }, [orderItems]);
+  // Récupérer les commandes qui ont des items au bar
+  const barOrders = useMemo(() => {
+    const orderIds = [...new Set(filteredBarItems.map(item => item.orderId))];
+    const filteredOrders = orders.filter(order => orderIds.includes(order.id));
 
-  const groupedOrders = useOrderGrouping(kitchenOrders, kitchenOrderItems, overdueOrderIds || [], overdueOrderItemIds || []);
+    return filteredOrders;
+  }, [orders, filteredBarItems]);
 
-  const handleStatusChange = async (order: Order, newStatus: Status) => {
+  const groupedItems = useItemGrouping(barOrders, filteredBarItems, overdueOrderItemIds);
+
+  const handleStatusChange = async (itemGroup: ItemGroup, newStatus: Status) => {
     try {
-      const orderLineIds = order.lines?.map(line => line.id) || [];
-      if (orderLineIds.length > 0) {
-        await updateOrderStatus(order.id, { 
+      // Séparer OrderLines (articles individuels) et OrderLineItems (items de menu)
+      const orderLineIds: string[] = [];
+      const orderLineItemIds: string[] = [];
+
+      itemGroup.items.forEach(item => {
+        if (item.type === 'ITEM') {
+          orderLineIds.push(item.id);
+        } else if (item.type === 'MENU_ITEM') {
+          orderLineItemIds.push(item.id);
+        }
+      });
+
+      if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
+        await updateOrderStatus(itemGroup.orderId, {
           status: newStatus,
-          orderLineIds: orderLineIds
+          orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+          orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
         });
       }
-      // Ne pas afficher le toast de succès ici - le WebSocket confirmera la mise à jour
+
     } catch (error: any) {
       console.error('Error updating status:', error);
 
@@ -125,18 +95,24 @@ export default function BarmanKitchenPage() {
         <Text style={styles.headerTitle}>Bar</Text>
         <Text style={styles.headerSubtitle}>Gestion des boissons en temps réel</Text>
       </View>
-      <View style={styles.columnsContainer}>
-        {AVAILABLE_STATUSES.map((status, index) => (
-          <OrderColumn
-            key={status}
-            orders={Array.from(groupedOrders.values())
-              .filter(order => order.status === status)}
-            status={status}
-            onStatusChange={handleStatusChange}
-            overdueOrderItemIds={overdueOrderItemIds}
-          />
-        ))}
-      </View>
+
+      {barViewMode === 'tickets' ? (
+        <KitchenTicketView
+          itemGroups={groupedItems}
+          onStatusChange={handleStatusChange}
+        />
+      ) : (
+        <View style={styles.columnsContainer}>
+          {currentVariant.availableStatuses.map((status) => (
+            <KitchenColumnView
+              key={status}
+              itemGroups={groupedItems.filter(group => group.status === status)}
+              status={status}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }

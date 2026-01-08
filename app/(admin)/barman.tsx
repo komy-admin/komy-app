@@ -2,7 +2,8 @@ import { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Status } from "~/types/status.enum";
 import { ItemGroup } from "~/types/kitchen.types";
-import OrderColumn from '~/components/Kitchen/OrderColumn';
+import KitchenColumnView from '~/components/Kitchen/KitchenColumnView';
+import { KitchenTicketView } from '~/components/Kitchen/KitchenTicketView';
 import { useOrders } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAllKitchenItems } from '~/store/slices/entities.slice';
@@ -12,23 +13,19 @@ import { useRouter } from 'expo-router';
 import { handleOrderStatusError } from '~/lib/errorHandlers';
 import { useItemGrouping } from '~/hooks/useItemGrouping';
 import { filterItemsByArea } from '~/lib/itemFilters';
-
-const AVAILABLE_STATUSES = [
-  Status.PENDING,
-  Status.INPROGRESS,
-  Status.READY,
-];
+import { CARD_VARIANTS } from '~/components/Kitchen/cards/config/card-variants.config';
+import { useAccountConfig } from '~/hooks/useAccountConfig';
 
 export default function BarmanPage() {
   const router = useRouter();
-  const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+  const { barViewMode, barEnabled } = useAccountConfig();
 
   // Rediriger si la vue est désactivée
   useEffect(() => {
-    if (accountConfig && accountConfig.barEnabled === false) {
+    if (!barEnabled) {
       router.replace('/(admin)/service');
     }
-  }, [accountConfig, router]);
+  }, [barEnabled, router]);
 
   const { orders, loading, error, updateOrderStatus } = useOrders();
 
@@ -37,10 +34,13 @@ export default function BarmanPage() {
   const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
 
-  // Filtrer les items selon les statuts disponibles au bar
+  // Déterminer le variant actif selon le mode de vue (config account)
+  const currentVariant = barViewMode === 'tickets' ? CARD_VARIANTS.ticket : CARD_VARIANTS.column;
+
+  // Filtrer les items selon les statuts du variant actif
   const filteredBarItems = useMemo(() => {
-    return filterItemsByArea(kitchenItems, 'bar', AVAILABLE_STATUSES);
-  }, [kitchenItems]);
+    return filterItemsByArea(kitchenItems, 'bar', currentVariant.availableStatuses);
+  }, [kitchenItems, currentVariant.availableStatuses]);
 
   // Récupérer les commandes qui ont des items au bar
   const barOrders = useMemo(() => {
@@ -78,40 +78,6 @@ export default function BarmanPage() {
     }
   };
 
-  // Fonction pour mettre à jour un item individuel
-  const handleIndividualItemStatusChange = async (item: any, newStatus: Status) => {
-    try {
-      // Déterminer le bon array selon le type d'item
-      let orderLineIds: string[] = [];
-      let orderLineItemIds: string[] = [];
-
-      if (item.type === 'ITEM') {
-        orderLineIds.push(item.id);
-      } else if (item.type === 'MENU_ITEM') {
-        orderLineItemIds.push(item.id);
-      }
-
-      // Trouver l'orderId de cet item
-      const parentGroup = groupedItems.find(group =>
-        group.items.some(groupItem => groupItem.id === item.id)
-      );
-
-      if (!parentGroup) {
-        console.error('Groupe parent non trouvé pour l\'item:', item.id);
-        return;
-      }
-
-      await updateOrderStatus(parentGroup.orderId, {
-        status: newStatus,
-        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
-        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
-      });
-
-    } catch (error: any) {
-      handleOrderStatusError(error, showToast);
-    }
-  };
-
   if (loading || error) {
     return (
       <View style={styles.loadingContainer}>
@@ -129,17 +95,23 @@ export default function BarmanPage() {
         <Text style={styles.headerSubtitle}>Gestion des boissons en temps réel</Text>
       </View>
 
-      <View style={styles.columnsContainer}>
-        {AVAILABLE_STATUSES.map((status) => (
-          <OrderColumn
-            key={status}
-            itemGroups={groupedItems.filter(group => group.status === status)}
-            status={status}
-            onStatusChange={handleStatusChange}
-            onIndividualItemStatusChange={handleIndividualItemStatusChange}
-          />
-        ))}
-      </View>
+      {barViewMode === 'tickets' ? (
+        <KitchenTicketView
+          itemGroups={groupedItems}
+          onStatusChange={handleStatusChange}
+        />
+      ) : (
+        <View style={styles.columnsContainer}>
+          {currentVariant.availableStatuses.map((status) => (
+            <KitchenColumnView
+              key={status}
+              itemGroups={groupedItems.filter(group => group.status === status)}
+              status={status}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
