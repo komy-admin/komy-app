@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity } from 'react-native';
-import { X, Check, ChefHat, Wine } from 'lucide-react-native';
+import { X, Check, ChefHat, Wine, Plus, ArrowLeft } from 'lucide-react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ItemType } from '~/types/item-type.types';
 import { useItemTypes } from '~/hooks/useItemTypes';
+import { IconSelector, AVAILABLE_ICONS } from '~/components/ui/IconSelector';
+
+// Filtres de catégories pré-calculés (constants - pas besoin de recalculer à chaque render)
+const DRINKS_ICONS = AVAILABLE_ICONS.filter(i => i.category === 'drinks');
+const FOOD_ICONS = AVAILABLE_ICONS.filter(i => i.category === 'food');
+const DESSERTS_ICONS = AVAILABLE_ICONS.filter(i => i.category === 'desserts');
 
 interface ItemTypeFormPanelProps {
   itemType: ItemType | null;
@@ -14,27 +21,134 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
   const { itemTypes } = useItemTypes();
   const [name, setName] = useState(itemType?.name || '');
   const [type, setType] = useState<'kitchen' | 'bar'>(itemType?.type === 'bar' ? 'bar' : 'kitchen');
+  const [icon, setIcon] = useState<string>(itemType?.icon || ''); // Vide par défaut en création
+  const [isSelectingIcon, setIsSelectingIcon] = useState(false); // Navigation vers vue sélection icône
+
+  // Récupérer les icônes déjà utilisées par d'autres itemTypes (pour éviter les doublons)
+  const usedIcons = useMemo(() => {
+    return itemTypes
+      .filter(it => it.id !== itemType?.id) // Exclure l'item en cours d'édition
+      .map(it => it.icon)
+      .filter(Boolean) as string[]; // Enlever les undefined/null
+  }, [itemTypes, itemType?.id]);
 
   // Calculer le nombre de positions disponibles
   // En création : N+1 (pour permettre d'insérer à la fin)
   // En édition : N (on peut réorganiser parmi les existants)
-  const totalPositions = itemType
-    ? itemTypes.length  // En édition : peut choisir parmi 1 à N
-    : itemTypes.length + 1;  // En création : peut choisir parmi 1 à N+1
+  const totalPositions = useMemo(() => {
+    return itemType
+      ? itemTypes.length  // En édition : peut choisir parmi 1 à N
+      : itemTypes.length + 1;  // En création : peut choisir parmi 1 à N+1
+  }, [itemType, itemTypes.length]);
 
   const [priorityOrder, setPriorityOrder] = useState<number>(
     itemType?.priorityOrder || totalPositions  // Par défaut : dernière position
   );
 
-  const handleSave = () => {
-    if (!name.trim()) return;
+  // State pour la validation (nécessaire pour garantir le re-render visuel du bouton)
+  const [isFormValid, setIsFormValid] = useState(false);
+
+  // Mettre à jour la validation quand les champs changent
+  useEffect(() => {
+    const valid = name.trim().length > 0 && icon.length > 0;
+    setIsFormValid(valid);
+  }, [name, icon]);
+
+  // Callback explicite pour la sélection d'icône (force le re-render)
+  const handleIconSelect = useCallback((iconName: string) => {
+    setIcon(iconName);
+    setIsSelectingIcon(false); // Retour au formulaire après sélection
+  }, []);
+
+  const handleSave = useCallback(() => {
+    if (!isFormValid) return;
     onSave({
       name: name.trim(),
       type,
+      icon,
       priorityOrder
     });
-  };
+  }, [isFormValid, onSave, name, type, icon, priorityOrder]);
 
+  // Vue de sélection d'icône (full-screen dans le panel)
+  if (isSelectingIcon) {
+    return (
+      <View style={styles.panelContent}>
+        <View style={styles.panelHeader}>
+          <TouchableOpacity onPress={() => setIsSelectingIcon(false)} style={styles.backButton}>
+            <ArrowLeft size={24} color="#64748B" strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onCancel}>
+            <X size={24} color="#64748B" strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.iconSelectionView}
+          contentContainerStyle={styles.iconSelectionContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.iconSelectionTitle}>Choisir une icône</Text>
+          <Text style={styles.iconSelectionSubtitle}>
+            Sélectionnez l'icône qui représente le mieux ce type d'article
+          </Text>
+
+          {/* Catégorie Boissons */}
+          <View style={styles.categorySection}>
+            <View style={styles.categoryHeader}>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>Boissons</Text>
+              </View>
+            </View>
+
+            <IconSelector
+              selectedIcon={icon}
+              onSelectIcon={handleIconSelect}
+              color="#A855F7"
+              disabledIcons={usedIcons}
+              iconsToShow={DRINKS_ICONS}
+            />
+          </View>
+
+          {/* Catégorie Repas/Plats */}
+          <View style={styles.categorySection}>
+            <View style={styles.categoryHeader}>
+              <View style={[styles.categoryBadge, { backgroundColor: '#10B981' }]}>
+                <Text style={styles.categoryBadgeText}>Repas / Plats</Text>
+              </View>
+            </View>
+
+            <IconSelector
+              selectedIcon={icon}
+              onSelectIcon={handleIconSelect}
+              color="#A855F7"
+              disabledIcons={usedIcons}
+              iconsToShow={FOOD_ICONS}
+            />
+          </View>
+
+          {/* Catégorie Desserts */}
+          <View style={styles.categorySection}>
+            <View style={styles.categoryHeader}>
+              <View style={[styles.categoryBadge, { backgroundColor: '#F59E0B' }]}>
+                <Text style={styles.categoryBadgeText}>Desserts</Text>
+              </View>
+            </View>
+
+            <IconSelector
+              selectedIcon={icon}
+              onSelectIcon={handleIconSelect}
+              color="#A855F7"
+              disabledIcons={usedIcons}
+              iconsToShow={DESSERTS_ICONS}
+            />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Vue formulaire normale
   return (
     <View style={styles.panelContent}>
       <View style={styles.panelHeader}>
@@ -47,18 +161,36 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
       <ScrollView
         style={styles.panelForm}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={styles.scrollContent}
       >
-        {/* Nom du type */}
+        {/* Nom du type + Icône */}
         <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Nom du type</Text>
-          <TextInput
-            style={styles.formInput}
-            value={name}
-            onChangeText={setName}
-            placeholder="Ex: Entrée, Plat, Boisson..."
-            placeholderTextColor="#94A3B8"
-          />
+          <Text style={styles.formLabel}>Nom du type & Icône</Text>
+          <View style={styles.nameIconRow}>
+            <TextInput
+              style={[styles.formInput, styles.nameInput]}
+              value={name}
+              onChangeText={setName}
+              placeholder="Ex: Entrée, Plat, Boisson..."
+              placeholderTextColor="#94A3B8"
+            />
+
+            {/* Bouton sélection icône */}
+            <TouchableOpacity
+              style={[
+                styles.iconButton,
+                !icon && styles.iconButtonEmpty,
+                icon && styles.iconButtonSelected
+              ]}
+              onPress={() => setIsSelectingIcon(true)}
+            >
+              {icon ? (
+                <MaterialCommunityIcons name={icon as any} size={24} color="#A855F7" />
+              ) : (
+                <Plus size={20} color="#94A3B8" strokeWidth={2} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Département */}
@@ -182,9 +314,12 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.saveButton, !name.trim() && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            { backgroundColor: isFormValid ? '#A855F7' : '#CBD5E1' }
+          ]}
           onPress={handleSave}
-          disabled={!name.trim()}
+          disabled={!isFormValid}
         >
           <Check size={20} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.saveButtonText}>Enregistrer</Text>
@@ -211,12 +346,89 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1E293B',
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+  },
   panelForm: {
     flex: 1,
     padding: 20,
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  iconSelectionView: {
+    flex: 1,
+    padding: 20,
+  },
+  iconSelectionContent: {
+    paddingBottom: 40,
+  },
+  iconSelectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  iconSelectionSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  categorySection: {
+    marginBottom: 32,
+  },
+  categoryHeader: {
+    marginBottom: 16,
+  },
+  categoryBadge: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  categoryBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   formGroup: {
     marginBottom: 20,
+  },
+  nameIconRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  nameInput: {
+    flex: 1,
+  },
+  iconButton: {
+    width: 56,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconButtonEmpty: {
+    borderStyle: 'dashed',
+  },
+  iconButtonSelected: {
+    borderColor: '#A855F7',
+    backgroundColor: '#F8F4FF',
   },
   formLabel: {
     fontSize: 14,

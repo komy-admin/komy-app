@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useTags } from '~/hooks/useTags';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
@@ -519,7 +521,11 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         )}
       </View>
 
-      <View style={styles.viewsContainer}>
+      <ScrollView
+        style={styles.viewsScrollContainer}
+        contentContainerStyle={styles.viewsContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Vue Équipe */}
         <View style={styles.viewCard}>
           <View style={styles.viewCardHeader}>
@@ -621,7 +627,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
             </View>
           )}
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -633,20 +639,20 @@ interface ItemTypeListItemProps {
   onDelete: () => void;
 }
 
-const ItemTypeListItem: React.FC<ItemTypeListItemProps> = ({ itemType, onEdit, onDelete }) => {
+const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType, onEdit, onDelete }) => {
   const isBar = itemType.type === 'bar';
   const iconColor = isBar ? '#A855F7' : '#10B981';
   const backgroundColor = isBar ? '#FAF5FF' : '#F0FDF4';
+
+  // Récupérer l'icône enregistrée
+  const iconData = AVAILABLE_ICONS.find(i => i.name === itemType.icon);
+  const iconName = iconData?.name || 'glass-wine';
 
   return (
     <View style={styles.tagItem}>
       <View style={styles.tagItemHeader}>
         <View style={[styles.tagItemIcon, { backgroundColor }]}>
-          {isBar ? (
-            <Wine size={20} color={iconColor} strokeWidth={2} />
-          ) : (
-            <ChefHat size={20} color={iconColor} strokeWidth={2} />
-          )}
+          <MaterialCommunityIcons name={iconName as any} size={20} color={iconColor} />
         </View>
         <View style={styles.tagItemContent}>
           <Text style={styles.tagItemTitle}>{itemType.name}</Text>
@@ -674,7 +680,9 @@ const ItemTypeListItem: React.FC<ItemTypeListItemProps> = ({ itemType, onEdit, o
       </View>
     </View>
   );
-};
+});
+
+ItemTypeListItem.displayName = 'ItemTypeListItem';
 
 // Tag List Item
 interface TagListItemProps {
@@ -1054,8 +1062,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   // Views Tab specific styles
+  viewsScrollContainer: {
+    flex: 1,
+  },
   viewsContainer: {
     gap: 16,
+    paddingBottom: 24,
   },
   viewCard: {
     backgroundColor: '#FFFFFF',
