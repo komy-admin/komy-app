@@ -227,6 +227,7 @@ function AuthenticationGate() {
 function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
     'Mona-Sans': require('../assets/images/fonts/MonaSans-VariableFont_wdth,wght.ttf'),
+    'material-community': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf'),
   });
 
   React.useEffect(() => {

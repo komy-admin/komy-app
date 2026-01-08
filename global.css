@@ -10,6 +10,11 @@
   * {
     font-family: 'Mona-Sans', 'system-ui', sans-serif !important;
   }
+
+  /* Exception pour les polices d'icônes - priorité maximale */
+  [style*="material-community"] {
+    font-family: 'material-community' !important;
+  }
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
