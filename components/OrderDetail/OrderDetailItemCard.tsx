@@ -13,6 +13,8 @@ export interface OrderDetailItemCardProps {
   orderLineItem?: OrderLineItem;
   isFromMenu?: boolean;
   menuName?: string;
+  showItemTypeTag?: boolean;
+  itemTypeName?: string;
   onStatusChange: (newStatus: Status) => void;
   onDelete: () => void;
   isMultiSelectMode?: boolean;
@@ -25,6 +27,8 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   orderLineItem,
   isFromMenu = false,
   menuName,
+  showItemTypeTag = false,
+  itemTypeName,
   onStatusChange,
   onDelete,
   isMultiSelectMode = false,
@@ -86,6 +90,12 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
               <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
                 <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
               </View>
+
+              {showItemTypeTag && itemTypeName && (
+                <View style={styles.itemTypeBadge}>
+                  <Text style={styles.itemTypeBadgeText}>{itemTypeName}</Text>
+                </View>
+              )}
 
               {isFromMenu && menuName && (
                 <View style={styles.menuBadge}>
@@ -282,6 +292,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   menuBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemTypeBadge: {
+    backgroundColor: '#6B7280',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  itemTypeBadgeText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',

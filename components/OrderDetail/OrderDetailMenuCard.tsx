@@ -1,15 +1,16 @@
-import React, { memo, useState } from 'react';
+import { memo, useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
+import { getMostImportantStatus, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { IconButton } from '~/components/ui/IconButton';
 import StatusSelector from '~/components/Service/StatusSelector';
 
 export interface OrderDetailMenuCardProps {
   menuLine: OrderLine;
+  itemTypes?: { id: string; priorityOrder: number }[]; // Pour le tri
   onUpdateItemStatus: (orderLineItem: OrderLineItem, newStatus: Status) => void;
   onUpdateMenuStatus?: (orderLineItems: OrderLineItem[], newStatus: Status) => void;
   onDelete: () => void;
@@ -20,6 +21,7 @@ export interface OrderDetailMenuCardProps {
 
 export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   menuLine,
+  itemTypes = [],
   onUpdateItemStatus,
   onUpdateMenuStatus,
   onDelete,
@@ -73,19 +75,55 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
     setCurrentItemForStatus(null);
   };
 
-  // Grouper les items par catégorie
-  const itemsByCategory = orderItems.reduce((acc, orderLineItem) => {
-    const categoryName = orderLineItem?.categoryName || 'Autres';
-    if (!acc[categoryName]) {
-      acc[categoryName] = [];
-    }
-    acc[categoryName].push(orderLineItem);
-    return acc;
-  }, {} as Record<string, OrderLineItem[]>);
+  // Mémoriser le calcul coûteux du tri des catégories et items
+  const sortedCategories = useMemo(() => {
+    // Créer un Map pour accès rapide au priorityOrder (O(1))
+    const itemTypePriorityMap = new Map(
+      itemTypes.map(it => [it.id, it.priorityOrder])
+    );
 
-  // Vérifier si tous les items du menu sont sélectionnés
-  const allMenuItemsSelected = orderItems.every(item => selectedItems.has(item.id));
-  const someMenuItemsSelected = orderItems.some(item => selectedItems.has(item.id));
+    // Grouper les items par catégorie
+    const itemsByCategory = orderItems.reduce((acc, orderLineItem) => {
+      const categoryName = orderLineItem?.categoryName || 'Autres';
+      if (!acc[categoryName]) {
+        acc[categoryName] = [];
+      }
+      acc[categoryName].push(orderLineItem);
+      return acc;
+    }, {} as Record<string, OrderLineItem[]>);
+
+    // Trier les items de chaque catégorie par priorityOrder de leur itemType
+    Object.keys(itemsByCategory).forEach(categoryName => {
+      itemsByCategory[categoryName].sort((a, b) => {
+        const priorityA = itemTypePriorityMap.get(a.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
+        const priorityB = itemTypePriorityMap.get(b.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
+        return priorityA - priorityB;
+      });
+    });
+
+    // Trier les catégories elles-mêmes par la priorité minimale de leurs items
+    return Object.entries(itemsByCategory).sort((a, b) => {
+      const [, itemsA] = a;
+      const [, itemsB] = b;
+
+      // Trouver la priorité minimale dans chaque catégorie
+      const minPriorityA = Math.min(...itemsA.map(item =>
+        itemTypePriorityMap.get(item.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER
+      ));
+      const minPriorityB = Math.min(...itemsB.map(item =>
+        itemTypePriorityMap.get(item.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER
+      ));
+
+      return minPriorityA - minPriorityB;
+    });
+  }, [orderItems, itemTypes]);
+
+  // Mémoriser les états de sélection pour éviter les recalculs
+  const { allMenuItemsSelected, someMenuItemsSelected } = useMemo(() => {
+    const allSelected = orderItems.every(item => selectedItems.has(item.id));
+    const someSelected = orderItems.some(item => selectedItems.has(item.id));
+    return { allMenuItemsSelected: allSelected, someMenuItemsSelected: someSelected };
+  }, [orderItems, selectedItems]);
 
   // Handler pour sélectionner/désélectionner tout le menu
   const handleToggleMenuSelection = () => {
@@ -223,7 +261,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
         {/* Expanded content - rows simples */}
         {isExpanded && (
           <View>
-            {Object.entries(itemsByCategory).map(([categoryName, categoryItems]) => (
+            {sortedCategories.map(([categoryName, categoryItems]) => (
               <View key={categoryName}>
                 {/* Category header */}
                 <View style={styles.categoryHeader}>

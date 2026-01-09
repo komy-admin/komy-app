@@ -81,6 +81,11 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     const menuLines = order.lines?.filter((line) => line.type === OrderLineType.MENU) || [];
     const itemLines = order.lines?.filter((line) => line.type === OrderLineType.ITEM) || [];
 
+    // Créer un Map pour accès rapide au priorityOrder par itemType.id
+    const itemTypePriorityMap = new Map(
+      itemTypes.map(it => [it.id, it.priorityOrder])
+    );
+
     // Compter tous les items (y compris ceux dans les menus)
     let totalMenuItems = 0;
     menuLines.forEach((menuLine) => {
@@ -122,11 +127,21 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     }[] = [];
 
     if (activeTab === 'ALL') {
-      // Afficher tout
+      // Afficher tout : Menus en premier, puis items triés par priorityOrder des itemTypes
+      // 1. Ajouter tous les menus en premier
       menuLines.forEach((menuLine: OrderLine) => {
         filteredItems.push({ type: 'menu', data: menuLine });
       });
-      itemLines.forEach((line: OrderLine) => {
+
+      // 2. Trier les items par priorityOrder de leur itemType (ordre croissant)
+      const sortedItemLines = [...itemLines].sort((a, b) => {
+        const priorityA = itemTypePriorityMap.get(a.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
+        const priorityB = itemTypePriorityMap.get(b.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
+        return priorityA - priorityB;
+      });
+
+      // 3. Ajouter les items triés
+      sortedItemLines.forEach((line: OrderLine) => {
         filteredItems.push({ type: 'item', data: line });
       });
     } else if (activeTab === 'MENUS') {
@@ -136,6 +151,8 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
       });
     } else {
       // Afficher les items d'un itemType spécifique
+      // Pas besoin de tri ici car tous les items ont le même itemType (même priorityOrder)
+
       // Items individuels
       itemLines.forEach((line: OrderLine) => {
         if (line.item?.itemType?.id === activeTab) {
@@ -357,6 +374,7 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
                 <OrderDetailMenuCard
                   key={`menu-${menuLine.id}`}
                   menuLine={menuLine}
+                  itemTypes={itemTypes}
                   onUpdateItemStatus={onUpdateMenuItemStatus}
                   onUpdateMenuStatus={handleUpdateMenuStatus}
                   onDelete={() => handleDeleteMenu(menuLine.id, menuLine.menu?.name || 'Menu')}
@@ -378,6 +396,8 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
                     orderLineItem={orderLineItem}
                     isFromMenu={true}
                     menuName={menuName}
+                    showItemTypeTag={activeTab === 'ALL'}
+                    itemTypeName={orderLineItem.item?.itemType?.name}
                     onStatusChange={(newStatus) =>
                       onUpdateMenuItemStatus(orderLineItem, newStatus)
                     }
@@ -396,6 +416,8 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
                   <OrderDetailItemCard
                     key={`item-${orderLine.id}`}
                     orderLine={orderLine}
+                    showItemTypeTag={activeTab === 'ALL'}
+                    itemTypeName={orderLine.item?.itemType?.name}
                     onStatusChange={(newStatus) => onUpdateItemStatus(orderLine, newStatus)}
                     onDelete={() => handleDeleteItem(orderLine.id, orderLine.item?.name || 'Article')}
                     isMultiSelectMode={isMultiSelectMode}
