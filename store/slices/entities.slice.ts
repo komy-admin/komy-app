@@ -9,6 +9,7 @@ import { ItemType } from '~/types/item-type.types';
 import { User } from '~/types/user.types';
 import { Status } from '~/types/status.enum';
 import { Tag } from '~/types/tag.types';
+import { Payment, PaymentAllocation } from '~/types/payment.types';
 
 /**
  * État unifié pour toutes les entités métier
@@ -26,6 +27,8 @@ export interface EntitiesState {
   itemTypes: Record<string, ItemType>;
   users: Record<string, User>;
   tags: Record<string, Tag>;
+  payments: Record<string, Payment>;
+  paymentAllocations: Record<string, PaymentAllocation>;
 
   // État global
   isInitialized: boolean;
@@ -44,6 +47,8 @@ const initialState: EntitiesState = {
   itemTypes: {},
   users: {},
   tags: {},
+  payments: {},
+  paymentAllocations: {},
   isInitialized: false,
   initError: null,
 };
@@ -480,6 +485,72 @@ const entitiesSlice = createSlice({
     deleteUser: (state, action: PayloadAction<{ userId: string }>) => {
       delete state.users[action.payload.userId];
     },
+
+    // === PAYMENTS ===
+    setPayments: (state, action: PayloadAction<{ payments: Payment[] }>) => {
+      const { payments } = action.payload;
+      state.payments = normalizeArray(payments);
+      // Normaliser aussi les PaymentAllocations
+      payments.forEach(payment => {
+        if (payment.allocations) {
+          payment.allocations.forEach(allocation => {
+            state.paymentAllocations[allocation.id] = allocation;
+          });
+        }
+      });
+    },
+    createPayment: (state, action: PayloadAction<{ payment: Payment }>) => {
+      const { payment } = action.payload;
+      state.payments[payment.id] = payment;
+      // Normaliser les allocations
+      if (payment.allocations) {
+        payment.allocations.forEach(allocation => {
+          state.paymentAllocations[allocation.id] = allocation;
+        });
+      }
+    },
+    updatePayment: (state, action: PayloadAction<{ payment: Partial<Payment> & { id: string } }>) => {
+      const { payment } = action.payload;
+      if (state.payments[payment.id]) {
+        state.payments[payment.id] = { ...state.payments[payment.id], ...payment };
+        // Mettre à jour les allocations si présentes
+        if (payment.allocations) {
+          payment.allocations.forEach(allocation => {
+            state.paymentAllocations[allocation.id] = allocation;
+          });
+        }
+      }
+    },
+    deletePayment: (state, action: PayloadAction<{ paymentId: string }>) => {
+      const paymentId = action.payload.paymentId;
+      // Supprimer aussi les allocations associées
+      const payment = state.payments[paymentId];
+      if (payment?.allocations) {
+        payment.allocations.forEach(allocation => {
+          delete state.paymentAllocations[allocation.id];
+        });
+      }
+      delete state.payments[paymentId];
+    },
+
+    // === PAYMENT ALLOCATIONS ===
+    createPaymentAllocation: (state, action: PayloadAction<{ paymentAllocation: PaymentAllocation }>) => {
+      const { paymentAllocation } = action.payload;
+      state.paymentAllocations[paymentAllocation.id] = paymentAllocation;
+    },
+    updatePaymentAllocation: (state, action: PayloadAction<{ paymentAllocation: Partial<PaymentAllocation> & { id: string } }>) => {
+      const { paymentAllocation } = action.payload;
+      if (state.paymentAllocations[paymentAllocation.id]) {
+        state.paymentAllocations[paymentAllocation.id] = {
+          ...state.paymentAllocations[paymentAllocation.id],
+          ...paymentAllocation
+        };
+      }
+    },
+    deletePaymentAllocation: (state, action: PayloadAction<{ paymentAllocationId: string }>) => {
+      const allocationId = action.payload.paymentAllocationId;
+      delete state.paymentAllocations[allocationId];
+    },
   },
 });
 
@@ -741,4 +812,35 @@ export const selectAllOrderItems = createSelector(
     
     return orderItems;
   }
+);
+
+// Payments
+export const selectAllPayments = createSelector(
+  selectEntities,
+  (entities) => Object.values(entities.payments)
+);
+
+export const selectPaymentById = (paymentId: string) => createSelector(
+  selectEntities,
+  (entities) => entities.payments[paymentId]
+);
+
+export const selectPaymentsByOrderId = (orderId: string) => createSelector(
+  selectEntities,
+  (entities) => Object.values(entities.payments).filter(payment => payment.orderId === orderId)
+);
+
+export const selectPaymentAllocationsByPaymentId = (paymentId: string) => createSelector(
+  selectEntities,
+  (entities) => Object.values(entities.paymentAllocations).filter(allocation => allocation.paymentId === paymentId)
+);
+
+export const selectPaymentAllocationsByOrderLineId = (orderLineId: string) => createSelector(
+  selectEntities,
+  (entities) => Object.values(entities.paymentAllocations).filter(allocation => allocation.orderLineId === orderLineId)
+);
+
+export const selectAllPaymentAllocations = createSelector(
+  selectEntities,
+  (entities) => Object.values(entities.paymentAllocations)
 );

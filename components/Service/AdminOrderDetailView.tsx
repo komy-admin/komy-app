@@ -1,5 +1,5 @@
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { ChevronDown, ChevronUp, Wine, UtensilsCrossed, Soup, Dessert, Trash2, Settings, Menu } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Wine, UtensilsCrossed, Soup, Dessert, Trash2, Settings, Menu, Lock } from 'lucide-react-native';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ItemType } from '~/types/item-type.types';
@@ -12,6 +12,7 @@ import StatusSelector from './StatusSelector';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useOrders } from '~/hooks/useOrders';
 import { useMenus } from '~/hooks/useMenus';
+import { usePayments } from '~/hooks/usePayments';
 import { entitiesActions } from '~/store';
 import { useDispatch } from 'react-redux';
 import { useToast } from '~/components/ToastProvider';
@@ -53,7 +54,8 @@ const AdminOrderLineItem = ({
   onUpdateStatus,
   isGroupMenuOpen = false,
   isFirstInCategory = false,
-  isMenuItem = false
+  isMenuItem = false,
+  isPaid = false
 }: {
   orderLine?: OrderLine,
   orderLineItem?: OrderLineItem,
@@ -61,7 +63,8 @@ const AdminOrderLineItem = ({
   onUpdateStatus?: (status: Status) => void,
   isGroupMenuOpen?: boolean,
   isFirstInCategory?: boolean,
-  isMenuItem?: boolean
+  isMenuItem?: boolean,
+  isPaid?: boolean
 }) => {
   const [showStatusSelector, setShowStatusSelector] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -125,7 +128,31 @@ const AdminOrderLineItem = ({
         <View style={{ flex: 1, justifyContent: 'center' }}>
           {/* Nom, tag statut et heure sur la même ligne */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: itemNote ? 4 : 0 }}>
-            <Text style={{ fontSize: 16, flex: 1, marginRight: 8 }}>{itemName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+              <Text style={{ fontSize: 16, marginRight: 6 }}>{itemName}</Text>
+              {/* Badge "PAYÉ" si l'item est payé */}
+              {isPaid && (
+                <View style={{
+                  backgroundColor: '#10B981',
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 3,
+                }}>
+                  <Lock size={10} color="white" strokeWidth={3} />
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '700',
+                    color: 'white',
+                    letterSpacing: 0.5,
+                  }}>
+                    PAYÉ
+                  </Text>
+                </View>
+              )}
+            </View>
             {/* Tag du statut */}
             <View style={{
               backgroundColor: getStatusTagColor(itemStatus),
@@ -158,34 +185,48 @@ const AdminOrderLineItem = ({
 
       {/* Boutons d'action toujours visibles - s'étirent pour coller aux bords */}
       <View style={{ flexDirection: 'row', alignSelf: 'stretch' }}>
-        {/* Bouton modification statut */}
-        {onUpdateStatus && (
-          <Pressable
-            onPress={handleStatusClick}
-            style={{
-              backgroundColor: '#3B82F6',
-              width: 60,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Settings size={18} color="white" strokeWidth={2} />
-          </Pressable>
-        )}
+        {isPaid ? (
+          /* Si payé, afficher un indicateur visuel désactivé */
+          <View style={{
+            backgroundColor: '#9CA3AF',
+            width: 60,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Lock size={18} color="white" strokeWidth={2} />
+          </View>
+        ) : (
+          <>
+            {/* Bouton modification statut - seulement si non payé */}
+            {onUpdateStatus && (
+              <Pressable
+                onPress={handleStatusClick}
+                style={{
+                  backgroundColor: '#3B82F6',
+                  width: 60,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Settings size={18} color="white" strokeWidth={2} />
+              </Pressable>
+            )}
 
-        {/* Bouton suppression - masqué pour les items de menu */}
-        {!isMenuItem && onDelete && (
-          <Pressable
-            onPress={handleDeleteClick}
-            style={{
-              backgroundColor: '#EF4444',
-              width: 60,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Trash2 size={18} color="white" strokeWidth={2} />
-          </Pressable>
+            {/* Bouton suppression - masqué pour les items de menu et si payé */}
+            {!isMenuItem && onDelete && (
+              <Pressable
+                onPress={handleDeleteClick}
+                style={{
+                  backgroundColor: '#EF4444',
+                  width: 60,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Trash2 size={18} color="white" strokeWidth={2} />
+              </Pressable>
+            )}
+          </>
         )}
       </View>
 
@@ -230,7 +271,8 @@ const AdminMenuOrderGroup = ({
   onUpdateOrderLinesStatus,
   groupId,
   isMenuOpen,
-  onMenuOpenChange
+  onMenuOpenChange,
+  isOrderLinePaid
 }: {
   menuOrderGroup: any,
   menuInfo: any, // Info du menu depuis order.menus
@@ -242,7 +284,8 @@ const AdminMenuOrderGroup = ({
   onUpdateOrderLinesStatus?: (orderLines: any[], status: Status) => void,
   groupId: string,
   isMenuOpen: boolean,
-  onMenuOpenChange: (groupId: string | null) => void
+  onMenuOpenChange: (groupId: string | null) => void,
+  isOrderLinePaid: (orderLineId: string) => boolean
 }) => {
   const statuses = orderItems.map((orderLineItem: any) => orderLineItem.status);
   const itemStatus = getMostImportantStatus(statuses); // Utilisation de la fonction générique
@@ -455,6 +498,7 @@ const AdminMenuOrderGroup = ({
                       isGroupMenuOpen={isMenuOpen}
                       isFirstInCategory={index === 0}
                       isMenuItem={true}
+                      isPaid={isOrderLinePaid(orderLineItem.id)}
                     />
                   ))}
                 </View>
@@ -503,7 +547,8 @@ const AdminOrderItemsGroup = ({
   onDeleteGroup,
   groupId,
   isMenuOpen,
-  onMenuOpenChange
+  onMenuOpenChange,
+  isOrderLinePaid
 }: {
   itemType: ItemType;
   status: Status;
@@ -516,6 +561,7 @@ const AdminOrderItemsGroup = ({
   groupId: string;
   isMenuOpen: boolean;
   onMenuOpenChange: (groupId: string | null) => void;
+  isOrderLinePaid: (orderLineId: string) => boolean;
 }) => {
   const itemStatus = getMostImportantStatus(orderItems.map((orderLine: OrderLine) => orderLine.status || Status.PENDING));
   const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
@@ -681,6 +727,7 @@ const AdminOrderItemsGroup = ({
                   onDelete={() => onDeleteOrderLines([orderLine.id])}
                   onUpdateStatus={onUpdateOrderLinesStatus ? (newStatus) => onUpdateOrderLinesStatus([orderLine], newStatus) : undefined}
                   isGroupMenuOpen={false}
+                  isPaid={isOrderLinePaid(orderLine.id)}
                 />
               </View>
             ))}
@@ -733,6 +780,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
   const { showToast } = useToast();
   const { activeMenus, loadAllMenus } = useMenus();
   const { updateOrderStatus } = useOrders();
+  const { isOrderLinePaid } = usePayments();
 
   // Si les menus ne sont pas chargés, les charger
   useEffect(() => {
@@ -908,6 +956,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                       groupId={`menu-${menuLine.id}`}
                       isMenuOpen={openGroupMenuId === `menu-${menuLine.id}`}
                       onMenuOpenChange={setOpenGroupMenuId}
+                      isOrderLinePaid={isOrderLinePaid}
                     />
                   ))}
                 </>
@@ -952,6 +1001,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                   groupId={group.id}
                   isMenuOpen={openGroupMenuId === group.id}
                   onMenuOpenChange={setOpenGroupMenuId}
+                  isOrderLinePaid={isOrderLinePaid}
                 />
               ))}
             </>

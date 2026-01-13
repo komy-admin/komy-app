@@ -1,6 +1,6 @@
 import { memo, useState, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronDown, ChevronUp, Clock } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Clock, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { getMostImportantStatus, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
@@ -12,6 +12,7 @@ export interface OrderDetailMenuCardProps {
   onOpenItemStatusSelector: (orderLineItem: OrderLineItem) => void;
   onOpenMenuStatusSelector: (orderLineItems: OrderLineItem[], currentStatus: Status) => void;
   onOpenDeleteDialog: () => void;
+  isPaid?: boolean;
 }
 
 /**
@@ -133,6 +134,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   onOpenItemStatusSelector,
   onOpenMenuStatusSelector,
   onOpenDeleteDialog,
+  isPaid = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -279,6 +281,12 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
             </View>
 
             <View style={styles.priceTimeColumn}>
+              {isPaid && (
+                <View style={styles.paidBadge}>
+                  <Lock size={9} color="white" strokeWidth={3} />
+                  <Text style={styles.paidBadgeText}>PAYÉ</Text>
+                </View>
+              )}
               <Text style={styles.priceText}>
                 {formattedPrice}€
               </Text>
@@ -292,20 +300,29 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
           </TouchableOpacity>
 
           <View style={styles.actionsColumn}>
-            <IconButton
-              iconName="settings"
-              size={50}
-              variant="primary"
-              isTransparent={true}
-              onPress={handleMenuStatusClick}
-            />
-            <IconButton
-              iconName="trash"
-              size={50}
-              variant="danger"
-              isTransparent={true}
-              onPress={onOpenDeleteDialog}
-            />
+            
+                {isPaid ? (
+                  <View style={styles.lockedIcon}>
+                    <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+                  </View>
+                ) : (
+                  <>
+                  <IconButton
+                    iconName="settings"
+                    size={50}
+                    variant="primary"
+                    isTransparent={true}
+                    onPress={handleMenuStatusClick}
+                  />
+                  <IconButton
+                    iconName="trash"
+                    size={50}
+                    variant="danger"
+                    isTransparent={true}
+                    onPress={onOpenDeleteDialog}
+                  />
+                  </>
+                )}
             <TouchableOpacity
               onPress={toggleExpanded}
               activeOpacity={0.7}
@@ -385,6 +402,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 8,
     minWidth: 0,
+  },
+  menuNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
   menuName: {
     fontSize: 16,
@@ -558,5 +581,26 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#E5E7EB',
     marginHorizontal: -12, // Pour aller jusqu'aux bords
+  },
+  paidBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  paidBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.5,
+  },
+  lockedIcon: {
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

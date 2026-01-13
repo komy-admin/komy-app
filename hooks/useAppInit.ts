@@ -7,6 +7,7 @@ import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
+import { usePayments } from './usePayments';
 import { accountConfigApiService } from '~/api/account-config.api';
 import { tagApiService } from '~/api/tag.api';
 import { entitiesActions } from '~/store/slices/entities.slice';
@@ -18,6 +19,7 @@ export interface InitializationProgress {
   items: boolean;
   menus: boolean;
   orders: boolean;
+  payments: boolean;
   users: boolean;
   accountConfig: boolean;
   tags: boolean;
@@ -32,6 +34,7 @@ const INITIAL_PROGRESS: InitializationProgress = {
   items: false,
   menus: false,
   orders: false,
+  payments: false,
   users: false,
   accountConfig: false,
   tags: false,
@@ -62,6 +65,7 @@ export const useAppInit = () => {
   const { loadItemTypes, loadItems } = useMenu();
   const { loadAllMenus } = useMenus();
   const { loadUsers } = useUsers();
+  const { loadAllPayments } = usePayments();
 
   // Plus d'état local, tout est dans Redux maintenant
 
@@ -144,7 +148,7 @@ export const useAppInit = () => {
 
       await Promise.all(promises);
 
-      // Étape 3: Menu et commandes
+      // Étape 3: Menu, commandes et paiements
       await Promise.all([
         loadItems().then(result => {
           updateProgress('items', true);
@@ -156,6 +160,10 @@ export const useAppInit = () => {
         }),
         loadAllOrders().then(result => {
           updateProgress('orders', true);
+          return result;
+        }),
+        loadAllPayments().then(result => {
+          updateProgress('payments', true);
           return result;
         })
       ]);
@@ -200,7 +208,7 @@ export const useAppInit = () => {
 
       throw error;
     }
-  }, [canInitialize, appInitialized, isAppInitializing, dispatch, user?.profil, loadRooms, loadItemTypes, loadUsers, loadItems, loadAllMenus, loadAllOrders]);
+  }, [canInitialize, appInitialized, isAppInitializing, dispatch, user?.profil, loadRooms, loadItemTypes, loadUsers, loadItems, loadAllMenus, loadAllOrders, loadAllPayments]);
 
   // Démarrage automatique de l'initialisation
   useEffect(() => {

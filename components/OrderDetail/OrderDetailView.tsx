@@ -10,6 +10,7 @@ import { useToast } from '~/components/ToastProvider';
 import StatusSelector from '~/components/Service/StatusSelector';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { useOrderDetailFiltering, FilteredItem } from '~/hooks/useOrderDetailFiltering';
+import { usePayments } from '~/hooks/usePayments';
 
 export interface OrderDetailViewProps {
   order: Order;
@@ -33,6 +34,7 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
   const [activeTab, setActiveTab] = useState('ALL');
   const [prevOrderId, setPrevOrderId] = useState(order.id);
   const { showToast } = useToast();
+  const { isOrderLinePaid } = usePayments();
 
   // Reset synchrone du tab quand on change de commande (pas de flash)
   if (order.id !== prevOrderId) {

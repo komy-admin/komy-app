@@ -1,84 +1,87 @@
 import React, { useState, useMemo } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { Button, Text } from '~/components/ui';
-import { X, CheckSquare, Square, Plus, Minus, DivideIcon, Equal } from 'lucide-react-native';
+import { ChevronLeft, Check, Minus, Plus } from 'lucide-react-native';
 import { Order } from '~/types/order.types';
 import { OrderLine } from '~/types/order-line.types';
+import { formatPrice } from '~/lib/utils';
+import { usePayments } from '~/hooks/usePayments';
 
 interface PaymentViewProps {
   order: Order;
-  onClose: () => void;
-  onPaymentComplete: (paymentData: PaymentData) => void;
+  tableName: string;
+  onBack: () => void;
+  onPaymentComplete: () => void;
 }
 
-interface PaymentData {
-  orderId: string;
-  selectedItems: string[];
-  totalAmount: number;
-  calculatorTotal: number;
-}
+type PaymentType = 'full' | 'split' | 'items';
+type PaymentMethod = 'cash' | 'card' | 'check' | 'ticket_resto';
 
-export default function PaymentView({ order, onClose, onPaymentComplete }: PaymentViewProps) {
+export default function PaymentView({ order, tableName, onBack, onPaymentComplete }: PaymentViewProps) {
+  const { createPayment } = usePayments();
+
+  // États principaux
+  const [paymentType, setPaymentType] = useState<PaymentType>('items');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [paidItems, setPaidItems] = useState<Set<string>>(new Set());
+  const [splitCount, setSplitCount] = useState(2);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // État de la calculatrice
-  const [display, setDisplay] = useState('0');
-  const [previousValue, setPreviousValue] = useState<number | null>(null);
-  const [operation, setOperation] = useState<string | null>(null);
-  const [waitingForNext, setWaitingForNext] = useState(false);
-  const [calculationHistory, setCalculationHistory] = useState<string[]>([]);
+  // Calculer les montants depuis les payments existants de la commande
+  const orderTotals = useMemo(() => {
+    const totalAmount = order.lines?.reduce((sum, line) => sum + line.totalPrice, 0) || 0;
 
-  // Grouper les OrderLines par type
-  const groupedItems = useMemo(() => {
-    const groups: { [key: string]: OrderLine[] } = {};
+    // Les paiements complétés de cette commande
+    const completedPayments = order.payments?.filter(p => p.status === 'completed') || [];
+    const paidAmount = completedPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    (order.lines || []).forEach(line => {
-      let typeName = 'Articles';
-      if (line.type === 'MENU') {
-        typeName = 'Menus';
-      }
-      if (!groups[typeName]) {
-        groups[typeName] = [];
-      }
-      groups[typeName].push(line);
+    // Retrouver quels orderLines ont été payés via les allocations
+    const paidOrderLineIds = new Set<string>();
+    completedPayments.forEach(payment => {
+      payment.allocations?.forEach(allocation => {
+        // Si quantityFraction === 1.0, l'orderLine est complètement payé
+        if (allocation.quantityFraction === 1.0) {
+          paidOrderLineIds.add(allocation.orderLineId);
+        }
+      });
     });
 
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [order.lines]);
+    return {
+      totalAmount,
+      paidAmount,
+      remainingAmount: totalAmount - paidAmount,
+      paidOrderLineIds
+    };
+  }, [order]);
 
-  // Calculer le total des OrderLines sélectionnées
-  const selectedTotal = useMemo(() => {
-    return Array.from(selectedItems).reduce((total, lineId) => {
-      const line = (order.lines || []).find(ol => ol.id === lineId);
-      return total + (line?.totalPrice || 0);
-    }, 0);
-  }, [selectedItems, order.lines]);
+  // Items disponibles (non complètement payés)
+  const availableItems = useMemo(() => {
+    return order.lines?.filter(line => !orderTotals.paidOrderLineIds.has(line.id)) || [];
+  }, [order.lines, orderTotals.paidOrderLineIds]);
 
-  // Affichage des calculs ligne par ligne
-  const calculationLines = useMemo(() => {
-    if (selectedItems.size === 0) return [];
+  // Montant à payer selon le mode
+  const amountToPay = useMemo(() => {
+    switch (paymentType) {
+      case 'full':
+        return orderTotals.remainingAmount;
 
-    const lines: { operator: string; value: string; price: number }[] = [];
+      case 'split':
+        return Math.round(orderTotals.remainingAmount / splitCount);
 
-    Array.from(selectedItems).forEach((lineId, index) => {
-      const line = (order.lines || []).find(ol => ol.id === lineId);
-      if (line) {
-        const name = line.type === 'MENU' ? (line.menu?.name || 'Menu') : (line.item?.name || 'Article');
-        lines.push({
-          operator: index === 0 ? '' : '+',
-          value: name,
-          price: line.totalPrice
-        });
-      }
-    });
+      case 'items':
+        return selectedItems.size === 0
+          ? 0
+          : availableItems
+              .filter(line => selectedItems.has(line.id))
+              .reduce((sum, line) => sum + line.totalPrice, 0);
 
-    return lines;
-  }, [selectedItems, order.lines]);
+      default:
+        return 0;
+    }
+  }, [paymentType, splitCount, selectedItems, availableItems, orderTotals.remainingAmount]);
 
+  // Toggle sélection d'un item
   const handleItemToggle = (itemId: string) => {
-    if (paidItems.has(itemId)) return;
-
     setSelectedItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(itemId)) {
@@ -90,388 +93,402 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
     });
   };
 
-  // Vérifier si toutes les OrderLines disponibles sont sélectionnées
-  const availableItems = useMemo(() => {
-    return (order.lines || []).filter(line => !paidItems.has(line.id));
-  }, [order.lines, paidItems]);
+  // Créer les allocations selon le mode de paiement
+  const buildAllocations = () => {
+    switch (paymentType) {
+      case 'full':
+        return availableItems.map(line => ({
+          orderLineId: line.id,
+          quantityFraction: 1.0,
+          allocatedAmount: line.totalPrice // 100% du prix
+        }));
 
-  const allAvailableSelected = useMemo(() => {
-    return availableItems.length > 0 && availableItems.every(line => selectedItems.has(line.id));
-  }, [availableItems, selectedItems]);
+      case 'split':
+        const fraction = 1.0 / splitCount;
+        return availableItems.map(line => ({
+          orderLineId: line.id,
+          quantityFraction: fraction,
+          allocatedAmount: Math.round(line.totalPrice * fraction) // fraction du prix
+        }));
 
-  const handleToggleSelectAll = () => {
-    if (allAvailableSelected) {
-      // Tout désélectionner
-      setSelectedItems(new Set());
-    } else {
-      // Tout sélectionner
-      const availableItemIds = availableItems.map(item => item.id);
-      setSelectedItems(new Set(availableItemIds));
-    }
-  };
+      case 'items':
+        return Array.from(selectedItems).map(lineId => {
+          const line = availableItems.find(l => l.id === lineId);
+          return {
+            orderLineId: lineId,
+            quantityFraction: 1.0,
+            allocatedAmount: line?.totalPrice || 0 // 100% du prix de l'item
+          };
+        });
 
-  // Fonctions de la calculatrice
-  const inputNumber = (num: string) => {
-    if (waitingForNext) {
-      setDisplay(num);
-      setWaitingForNext(false);
-    } else {
-      setDisplay(display === '0' ? num : display + num);
-    }
-  };
-
-  const inputDecimal = () => {
-    if (waitingForNext) {
-      setDisplay('0.');
-      setWaitingForNext(false);
-    } else if (display.indexOf('.') === -1) {
-      setDisplay(display + '.');
-    }
-  };
-
-  const clear = () => {
-    setDisplay('0');
-    setPreviousValue(null);
-    setOperation(null);
-    setWaitingForNext(false);
-    setCalculationHistory([]);
-  };
-
-  const performOperation = (nextOperation: string) => {
-    const inputValue = parseFloat(display);
-
-    if (previousValue === null) {
-      setPreviousValue(inputValue);
-    } else if (operation) {
-      const currentValue = previousValue || 0;
-      const newValue = calculate(currentValue, inputValue, operation);
-
-      setDisplay(String(newValue));
-      setPreviousValue(newValue);
-
-      // Ajouter à l'historique
-      setCalculationHistory(prev => [
-        ...prev,
-        `${currentValue} ${operation} ${inputValue} = ${newValue}`
-      ]);
-    }
-
-    setWaitingForNext(true);
-    setOperation(nextOperation);
-  };
-
-  const calculate = (firstValue: number, secondValue: number, operation: string) => {
-    switch (operation) {
-      case '+':
-        return firstValue + secondValue;
-      case '-':
-        return firstValue - secondValue;
-      case '×':
-        return firstValue * secondValue;
-      case '÷':
-        return firstValue / secondValue;
-      case '=':
-        return secondValue;
       default:
-        return secondValue;
+        return [];
     }
   };
 
-  const addSelectedTotal = () => {
-    if (selectedTotal > 0) {
-      inputNumber(selectedTotal.toString());
+  // Traiter le paiement
+  const handlePayment = async () => {
+    if (!paymentMethod || amountToPay <= 0) return;
+
+    setIsProcessing(true);
+    try {
+      const allocations = buildAllocations();
+
+      await createPayment({
+        orderId: order.id,
+        amount: amountToPay,
+        paymentMethod,
+        allocations: allocations as any
+      });
+
+      onPaymentComplete();
+      onBack();
+    } catch (error) {
+      console.error('Erreur lors de la création du paiement:', error);
+      alert('Erreur lors du paiement');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handlePayment = () => {
-    const calculatorTotal = parseFloat(display);
+  // Render d'un item de la liste
+  const renderOrderLine = (line: OrderLine) => {
+    const isPaid = orderTotals.paidOrderLineIds.has(line.id);
+    const isSelected = selectedItems.has(line.id);
+    const showCheckbox = paymentType === 'items' && !isPaid;
 
-    if (calculatorTotal <= 0) return;
+    const itemName = line.type === 'MENU'
+      ? line.menu?.name || 'Menu'
+      : line.item?.name || 'Article';
 
-    const paymentData: PaymentData = {
-      orderId: order.id,
-      selectedItems: Array.from(selectedItems),
-      totalAmount: selectedTotal,
-      calculatorTotal
-    };
-
-    // Marquer les items comme payés
-    setPaidItems(prev => new Set([...prev, ...selectedItems]));
-    setSelectedItems(new Set());
-
-    onPaymentComplete(paymentData);
-  };
-
-  // Utiliser la fonction utilitaire pour formater les prix (centimes -> euros)
-  const formatPrice = (centimes: number) => {
-    const euros = centimes / 100;
-    return `${euros.toFixed(2)}€`;
-  };
-
-  const renderItem = ({ item }: { item: OrderLine }) => {
-    const isSelected = selectedItems.has(item.id);
-    const isPaid = paidItems.has(item.id);
-    const itemName = item.type === 'MENU' ? (item.menu?.name || 'Menu') : (item.item?.name || 'Article');
-    const itemTypeLabel = item.type === 'MENU' ? 'Menu' : (item.item?.itemType?.name || 'Article');
+    // Récupérer les sous-items pour les menus
+    const subItems = line.type === 'MENU' && line.items
+      ? line.items.map(menuItem => menuItem.item?.name).filter(Boolean)
+      : [];
 
     return (
       <Pressable
-        onPress={() => handleItemToggle(item.id)}
-        className={`flex-row items-center justify-between p-2 border-b border-gray-100 ${isPaid ? 'bg-gray-50 opacity-50' :
-          isSelected ? 'bg-blue-50' : 'bg-white'
-          }`}
-        disabled={isPaid}
+        key={line.id}
+        onPress={() => showCheckbox && handleItemToggle(line.id)}
+        disabled={isPaid || paymentType !== 'items'}
+        className="py-3 border-b border-gray-100"
       >
-        <View className="flex-row items-center flex-1">
-          <View className="mr-2">
-            {isPaid ? (
-              <CheckSquare size={16} color="#10B981" />
-            ) : isSelected ? (
-              <CheckSquare size={16} color="#3B82F6" />
-            ) : (
-              <Square size={16} color="#6B7280" />
+        <View className="flex-row items-start">
+          {/* Checkbox ou Check vert */}
+          <View className="w-8 items-center pt-0.5">
+            {showCheckbox && (
+              <View className={`w-5 h-5 border-2 rounded items-center justify-center ${
+                isSelected ? 'bg-green-500 border-green-500' : 'border-gray-300'
+              }`}>
+                {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+              </View>
+            )}
+            {isPaid && (
+              <Check size={18} color="#10B981" strokeWidth={2} />
             )}
           </View>
+
+          {/* Nom et prix */}
           <View className="flex-1">
-            <Text className={`text-sm font-medium ${isPaid ? 'text-gray-400' : 'text-gray-900'}`}>
-              {itemName}
-            </Text>
-            <Text className={`text-sm ${isPaid ? 'text-gray-300' : 'text-gray-600'}`}>
-              {itemTypeLabel}
-            </Text>
+            <View className="flex-row items-start justify-between">
+              <View className="flex-1 mr-2">
+                <Text className={`font-medium ${
+                  isPaid ? 'text-gray-400 line-through' : 'text-gray-900'
+                }`}>
+                  {itemName}
+                </Text>
+                {subItems.length > 0 && (
+                  <View className="mt-1">
+                    {subItems.map((subItem, idx) => (
+                      <Text key={idx} className={`text-xs ${
+                        isPaid ? 'text-gray-300' : 'text-gray-500'
+                      }`}>
+                        • {subItem}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+                {isPaid && (
+                  <Text className="text-xs text-green-600 mt-1">✓ Payé</Text>
+                )}
+              </View>
+              <Text className={`font-medium ${
+                isPaid ? 'text-gray-400 line-through' : 'text-gray-900'
+              }`}>
+                {formatPrice(line.totalPrice)}
+              </Text>
+            </View>
           </View>
         </View>
-        <Text className={`text-sm font-semibold ${isPaid ? 'text-gray-400' : 'text-gray-900'}`}>
-          {formatPrice(item.totalPrice)}
-        </Text>
-      </Pressable>
-    );
-  };
-
-  const CalculatorButton = ({
-    onPress,
-    className = '',
-    children,
-    variant = 'default'
-  }: {
-    onPress: () => void;
-    className?: string;
-    children: React.ReactNode;
-    variant?: 'default' | 'operator' | 'equals' | 'clear';
-  }) => {
-    const baseClass = 'h-12 justify-center items-center rounded-lg border border-gray-300';
-    const variantClass = {
-      default: 'bg-white',
-      operator: 'bg-blue-500',
-      equals: 'bg-green-500',
-      clear: 'bg-red-500'
-    }[variant];
-
-    return (
-      <Pressable
-        onPress={onPress}
-        className={`${baseClass} ${variantClass} ${className}`}
-      >
-        {children}
       </Pressable>
     );
   };
 
   return (
-    <View className="flex-1 bg-white flex-row">
-      {/* Liste des items à gauche */}
-      <View className="w-80 border-r border-gray-200">
-        <View className="p-3 bg-gray-50 border-b border-gray-200 flex-row justify-between items-center">
-          <Text className="font-semibold text-gray-900">Articles ({(order.lines || []).length - paidItems.size} restants)</Text>
-          <Pressable onPress={onClose} className="p-1">
-            <X size={20} color="#6B7280" />
+    <View className="flex-1 bg-white">
+      {/* HEADER */}
+      <View className="bg-white border-b border-gray-200 px-6 py-4">
+        <View className="flex-row items-center">
+          <Pressable onPress={onBack} className="mr-3">
+            <ChevronLeft size={24} color="#000" />
           </Pressable>
+          <Text className="text-lg font-semibold">Paiement - {tableName}</Text>
         </View>
-
-        <View className="p-3 border-b border-gray-200">
-          <Button
-            variant="outline"
-            onPress={handleToggleSelectAll}
-            className="w-full h-8"
-          >
-            <Text className="text-xs">
-              {allAvailableSelected ? "Tout désélectionner" : "Tout sélectionner"}
-            </Text>
-          </Button>
-        </View>
-
-        <ScrollView className="flex-1">
-          {groupedItems.map(([typeName, items]) => (
-            <View key={typeName}>
-              <View className="px-3 py-1 bg-gray-100">
-                <Text className="text-sm font-semibold text-gray-700 uppercase">
-                  {typeName} ({items.length})
-                </Text>
-              </View>
-              {items.map(item => renderItem({ item }))}
-            </View>
-          ))}
-        </ScrollView>
       </View>
 
-      {/* Calculatrice à droite */}
-      <View className="flex-1 bg-gray-50 p-4">
-        {/* Écran de la calculatrice avec affichage des opérations - Height fixe */}
-        <View className="bg-white border-2 border-gray-300 p-4 rounded-lg mb-4 h-64">
-          {/* Zone d'affichage des opérations sélectionnées - Scrollable */}
-          <ScrollView className="flex-1 mb-4" showsVerticalScrollIndicator={false}>
-            {calculationLines.length > 0 ? (
-              <>
-                {calculationLines.map((line, index) => (
-                  <View key={index} className="flex-row items-center mb-1">
-                    <Text className="w-6 text-sm text-blue-600 font-mono">
-                      {line.operator}
-                    </Text>
-                    <Text className="flex-1 text-sm text-gray-900 ml-2">
-                      {line.value}
-                    </Text>
-                    <Text className="text-sm text-gray-900 font-mono">
-                      {line.price.toFixed(2)}
-                    </Text>
-                  </View>
-                ))}
-                <View className="border-t border-gray-300 mt-2 pt-2">
-                  <View className="flex-row items-center">
-                    <Text className="w-6 text-sm text-blue-600 font-mono">=</Text>
-                    <Text className="flex-1 text-sm text-blue-600 ml-2 font-semibold">
-                      Sélection
-                    </Text>
-                    <Text className="text-lg text-blue-600 font-mono font-bold">
-                      {selectedTotal.toFixed(2)}
-                    </Text>
-                  </View>
-                </View>
+      {/* CONTENU */}
+      <View className="flex-1 flex-row">
+        {/* PANNEAU GAUCHE: Articles */}
+        <View className="w-[380px] border-r border-gray-200 bg-white">
+          <View className="px-6 py-4 border-b border-gray-100">
+            <Text className="font-semibold text-gray-900 mb-1">Articles de la commande</Text>
+            <Text className="text-sm text-gray-500">{order.lines?.length || 0} article(s)</Text>
+          </View>
 
-                {/* Affichage des calculs de la calculatrice */}
-                {calculationHistory.length > 0 && (
-                  <View className="border-t border-gray-300 mt-2 pt-2">
-                    {calculationHistory.slice(-2).map((calc, index) => (
-                      <Text key={index} className="text-xs text-gray-600 font-mono">
-                        {calc}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-              </>
-            ) : (
-              <Text className="text-gray-500 text-center italic text-sm">
-                Sélectionnez des articles ou utilisez la calculatrice
-              </Text>
-            )}
+          <ScrollView className="flex-1 px-6">
+            {order.lines?.map(line => renderOrderLine(line))}
           </ScrollView>
-
-          {/* Ligne d'affichage principal */}
-          <View className="border-t border-gray-300 pt-2">
-            <Text className="text-gray-900 text-right text-3xl font-mono font-bold">
-              {display}
-            </Text>
-          </View>
         </View>
 
-        {/* Boutons actions rapides */}
-        <View className="flex-row gap-2 mb-4">
-          <Button
-            onPress={addSelectedTotal}
-            disabled={selectedTotal === 0}
-            variant="outline"
-            className="flex-1 h-10"
-          >
-            <Text className="text-xs">Ajouter sélection ({formatPrice(selectedTotal)})</Text>
-          </Button>
-          <Button
-            onPress={clear}
-            variant="outline"
-            className="w-16 h-10"
-          >
-            <Text className="text-xs">Clear</Text>
-          </Button>
+        {/* PANNEAU DROIT: Configuration */}
+        <View className="flex-1 bg-gray-50">
+          <View className="flex-1 px-6 py-4">
+            {/* RÉSUMÉ */}
+            <View className="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+              <Text className="font-semibold text-gray-900 mb-2">Résumé</Text>
+              <View className="flex-row justify-between mb-1">
+                <Text className="text-sm text-gray-600">Total:</Text>
+                <Text className="text-sm font-semibold text-gray-900">
+                  {formatPrice(orderTotals.totalAmount)}
+                </Text>
+              </View>
+              <View className="flex-row justify-between mb-2">
+                <Text className="text-sm text-gray-600">Déjà payé:</Text>
+                <Text className="text-sm font-semibold text-green-600">
+                  {formatPrice(orderTotals.paidAmount)}
+                </Text>
+              </View>
+              <View className="border-t border-gray-200 pt-2">
+                <View className="flex-row justify-between">
+                  <Text className="font-bold text-gray-900">Restant:</Text>
+                  <Text className="font-bold text-lg text-blue-600">
+                    {formatPrice(orderTotals.remainingAmount)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* TYPE DE PAIEMENT */}
+            <View className="mb-4">
+              <Text className="font-semibold text-gray-900 mb-2">Type de paiement</Text>
+              <View className="gap-2">
+                <Pressable
+                  onPress={() => setPaymentType('full')}
+                  disabled={orderTotals.remainingAmount === 0}
+                  className={`h-10 rounded-lg border-2 items-center justify-center ${
+                    paymentType === 'full'
+                      ? 'bg-blue-50 border-blue-500'
+                      : orderTotals.remainingAmount === 0
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Text className={`font-medium ${
+                    paymentType === 'full'
+                      ? 'text-blue-700'
+                      : orderTotals.remainingAmount === 0
+                      ? 'text-gray-400'
+                      : 'text-gray-700'
+                  }`}>
+                    Paiement complet
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPaymentType('split')}
+                  disabled={orderTotals.remainingAmount === 0}
+                  className={`h-10 rounded-lg border-2 items-center justify-center ${
+                    paymentType === 'split'
+                      ? 'bg-blue-50 border-blue-500'
+                      : orderTotals.remainingAmount === 0
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Text className={`font-medium ${
+                    paymentType === 'split'
+                      ? 'text-blue-700'
+                      : orderTotals.remainingAmount === 0
+                      ? 'text-gray-400'
+                      : 'text-gray-700'
+                  }`}>
+                    Split égal
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPaymentType('items')}
+                  disabled={availableItems.length === 0}
+                  className={`h-10 rounded-lg border-2 items-center justify-center ${
+                    paymentType === 'items'
+                      ? 'bg-blue-50 border-blue-500'
+                      : availableItems.length === 0
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Text className={`font-medium ${
+                    paymentType === 'items'
+                      ? 'text-blue-700'
+                      : availableItems.length === 0
+                      ? 'text-gray-400'
+                      : 'text-gray-700'
+                  }`}>
+                    Par articles
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* COMPTEUR SPLIT */}
+            {paymentType === 'split' && (
+              <View className="bg-white rounded-lg p-3 mb-4 border border-gray-200">
+                <Text className="text-xs font-medium text-gray-700 mb-2 text-center">
+                  Nombre de personnes
+                </Text>
+                <View className="flex-row items-center justify-center gap-4">
+                  <Pressable
+                    onPress={() => setSplitCount(Math.max(2, splitCount - 1))}
+                    className="w-8 h-8 bg-gray-100 rounded items-center justify-center"
+                  >
+                    <Minus size={16} color="#374151" />
+                  </Pressable>
+
+                  <Text className="text-2xl font-bold text-gray-900 w-12 text-center">
+                    {splitCount}
+                  </Text>
+
+                  <Pressable
+                    onPress={() => setSplitCount(Math.min(10, splitCount + 1))}
+                    className="w-8 h-8 bg-gray-100 rounded items-center justify-center"
+                  >
+                    <Plus size={16} color="#374151" />
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {/* ARTICLES SÉLECTIONNÉS */}
+            {paymentType === 'items' && (
+              <View className="bg-white rounded-lg p-3 mb-4 border border-gray-200">
+                <Text className="font-semibold text-sm text-gray-900 mb-1">Articles sélectionnés</Text>
+                <Text className="text-xs text-gray-500 mb-2">
+                  Cliquez sur les articles à gauche
+                </Text>
+                <Text className="text-lg font-bold text-blue-600">
+                  {formatPrice(amountToPay)}
+                </Text>
+              </View>
+            )}
+
+            {/* MOYEN DE PAIEMENT */}
+            <View className="mb-2">
+              <Text className="font-semibold text-gray-900 mb-2">Moyen de paiement</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {/* Espèces */}
+                <Pressable
+                  onPress={() => setPaymentMethod('cash')}
+                  className={`flex-1 min-w-[48%] h-20 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'cash'
+                      ? 'bg-blue-50 border-blue-500'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Text className="text-2xl mb-2">💵</Text>
+                  <Text className={`font-medium ${
+                    paymentMethod === 'cash' ? 'text-blue-700' : 'text-gray-700'
+                  }`}>
+                    Espèces
+                  </Text>
+                </Pressable>
+
+                {/* Carte */}
+                <Pressable
+                  onPress={() => setPaymentMethod('card')}
+                  className={`flex-1 min-w-[48%] h-20 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'card'
+                      ? 'bg-blue-50 border-blue-500'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Text className="text-2xl mb-2">💳</Text>
+                  <Text className={`font-medium ${
+                    paymentMethod === 'card' ? 'text-blue-700' : 'text-gray-700'
+                  }`}>
+                    Carte
+                  </Text>
+                </Pressable>
+
+                {/* Ticket Resto */}
+                <Pressable
+                  onPress={() => setPaymentMethod('ticket_resto')}
+                  className={`flex-1 min-w-[48%] h-20 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'ticket_resto'
+                      ? 'bg-blue-50 border-blue-500'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Text className="text-2xl mb-2">🎫</Text>
+                  <Text className={`font-medium ${
+                    paymentMethod === 'ticket_resto' ? 'text-blue-700' : 'text-gray-700'
+                  }`}>
+                    Ticket Resto
+                  </Text>
+                </Pressable>
+
+                {/* Chèque */}
+                <Pressable
+                  onPress={() => setPaymentMethod('check')}
+                  className={`flex-1 min-w-[48%] h-20 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'check'
+                      ? 'bg-blue-50 border-blue-500'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Text className="text-2xl mb-2">✓</Text>
+                  <Text className={`font-medium ${
+                    paymentMethod === 'check' ? 'text-blue-700' : 'text-gray-700'
+                  }`}>
+                    Chèque
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          {/* BOUTON PAYER FIXE EN BAS */}
+          <View className="px-6 py-3 bg-white border-t border-gray-200">
+            <Button
+              onPress={handlePayment}
+              disabled={!paymentMethod || amountToPay <= 0 || isProcessing}
+              className={`w-full h-12 ${
+                !paymentMethod || amountToPay <= 0 || isProcessing
+                  ? 'bg-gray-300'
+                  : 'bg-blue-600'
+              }`}
+            >
+              <View className="flex-row items-center gap-2">
+                <Text className="text-2xl">💳</Text>
+                <Text className="text-white font-bold text-base">
+                  {isProcessing
+                    ? 'Traitement...'
+                    : `Payer ${formatPrice(amountToPay)}`
+                  }
+                </Text>
+              </View>
+            </Button>
+          </View>
         </View>
-
-        {/* Boutons de la calculatrice */}
-        <View className="gap-2">
-          {/* Première ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => performOperation('÷')} variant="operator" className="flex-1">
-              <DivideIcon size={20} color="white" />
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('×')} variant="operator" className="flex-1">
-              <Text className="text-white font-semibold text-lg">×</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('-')} variant="operator" className="flex-1">
-              <Minus size={20} color="white" />
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('+')} variant="operator" className="flex-1">
-              <Plus size={20} color="white" />
-            </CalculatorButton>
-          </View>
-
-          {/* Deuxième ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => inputNumber('7')} className="flex-1">
-              <Text className="text-lg font-semibold">7</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('8')} className="flex-1">
-              <Text className="text-lg font-semibold">8</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('9')} className="flex-1">
-              <Text className="text-lg font-semibold">9</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('=')} variant="equals" className="flex-1">
-              <Equal size={20} color="white" />
-            </CalculatorButton>
-          </View>
-
-          {/* Troisième ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => inputNumber('4')} className="flex-1">
-              <Text className="text-lg font-semibold">4</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('5')} className="flex-1">
-              <Text className="text-lg font-semibold">5</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('6')} className="flex-1">
-              <Text className="text-lg font-semibold">6</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('0')} className="flex-1">
-              <Text className="text-lg font-semibold">0</Text>
-            </CalculatorButton>
-          </View>
-
-          {/* Quatrième ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => inputNumber('1')} className="flex-1">
-              <Text className="text-lg font-semibold">1</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('2')} className="flex-1">
-              <Text className="text-lg font-semibold">2</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('3')} className="flex-1">
-              <Text className="text-lg font-semibold">3</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={inputDecimal} className="flex-1">
-              <Text className="text-lg font-semibold">.</Text>
-            </CalculatorButton>
-          </View>
-        </View>
-
-        {/* Bouton de paiement */}
-        <Button
-          onPress={handlePayment}
-          disabled={parseFloat(display) <= 0}
-          className={`w-full h-12 mt-4 ${parseFloat(display) <= 0
-            ? 'bg-gray-300'
-            : 'bg-green-600'
-            }`}
-        >
-          <Text className="text-white font-medium">
-            Encaisser {formatPrice(parseFloat(display) || 0)}
-          </Text>
-        </Button>
       </View>
     </View>
   );

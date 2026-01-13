@@ -28,7 +28,7 @@ import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal
 import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { CustomModal } from '@/components/CustomModal';
 import PaymentView from '~/components/Service/PaymentView';
-import { ForkModal } from '~/components/ui';
+import { Status } from '~/types/status.enum';
 
 const NOOP = () => {};
 
@@ -40,7 +40,18 @@ export default function ServicePage() {
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
   const [isReassigning, setIsReassigning] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // const [showClaimConfirmModal, setShowClaimConfirmModal] = useState(false);
+  // const [showServeConfirmModal, setShowServeConfirmModal] = useState(false);
+  // const [itemsToClaimData, setItemsToClaimData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; itemTypeNames: string[]; count: number; itemNames: string[] } | null>(null);
+  // const [itemsToServeData, setItemsToServeData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; count: number; itemNames: string[] } | null>(null);
+  const [showPaymentView, setShowPaymentView] = useState(false);
+  // const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  // const [menuConfigActions, setMenuConfigActions] = useState<{
+  //   onCancel: () => void;
+  //   onConfirm: () => void;
+  //   isValid?: boolean;
+  // } | null>(null);
+
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useAppSelector(selectAppInitialized);
   const appLoading = useAppSelector(selectIsAppInitializing);
@@ -250,17 +261,75 @@ export default function ServicePage() {
   }, [selectedTableOrder, updateOrder, setSelectedTable, showToast, isReassigning]);
 
   const handlePayment = useCallback(() => {
-    setShowPaymentModal(true);
+    setShowPaymentView(true);
   }, []);
 
-  const handlePaymentComplete = useCallback(async (_paymentData: any) => {
+  const handlePaymentComplete = useCallback(async () => {
     try {
-      setShowPaymentModal(false);
       showToast('Paiement traité avec succès', 'success');
     } catch (error) {
       showToast('Erreur lors du traitement du paiement', 'error');
     }
   }, [showToast]);
+
+  const handleBackFromPayment = useCallback(() => {
+    setShowPaymentView(false);
+  }, []);
+
+  const handleTerminate = useCallback(() => {
+    setShowTerminateDialog(true);
+  }, []);
+
+  const handleConfirmTerminate = useCallback(async () => {
+    if (!selectedTableOrder) return;
+
+    try {
+      const orderLineIds: string[] = [];
+      const orderLineItemIds: string[] = [];
+
+      selectedTableOrder.lines?.forEach((line) => {
+        if (line.type === OrderLineType.ITEM) {
+          orderLineIds.push(line.id);
+        } else if (line.type === OrderLineType.MENU && line.items) {
+          line.items.forEach((item) => {
+            orderLineItemIds.push(item.id);
+          });
+        }
+      });
+
+      await updateOrderStatus(selectedTableOrder.id, {
+        status: Status.TERMINATED,
+        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
+        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+      });
+
+      showToast('Commande terminée avec succès', 'success');
+      setShowTerminateDialog(false);
+      setShowOrderDetail(false);
+      setSelectedTable(null);
+    } catch (error) {
+      showToast('Erreur lors de la terminaison de la commande', 'error');
+      console.error('Erreur terminate:', error);
+    }
+  }, [selectedTableOrder, updateOrderStatus, showToast, setSelectedTable]);
+
+  const handleDelete = useCallback(() => {
+    setShowDeleteDialog(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!selectedTableOrder) return;
+
+    try {
+      await deleteOrder(selectedTableOrder.id);
+      showToast('Commande supprimée avec succès', 'success');
+      setShowDeleteDialog(false);
+      setShowOrderDetail(false);
+      setSelectedTable(null);
+    } catch (error) {
+      showToast('Erreur lors de la suppression de la commande', 'error');
+    }
+  }, [selectedTableOrder, deleteOrder, showToast, setSelectedTable]);
 
   const handleCloseOrderDetail = useCallback(() => {
     setShowOrderDetail(false);
@@ -306,26 +375,38 @@ export default function ServicePage() {
   }, []);
 
   return (
-    <View style={styles.flex1}>
-      {/* OrderLinesForm en pleine page - remplace tout le layout */}
-      {showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
-        <View style={styles.flex1}>
-          <OrderLinesForm
-            title={orderModalTitle}
-            lines={orderLinesManager.orderLines}
-            items={allItems.filter(item => item.isActive)}
-            itemTypes={allItemTypes}
-            onAddItem={orderLinesManager.addItem}
-            onUpdateItem={orderLinesManager.updateItem}
-            onAddMenu={orderLinesManager.addMenu}
-            onUpdateMenu={orderLinesManager.updateMenu}
-            onDeleteLine={orderLinesManager.deleteLine}
-            onClearAll={orderLinesManager.clearAllLines}
-            onSave={orderLinesManager.save}
-            onCancel={handleSmartCloseOrderModal}
-            hasChanges={orderLinesManager.hasChanges}
-            isProcessing={orderLinesManager.isProcessing}
-          />
+    <View style={{ flex: 1 }}>
+      {/* PaymentView en pleine page */}
+      {showPaymentView && selectedTableOrder ? (
+        <PaymentView
+          order={selectedTableOrder}
+          tableName={selectedTable?.name || 'Table'}
+          onBack={handleBackFromPayment}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      ) : /* OrderLinesForm en pleine page - remplace tout le layout */
+      showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
+        <View style={{ flex: 1, flexDirection: 'column' }}>
+          {/* OrderLinesForm */}
+          <View style={{ flex: 1 }}>
+            <OrderLinesForm
+              title={orderModalTitle}
+              lines={orderLinesManager.orderLines}
+              items={allItems.filter(item => item.isActive)}
+              itemTypes={allItemTypes}
+              onAddItem={orderLinesManager.addItem}
+              onUpdateItem={orderLinesManager.updateItem}
+              onAddMenu={orderLinesManager.addMenu}
+              onUpdateMenu={orderLinesManager.updateMenu}
+              onDeleteLine={orderLinesManager.deleteLine}
+              onClearAll={orderLinesManager.clearAllLines}
+              onSave={orderLinesManager.save}
+              onCancel={handleSmartCloseOrderModal}
+              hasChanges={orderLinesManager.hasChanges}
+              isProcessing={orderLinesManager.isProcessing}
+            />
+          </View>
+
         </View>
       ) : (
         // Layout normal service — Room plein écran
@@ -448,21 +529,6 @@ export default function ServicePage() {
           </View>
         </View>
       </CustomModal>
-
-      <ForkModal
-        visible={showPaymentModal}
-        onClose={handleClosePaymentModal}
-        maxWidth={1200}
-        title="Régler l'addition"
-      >
-        {selectedTableOrder && (
-          <PaymentView
-            order={selectedTableOrder}
-            onClose={handleClosePaymentModal}
-            onPaymentComplete={handlePaymentComplete}
-          />
-        )}
-      </ForkModal>
 
       {selectedTableOrder && showDeleteDialog && (
         <DeleteConfirmationModal
