@@ -30,7 +30,7 @@ export const useWebSocketSync = () => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    const listeners: Array<[string, Function]> = [];
+    const listeners: Array<[string, (...args: any[]) => void]> = [];
 
     Object.entries(WEBSOCKET_EVENT_MAP).forEach(([model, actions]) => {
       Object.entries(actions).forEach(([eventType, reduxActionName]) => {
@@ -88,9 +88,9 @@ export const useWebSocketDebugger = () => {
 
     // Logger tous les événements pour debug
     const originalEmit = socket.emit;
-    socket.emit = function(...args: any[]) {
-      console.log('🚀 WebSocket emit:', args[0], args[1]);
-      return originalEmit.apply(socket, args);
+    socket.emit = function(ev: string, ...args: any[]) {
+      console.log('🚀 WebSocket emit:', ev, args[0]);
+      return originalEmit.apply(socket, [ev, ...args] as [string, ...any[]]);
     };
 
     const originalOn = socket.on;

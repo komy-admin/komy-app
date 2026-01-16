@@ -23,6 +23,9 @@ export const WebSocketListener: React.FC<{ children: React.ReactNode }> = ({
   // Initialise le listener pour la déconnexion forcée (multi-device)
   useForceLogout();
 
+  // Initialise le listener pour la déconnexion forcée (multi-device)
+  useForceLogout();
+
   // Ce composant ne rend rien, il initialise juste les listeners
   return <>{children}</>;
 };
