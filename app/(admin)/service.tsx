@@ -698,6 +698,7 @@ export default function ServicePage() {
         <View style={{ flexDirection: 'row', flex: 1 }}>
           <SidePanel
             hideCloseButton={true}
+            hideHeader={true}
             width={windowDimensions.width / 4}
             title="Service"
             onBack={handleDeselectTable}

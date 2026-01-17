@@ -14,6 +14,7 @@ interface SidePanelProps {
   onCollapsedChange?: (collapsed: boolean) => void;
   hideCloseButton?: boolean;
   showCloseButtonWhenTableSelected?: boolean;
+  hideHeader?: boolean;
 }
 
 export function SidePanel({
@@ -27,6 +28,7 @@ export function SidePanel({
   onCollapsedChange,
   hideCloseButton = false,
   showCloseButtonWhenTableSelected = false,
+  hideHeader = false,
 }: SidePanelProps) {
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
   const isCollapsed = controlledIsCollapsed ?? internalIsCollapsed;
@@ -137,27 +139,29 @@ export function SidePanel({
         ]}
         pointerEvents={isCollapsed ? "none" : "auto"}
       >
-        <View
-          style={[
-            styles.header,
-            getHeaderStyle()
-          ]}
-        >
-          <View style={styles.headerLeft}>
-            <Text
-              style={styles.title}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {title}
-            </Text>
-            {shouldShowCloseButton() && (
-              <Pressable onPress={handleCloseAction} style={styles.backButton}>
-                <X size={24} color="#2A2E33" />
-              </Pressable>
-            )}
+        {!hideHeader && (
+          <View
+            style={[
+              styles.header,
+              getHeaderStyle()
+            ]}
+          >
+            <View style={styles.headerLeft}>
+              <Text
+                style={styles.title}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {title}
+              </Text>
+              {shouldShowCloseButton() && (
+                <Pressable onPress={handleCloseAction} style={styles.backButton}>
+                  <X size={24} color="#2A2E33" />
+                </Pressable>
+              )}
+            </View>
           </View>
-        </View>
+        )}
         {/* CRITIQUE: Wrapper pour isoler le contenu scrollable */}
         <View style={styles.childrenContainer}>
           {children}
