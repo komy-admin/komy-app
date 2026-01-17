@@ -1,10 +1,10 @@
-import React, { memo } from 'react';
-import { Pressable, View, PressableProps } from 'react-native';
-import { 
-  Eye, 
-  EyeOff, 
-  PencilLine, 
-  Trash2, 
+import React, { memo, useMemo } from 'react';
+import { TouchableOpacity, View, TouchableOpacityProps, StyleSheet } from 'react-native';
+import {
+  Eye,
+  EyeOff,
+  PencilLine,
+  Trash2,
   Plus,
   X,
   Check,
@@ -15,13 +15,13 @@ import {
   Filter
 } from 'lucide-react-native';
 
-export type IconName = 
-  | 'eye' 
-  | 'eye-off' 
-  | 'pencil' 
-  | 'trash' 
-  | 'plus' 
-  | 'x' 
+export type IconName =
+  | 'eye'
+  | 'eye-off'
+  | 'pencil'
+  | 'trash'
+  | 'plus'
+  | 'x'
   | 'check'
   | 'chevron-down'
   | 'chevron-up'
@@ -31,7 +31,7 @@ export type IconName =
 
 export type IconButtonVariant = 'success' | 'primary' | 'danger' | 'warning' | 'neutral';
 
-interface IconButtonProps extends Omit<PressableProps, 'style' | 'children'> {
+interface IconButtonProps extends Omit<TouchableOpacityProps, 'style' | 'children'> {
   iconName: IconName;
   size?: number;
   variant?: IconButtonVariant;
@@ -40,57 +40,91 @@ interface IconButtonProps extends Omit<PressableProps, 'style' | 'children'> {
   onPress?: () => void;
 }
 
-const getIcon = (iconName: IconName, size: number, color: string) => {
-  const icons = {
-    'eye': Eye,
-    'eye-off': EyeOff,
-    'pencil': PencilLine,
-    'trash': Trash2,
-    'plus': Plus,
-    'x': X,
-    'check': Check,
-    'chevron-down': ChevronDown,
-    'chevron-up': ChevronUp,
-    'settings': Settings,
-    'search': Search,
-    'filter': Filter,
-  };
-
-  const Icon = icons[iconName];
-  return <Icon size={size} color={color} />;
+// ✅ Constante hors du component (créée une seule fois)
+const ICON_MAP: Record<IconName, React.ComponentType<any>> = {
+  'eye': Eye,
+  'eye-off': EyeOff,
+  'pencil': PencilLine,
+  'trash': Trash2,
+  'plus': Plus,
+  'x': X,
+  'check': Check,
+  'chevron-down': ChevronDown,
+  'chevron-up': ChevronUp,
+  'settings': Settings,
+  'search': Search,
+  'filter': Filter,
 };
 
-const getVariantStyles = (variant: IconButtonVariant, isTransparent: boolean) => {
-  const variants = {
-    success: {
-      backgroundColor: isTransparent ? '#F0FDF4' : '#10B981',
-      borderColor: isTransparent ? '#10B981' : '#059669',
-      iconColor: isTransparent ? '#10B981' : '#FFFFFF',
-    },
-    primary: {
-      backgroundColor: isTransparent ? '#EFF6FF' : '#3B82F6',
-      borderColor: isTransparent ? '#93C5FD' : '#2563EB',
-      iconColor: isTransparent ? '#3B82F6' : '#FFFFFF',
-    },
-    danger: {
-      backgroundColor: isTransparent ? '#FEE2E2' : '#EF4444',
-      borderColor: isTransparent ? '#FCA5A5' : '#DC2626',
-      iconColor: isTransparent ? '#EF4444' : '#FFFFFF',
-    },
-    warning: {
-      backgroundColor: isTransparent ? '#FEF3C7' : '#F59E0B',
-      borderColor: isTransparent ? '#FDE68A' : '#D97706',
-      iconColor: isTransparent ? '#F59E0B' : '#FFFFFF',
-    },
-    neutral: {
-      backgroundColor: isTransparent ? '#F9FAFB' : '#6B7280',
-      borderColor: isTransparent ? '#D1D5DB' : '#4B5563',
-      iconColor: isTransparent ? '#6B7280' : '#FFFFFF',
-    },
-  };
+// ✅ Constante pour le ratio icon/button (documentée)
+const ICON_SIZE_RATIO = 0.44; // L'icône fait 44% de la taille du bouton
 
-  return variants[variant];
-};
+// ✅ Fonction pure pour obtenir le component Icon (pas de JSX)
+const getIconComponent = (iconName: IconName) => ICON_MAP[iconName];
+
+// ✅ Configuration des variants (constante hors du component)
+const VARIANT_STYLES = {
+  success: {
+    transparent: {
+      backgroundColor: '#F0FDF4',
+      borderColor: '#10B981',
+      iconColor: '#10B981',
+    },
+    solid: {
+      backgroundColor: '#10B981',
+      borderColor: '#059669',
+      iconColor: '#FFFFFF',
+    },
+  },
+  primary: {
+    transparent: {
+      backgroundColor: '#EFF6FF',
+      borderColor: '#93C5FD',
+      iconColor: '#3B82F6',
+    },
+    solid: {
+      backgroundColor: '#3B82F6',
+      borderColor: '#2563EB',
+      iconColor: '#FFFFFF',
+    },
+  },
+  danger: {
+    transparent: {
+      backgroundColor: '#FEE2E2',
+      borderColor: '#FCA5A5',
+      iconColor: '#EF4444',
+    },
+    solid: {
+      backgroundColor: '#EF4444',
+      borderColor: '#DC2626',
+      iconColor: '#FFFFFF',
+    },
+  },
+  warning: {
+    transparent: {
+      backgroundColor: '#FEF3C7',
+      borderColor: '#FDE68A',
+      iconColor: '#F59E0B',
+    },
+    solid: {
+      backgroundColor: '#F59E0B',
+      borderColor: '#D97706',
+      iconColor: '#FFFFFF',
+    },
+  },
+  neutral: {
+    transparent: {
+      backgroundColor: '#F9FAFB',
+      borderColor: '#D1D5DB',
+      iconColor: '#6B7280',
+    },
+    solid: {
+      backgroundColor: '#6B7280',
+      borderColor: '#4B5563',
+      iconColor: '#FFFFFF',
+    },
+  },
+} as const;
 
 export const IconButton = memo<IconButtonProps>(({
   iconName,
@@ -100,38 +134,54 @@ export const IconButton = memo<IconButtonProps>(({
   iconColor,
   onPress,
   disabled,
-  ...pressableProps
+  ...touchableProps
 }) => {
-  const variantStyles = getVariantStyles(variant, isTransparent);
+  // ✅ useMemo : Calcule le style seulement si variant/isTransparent changent
+  const variantStyles = useMemo(() => {
+    const variantKey = isTransparent ? 'transparent' : 'solid';
+    return VARIANT_STYLES[variant][variantKey];
+  }, [variant, isTransparent]);
+
+  // ✅ useMemo : Calcule les styles dynamiques seulement si les dépendances changent
+  const containerStyle = useMemo(() => ({
+    width: size,
+    height: size,
+    backgroundColor: variantStyles.backgroundColor,
+    borderColor: variantStyles.borderColor,
+  }), [size, variantStyles.backgroundColor, variantStyles.borderColor]);
+
+  const touchableStyle = useMemo(() => ({
+    opacity: disabled ? 0.5 : 1,
+  }), [disabled]);
+
+  // ✅ Calculs simples (pas besoin de useMemo pour ça)
   const finalIconColor = iconColor || variantStyles.iconColor;
-  const iconSize = Math.round(size * 0.44);
+  const iconSize = Math.round(size * ICON_SIZE_RATIO);
+  const Icon = getIconComponent(iconName);
 
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => ({
-        opacity: pressed ? 0.8 : disabled ? 0.5 : 1,
-        transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
-      })}
-      {...pressableProps}
+      activeOpacity={0.7}
+      style={touchableStyle}
+      {...touchableProps}
     >
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: 8,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: variantStyles.backgroundColor,
-          borderColor: variantStyles.borderColor,
-          borderWidth: 1,
-        }}
-      >
-        {getIcon(iconName, iconSize, finalIconColor)}
+      <View style={[styles.container, containerStyle]}>
+        <Icon size={iconSize} color={finalIconColor} />
       </View>
-    </Pressable>
+    </TouchableOpacity>
   );
 });
 
 IconButton.displayName = 'IconButton';
+
+// ✅ StyleSheet.create : Optimisé par React Native (styles natifs)
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+});

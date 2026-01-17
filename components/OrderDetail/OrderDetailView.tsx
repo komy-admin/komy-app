@@ -1,15 +1,15 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, Text } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, FlatList, StyleSheet, Text } from 'react-native';
 import { OrderDetailTabs } from './OrderDetailTabs';
-import { OrderDetailItemCard } from './OrderDetailItemCard';
-import { OrderDetailMenuCard } from './OrderDetailMenuCard';
-import { OrderDetailActions } from './OrderDetailActions';
-import { OrderDetailMultiSelectBar } from './OrderDetailMultiSelectBar';
-import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
+import { OrderDetailListItem } from './OrderDetailListItem';
+import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Order } from '~/types/order.types';
 import { Status } from '~/types/status.enum';
 import { ItemType } from '~/types/item-type.types';
 import { useToast } from '~/components/ToastProvider';
+import StatusSelector from '~/components/Service/StatusSelector';
+import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { useOrderDetailFiltering, FilteredItem } from '~/hooks/useOrderDetailFiltering';
 
 export interface OrderDetailViewProps {
   order: Order;
@@ -19,12 +19,6 @@ export interface OrderDetailViewProps {
   onBulkUpdateStatus?: (orderLineIds: string[], orderLineItemIds: string[], newStatus: Status) => Promise<void>;
   onDeleteOrderLine: (orderLineId: string) => Promise<void>;
   onDeleteMenuLine: (orderLineId: string) => Promise<void>;
-  onReassignTable: () => void;
-  onPayment: () => void;
-  onTerminate: () => void;
-  onDelete: () => void;
-  isMultiSelectMode?: boolean;
-  onToggleMultiSelectMode?: () => void;
 }
 
 export const OrderDetailView = React.memo<OrderDetailViewProps>(({
@@ -35,159 +29,38 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
   onBulkUpdateStatus,
   onDeleteOrderLine,
   onDeleteMenuLine,
-  onReassignTable,
-  onPayment,
-  onTerminate,
-  onDelete,
-  isMultiSelectMode: externalMultiSelectMode,
-  onToggleMultiSelectMode: externalToggleMultiSelectMode,
 }) => {
   const [activeTab, setActiveTab] = useState('ALL');
-  const [internalMultiSelectMode, setInternalMultiSelectMode] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
 
-  const isMultiSelectMode = externalMultiSelectMode !== undefined ? externalMultiSelectMode : internalMultiSelectMode;
+  // ✅ Hook custom pour la logique de filtrage (séparé pour la réutilisabilité)
+  const { filteredItems, counts } = useOrderDetailFiltering(order.lines, activeTab, itemTypes);
 
-  // Stocker l'order.id précédent pour détecter les changements
-  const prevOrderIdRef = React.useRef(order.id);
+  // State pour le StatusSelector global
+  const [showStatusSelector, setShowStatusSelector] = useState(false);
+  const [selectedItemForStatus, setSelectedItemForStatus] = useState<{
+    type: 'orderLine' | 'orderLineItem' | 'menuItems';
+    data: OrderLine | OrderLineItem | OrderLineItem[];
+    currentStatus: Status;
+  } | null>(null);
 
-  // Nettoyer la sélection quand on désactive le mode sélection
-  React.useEffect(() => {
-    if (!isMultiSelectMode) {
-      setSelectedItems(new Set());
-    }
-  }, [isMultiSelectMode]);
+  // State pour le DeleteConfirmationModal global
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedItemForDelete, setSelectedItemForDelete] = useState<{
+    type: 'orderLine' | 'menu';
+    id: string;
+    name: string;
+  } | null>(null);
 
-  // Désactiver le mode sélection quand on change de commande
-  React.useEffect(() => {
-    // Ne se déclenche que si l'order.id a vraiment changé
-    if (prevOrderIdRef.current !== order.id) {
-      if (isMultiSelectMode) {
-        if (externalToggleMultiSelectMode) {
-          externalToggleMultiSelectMode();
-        } else {
-          setInternalMultiSelectMode(false);
-        }
-        setSelectedItems(new Set());
-      }
-      // Mettre à jour la ref
-      prevOrderIdRef.current = order.id;
-    }
-  }, [order.id, isMultiSelectMode, externalToggleMultiSelectMode]);
-
-  // Logique de regroupement des items par tab
-  const { filteredItems, counts } = useMemo(() => {
-    const menuLines = order.lines?.filter((line) => line.type === OrderLineType.MENU) || [];
-    const itemLines = order.lines?.filter((line) => line.type === OrderLineType.ITEM) || [];
-
-    // Créer un Map pour accès rapide au priorityOrder par itemType.id
-    const itemTypePriorityMap = new Map(
-      itemTypes.map(it => [it.id, it.priorityOrder])
-    );
-
-    // Compter tous les items (y compris ceux dans les menus)
-    let totalMenuItems = 0;
-    menuLines.forEach((menuLine) => {
-      totalMenuItems += menuLine.items?.length || 0;
+  // ✅ Handlers optimisés avec useCallback
+  const handleOpenDeleteItemDialog = useCallback((orderLine: OrderLine) => {
+    setSelectedItemForDelete({
+      type: 'orderLine',
+      id: orderLine.id,
+      name: orderLine.item?.name || 'Article',
     });
-
-    const allCount = itemLines.length + totalMenuItems;
-
-    const counts: { all: number; menus: number; [key: string]: number } = {
-      all: allCount,
-      menus: menuLines.length,
-    };
-
-    // Compter par itemType
-    itemTypes.forEach((itemType) => {
-      counts[itemType.id] = 0;
-
-      // Compter les items individuels de ce type
-      itemLines.forEach((line: OrderLine) => {
-        if (line.item?.itemType?.id === itemType.id) {
-          counts[itemType.id]++;
-        }
-      });
-
-      // Compter les items de menu de ce type
-      menuLines.forEach((menuLine: OrderLine) => {
-        menuLine.items?.forEach((menuItem: OrderLineItem) => {
-          if (menuItem.item?.itemType?.id === itemType.id) {
-            counts[itemType.id]++;
-          }
-        });
-      });
-    });
-
-    // Filtrer selon le tab actif
-    let filteredItems: {
-      type: 'item' | 'menu';
-      data: OrderLine | { orderLineItem: OrderLineItem; menuName: string };
-    }[] = [];
-
-    if (activeTab === 'ALL') {
-      // Afficher tout : Menus en premier, puis items triés par priorityOrder des itemTypes
-      // 1. Ajouter tous les menus en premier
-      menuLines.forEach((menuLine: OrderLine) => {
-        filteredItems.push({ type: 'menu', data: menuLine });
-      });
-
-      // 2. Trier les items par priorityOrder de leur itemType (ordre croissant)
-      const sortedItemLines = [...itemLines].sort((a, b) => {
-        const priorityA = itemTypePriorityMap.get(a.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
-        const priorityB = itemTypePriorityMap.get(b.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
-        return priorityA - priorityB;
-      });
-
-      // 3. Ajouter les items triés
-      sortedItemLines.forEach((line: OrderLine) => {
-        filteredItems.push({ type: 'item', data: line });
-      });
-    } else if (activeTab === 'MENUS') {
-      // Afficher seulement les menus
-      menuLines.forEach((menuLine: OrderLine) => {
-        filteredItems.push({ type: 'menu', data: menuLine });
-      });
-    } else {
-      // Afficher les items d'un itemType spécifique
-      // Pas besoin de tri ici car tous les items ont le même itemType (même priorityOrder)
-
-      // Items individuels
-      itemLines.forEach((line: OrderLine) => {
-        if (line.item?.itemType?.id === activeTab) {
-          filteredItems.push({ type: 'item', data: line });
-        }
-      });
-
-      // Items de menu de ce type
-      menuLines.forEach((menuLine: OrderLine) => {
-        menuLine.items?.forEach((menuItem: OrderLineItem) => {
-          if (menuItem.item?.itemType?.id === activeTab) {
-            filteredItems.push({
-              type: 'item',
-              data: {
-                orderLineItem: menuItem,
-                menuName: menuLine.menu?.name || 'Menu',
-              },
-            });
-          }
-        });
-      });
-    }
-
-    return { filteredItems, counts };
-  }, [order.lines, activeTab, itemTypes]);
-
-  const handleDeleteItem = useCallback(async (orderLineId: string, itemName: string) => {
-    try {
-      await onDeleteOrderLine(orderLineId);
-      showToast('Article supprimé avec succès', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
-      console.error('Erreur suppression:', error);
-    }
-  }, [onDeleteOrderLine, showToast]);
+    setShowDeleteDialog(true);
+  }, []);
 
   const handleUpdateMenuStatus = useCallback(async (orderLineItems: OrderLineItem[], newStatus: Status) => {
     if (!onBulkUpdateStatus) {
@@ -196,10 +69,7 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     }
 
     try {
-      // Collecter tous les IDs des items du menu
       const orderLineItemIds = orderLineItems.map(item => item.id);
-
-      // Un seul appel API pour tout mettre à jour
       await onBulkUpdateStatus([], orderLineItemIds, newStatus);
       showToast('Statut du menu mis à jour avec succès', 'success');
     } catch (error) {
@@ -208,140 +78,139 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
     }
   }, [onBulkUpdateStatus, showToast]);
 
-  const handleDeleteMenu = useCallback(async (orderLineId: string, menuName: string) => {
+  const handleOpenDeleteMenuDialog = useCallback((menuLine: OrderLine) => {
+    setSelectedItemForDelete({
+      type: 'menu',
+      id: menuLine.id,
+      name: menuLine.menu?.name || 'Menu',
+    });
+    setShowDeleteDialog(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!selectedItemForDelete) return;
+
+    setShowDeleteDialog(false);
+
     try {
-      await onDeleteMenuLine(orderLineId);
-      showToast('Menu supprimé avec succès', 'success');
+      if (selectedItemForDelete.type === 'orderLine') {
+        await onDeleteOrderLine(selectedItemForDelete.id);
+        showToast('Article supprimé avec succès', 'success');
+      } else if (selectedItemForDelete.type === 'menu') {
+        await onDeleteMenuLine(selectedItemForDelete.id);
+        showToast('Menu supprimé avec succès', 'success');
+      }
     } catch (error) {
       showToast('Erreur lors de la suppression', 'error');
       console.error('Erreur suppression:', error);
+    } finally {
+      setSelectedItemForDelete(null);
     }
-  }, [onDeleteMenuLine, showToast]);
+  }, [selectedItemForDelete, onDeleteOrderLine, onDeleteMenuLine, showToast]);
 
-  const toggleMultiSelectMode = useCallback(() => {
-    if (externalToggleMultiSelectMode) {
-      externalToggleMultiSelectMode();
-    } else {
-      setInternalMultiSelectMode((prev) => !prev);
-    }
-    setSelectedItems(new Set());
-  }, [externalToggleMultiSelectMode]);
-
-  const toggleItemSelection = useCallback((itemId: string) => {
-    setSelectedItems((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(itemId)) {
-        newSet.delete(itemId);
-      } else {
-        newSet.add(itemId);
-      }
-      return newSet;
+  const handleOpenItemStatusSelector = useCallback((orderLine: OrderLine) => {
+    setSelectedItemForStatus({
+      type: 'orderLine',
+      data: orderLine,
+      currentStatus: orderLine.status || Status.PENDING,
     });
+    setShowStatusSelector(true);
   }, []);
 
-  const handleBulkStatusChange = useCallback(async (newStatus: Status) => {
-    if (selectedItems.size === 0) return;
+  const handleOpenMenuItemStatusSelector = useCallback((orderLineItem: OrderLineItem) => {
+    setSelectedItemForStatus({
+      type: 'orderLineItem',
+      data: orderLineItem,
+      currentStatus: orderLineItem.status || Status.PENDING,
+    });
+    setShowStatusSelector(true);
+  }, []);
+
+  const handleOpenMenuStatusSelector = useCallback((orderLineItems: OrderLineItem[], currentStatus: Status) => {
+    setSelectedItemForStatus({
+      type: 'menuItems',
+      data: orderLineItems,
+      currentStatus,
+    });
+    setShowStatusSelector(true);
+  }, []);
+
+  const handleStatusSelect = useCallback(async (newStatus: Status) => {
+    if (!selectedItemForStatus) return;
+
+    setShowStatusSelector(false);
 
     try {
-      if (onBulkUpdateStatus) {
-        const orderLineIds: string[] = [];
-        const orderLineItemIds: string[] = [];
-
-        selectedItems.forEach((itemId) => {
-          const orderLine = order.lines?.find((line) => line.id === itemId);
-          if (orderLine) {
-            if (orderLine.type === OrderLineType.ITEM) {
-              orderLineIds.push(itemId);
-            }
-          } else {
-            order.lines?.forEach((line) => {
-              if (line.type === OrderLineType.MENU && line.items) {
-                const menuItem = line.items.find((item) => item.id === itemId);
-                if (menuItem) {
-                  orderLineItemIds.push(itemId);
-                }
-              }
-            });
-          }
-        });
-
-        await onBulkUpdateStatus(orderLineIds, orderLineItemIds, newStatus);
-      } else {
-        const promises: Promise<void>[] = [];
-
-        selectedItems.forEach((itemId) => {
-          const orderLine = order.lines?.find((line) => line.id === itemId);
-          if (orderLine) {
-            if (orderLine.type === OrderLineType.ITEM) {
-              promises.push(onUpdateItemStatus(orderLine, newStatus));
-            }
-          } else {
-            order.lines?.forEach((line) => {
-              if (line.type === OrderLineType.MENU && line.items) {
-                const menuItem = line.items.find((item) => item.id === itemId);
-                if (menuItem) {
-                  promises.push(onUpdateMenuItemStatus(menuItem, newStatus));
-                }
-              }
-            });
-          }
-        });
-
-        await Promise.all(promises);
-        showToast(`${selectedItems.size} article(s) mis à jour`, 'success');
+      if (selectedItemForStatus.type === 'orderLine') {
+        await onUpdateItemStatus(selectedItemForStatus.data as OrderLine, newStatus);
+      } else if (selectedItemForStatus.type === 'orderLineItem') {
+        await onUpdateMenuItemStatus(selectedItemForStatus.data as OrderLineItem, newStatus);
+      } else if (selectedItemForStatus.type === 'menuItems') {
+        await handleUpdateMenuStatus(selectedItemForStatus.data as OrderLineItem[], newStatus);
       }
-
-      setSelectedItems(new Set());
-      toggleMultiSelectMode();
     } catch (error) {
-      showToast('Erreur lors de la mise à jour', 'error');
-      console.error('Erreur bulk update:', error);
+      console.error('Erreur lors du changement de statut:', error);
+    } finally {
+      setSelectedItemForStatus(null);
     }
-  }, [selectedItems, order.lines, onUpdateItemStatus, onUpdateMenuItemStatus, onBulkUpdateStatus, showToast, toggleMultiSelectMode]);
+  }, [selectedItemForStatus, onUpdateItemStatus, onUpdateMenuItemStatus, handleUpdateMenuStatus]);
 
-  // Calculer le nombre total d'items visibles
-  const totalVisibleCount = useMemo(() => {
-    let count = 0;
-    filteredItems.forEach((item) => {
-      if (item.type === 'menu') {
-        const menuLine = item.data as OrderLine;
-        count += menuLine.items?.length || 0;
-      } else {
-        count += 1;
-      }
-    });
-    return count;
-  }, [filteredItems]);
+  const handleCloseStatusSelector = useCallback(() => {
+    setShowStatusSelector(false);
+    setSelectedItemForStatus(null);
+  }, []);
 
-  // Sélectionner/désélectionner tous les items visibles
-  const handleSelectAll = useCallback(() => {
-    const allVisibleIds: string[] = [];
+  const handleCloseDeleteDialog = useCallback(() => {
+    setShowDeleteDialog(false);
+    setSelectedItemForDelete(null);
+  }, []);
 
-    filteredItems.forEach((item) => {
-      if (item.type === 'menu') {
-        const menuLine = item.data as OrderLine;
-        menuLine.items?.forEach((menuItem) => {
-          allVisibleIds.push(menuItem.id);
-        });
-      } else if ('orderLineItem' in item.data) {
-        const { orderLineItem } = item.data as { orderLineItem: OrderLineItem; menuName: string };
-        allVisibleIds.push(orderLineItem.id);
-      } else {
-        const orderLine = item.data as OrderLine;
-        allVisibleIds.push(orderLine.id);
-      }
-    });
-
-    const allSelected = allVisibleIds.every(id => selectedItems.has(id));
-
-    if (allSelected) {
-      // Désélectionner tout
-      setSelectedItems(new Set());
-    } else {
-      // Sélectionner tout
-      setSelectedItems(new Set(allVisibleIds));
+  // ✅ keyExtractor optimisé
+  const keyExtractor = useCallback((item: FilteredItem, index: number) => {
+    if (item.type === 'menu') {
+      return `menu-${(item.data as OrderLine).id}`;
     }
-  }, [filteredItems, selectedItems]);
+    if ('orderLineItem' in item.data) {
+      return `menu-item-${item.data.orderLineItem.id}`;
+    }
+    return `item-${(item.data as OrderLine).id}`;
+  }, []);
+
+  // ✅ renderItem optimisé - extrait dans un composant séparé
+  const renderItem = useCallback(({ item }: { item: FilteredItem }) => (
+    <OrderDetailListItem
+      item={item}
+      activeTab={activeTab}
+      itemTypes={itemTypes}
+      onOpenItemStatusSelector={handleOpenItemStatusSelector}
+      onOpenMenuItemStatusSelector={handleOpenMenuItemStatusSelector}
+      onOpenMenuStatusSelector={handleOpenMenuStatusSelector}
+      onOpenDeleteItemDialog={handleOpenDeleteItemDialog}
+      onOpenDeleteMenuDialog={handleOpenDeleteMenuDialog}
+      onShowToast={showToast}
+    />
+  ), [
+    activeTab,
+    itemTypes,
+    handleOpenItemStatusSelector,
+    handleOpenMenuItemStatusSelector,
+    handleOpenMenuStatusSelector,
+    handleOpenDeleteItemDialog,
+    handleOpenDeleteMenuDialog,
+    showToast,
+  ]);
+
+  // ✅ ListEmptyComponent optimisé
+  const ListEmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>Aucun article dans cette catégorie</Text>
+    </View>
+  ), []);
+
+  // ✅ ListFooterComponent optimisé
+  const ListFooterComponent = useCallback(() => (
+    <View style={styles.footer} />
+  ), []);
 
   return (
     <View style={styles.container}>
@@ -353,108 +222,50 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
         counts={counts}
       />
 
-      {/* Contenu */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          isMultiSelectMode && styles.scrollContentWithBar
-        ]}
+      {/* ✅ FlatList avec virtualisation (bien plus performant que ScrollView + map) */}
+      <FlatList
+        data={filteredItems}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.listContent}
+        style={styles.list}
+        // ✅ Optimisations critiques pour tablettes
         showsVerticalScrollIndicator={true}
-      >
-        {filteredItems.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Aucun article dans cette catégorie</Text>
-          </View>
-        ) : (
-          filteredItems.map((item, index) => {
-            if (item.type === 'menu') {
-              const menuLine = item.data as OrderLine;
-              return (
-                <OrderDetailMenuCard
-                  key={`menu-${menuLine.id}`}
-                  menuLine={menuLine}
-                  itemTypes={itemTypes}
-                  onUpdateItemStatus={onUpdateMenuItemStatus}
-                  onUpdateMenuStatus={handleUpdateMenuStatus}
-                  onDelete={() => handleDeleteMenu(menuLine.id, menuLine.menu?.name || 'Menu')}
-                  isMultiSelectMode={isMultiSelectMode}
-                  selectedItems={selectedItems}
-                  onToggleItemSelection={toggleItemSelection}
-                />
-              );
-            } else {
-              // Vérifier si c'est un OrderLine ou un OrderLineItem
-              if ('orderLineItem' in item.data) {
-                const { orderLineItem, menuName } = item.data as {
-                  orderLineItem: OrderLineItem;
-                  menuName: string;
-                };
-                return (
-                  <OrderDetailItemCard
-                    key={`menu-item-${orderLineItem.id}`}
-                    orderLineItem={orderLineItem}
-                    isFromMenu={true}
-                    menuName={menuName}
-                    showItemTypeTag={activeTab === 'ALL'}
-                    itemTypeName={orderLineItem.item?.itemType?.name}
-                    onStatusChange={(newStatus) =>
-                      onUpdateMenuItemStatus(orderLineItem, newStatus)
-                    }
-                    onDelete={() => {
-                      // On ne peut pas supprimer un item de menu individuellement
-                      showToast('Impossible de supprimer un item de menu', 'warning');
-                    }}
-                    isMultiSelectMode={isMultiSelectMode}
-                    isSelected={selectedItems.has(orderLineItem.id)}
-                    onToggleSelection={() => toggleItemSelection(orderLineItem.id)}
-                  />
-                );
-              } else {
-                const orderLine = item.data as OrderLine;
-                return (
-                  <OrderDetailItemCard
-                    key={`item-${orderLine.id}`}
-                    orderLine={orderLine}
-                    showItemTypeTag={activeTab === 'ALL'}
-                    itemTypeName={orderLine.item?.itemType?.name}
-                    onStatusChange={(newStatus) => onUpdateItemStatus(orderLine, newStatus)}
-                    onDelete={() => handleDeleteItem(orderLine.id, orderLine.item?.name || 'Article')}
-                    isMultiSelectMode={isMultiSelectMode}
-                    isSelected={selectedItems.has(orderLine.id)}
-                    onToggleSelection={() => toggleItemSelection(orderLine.id)}
-                  />
-                );
-              }
-            }
-          })
-        )}
+        bounces={true}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
+        scrollEnabled={true}
+        directionalLockEnabled={true}
+        alwaysBounceVertical={true}
+        // ✅ Performance optimizations
+        removeClippedSubviews={true} // Enlève les vues hors écran (iOS/Android)
+        maxToRenderPerBatch={10} // Rend 10 items max par batch
+        updateCellsBatchingPeriod={50} // Attend 50ms entre les batches
+        initialNumToRender={10} // Rend 10 items au départ
+        windowSize={5} // Garde 5 écrans en mémoire (2.5 avant, 2.5 après)
+        // ✅ Empty state
+        ListEmptyComponent={ListEmptyComponent}
+        ListFooterComponent={ListFooterComponent}
+      />
 
-        <View style={{ height: 20 }} />
-      </ScrollView>
+      {/* StatusSelector global - un seul pour toutes les cards */}
+      <StatusSelector
+        visible={showStatusSelector}
+        currentStatus={selectedItemForStatus?.currentStatus || Status.DRAFT}
+        onClose={handleCloseStatusSelector}
+        onStatusSelect={handleStatusSelect}
+      />
 
-      {/* Multi-select bar */}
-      {isMultiSelectMode && (
-        <OrderDetailMultiSelectBar
-          selectedCount={selectedItems.size}
-          totalVisibleCount={totalVisibleCount}
-          onCancel={() => {
-            setSelectedItems(new Set());
-            toggleMultiSelectMode();
-          }}
-          onStatusChange={handleBulkStatusChange}
-          onSelectAll={handleSelectAll}
-        />
-      )}
-
-      {/* Actions */}
-      {!isMultiSelectMode && (
-        <OrderDetailActions
-          orderStatus={order.status}
-          onReassignTable={onReassignTable}
-          onPayment={onPayment}
-          onTerminate={onTerminate}
-          onDelete={onDelete}
+      {/* DeleteConfirmationModal global - un seul pour toutes les cards */}
+      {selectedItemForDelete && (
+        <DeleteConfirmationModal
+          isVisible={showDeleteDialog}
+          onClose={handleCloseDeleteDialog}
+          onConfirm={handleConfirmDelete}
+          entityName={`"${selectedItemForDelete.name}"`}
+          entityType={selectedItemForDelete.type === 'menu' ? 'le menu' : "l'article"}
+          usePortal={true}
         />
       )}
     </View>
@@ -463,19 +274,20 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
 
 OrderDetailView.displayName = 'OrderDetailView';
 
+// ✅ StyleSheet.create pour performance native
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  scrollView: {
+  list: {
     flex: 1,
   },
-  scrollContent: {
+  listContent: {
     padding: 16,
   },
-  scrollContentWithBar: {
-    paddingBottom: 90,
+  footer: {
+    height: 20,
   },
   emptyContainer: {
     flex: 1,

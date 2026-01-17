@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, View, useWindowDimensions, Platform } from "react-native";
+import { Pressable, ScrollView, View, useWindowDimensions, StyleSheet } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
 import { Badge, Text, Button } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
@@ -12,6 +12,11 @@ import { useOrderFilters } from "~/hooks/useOrderFilters";
 import StartOrderCard from "~/components/Service/StartOrderCard";
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
+import { RoomTabsHeader } from '~/components/Service/RoomTabsHeader';
+import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
+import { ClaimConfirmModal } from '~/components/Service/ClaimConfirmModal';
+import { ServeConfirmModal } from '~/components/Service/ServeConfirmModal';
+import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
 import {
   useRestaurant,
   useMenu,
@@ -45,7 +50,10 @@ export default function ServicePage() {
   const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
   const [isReassigning, setIsReassigning] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [showClaimConfirmModal, setShowClaimConfirmModal] = useState(false);
+  const [showServeConfirmModal, setShowServeConfirmModal] = useState(false);
+  const [itemsToClaimData, setItemsToClaimData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; itemTypeName: string; count: number; itemNames: string[] } | null>(null);
+  const [itemsToServeData, setItemsToServeData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; count: number; itemNames: string[] } | null>(null);
   const [menuConfigActions, setMenuConfigActions] = useState<{
     onCancel: () => void;
     onConfirm: () => void;
@@ -69,6 +77,40 @@ export default function ServicePage() {
 
   // Stabiliser la référence des initialLines pour éviter les re-renders inutiles
   const initialLines = useMemo(() => selectedTableOrder?.lines || [], [selectedTableOrder?.id, selectedTableOrder?.lines]);
+
+  // Calculer si il y a des items en DRAFT
+  const hasDraftItems = useMemo(() => {
+    if (!selectedTableOrder?.lines) return false;
+
+    // Vérifier items individuels
+    const hasDraftIndividualItems = selectedTableOrder.lines.some(
+      (line) => line.type === OrderLineType.ITEM && line.status === Status.DRAFT
+    );
+    if (hasDraftIndividualItems) return true;
+
+    // Vérifier items dans les menus
+    return selectedTableOrder.lines.some(
+      (line) => line.type === OrderLineType.MENU &&
+        line.items?.some((menuItem) => menuItem.status === Status.DRAFT)
+    );
+  }, [selectedTableOrder?.lines]);
+
+  // Calculer si il y a des items en READY
+  const hasReadyItems = useMemo(() => {
+    if (!selectedTableOrder?.lines) return false;
+
+    // Vérifier items individuels
+    const hasReadyIndividualItems = selectedTableOrder.lines.some(
+      (line) => line.type === OrderLineType.ITEM && line.status === Status.READY
+    );
+    if (hasReadyIndividualItems) return true;
+
+    // Vérifier items dans les menus
+    return selectedTableOrder.lines.some(
+      (line) => line.type === OrderLineType.MENU &&
+        line.items?.some((menuItem) => menuItem.status === Status.READY)
+    );
+  }, [selectedTableOrder?.lines]);
 
   // ✅ Hook pour gérer les OrderLines (remplace toute la logique manuelle)
   const orderLinesManager = useOrderLinesManager({
@@ -124,10 +166,10 @@ export default function ServicePage() {
 
 
 
-  const handleChangeRoom = (room: any) => {
+  const handleChangeRoom = useCallback((room: any) => {
     setSelectedTable(null);
     setCurrentRoom(room.id);
-  };
+  }, [setSelectedTable, setCurrentRoom]);
 
   const handleTablePress = useCallback((table: Table | null) => {
     if (!table) return;
@@ -145,7 +187,7 @@ export default function ServicePage() {
     }
   }, [currentRoomOrders, setSelectedTable]);
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = useCallback(() => {
     if (!selectedTableId) {
       showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
       return;
@@ -162,7 +204,7 @@ export default function ServicePage() {
     setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
     setOrderModalTitle(`Prendre la commande - ${selectedTable?.name}`);
     setShowOrderModal(true); // Ouvrir la modal
-  };
+  }, [selectedTableId, currentRoomOrders, selectedTable, showToast]);
 
 
 
@@ -211,7 +253,7 @@ export default function ServicePage() {
     setMenuConfigActions(actions);
   }, []);
 
-  const handleDeleteOrder = async () => {
+  const handleDeleteOrder = useCallback(async () => {
     if (!selectedTableOrder) return;
 
     try {
@@ -222,7 +264,7 @@ export default function ServicePage() {
     } catch (error) {
       showToast('Erreur lors de la suppression de la commande.', 'error');
     }
-  };
+  }, [selectedTableOrder, deleteOrder, setSelectedTable, showToast]);
 
   // Handlers pour OrderDetailView
   const handleEditOrder = useCallback(() => {
@@ -278,6 +320,149 @@ export default function ServicePage() {
       console.error('Erreur bulk update:', error);
     }
   }, [selectedTableOrder, updateOrderStatus, showToast]);
+
+  const handleClaim = useCallback(() => {
+    if (!selectedTableOrder) return;
+
+    // Créer un Map pour accès rapide au priorityOrder
+    const itemTypePriorityMap = new Map(
+      allItemTypes.map(it => [it.id, it.priorityOrder])
+    );
+
+    // Trouver tous les items en DRAFT (items individuels + items dans les menus)
+    const draftItems: { orderLineId?: string; orderLineItemId?: string; itemTypeId: string; priority: number; itemName: string }[] = [];
+
+    // Items individuels
+    selectedTableOrder.lines?.forEach((line) => {
+      if (line.type === OrderLineType.ITEM && line.status === Status.DRAFT) {
+        const itemTypeId = line.item?.itemType?.id || '';
+        const priority = itemTypePriorityMap.get(itemTypeId) ?? Number.MAX_SAFE_INTEGER;
+        draftItems.push({
+          orderLineId: line.id,
+          itemTypeId,
+          priority,
+          itemName: line.item?.name || 'Article inconnu'
+        });
+      }
+    });
+
+    // Items dans les menus
+    selectedTableOrder.lines?.forEach((line) => {
+      if (line.type === OrderLineType.MENU && line.items) {
+        line.items.forEach((menuItem) => {
+          if (menuItem.status === Status.DRAFT) {
+            const itemTypeId = menuItem.item?.itemType?.id || '';
+            const priority = itemTypePriorityMap.get(itemTypeId) ?? Number.MAX_SAFE_INTEGER;
+            draftItems.push({
+              orderLineItemId: menuItem.id,
+              itemTypeId,
+              priority,
+              itemName: menuItem.item?.name || 'Article inconnu'
+            });
+          }
+        });
+      }
+    });
+
+    if (draftItems.length === 0) {
+      showToast('Aucun article en brouillon', 'warning');
+      return;
+    }
+
+    // Trouver la priorité minimale parmi les items en DRAFT
+    const minPriority = Math.min(...draftItems.map(item => item.priority));
+
+    // Filtrer seulement les items avec cette priorité minimale
+    const itemsToClaim = draftItems.filter(item => item.priority === minPriority);
+
+    const orderLineIds = itemsToClaim.filter(item => item.orderLineId).map(item => item.orderLineId!);
+    const orderLineItemIds = itemsToClaim.filter(item => item.orderLineItemId).map(item => item.orderLineItemId!);
+    const itemTypeName = allItemTypes.find(it => it.priorityOrder === minPriority)?.name || 'Articles';
+    const itemNames = itemsToClaim.map(item => item.itemName);
+
+    // Stocker les données et afficher la modal de confirmation
+    setItemsToClaimData({
+      orderLineIds,
+      orderLineItemIds,
+      itemTypeName,
+      count: itemsToClaim.length,
+      itemNames
+    });
+    setShowClaimConfirmModal(true);
+  }, [selectedTableOrder, allItemTypes, showToast]);
+
+  const confirmClaim = useCallback(async () => {
+    if (!itemsToClaimData) return;
+
+    try {
+      await handleBulkUpdateStatus(itemsToClaimData.orderLineIds, itemsToClaimData.orderLineItemIds, Status.PENDING);
+      showToast(`${itemsToClaimData.itemTypeName} réclamé${itemsToClaimData.count > 1 ? 's' : ''} (${itemsToClaimData.count})`, 'success');
+      setShowClaimConfirmModal(false);
+      setItemsToClaimData(null);
+    } catch (error) {
+      showToast('Erreur lors de la réclamation', 'error');
+      console.error('Erreur claim:', error);
+    }
+  }, [itemsToClaimData, handleBulkUpdateStatus, showToast]);
+
+  const handleServe = useCallback(() => {
+    if (!selectedTableOrder) return;
+
+    // Trouver tous les items en READY (items individuels + items dans les menus)
+    const orderLineIds: string[] = [];
+    const orderLineItemIds: string[] = [];
+    const itemNames: string[] = [];
+
+    // Items individuels
+    selectedTableOrder.lines?.forEach((line) => {
+      if (line.type === OrderLineType.ITEM && line.status === Status.READY) {
+        orderLineIds.push(line.id);
+        itemNames.push(line.item?.name || 'Article inconnu');
+      }
+    });
+
+    // Items dans les menus
+    selectedTableOrder.lines?.forEach((line) => {
+      if (line.type === OrderLineType.MENU && line.items) {
+        line.items.forEach((menuItem) => {
+          if (menuItem.status === Status.READY) {
+            orderLineItemIds.push(menuItem.id);
+            itemNames.push(menuItem.item?.name || 'Article inconnu');
+          }
+        });
+      }
+    });
+
+    const totalItems = orderLineIds.length + orderLineItemIds.length;
+
+    if (totalItems === 0) {
+      showToast('Aucun article prêt', 'warning');
+      return;
+    }
+
+    // Stocker les données et afficher la modal de confirmation
+    setItemsToServeData({
+      orderLineIds,
+      orderLineItemIds,
+      count: totalItems,
+      itemNames
+    });
+    setShowServeConfirmModal(true);
+  }, [selectedTableOrder, showToast]);
+
+  const confirmServe = useCallback(async () => {
+    if (!itemsToServeData) return;
+
+    try {
+      await handleBulkUpdateStatus(itemsToServeData.orderLineIds, itemsToServeData.orderLineItemIds, Status.SERVED);
+      showToast(`Article${itemsToServeData.count > 1 ? 's' : ''} servi${itemsToServeData.count > 1 ? 's' : ''} (${itemsToServeData.count})`, 'success');
+      setShowServeConfirmModal(false);
+      setItemsToServeData(null);
+    } catch (error) {
+      showToast('Erreur lors du service', 'error');
+      console.error('Erreur serve:', error);
+    }
+  }, [itemsToServeData, handleBulkUpdateStatus, showToast]);
 
   const handleDeleteOrderLine = useCallback(async (orderLineId: string) => {
     try {
@@ -411,20 +596,33 @@ export default function ServicePage() {
     setSelectedTable(null);
   }, [setSelectedTable]);
 
-  const navigateToRoomEdit = () => {
+  const navigateToRoomEdit = useCallback(() => {
     if (!currentRoom) return;
     router.push('/(admin)/room/edition-mode');
-  };
+  }, [currentRoom]);
 
-  const handleDeselectTable = () => {
+  const handleDeselectTable = useCallback(() => {
     setSelectedTable(null);
-  };
+  }, [setSelectedTable]);
 
   const windowDimensions = useWindowDimensions();
+
+  // ✅ useMemo : Dimensions de la modal de réassignation
+  const reassignModalDimensions = useMemo(() => ({
+    width: Math.min(windowDimensions.width * 0.55, 600),
+    height: Math.min(windowDimensions.height * 0.7, 600),
+  }), [windowDimensions.width, windowDimensions.height]);
+
+  // ✅ useMemo : Dimensions du container Room dans la modal de réassignation
+  const reassignRoomContainerDimensions = useMemo(() => ({
+    width: Math.min(windowDimensions.width * 0.65, 660),
+    height: Math.min(windowDimensions.height * 0.55, 500),
+  }), [windowDimensions.width, windowDimensions.height]);
+
   // Fonction pour rediriger vers room_list avec création automatique
-  const handleCreateFirstRoom = () => {
+  const handleCreateFirstRoom = useCallback(() => {
     router.push('/(admin)/room');
-  };
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>
@@ -457,15 +655,7 @@ export default function ServicePage() {
 
           {/* Boutons d'action */}
           {!isConfiguringMenu && (
-            <View style={{
-              backgroundColor: '#ffffff',
-              borderTopWidth: 1,
-              borderTopColor: '#e5e7eb',
-              flexDirection: 'row',
-              justifyContent: 'flex-end',
-              padding: 16,
-              gap: 12
-            }}>
+            <View style={styles.actionButtonsContainer}>
               <OrderLinesButton
                 variant="secondary"
                 onPress={handleSmartCloseOrderModal}
@@ -485,15 +675,7 @@ export default function ServicePage() {
 
           {/* Boutons de configuration de menu */}
           {isConfiguringMenu && menuConfigActions && (
-            <View style={{
-              backgroundColor: '#ffffff',
-              borderTopWidth: 1,
-              borderTopColor: '#e5e7eb',
-              flexDirection: 'row',
-              justifyContent: 'flex-end',
-              padding: 16,
-              gap: 12
-            }}>
+            <View style={styles.actionButtonsContainer}>
               <OrderLinesButton
                 variant="configCancel"
                 onPress={menuConfigActions.onCancel}
@@ -546,152 +728,44 @@ export default function ServicePage() {
             </View>
           </SidePanel>
 
-          <View style={{ flex: 1, height: '100%', position: 'relative' }}>
+          <View style={styles.mainContentContainer}>
             {/* Header avec tabs des rooms - seulement si il y a des rooms et pas en mode detail/edit */}
             {rooms.length > 0 && !showOrderDetail && !showOrderModal && (
-              <View className='flex-row w-full justify-between' style={{
-                backgroundColor: '#FBFBFB',
-                height: 50,
-                zIndex: 10,
-                elevation: 5,
-                ...Platform.select({
-                  android: {
-                    shadowColor: 'transparent', // Pas d'ombre visible sur Android
-                  },
-                }),
-              }}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{
-                    alignItems: 'center',
-                    height: '100%'
-                  }}
-                  className='flex-row p-2 flex-1'
-                >
-                  {rooms.map((room, index) => (
-                    <Pressable
-                      key={`${room.name}-badge-${index}`}
-                      onPress={() => handleChangeRoom(room)}>
-                      <Badge
-                        variant="outline"
-                        className='mx-1'
-                        active={room.id === currentRoom?.id}
-                        size='lg'
-                      >
-                        <Text>{room.name}</Text>
-                      </Badge>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-                <Button
-                  onPress={() => navigateToRoomEdit()}
-                  className="w-[200px] h-[50px] flex items-center justify-center"
-                  style={{ backgroundColor: '#2A2E33', borderRadius: 0, height: 50 }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: '#FBFBFB',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Mode édition
-                  </Text>
-                </Button>
-              </View>
+              <RoomTabsHeader
+                rooms={rooms}
+                currentRoomId={currentRoom?.id}
+                onRoomChange={handleChangeRoom}
+                onEditModePress={navigateToRoomEdit}
+              />
             )}
 
             {appInitialized && !appLoading && rooms.length === 0 ? (
-              // État vide - Aucune room disponible (seulement quand l'initialisation est vraiment terminée)
-              <View style={{
-                backgroundColor: '#F4F5F7',
-                padding: 48,
-                alignItems: 'center',
-                flex: 1,
-                justifyContent: 'center',
-              }}>
-                <View style={{ marginBottom: 20 }}>
-                  <LayoutDashboard size={48} color="#D1D5DB" />
-                </View>
-                <Text style={{
-                  fontSize: 18,
-                  fontWeight: '700',
-                  color: '#2A2E33',
-                  marginBottom: 12,
-                  textAlign: 'center',
-                  letterSpacing: 0.3,
-                }}>
-                  Aucune salle configurée
-                </Text>
-                <Text style={{
-                  fontSize: 15,
-                  color: '#6B7280',
-                  textAlign: 'center',
-                  lineHeight: 22,
-                  marginBottom: 32,
-                  maxWidth: 320,
-                }}>
-                  Pour commencer à utiliser le service, vous devez d'abord créer une salle avec des tables.
-                </Text>
-                <Pressable
-                  onPress={handleCreateFirstRoom}
-                  style={{
-                    backgroundColor: '#2A2E33',
-                    paddingHorizontal: 28,
-                    paddingVertical: 14,
-                    borderRadius: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    shadowColor: '#2A2E33',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 8,
-                    elevation: 6,
-                    ...(Platform.OS === 'web' && {
-                      cursor: 'pointer',
-                    })
-                  }}
-                >
-                  <Plus size={20} color="white" style={{ marginRight: 8 }} />
-                  <Text style={{
-                    color: '#FFFFFF',
-                    fontSize: 16,
-                    fontWeight: '700',
-                    letterSpacing: 0.4,
-                  }}>
-                    Créer ma première salle
-                  </Text>
-                </Pressable>
-              </View>
+              <EmptyRoomsState onCreateFirstRoom={handleCreateFirstRoom} />
             ) : appLoading || !appInitialized ? (
               // État de chargement
-              <View style={{
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
+              <View style={styles.loadingContainer}>
                 <Text>Chargement des salles...</Text>
               </View>
             ) : (
               // Layout normal avec room existante
-              <View style={{
-                flex: 1,
-                zIndex: 1,
-                elevation: 0,
-              }}>
+              <View style={styles.normalLayoutContainer}>
                 {showOrderDetail && selectedTableOrder ? (
                   // Afficher les détails de la commande
                   <View style={{ flex: 1, flexDirection: 'column' }}>
-                    {/* Header avec bouton retour, sélection et modifier */}
+                    {/* Header avec bouton retour, Réclamer et Actions */}
                     <OrderDetailHeader
                       title={`Commande - ${selectedTableOrder.table?.name || 'Table'}`}
                       onBack={handleCloseOrderDetail}
-                      onEdit={handleEditOrder}
-                      isMultiSelectMode={isMultiSelectMode}
-                      onToggleMultiSelectMode={() => setIsMultiSelectMode(!isMultiSelectMode)}
+                      onAddItem={handleEditOrder}
+                      onClaim={handleClaim}
+                      onServe={handleServe}
+                      hasDraftItems={hasDraftItems}
+                      hasReadyItems={hasReadyItems}
+                      onReassignTable={handleReassignTable}
+                      onPayment={handlePayment}
+                      onTerminate={handleTerminate}
+                      onDelete={handleDelete}
+                      orderStatus={selectedTableOrder.status}
                     />
 
                     {/* OrderDetailView */}
@@ -703,12 +777,6 @@ export default function ServicePage() {
                       onBulkUpdateStatus={handleBulkUpdateStatus}
                       onDeleteOrderLine={handleDeleteOrderLine}
                       onDeleteMenuLine={handleDeleteMenuLine}
-                      onReassignTable={handleReassignTable}
-                      onPayment={handlePayment}
-                      onTerminate={handleTerminate}
-                      onDelete={handleDelete}
-                      isMultiSelectMode={isMultiSelectMode}
-                      onToggleMultiSelectMode={() => setIsMultiSelectMode(!isMultiSelectMode)}
                     />
                   </View>
                 ) : (
@@ -745,78 +813,47 @@ export default function ServicePage() {
       <CustomModal
         isVisible={showReassignModal}
         onClose={() => setShowReassignModal(false)}
-        width={Math.min(windowDimensions.width * 0.55, 600)}
-        height={Math.min(windowDimensions.height * 0.7, 600)}
+        width={reassignModalDimensions.width}
+        height={reassignModalDimensions.height}
         title={isReassigning ? 'Assignation en cours...' : 'Sélectionner une table'}
       >
-        <View style={{
-          flex: 1,
-          flexDirection: 'column',
-          backgroundColor: '#FFFFFF'
-        }}>
+        <View style={styles.reassignModalContainer}>
           {/* Tabs des rooms - hauteur fixe en haut avec zIndex élevé */}
-          <View style={{
-            height: 54,
-            backgroundColor: '#F9FAFB',
-            borderBottomWidth: 1,
-            borderBottomColor: '#E5E7EB',
-            paddingVertical: 6,
-            zIndex: 10,
-            elevation: 2,
-            shadowColor: 'transparent',
-          }}>
+          <View style={styles.reassignTabsContainer}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
-                paddingHorizontal: 16,
-                gap: 8,
-                flexDirection: 'row',
-                alignItems: 'center',
-                height: '100%',
-              }}
+              contentContainerStyle={styles.reassignScrollContent}
               nestedScrollEnabled={true}
             >
               {rooms.length === 0 ? (
                 <Text style={{ color: '#999' }}>Aucune room disponible</Text>
               ) : (
                 rooms.map((room, index) => (
-                  <Pressable
+                  <RoomBadgeItem
                     key={`${room.name}-reassign-${index}`}
-                    onPress={() => {
+                    room={room}
+                    isActive={room.id === reassignRoomId}
+                    onPress={(room) => {
                       console.log('👆 Room clicked:', room.name);
                       setReassignRoomId(room.id);
                     }}
-                  >
-                    <Badge
-                      variant="outline"
-                      active={room.id === reassignRoomId}
-                      size='lg'
-                    >
-                      <Text>{room.name}</Text>
-                    </Badge>
-                  </Pressable>
+                    keyPrefix="reassign"
+                  />
                 ))
               )}
             </ScrollView>
           </View>
 
           {/* Room - prend le reste de l'espace disponible */}
-          <View style={{
-            flex: 1,
-            zIndex: 1,
-            backgroundColor: '#FFFFFF',
-          }}>
+          <View style={styles.reassignRoomContainer}>
             <RoomComponent
               tables={reassignRoomTables}
               editionMode={false}
               isLoading={loading || isReassigning}
               width={reassignRoom?.width}
               height={reassignRoom?.height}
-              containerDimensions={{
-                width: Math.min(windowDimensions.width * 0.65, 660),
-                height: Math.min(windowDimensions.height * 0.55, 500)
-              }}
+              containerDimensions={reassignRoomContainerDimensions}
               onTablePress={handleTableReassign}
               onTableLongPress={handleTableReassign}
               onTableUpdate={() => {}}
@@ -862,6 +899,82 @@ export default function ServicePage() {
           confirmVariant="default"
         />
       )}
+
+      {/* Modal de confirmation pour Réclamer */}
+      <ClaimConfirmModal
+        isVisible={showClaimConfirmModal}
+        itemsData={itemsToClaimData}
+        onClose={() => {
+          setShowClaimConfirmModal(false);
+          setItemsToClaimData(null);
+        }}
+        onConfirm={confirmClaim}
+      />
+
+      {/* Modal de confirmation pour Servir */}
+      <ServeConfirmModal
+        isVisible={showServeConfirmModal}
+        itemsData={itemsToServeData}
+        onClose={() => {
+          setShowServeConfirmModal(false);
+          setItemsToServeData(null);
+        }}
+        onConfirm={confirmServe}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  actionButtonsContainer: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    gap: 12,
+  },
+  mainContentContainer: {
+    flex: 1,
+    height: '100%',
+    position: 'relative',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  normalLayoutContainer: {
+    flex: 1,
+    zIndex: 1,
+    elevation: 0,
+  },
+  reassignModalContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    backgroundColor: '#FFFFFF',
+  },
+  reassignTabsContainer: {
+    height: 54,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingVertical: 6,
+    zIndex: 10,
+    elevation: 2,
+    shadowColor: 'transparent',
+  },
+  reassignScrollContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '100%',
+  },
+  reassignRoomContainer: {
+    flex: 1,
+    zIndex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+});

@@ -1,81 +1,207 @@
-import { memo, useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { memo, useState, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { getMostImportantStatus, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { IconButton } from '~/components/ui/IconButton';
-import StatusSelector from '~/components/Service/StatusSelector';
 
 export interface OrderDetailMenuCardProps {
   menuLine: OrderLine;
   itemTypes?: { id: string; priorityOrder: number }[]; // Pour le tri
-  onUpdateItemStatus: (orderLineItem: OrderLineItem, newStatus: Status) => void;
-  onUpdateMenuStatus?: (orderLineItems: OrderLineItem[], newStatus: Status) => void;
-  onDelete: () => void;
-  isMultiSelectMode?: boolean;
-  selectedItems?: Set<string>;
-  onToggleItemSelection?: (itemId: string) => void;
+  onOpenItemStatusSelector: (orderLineItem: OrderLineItem) => void;
+  onOpenMenuStatusSelector: (orderLineItems: OrderLineItem[], currentStatus: Status) => void;
+  onOpenDeleteDialog: () => void;
 }
+
+/**
+ * Composant mémoïsé pour rendre un tag d'item dans un menu
+ */
+const MenuItemTag = memo<{ tag: any }>(({ tag }) => {
+  const tagConfig = useMemo(
+    () => getTagFieldTypeConfig(tag.tagSnapshot.fieldType),
+    [tag.tagSnapshot.fieldType]
+  );
+
+  const tagStyle = useMemo(
+    () => [styles.itemTag, { backgroundColor: tagConfig.bgColor }],
+    [tagConfig.bgColor]
+  );
+
+  const tagTextStyle = useMemo(
+    () => [styles.itemTagText, { color: tagConfig.textColor }],
+    [tagConfig.textColor]
+  );
+
+  return (
+    <View style={tagStyle}>
+      <Text style={tagTextStyle}>
+        {tag.tagSnapshot.label}: {String(tag.value)}
+      </Text>
+    </View>
+  );
+});
+
+MenuItemTag.displayName = 'MenuItemTag';
+
+/**
+ * Composant mémoïsé pour rendre un item de menu
+ */
+interface MenuCategoryItemProps {
+  item: OrderLineItem;
+  isLastItem: boolean;
+  onItemStatusClick: (item: OrderLineItem) => void;
+}
+
+const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItemStatusClick }) => {
+  // ✅ useCallback : Handler pour éviter re-création à chaque render
+  const handlePress = useCallback(() => {
+    onItemStatusClick(item);
+  }, [item, onItemStatusClick]);
+
+  // ✅ useMemo : Style dynamique pour la row
+  const itemRowStyle = useMemo(
+    () => [styles.itemRow, { backgroundColor: getStatusBackgroundColor(item.status) }],
+    [item.status]
+  );
+
+  // ✅ useMemo : Style dynamique pour le status badge
+  const statusBadgeStyle = useMemo(
+    () => [styles.itemRowStatus, { backgroundColor: getStatusTagColor(item.status) }],
+    [item.status]
+  );
+
+  // ✅ useMemo : Formater le temps
+  const formattedTime = useMemo(
+    () => formatDate(item.updatedAt || new Date().toISOString(), DateFormat.TIME),
+    [item.updatedAt]
+  );
+
+  return (
+    <View>
+      <View style={itemRowStyle}>
+        <View style={styles.itemLeftColumn}>
+          <Text style={styles.itemRowName} numberOfLines={1}>
+            {item.item?.name || 'Article'}
+          </Text>
+
+          <View style={styles.itemFooterInfo}>
+            <View style={statusBadgeStyle}>
+              <Text style={styles.itemRowStatusText}>{getStatusText(item.status)}</Text>
+            </View>
+
+            {/* ✅ Utiliser le composant mémoïsé pour les tags */}
+            {(item as any).tags?.length > 0 && (item as any).tags.map((tag: any, tagIndex: number) => (
+              <MenuItemTag key={tagIndex} tag={tag} />
+            ))}
+
+            {(item as any).note && (
+              <View style={styles.itemNoteContainer}>
+                <Text style={styles.itemNoteLabel}>Note :</Text>
+                <Text style={styles.itemNoteText} numberOfLines={1} ellipsizeMode="tail">
+                  {(item as any).note}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.itemRowTime}>
+          <Clock size={10} color="#9CA3AF" strokeWidth={2} />
+          <Text style={styles.itemRowTimeText}>{formattedTime}</Text>
+        </View>
+
+        <IconButton
+          iconName="settings"
+          size={40}
+          variant="primary"
+          isTransparent={true}
+          onPress={handlePress}
+        />
+      </View>
+      {/* Ligne de séparation sauf pour le dernier item */}
+      {!isLastItem && <View style={styles.itemSeparator} />}
+    </View>
+  );
+});
+
+MenuCategoryItem.displayName = 'MenuCategoryItem';
 
 export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   menuLine,
   itemTypes = [],
-  onUpdateItemStatus,
-  onUpdateMenuStatus,
-  onDelete,
-  isMultiSelectMode = false,
-  selectedItems = new Set(),
-  onToggleItemSelection,
+  onOpenItemStatusSelector,
+  onOpenMenuStatusSelector,
+  onOpenDeleteDialog,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showStatusSelector, setShowStatusSelector] = useState(false);
-  const [currentItemForStatus, setCurrentItemForStatus] = useState<OrderLineItem | null>(null);
 
   const menuInfo = menuLine.menu;
   const orderItems = menuLine.items || [];
-  const statuses = orderItems.map((item) => item.status);
-  const itemStatus = getMostImportantStatus(statuses);
-  const hasMixed = hasMenuMixedStatuses(statuses);
-  const menuTime = menuLine.updatedAt || new Date().toISOString();
 
-  const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
-  };
+  // ✅ useMemo : Calculer les statuses une seule fois
+  const statuses = useMemo(
+    () => orderItems.map((item) => item.status),
+    [orderItems]
+  );
 
-  const handleMenuStatusClick = () => {
-    setCurrentItemForStatus(null); // null = modifier le statut du menu entier
-    setShowStatusSelector(true);
-  };
+  // ✅ useMemo : Calculer le status le plus important
+  const itemStatus = useMemo(
+    () => getMostImportantStatus(statuses),
+    [statuses]
+  );
 
-  const handleItemStatusClick = (item: OrderLineItem) => {
-    setCurrentItemForStatus(item);
-    setShowStatusSelector(true);
-  };
+  // ✅ useMemo : Vérifier si le menu a des statuses mixtes
+  const hasMixed = useMemo(
+    () => hasMenuMixedStatuses(statuses),
+    [statuses]
+  );
 
-  const handleStatusSelect = (newStatus: Status) => {
-    if (currentItemForStatus) {
-      // Modifier le statut d'un item individuel
-      onUpdateItemStatus(currentItemForStatus, newStatus);
-    } else {
-      // Modifier le statut de tous les items du menu
-      if (onUpdateMenuStatus) {
-        // Utiliser la méthode optimisée (UN SEUL appel API)
-        onUpdateMenuStatus(orderItems, newStatus);
-      } else {
-        // Fallback : appeler onUpdateItemStatus pour chaque item
-        orderItems.forEach((item) => {
-          onUpdateItemStatus(item, newStatus);
-        });
-      }
-    }
-    setShowStatusSelector(false);
-    setCurrentItemForStatus(null);
-  };
+  // ✅ useMemo : Calculer le temps du menu
+  const menuTime = useMemo(
+    () => menuLine.updatedAt || new Date().toISOString(),
+    [menuLine.updatedAt]
+  );
 
-  // Mémoriser le calcul coûteux du tri des catégories et items
+  // ✅ useMemo : Calculer le prix formaté
+  const formattedPrice = useMemo(
+    () => ((menuLine.totalPrice || 0) / 100).toFixed(2),
+    [menuLine.totalPrice]
+  );
+
+  // ✅ useCallback : Handler pour toggle l'expansion
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded(prev => !prev);
+  }, []);
+
+  // ✅ useCallback : Handler pour le status du menu
+  const handleMenuStatusClick = useCallback(() => {
+    onOpenMenuStatusSelector(orderItems, itemStatus);
+  }, [onOpenMenuStatusSelector, orderItems, itemStatus]);
+
+  // ✅ useCallback : Handler pour le status d'un item
+  const handleItemStatusClick = useCallback((item: OrderLineItem) => {
+    onOpenItemStatusSelector(item);
+  }, [onOpenItemStatusSelector]);
+
+  // ✅ useMemo : Styles dynamiques
+  const cardStyle = useMemo(
+    () => [
+      styles.card,
+      {
+        borderColor: '#6366F1', // Indigo fixe pour tous les menus
+        backgroundColor: getStatusBackgroundColor(itemStatus),
+      },
+    ],
+    [itemStatus]
+  );
+
+  const statusBadgeStyle = useMemo(
+    () => [styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }],
+    [itemStatus]
+  );
+
+  // ✅ Mémoriser le calcul coûteux du tri des catégories et items
   const sortedCategories = useMemo(() => {
     // Créer un Map pour accès rapide au priorityOrder (O(1))
     const itemTypePriorityMap = new Map(
@@ -118,145 +244,82 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
     });
   }, [orderItems, itemTypes]);
 
-  // Mémoriser les états de sélection pour éviter les recalculs
-  const { allMenuItemsSelected, someMenuItemsSelected } = useMemo(() => {
-    const allSelected = orderItems.every(item => selectedItems.has(item.id));
-    const someSelected = orderItems.some(item => selectedItems.has(item.id));
-    return { allMenuItemsSelected: allSelected, someMenuItemsSelected: someSelected };
-  }, [orderItems, selectedItems]);
-
-  // Handler pour sélectionner/désélectionner tout le menu
-  const handleToggleMenuSelection = () => {
-    if (!onToggleItemSelection) return;
-
-    if (allMenuItemsSelected) {
-      // Désélectionner tous les items
-      orderItems.forEach(item => {
-        if (selectedItems.has(item.id)) {
-          onToggleItemSelection(item.id);
-        }
-      });
-    } else {
-      // Sélectionner tous les items
-      orderItems.forEach(item => {
-        if (!selectedItems.has(item.id)) {
-          onToggleItemSelection(item.id);
-        }
-      });
-    }
-  };
-
   return (
-    <View style={styles.container}>
-      <View style={[
-        styles.card,
-        {
-          borderColor: '#6366F1', // Indigo fixe pour tous les menus
-          backgroundColor: getStatusBackgroundColor(itemStatus)
-        }
-      ]}>
+    <View style={styles.wrapper}>
+      <View style={cardStyle}>
         {/* Header - toujours visible */}
-        <Pressable
-          onPress={isMultiSelectMode ? handleToggleMenuSelection : toggleExpanded}
-          style={styles.mainContent}
-        >
-          {isMultiSelectMode && (
-            <View style={styles.checkboxContainer}>
-              <View style={[
-                styles.checkbox,
-                allMenuItemsSelected && styles.checkboxSelected,
-                !allMenuItemsSelected && someMenuItemsSelected && styles.checkboxPartial
-              ]}>
-                {allMenuItemsSelected && <Text style={styles.checkboxIcon}>✓</Text>}
-                {!allMenuItemsSelected && someMenuItemsSelected && <Text style={styles.checkboxIcon}>-</Text>}
+        <View style={styles.mainContent}>
+          <TouchableOpacity
+            onPress={toggleExpanded}
+            activeOpacity={1}
+            style={styles.expandableArea}
+          >
+            <View style={styles.leftColumn}>
+              <Text style={styles.menuName} numberOfLines={1}>
+                {menuInfo?.name || 'Menu'}
+              </Text>
+
+              <View style={styles.footerInfo}>
+                {hasMixed ? (
+                  <View style={statusBadgeStyle}>
+                    <Text style={styles.statusText}>MIXTE</Text>
+                  </View>
+                ) : (
+                  <View style={statusBadgeStyle}>
+                    <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
+                  </View>
+                )}
+                <View style={styles.menuBadge}>
+                  <Text style={styles.menuBadgeText}>MENU</Text>
+                </View>
+                <Text style={styles.itemCount}>
+                  {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
+                </Text>
               </View>
             </View>
-          )}
 
-          <View style={styles.leftColumn}>
-            <Text style={styles.menuName} numberOfLines={1}>
-              {menuInfo?.name || 'Menu'}
-            </Text>
-
-            <View style={styles.footerInfo}>
-              {hasMixed ? (
-                <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
-                  <Text style={styles.statusText}>MIXTE</Text>
-                </View>
-              ) : (
-                <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
-                  <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
-                </View>
-              )}
-              <View style={styles.menuBadge}>
-                <Text style={styles.menuBadgeText}>MENU</Text>
+            <View style={styles.priceTimeColumn}>
+              <Text style={styles.priceText}>
+                {formattedPrice}€
+              </Text>
+              <View style={styles.timeContainer}>
+                <Clock size={10} color="#9CA3AF" strokeWidth={2} />
+                <Text style={styles.timeText}>
+                  {formatDate(menuTime, DateFormat.TIME)}
+                </Text>
               </View>
-              <Text style={styles.itemCount}>
-                {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
-              </Text>
             </View>
-          </View>
-
-          <View style={styles.priceTimeColumn}>
-            <Text style={styles.priceText}>
-              {((menuLine.totalPrice || 0) / 100).toFixed(2)}€
-            </Text>
-            <View style={styles.timeContainer}>
-              <Clock size={10} color="#9CA3AF" strokeWidth={2} />
-              <Text style={styles.timeText}>
-                {formatDate(menuTime, DateFormat.TIME)}
-              </Text>
-            </View>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.actionsColumn}>
-            {!isMultiSelectMode && (
-              <>
-                <Pressable onPress={(e) => e.stopPropagation()}>
-                  <IconButton
-                    iconName="settings"
-                    size={50}
-                    variant="primary"
-                    isTransparent={true}
-                    onPress={handleMenuStatusClick}
-                  />
-                </Pressable>
-                <Pressable onPress={(e) => e.stopPropagation()}>
-                  <IconButton
-                    iconName="trash"
-                    size={50}
-                    variant="danger"
-                    isTransparent={true}
-                    onPress={() => setShowDeleteDialog(true)}
-                  />
-                </Pressable>
-              </>
-            )}
-            {isMultiSelectMode ? (
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  toggleExpanded();
-                }}
-                style={styles.chevronContainer}
-              >
-                {isExpanded ? (
-                  <ChevronUp size={20} color="#6B7280" strokeWidth={2.5} />
-                ) : (
-                  <ChevronDown size={20} color="#6B7280" strokeWidth={2.5} />
-                )}
-              </Pressable>
-            ) : (
-              <View style={styles.chevronContainer}>
-                {isExpanded ? (
-                  <ChevronUp size={20} color="#6B7280" strokeWidth={2.5} />
-                ) : (
-                  <ChevronDown size={20} color="#6B7280" strokeWidth={2.5} />
-                )}
-              </View>
-            )}
+            <IconButton
+              iconName="settings"
+              size={50}
+              variant="primary"
+              isTransparent={true}
+              onPress={handleMenuStatusClick}
+            />
+            <IconButton
+              iconName="trash"
+              size={50}
+              variant="danger"
+              isTransparent={true}
+              onPress={onOpenDeleteDialog}
+            />
+            <TouchableOpacity
+              onPress={toggleExpanded}
+              activeOpacity={0.7}
+              delayPressOut={0}
+              style={styles.chevronContainer}
+            >
+              {isExpanded ? (
+                <ChevronUp size={20} color="#6B7280" strokeWidth={2.5} />
+              ) : (
+                <ChevronDown size={20} color="#6B7280" strokeWidth={2.5} />
+              )}
+            </TouchableOpacity>
           </View>
-        </Pressable>
+        </View>
 
         {/* Expanded content - rows simples */}
         {isExpanded && (
@@ -268,111 +331,20 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
                   <Text style={styles.categoryTitle}>{categoryName}</Text>
                 </View>
 
-                {/* Items rows */}
-                {categoryItems.map((item, itemIndex) => {
-                  const ItemWrapper = isMultiSelectMode ? Pressable : View;
-                  const itemProps = isMultiSelectMode ? { onPress: () => onToggleItemSelection?.(item.id) } : {};
-
-                  return (
-                    <View key={item.id}>
-                      <ItemWrapper
-                        style={[
-                          styles.itemRow,
-                          { backgroundColor: getStatusBackgroundColor(item.status) }
-                        ]}
-                        {...itemProps}
-                      >
-                        {isMultiSelectMode && (
-                          <View style={styles.checkboxContainer}>
-                            <View style={[styles.checkbox, selectedItems.has(item.id) && styles.checkboxSelected]}>
-                              {selectedItems.has(item.id) && <Text style={styles.checkboxIcon}>✓</Text>}
-                            </View>
-                          </View>
-                        )}
-
-                        <View style={styles.itemLeftColumn}>
-                        <Text style={styles.itemRowName} numberOfLines={1}>
-                          {item.item?.name || 'Article'}
-                        </Text>
-
-                        <View style={styles.itemFooterInfo}>
-                          <View style={[styles.itemRowStatus, { backgroundColor: getStatusTagColor(item.status) }]}>
-                            <Text style={styles.itemRowStatusText}>{getStatusText(item.status)}</Text>
-                          </View>
-
-                          {(item as any).tags?.length > 0 && (item as any).tags.map((tag: any, tagIndex: number) => {
-                            const tagConfig = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
-                            return (
-                              <View key={tagIndex} style={[styles.itemTag, { backgroundColor: tagConfig.bgColor }]}>
-                                <Text style={[styles.itemTagText, { color: tagConfig.textColor }]}>
-                                  {tag.tagSnapshot.label}: {String(tag.value)}
-                                </Text>
-                              </View>
-                            );
-                          })}
-
-                          {(item as any).note && (
-                            <View style={styles.itemNoteContainer}>
-                              <Text style={styles.itemNoteLabel}>Note :</Text>
-                              <Text style={styles.itemNoteText} numberOfLines={1} ellipsizeMode="tail">
-                                {(item as any).note}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-
-                      <View style={styles.itemRowTime}>
-                        <Clock size={10} color="#9CA3AF" strokeWidth={2} />
-                        <Text style={styles.itemRowTimeText}>
-                          {formatDate(item.updatedAt || new Date().toISOString(), DateFormat.TIME)}
-                        </Text>
-                      </View>
-
-                        {!isMultiSelectMode && (
-                          <IconButton
-                            iconName="settings"
-                            size={40}
-                            variant="primary"
-                            isTransparent={true}
-                            onPress={() => handleItemStatusClick(item)}
-                          />
-                        )}
-                      </ItemWrapper>
-                      {/* Ligne de séparation sauf pour le dernier item */}
-                      {itemIndex < categoryItems.length - 1 && (
-                        <View style={styles.itemSeparator} />
-                      )}
-                    </View>
-                  );
-                })}
+                {/* ✅ Items rows - Utiliser le composant mémoïsé */}
+                {categoryItems.map((item, itemIndex) => (
+                  <MenuCategoryItem
+                    key={item.id}
+                    item={item}
+                    isLastItem={itemIndex === categoryItems.length - 1}
+                    onItemStatusClick={handleItemStatusClick}
+                  />
+                ))}
               </View>
             ))}
           </View>
         )}
       </View>
-
-      <StatusSelector
-        visible={showStatusSelector}
-        currentStatus={currentItemForStatus?.status || itemStatus}
-        onClose={() => {
-          setShowStatusSelector(false);
-          setCurrentItemForStatus(null);
-        }}
-        onStatusSelect={handleStatusSelect}
-      />
-
-      <DeleteConfirmationModal
-        isVisible={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={() => {
-          setShowDeleteDialog(false);
-          onDelete();
-        }}
-        entityName={`"${menuInfo?.name || 'Menu'}"`}
-        entityType="le menu"
-        usePortal={true}
-      />
     </View>
   );
 });
@@ -380,36 +352,8 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
 OrderDetailMenuCard.displayName = 'OrderDetailMenuCard';
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     marginBottom: 8,
-  },
-  checkboxContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingRight: 8,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
-  },
-  checkboxPartial: {
-    backgroundColor: '#E0E7FF',
-    borderColor: '#6366F1',
-  },
-  checkboxIcon: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
   },
   // Card principale - identique à ItemCard mais border indigo
   card: {
@@ -430,6 +374,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingBottom: 10, // Padding bottom seulement sur le header (quand collapsed)
+  },
+  expandableArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
   },
   leftColumn: {
     flex: 1,

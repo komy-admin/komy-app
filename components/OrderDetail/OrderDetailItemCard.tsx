@@ -1,11 +1,9 @@
-import { memo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { memo, useMemo } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { DateFormat, formatDate, getStatusColor, getStatusTagColor, getStatusText, getStatusBackgroundColor, getTagFieldTypeConfig } from '~/lib/utils';
-import StatusSelector from '~/components/Service/StatusSelector';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { IconButton } from '~/components/ui/IconButton';
 
 export interface OrderDetailItemCardProps {
@@ -15,12 +13,41 @@ export interface OrderDetailItemCardProps {
   menuName?: string;
   showItemTypeTag?: boolean;
   itemTypeName?: string;
-  onStatusChange: (newStatus: Status) => void;
-  onDelete: () => void;
-  isMultiSelectMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelection?: () => void;
+  onOpenStatusSelector: () => void;
+  onOpenDeleteDialog: () => void;
 }
+
+/**
+ * Composant mémoïsé pour rendre un tag d'item
+ */
+const ItemTag = memo<{ tag: any }>(({ tag }) => {
+  // ✅ Mémoïser la config du tag
+  const tagConfig = useMemo(
+    () => getTagFieldTypeConfig(tag.tagSnapshot.fieldType),
+    [tag.tagSnapshot.fieldType]
+  );
+
+  // ✅ Mémoïser le style dynamique
+  const tagStyle = useMemo(
+    () => [styles.tag, { backgroundColor: tagConfig.bgColor }],
+    [tagConfig.bgColor]
+  );
+
+  const tagTextStyle = useMemo(
+    () => [styles.tagText, { color: tagConfig.textColor }],
+    [tagConfig.textColor]
+  );
+
+  return (
+    <View style={tagStyle}>
+      <Text style={tagTextStyle}>
+        {tag.tagSnapshot.label}: {String(tag.value)}
+      </Text>
+    </View>
+  );
+});
+
+ItemTag.displayName = 'ItemTag';
 
 export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   orderLine,
@@ -29,56 +56,67 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   menuName,
   showItemTypeTag = false,
   itemTypeName,
-  onStatusChange,
-  onDelete,
-  isMultiSelectMode = false,
-  isSelected = false,
-  onToggleSelection,
+  onOpenStatusSelector,
+  onOpenDeleteDialog,
 }) => {
-  const [showStatusSelector, setShowStatusSelector] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // ✅ useMemo : Calculer les valeurs dérivées une seule fois
+  const itemName = useMemo(
+    () => orderLine?.item?.name || orderLineItem?.item?.name || 'Article inconnu',
+    [orderLine?.item?.name, orderLineItem?.item?.name]
+  );
 
-  const itemName = orderLine?.item?.name || orderLineItem?.item?.name || 'Article inconnu';
-  const itemNote = orderLine?.note || (orderLineItem as any)?.note || undefined;
-  const itemStatus = orderLine?.status || orderLineItem?.status || Status.PENDING;
-  const itemTime = orderLine?.updatedAt || orderLineItem?.updatedAt || new Date().toISOString();
-  const itemPrice = orderLine?.totalPrice || orderLineItem?.item?.price || 0;
-  const itemTags = orderLine?.tags || (orderLineItem as any)?.tags || [];
+  const itemNote = useMemo(
+    () => orderLine?.note || (orderLineItem as any)?.note || undefined,
+    [orderLine?.note, orderLineItem]
+  );
 
-  const handleStatusClick = () => {
-    setShowStatusSelector(true);
-  };
+  const itemStatus = useMemo(
+    () => orderLine?.status || orderLineItem?.status || Status.PENDING,
+    [orderLine?.status, orderLineItem?.status]
+  );
 
-  const handleStatusSelect = (newStatus: Status) => {
-    setShowStatusSelector(false);
-    onStatusChange(newStatus);
-  };
+  const itemTime = useMemo(
+    () => orderLine?.updatedAt || orderLineItem?.updatedAt || new Date().toISOString(),
+    [orderLine?.updatedAt, orderLineItem?.updatedAt]
+  );
 
-  const handleDeleteClick = () => {
-    setShowDeleteDialog(true);
-  };
+  const itemPrice = useMemo(
+    () => orderLine?.totalPrice || orderLineItem?.item?.price || 0,
+    [orderLine?.totalPrice, orderLineItem?.item?.price]
+  );
 
-  const CardWrapper = isMultiSelectMode ? Pressable : View;
-  const cardProps = isMultiSelectMode ? { onPress: onToggleSelection } : {};
+  const itemTags = useMemo(
+    () => orderLine?.tags || (orderLineItem as any)?.tags || [],
+    [orderLine?.tags, orderLineItem]
+  );
+
+  // ✅ useMemo : Calculer le prix formaté
+  const formattedPrice = useMemo(
+    () => (itemPrice / 100).toFixed(2),
+    [itemPrice]
+  );
+
+  // ✅ useMemo : Styles dynamiques
+  const cardStyle = useMemo(
+    () => [
+      styles.card,
+      {
+        borderColor: getStatusColor(itemStatus),
+        backgroundColor: getStatusBackgroundColor(itemStatus),
+      },
+    ],
+    [itemStatus]
+  );
+
+  const statusBadgeStyle = useMemo(
+    () => [styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }],
+    [itemStatus]
+  );
 
   return (
-    <>
-      <CardWrapper style={[
-        styles.card,
-        {
-          borderColor: getStatusColor(itemStatus),
-          backgroundColor: getStatusBackgroundColor(itemStatus)
-        }
-      ]} {...cardProps}>
+    <View style={styles.wrapper}>
+      <View style={cardStyle}>
         <View style={styles.mainContent}>
-          {isMultiSelectMode && (
-            <Pressable onPress={onToggleSelection} style={styles.checkboxContainer}>
-              <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                {isSelected && <Text style={styles.checkboxIcon}>✓</Text>}
-              </View>
-            </Pressable>
-          )}
-
           <View style={styles.leftColumn}>
             <View style={styles.nameRow}>
               <Text style={styles.itemName} numberOfLines={1}>
@@ -87,7 +125,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
             </View>
 
             <View style={styles.footerInfo}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }]}>
+              <View style={statusBadgeStyle}>
                 <Text style={styles.statusText}>{getStatusText(itemStatus)}</Text>
               </View>
 
@@ -103,16 +141,10 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
                 </View>
               )}
 
-              {itemTags.length > 0 && itemTags.map((tag: any, index: number) => {
-                const tagConfig = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
-                return (
-                  <View key={index} style={[styles.tag, { backgroundColor: tagConfig.bgColor }]}>
-                    <Text style={[styles.tagText, { color: tagConfig.textColor }]}>
-                      {tag.tagSnapshot.label}: {String(tag.value)}
-                    </Text>
-                  </View>
-                );
-              })}
+              {/* ✅ Utiliser le composant mémoïsé ItemTag pour éviter les appels de fonction dans map */}
+              {itemTags.length > 0 && itemTags.map((tag: any, index: number) => (
+                <ItemTag key={index} tag={tag} />
+              ))}
 
               {itemNote && (
                 <View style={styles.noteContainer}>
@@ -126,7 +158,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
           <View style={styles.priceTimeColumn}>
             {!isFromMenu && (
               <Text style={styles.priceText}>
-                {(itemPrice / 100).toFixed(2)}€
+                {formattedPrice}€
               </Text>
             )}
             <View style={styles.timeContainer}>
@@ -137,89 +169,46 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
             </View>
           </View>
 
-          {!isMultiSelectMode && (
-            <View style={styles.actionsColumn}>
+          <View style={styles.actionsColumn}>
+            <IconButton
+              iconName="settings"
+              size={50}
+              variant="primary"
+              isTransparent={true}
+              onPress={onOpenStatusSelector}
+            />
+            {!isFromMenu && (
               <IconButton
-                iconName="settings"
+                iconName="trash"
                 size={50}
-                variant="primary"
+                variant="danger"
                 isTransparent={true}
-                onPress={handleStatusClick}
+                onPress={onOpenDeleteDialog}
               />
-              {!isFromMenu && (
-                <IconButton
-                  iconName="trash"
-                  size={50}
-                  variant="danger"
-                  isTransparent={true}
-                  onPress={handleDeleteClick}
-                />
-              )}
-            </View>
-          )}
+            )}
+          </View>
         </View>
-      </CardWrapper>
-
-      <StatusSelector
-        visible={showStatusSelector}
-        currentStatus={itemStatus}
-        onClose={() => setShowStatusSelector(false)}
-        onStatusSelect={handleStatusSelect}
-      />
-
-      <DeleteConfirmationModal
-        isVisible={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={() => {
-          setShowDeleteDialog(false);
-          onDelete();
-        }}
-        entityName={`"${itemName}"`}
-        entityType="l'article"
-        usePortal={true}
-      />
-    </>
+      </View>
+    </View>
   );
 });
 
 OrderDetailItemCard.displayName = 'OrderDetailItemCard';
 
 const styles = StyleSheet.create({
+  wrapper: {
+    marginBottom: 8,
+  },
   card: {
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 8,
     borderWidth: 2,
   },
   mainContent: {
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: 12,
-  },
-  checkboxContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingRight: 8,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
-  },
-  checkboxIcon: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
   },
   leftColumn: {
     flex: 1,
