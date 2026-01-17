@@ -1,6 +1,5 @@
 import { memo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
-import { Button } from '~/components/ui';
+import { View, ScrollView, StyleSheet, Platform, Pressable, Text as RNText } from 'react-native';
 import { RoomBadgeItem } from './RoomBadgeItem';
 
 interface RoomTabsHeaderProps {
@@ -37,15 +36,14 @@ export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
           />
         ))}
       </ScrollView>
-      <Button
+      <Pressable
         onPress={onEditModePress}
-        className="w-[200px] h-[50px] flex items-center justify-center"
         style={styles.editButton}
       >
-        <Text style={styles.editButtonText}>
-          Mode édition
-        </Text>
-      </Button>
+        <RNText style={styles.editButtonText}>
+          MODE ÉDITION
+        </RNText>
+      </Pressable>
     </View>
   );
 });
@@ -75,12 +73,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2E33',
     borderRadius: 0,
     height: 50,
+    width: 200,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   editButtonText: {
     fontSize: 14,
     color: '#FBFBFB',
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
-    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
