@@ -37,6 +37,12 @@ export const OrderDetailTabs = memo<OrderDetailTabsProps>(({
   itemTypes,
   counts,
 }) => {
+  // ✅ useMemo : Vérifier si le tab Menus doit être affiché (count > 0)
+  const showMenusTab = useMemo(
+    () => counts.menus > 0,
+    [counts.menus]
+  );
+
   // ✅ useMemo : Filtrer les itemTypes avec count > 0 (évite .filter() à chaque render)
   const filteredItemTypes = useMemo(
     () => itemTypes.filter((itemType) => (counts[itemType.id] || 0) > 0),
@@ -78,19 +84,21 @@ export const OrderDetailTabs = memo<OrderDetailTabsProps>(({
           activeBgColor={TAB_COLORS.ALL.activeBgColor}
         />
 
-        {/* Tab Menus */}
-        <SelectButton
-          label="Menus"
-          count={counts.menus}
-          isActive={activeTab === 'MENUS'}
-          onPress={handleMenusTabPress}
-          variant="pill"
-          activeColor={TAB_COLORS.MENUS.activeColor}
-          activeBgColor={TAB_COLORS.MENUS.activeBgColor}
-        />
+        {/* Tab Menus - affiché seulement si count > 0 */}
+        {showMenusTab && (
+          <SelectButton
+            label="Menus"
+            count={counts.menus}
+            isActive={activeTab === 'MENUS'}
+            onPress={handleMenusTabPress}
+            variant="pill"
+            activeColor={TAB_COLORS.MENUS.activeColor}
+            activeBgColor={TAB_COLORS.MENUS.activeBgColor}
+          />
+        )}
 
-        {/* Séparateur - affiché seulement si il y a des itemTypes avec count > 0 */}
-        {hasItemTypesWithCount && <View style={styles.divider} />}
+        {/* Séparateur - affiché seulement si il y a des itemTypes avec count > 0 ET (Menus visible OU Tab "Tous") */}
+        {hasItemTypesWithCount && (showMenusTab || counts.all > 0) && <View style={styles.divider} />}
 
         {/* ✅ Tabs pour chaque ItemType - composant mémoïsé avec handler propre */}
         {filteredItemTypes.map((itemType) => (
