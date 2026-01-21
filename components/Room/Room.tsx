@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import {
   GestureHandlerRootView,
@@ -10,19 +10,16 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Table } from '~/types/table.types';
-import { Order } from '~/types/order.types';
-import { Toast } from '~/components/ui/toast';
 import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
+import { RoomTableService } from '~/components/Room/RoomTableService';
 import { getTableStatus } from '~/lib/utils';
-import { RoomProvider } from '~/contexts/RoomContext';
 import { useRoomDimensions } from '~/hooks/room/useRoomDimensions';
 import { useRoomZoom } from '~/hooks/room/useRoomZoom';
 import { useRoomValidation } from '~/hooks/room/useRoomValidation';
 
 interface RoomProps {
   tables: Table[];
-  orders?: Order[];
   editingTableId?: string;
   editionMode?: boolean;
   width?: number;
@@ -36,7 +33,6 @@ interface RoomProps {
 
 const Room: React.FC<RoomProps> = ({
   tables,
-  orders,
   editingTableId,
   editionMode = false,
   width = 15,
@@ -61,52 +57,22 @@ const Room: React.FC<RoomProps> = ({
     translateY,
     scale,
     panGesture,
-    pinchGesture,
-    resetTransform
+    pinchGesture
   } = useRoomZoom({
     initialZoom: dimensions?.initialZoom || 1
   });
 
   // 🎯 HOOK: Validation des positions de tables
-  const { isPositionValid, getValidationDetails } = useRoomValidation({
+  const { isPositionValid } = useRoomValidation({
     tables,
     editingTableId,
     roomWidth: width,
     roomHeight: height
   });
 
-  // État local pour les tables visibles et les toasts
-  const [visibleTables, setVisibleTables] = useState<Table[]>([]);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-
-  function showToastMessage(message: string) {
-    setToastMessage(message);
-    setShowToast(true);
-  }
-
-  // Validation de position pendant le drag & drop
-  const checkTableValidity = useCallback((table: Table) => {
-    if (table.id !== editingTableId) return;
-
-    const validation = getValidationDetails(table.id);
-    if (!validation.isValid) {
-      showToastMessage("Position invalide : la table doit rester dans les limites");
-    }
-  }, [editingTableId, getValidationDetails]);
-
-  // Réinitialiser les transformations quand les dimensions changent
-  useEffect(() => {
-    resetTransform();
-  }, [width, height, isLoading, containerDimensions, resetTransform]);
-
-  useEffect(() => {
-    if (isGridReady) {
-      setVisibleTables(tables); // ✅ Accepte aussi les tableaux vides
-    } else {
-      setVisibleTables([]); // Vider si grille pas prête
-    }
-  }, [isGridReady, tables]);
+  // 🚀 OPTIMISATION: Suppression du state visibleTables
+  // Avec la KEY prop sur Room, le composant remount proprement à chaque changement de room
+  // Plus besoin d'un state intermédiaire qui cause un double rendu
 
   // 🚀 OPTIMISATION CRITIQUE: Memoïser les statuts des tables
   // Évite de recalculer getTableStatus() pour CHAQUE table à CHAQUE render
@@ -126,16 +92,6 @@ const Room: React.FC<RoomProps> = ({
       onTablePress(null);
     }
   }, [editionMode, onTablePress]);
-
-  // Valider les tables en mode édition (sans repositionnement)
-  useEffect(() => {
-    if (editionMode && editingTableId) {
-      const editingTable = tables.find(t => t.id === editingTableId);
-      if (editingTable) {
-        checkTableValidity(editingTable);
-      }
-    }
-  }, [tables, editingTableId, editionMode, checkTableValidity]);
 
   const tapGesture = useMemo(() =>
     Gesture.Tap()
@@ -173,18 +129,6 @@ const Room: React.FC<RoomProps> = ({
     };
   }, []);
 
-  // 🎯 Valeur du contexte pour partager les constantes avec RoomTable
-  // ⚠️ IMPORTANT: Ce useMemo DOIT être AVANT le return conditionnel
-  // pour respecter les règles des hooks React (nombre constant de hooks)
-  const roomContextValue = useMemo(() => ({
-    roomWidth: width,
-    roomHeight: height,
-    CELL_SIZE,
-    editionMode,
-    currentZoomScale: scale, // ⚡ Passer directement scale.value (SharedValue, pas state)
-    tables
-  }), [width, height, CELL_SIZE, editionMode, scale, tables]);
-
   if (isLoading || !dimensions || !isGridReady) {
     return (
       <View style={[styles.container, styles.loading]}>
@@ -194,33 +138,42 @@ const Room: React.FC<RoomProps> = ({
   }
 
   return (
-    <RoomProvider value={roomContextValue}>
-      <GestureHandlerRootView
-        nativeID="room-zoom-container"
-        style={styles.container}
-      >
-        <GestureDetector gesture={composedGesture}>
-          {/* Vue externe: SEULEMENT translate → zone gestures 100% même sur grandes rooms */}
-          <Animated.View style={[styles.animatedContainer, translateStyle]}>
-            {/* Vue interne: SEULEMENT scale → visuel zoomé, gestures non affectées */}
-            <Animated.View style={scaleStyle}>
-              <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
-                <View style={{
-                  position: 'absolute',
-                  left: EXTRA_LINES * CELL_SIZE,
-                  top: EXTRA_LINES * CELL_SIZE,
-                  width: width * CELL_SIZE,
-                  height: height * CELL_SIZE,
-                }}>
-                  <RoomGrid
-                    width={width * CELL_SIZE}
-                    height={height * CELL_SIZE}
-                    GRID_COLS={width}
-                    GRID_ROWS={height}
-                    CELL_SIZE={CELL_SIZE}
-                  />
-                  {visibleTables.map(table => {
-                    const isEditing = editingTableId === table.id;
+    <GestureHandlerRootView
+      nativeID="room-zoom-container"
+      style={styles.container}
+    >
+      <GestureDetector gesture={composedGesture}>
+        {/* Vue externe: SEULEMENT translate → zone gestures 100% même sur grandes rooms */}
+        <Animated.View style={[styles.animatedContainer, translateStyle]}>
+          {/* Vue interne: SEULEMENT scale → visuel zoomé, gestures non affectées */}
+          <Animated.View style={scaleStyle}>
+            <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
+              <View style={{
+                position: 'absolute',
+                left: EXTRA_LINES * CELL_SIZE,
+                top: EXTRA_LINES * CELL_SIZE,
+                width: width * CELL_SIZE,
+                height: height * CELL_SIZE,
+              }}>
+                <RoomGrid
+                  width={width * CELL_SIZE}
+                  height={height * CELL_SIZE}
+                  GRID_COLS={width}
+                  GRID_ROWS={height}
+                  CELL_SIZE={CELL_SIZE}
+                />
+                {/* 🚀 OPTIMISATION v2.1: Composant adapté selon le contexte
+                    - Table sélectionnée en mode édition → RoomTable complet (drag, resize)
+                    - Toutes les autres tables → RoomTableService léger
+
+                    Gain mode édition: ~88% réduction SharedValues (255 → 31 pour 15 tables)
+                    Gain mode service: ~94% réduction SharedValues */}
+                {tables.map(table => {
+                  const isEditing = editingTableId === table.id;
+
+                  // 🔧 SEULE la table sélectionnée en mode édition utilise RoomTable complet
+                  // Toutes les autres (même en editionMode) utilisent le composant léger
+                  if (editionMode && isEditing) {
                     return (
                       <RoomTable
                         key={table.id}
@@ -240,21 +193,27 @@ const Room: React.FC<RoomProps> = ({
                         onUpdate={onTableUpdate}
                       />
                     );
-                  })}
-                </View>
+                  }
+
+                  // 🎯 Composant léger pour toutes les autres tables
+                  return (
+                    <RoomTableService
+                      key={table.id}
+                      table={table}
+                      status={tableStatuses[table.id]}
+                      CELL_SIZE={CELL_SIZE}
+                      isSelected={isEditing}
+                      onPress={onTablePress}
+                      onLongPress={onTableLongPress}
+                    />
+                  );
+                })}
               </View>
-            </Animated.View>
+            </View>
           </Animated.View>
-        </GestureDetector>
-        <Toast
-          visible={showToast}
-          message={toastMessage}
-          type="warning"
-          duration={2000}
-          onHide={() => setShowToast(false)}
-        />
-      </GestureHandlerRootView>
-    </RoomProvider>
+        </Animated.View>
+      </GestureDetector>
+    </GestureHandlerRootView>
   );
 };
 

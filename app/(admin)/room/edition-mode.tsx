@@ -6,8 +6,7 @@
  * │   └── Composant principal de visualisation et interaction avec la grille
  * │       ├── useRoomDimensions → Calcul dimensions et zoom optimal
  * │       ├── useRoomZoom → Gestion pan, pinch, wheel zoom
- * │       ├── useRoomValidation → Validation O(1) positions et collisions
- * │       └── RoomContext.Provider → Partage CELL_SIZE, currentZoom, editionMode
+ * │       └── useRoomValidation → Validation O(1) positions et collisions
  * │
  * ├── RoomTable (~/components/Room/RoomTable.tsx)
  * │   └── Table individuelle draggable/resizable avec React.memo (95%+ re-renders évités)

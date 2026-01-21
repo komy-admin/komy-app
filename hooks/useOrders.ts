@@ -7,11 +7,15 @@ import { orderApiService, UpdateOrderStatusPayload } from '~/api/order.api';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
-import { OrderLine, OrderLineType } from '~/types/order-line.types';
 import { BulkUpdatePayload } from '~/utils/order-line-tracker';
+import { filterOrdersByRoom, isOrderActive } from '~/utils/orderUtils';
 
 /**
  * Hook spécialisé pour la gestion des commandes
+ *
+ * 🚀 OPTIMISATIONS v2.0 :
+ * - Utilisation de fonctions utilitaires memoizables
+ * - Complexité réduite grâce à filterOrdersByRoom optimisé
  */
 export const useOrders = () => {
   const dispatch = useDispatch();
@@ -24,59 +28,21 @@ export const useOrders = () => {
   const tables = useSelector((state: RootState) => state.entities.tables);
   const currentRoomId = useSelector(selectCurrentRoomId);
   const selectedTableId = useSelector(selectSelectedTableId);
-  
-  // Commandes de la salle courante (excluant les commandes terminées)
+
+  // 🚀 Commandes de la salle courante (excluant les commandes terminées)
+  // Utilise filterOrdersByRoom optimisé au lieu du filter inline
   const currentRoomOrders = useMemo(() => {
     if (!currentRoomId) return [];
-    return orders.filter(order => {
-      // Vérifier d'abord si l'ordre appartient à la salle
-      let belongsToRoom = false;
-      if (order.table?.roomId) {
-        belongsToRoom = order.table.roomId === currentRoomId;
-      } else if (order.tableId && tables[order.tableId]) {
-        belongsToRoom = tables[order.tableId].roomId === currentRoomId;
-      }
-
-      if (!belongsToRoom) return false;
-
-      // Exclure si toutes les lignes sont terminées
-      if (!order.lines || order.lines.length === 0) return true; // Commande vide, la garder
-
-      const allTerminated = order.lines.every(line => {
-        if (line.type === OrderLineType.ITEM) {
-          return line.status === Status.TERMINATED;
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          return line.items.every(item => item.status === Status.TERMINATED);
-        }
-        return false;
-      });
-
-      return !allTerminated; // Exclure si tout est terminé
-    });
+    return filterOrdersByRoom(orders, currentRoomId, tables, false);
   }, [orders, currentRoomId, tables]);
-  
-  // Commande de la table sélectionnée (excluant les terminées)
+
+  // 🚀 Commande de la table sélectionnée (excluant les terminées)
+  // Utilise isOrderActive pour une vérification cohérente
   const selectedTableOrder = useMemo(() => {
     if (!selectedTableId) return null;
-    return orders.find(order => {
-      if (order.tableId !== selectedTableId) return false;
-
-      // Calculer le statut réel basé sur les OrderLines
-      if (!order.lines || order.lines.length === 0) return true; // Commande vide
-
-      // Vérifier si toutes les lignes sont terminées
-      const allTerminated = order.lines.every(line => {
-        if (line.type === OrderLineType.ITEM) {
-          return line.status === Status.TERMINATED;
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          return line.items.every(item => item.status === Status.TERMINATED);
-        }
-        return false;
-      });
-
-      // Exclure si toutes les lignes sont terminées
-      return !allTerminated;
-    }) || null;
+    return orders.find(order =>
+      order.tableId === selectedTableId && isOrderActive(order)
+    ) || null;
   }, [orders, selectedTableId]);
   
   const loading = false; // Géré globalement maintenant
@@ -173,7 +139,7 @@ export const useOrders = () => {
       console.error('Erreur lors de la suppression de la commande:', error);
       throw error;
     }
-  }, [dispatch, orders, deleteOrderLines]);
+  }, [dispatch]);
 
   /**
    * Mettre à jour une commande avec ses lignes en utilisant le système de payload bulk

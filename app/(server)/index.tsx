@@ -230,9 +230,12 @@ export default function ServerHomePage() {
     <View className="flex-1 bg-background">
       {/* Plan de salle en plein écran */}
       <View style={{ height: screenHeight * 0.85 - 44 }}>
+        {/* 🚀 KEY PROP CRITIQUE: Force React à recréer Room quand on change de salle
+            Sans cette key, React essaie de réconcilier l'ancien état avec les nouvelles données
+            ce qui cause des re-renders coûteux au lieu d'un mount propre */}
         <RoomComponent
+          key={currentRoom?.id || 'no-room'}
           tables={currentRoomTables}
-          orders={currentRoomOrders}
           editingTableId={selectedTableId || undefined}
           editionMode={false}
           isLoading={false}

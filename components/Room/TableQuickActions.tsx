@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Pressable, Platform } from 'react-native';
-import { Settings, Edit2, Trash2 } from 'lucide-react-native';
+import { Settings, PenSquare, Trash2 } from 'lucide-react-native';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -12,26 +12,27 @@ interface TableQuickActionsProps {
 }
 
 // Constantes pour les dimensions et animations
-const BUTTON_SIZE = 56;
-const EXPANDED_HEIGHT = 167;
-const OVERLAP_OFFSET = -55;
+const BUTTON_SIZE = 64;
+const BUTTON_SPACING = 10;
 const ANIMATION_DURATION = 200;
+const EXPANDED_HEIGHT = (BUTTON_SIZE * 3) + (BUTTON_SPACING * 2);
 
 // Constantes de couleurs
 const COLORS = {
-  DARK: '#1E293B',
-  INDIGO: '#6366F1',
+  SETTINGS: '#1E293B',
+  EDIT: '#6366F1',
+  DELETE: '#EF4444',
   WHITE: '#FFFFFF',
-  DIVIDER: 'rgba(255, 255, 255, 0.3)',
-  RIPPLE: 'rgba(255, 255, 255, 0.1)',
   SHADOW: '#000',
 } as const;
 
 /**
- * TableQuickActions - Bouton flottant pour actions rapides sur une table
+ * TableQuickActions - Boutons flottants pour actions rapides sur une table
  *
- * Affiche un bouton circulaire en bas à droite de l'écran.
- * Au clic, une barre verticale grandit vers le haut avec les actions disponibles.
+ * Design: 3 boutons ronds empilés verticalement
+ * - Settings (bas) : toggle open/close
+ * - Delete (milieu) : rouge avec poubelle
+ * - Edit (haut) : bleu avec crayon
  */
 export const TableQuickActions = React.memo<TableQuickActionsProps>(({
   onEdit,
@@ -39,115 +40,83 @@ export const TableQuickActions = React.memo<TableQuickActionsProps>(({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Ref pour éviter les state updates sur composant unmounted
-  const isMountedRef = useRef(true);
-
-  // Cleanup au unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
   const toggleMenu = useCallback(() => {
-    if (isMountedRef.current) {
-      setIsMenuOpen(prev => !prev);
-    }
+    setIsMenuOpen(prev => !prev);
   }, []);
 
   const handleEdit = useCallback(() => {
-    if (isMountedRef.current) {
-      setIsMenuOpen(false);
-    }
+    setIsMenuOpen(false);
     onEdit();
   }, [onEdit]);
 
   const handleDelete = useCallback(() => {
-    if (isMountedRef.current) {
-      setIsMenuOpen(false);
-    }
+    setIsMenuOpen(false);
     onDelete();
   }, [onDelete]);
 
-  // Animation d'agrandissement vertical du bouton
-  const buttonHeightStyle = useAnimatedStyle(() => {
-    return {
-      height: withTiming(isMenuOpen ? EXPANDED_HEIGHT : BUTTON_SIZE, {
-        duration: ANIMATION_DURATION,
-      }),
-    };
-  }, [isMenuOpen]);
+  // Animation rotation icône Settings (45°)
+  const settingsIconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: withTiming(isMenuOpen ? '45deg' : '0deg', { duration: ANIMATION_DURATION }) },
+    ],
+  }), [isMenuOpen]);
 
-  // Animation de rotation de l'icône Settings
-  const iconAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          rotate: withTiming(isMenuOpen ? '45deg' : '0deg', {
-            duration: ANIMATION_DURATION,
-          }),
-        },
-      ],
-    };
-  }, [isMenuOpen]);
+  // Animation bouton Delete (1er au-dessus de settings)
+  const deleteButtonStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: withTiming(isMenuOpen ? -(BUTTON_SIZE + BUTTON_SPACING) : 0, { duration: ANIMATION_DURATION }) },
+    ],
+    opacity: withTiming(isMenuOpen ? 1 : 0, { duration: ANIMATION_DURATION }),
+  }), [isMenuOpen]);
 
-  // Animation d'opacité de la topSection
-  const topSectionOpacityStyle = useAnimatedStyle(() => {
-    return {
-      opacity: withTiming(isMenuOpen ? 1 : 0, {
-        duration: ANIMATION_DURATION,
-      }),
-    };
-  }, [isMenuOpen]);
+  // Animation bouton Edit (2ème au-dessus de settings)
+  const editButtonStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: withTiming(isMenuOpen ? -((BUTTON_SIZE + BUTTON_SPACING) * 2) : 0, { duration: ANIMATION_DURATION }) },
+    ],
+    opacity: withTiming(isMenuOpen ? 1 : 0, { duration: ANIMATION_DURATION }),
+  }), [isMenuOpen]);
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Conteneur qui s'agrandit verticalement */}
-      <Animated.View style={[styles.expandingContainer, buttonHeightStyle]}>
-        {/* Partie haute - Icônes Modifier/Supprimer */}
-        <Animated.View
-          style={[styles.topSection, topSectionOpacityStyle]}
-          pointerEvents={isMenuOpen ? 'auto' : 'none'}
-        >
+      {/* Bouton Edit (bleu, crayon) - en haut */}
+      {isMenuOpen && (
+        <Animated.View style={[styles.actionButton, styles.editButton, editButtonStyle]}>
           <Pressable
-            style={styles.actionButton}
+            style={styles.buttonPressable}
             onPress={handleEdit}
-            android_ripple={{ color: COLORS.RIPPLE }}
-            accessible={true}
             accessibilityLabel="Modifier la table"
             accessibilityRole="button"
-            accessibilityHint="Ouvre le formulaire d'édition de la table"
           >
-            <Edit2 size={22} color={COLORS.WHITE} strokeWidth={2} />
-          </Pressable>
-
-          <View style={styles.divider} />
-
-          <Pressable
-            style={styles.actionButton}
-            onPress={handleDelete}
-            android_ripple={{ color: COLORS.RIPPLE }}
-            accessible={true}
-            accessibilityLabel="Supprimer la table"
-            accessibilityRole="button"
-            accessibilityHint="Attention : cette action nécessitera une confirmation"
-          >
-            <Trash2 size={22} color={COLORS.WHITE} strokeWidth={2} />
+            <PenSquare size={24} color={COLORS.WHITE} strokeWidth={2} />
           </Pressable>
         </Animated.View>
-      </Animated.View>
+      )}
 
-      {/* Partie basse - Cercle sombre HORS du container pour être AU-DESSUS */}
-      <View style={styles.bottomSection}>
+      {/* Bouton Delete (rouge, poubelle) - au milieu */}
+      {isMenuOpen && (
+        <Animated.View style={[styles.actionButton, styles.deleteButton, deleteButtonStyle]}>
+          <Pressable
+            style={styles.buttonPressable}
+            onPress={handleDelete}
+            accessibilityLabel="Supprimer la table"
+            accessibilityRole="button"
+          >
+            <Trash2 size={24} color={COLORS.WHITE} strokeWidth={2} />
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* Bouton Settings (gris foncé) - toujours visible en bas */}
+      <View style={[styles.actionButton, styles.settingsButton]}>
         <Pressable
+          style={styles.buttonPressable}
           onPress={toggleMenu}
-          style={styles.bottomSectionPressable}
-          accessible={true}
-          accessibilityLabel={isMenuOpen ? "Fermer le menu d'actions" : "Ouvrir le menu d'actions"}
+          accessibilityLabel={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
           accessibilityRole="button"
           accessibilityState={{ expanded: isMenuOpen }}
         >
-          <Animated.View style={iconAnimatedStyle}>
+          <Animated.View style={settingsIconStyle}>
             <Settings size={24} color={COLORS.WHITE} strokeWidth={2} />
           </Animated.View>
         </Pressable>
@@ -162,64 +131,42 @@ const styles = StyleSheet.create({
     bottom: Platform.select({ web: 30, default: 10 }),
     right: Platform.select({ web: 30, default: 25 }),
     width: BUTTON_SIZE,
+    height: EXPANDED_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
     zIndex: 1000,
   },
-  expandingContainer: {
-    width: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
-    overflow: 'hidden',
-    flexDirection: 'column',
-    backgroundColor: COLORS.DARK,
-    zIndex: 1,
-  },
-  topSection: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: BUTTON_SIZE + OVERLAP_OFFSET,
-    backgroundColor: COLORS.INDIGO,
-    borderBottomLeftRadius: BUTTON_SIZE / 2,
-    borderBottomRightRadius: BUTTON_SIZE / 2,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 12,
-    gap: 8,
-  },
-  bottomSection: {
+  actionButton: {
     position: 'absolute',
     bottom: 0,
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
-    backgroundColor: COLORS.DARK,
     borderRadius: BUTTON_SIZE / 2,
-    zIndex: 999,
     shadowColor: COLORS.SHADOW,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 10,
-    overflow: 'hidden',
+    elevation: 8,
   },
-  bottomSectionPressable: {
+  buttonPressable: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: BUTTON_SIZE / 2,
   },
-  actionButton: {
-    width: '100%',
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+  settingsButton: {
+    backgroundColor: COLORS.SETTINGS,
+    zIndex: 3,
   },
-  divider: {
-    height: 1,
-    width: '60%',
-    backgroundColor: COLORS.DIVIDER,
-    marginVertical: 3,
+  editButton: {
+    backgroundColor: COLORS.EDIT,
+    zIndex: 1,
+  },
+  deleteButton: {
+    backgroundColor: COLORS.DELETE,
+    zIndex: 2,
   },
 });
 
-// Display name pour React DevTools
 TableQuickActions.displayName = 'TableQuickActions';

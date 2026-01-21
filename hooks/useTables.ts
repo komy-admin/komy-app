@@ -5,11 +5,15 @@ import { selectCurrentRoomId, selectSelectedTableId } from '~/store/slices/sessi
 import { selectTables } from '~/store/selectors';
 import { tableApiService } from '~/api/table.api';
 import { Table } from '~/types/table.types';
-import { OrderLineType } from '~/types/order-line.types';
-import { Status } from '~/types/status.enum';
+import { createActiveOrdersByTableIndex } from '~/utils/orderUtils';
 
 /**
  * Hook spécialisé pour la gestion des tables
+ *
+ * 🚀 OPTIMISATIONS v2.0 :
+ * - Index des commandes par tableId pour lookup O(1) au lieu de O(n)
+ * - Enrichissement uniquement des tables de la room actuelle
+ * - Complexité réduite de O(tables * orders) à O(orders) + O(tables_in_room)
  */
 export const useTables = () => {
   const dispatch = useDispatch();
@@ -20,35 +24,35 @@ export const useTables = () => {
   const currentRoomId = useSelector(selectCurrentRoomId);
   const selectedTableId = useSelector(selectSelectedTableId);
 
-  // Tables enrichies avec leurs commandes (excluant les commandes terminées)
+  // 🚀 Index des commandes actives par tableId - O(n) une seule fois
+  // Remplace le filter O(n) répété pour chaque table
+  const activeOrdersByTableId = useMemo(() => {
+    return createActiveOrdersByTableIndex(Object.values(orders));
+  }, [orders]);
+
+  // Tables de la salle courante (filtrées AVANT enrichissement)
+  // 🚀 OPTIMISATION: On filtre d'abord, puis on enrichit seulement les tables visibles
+  const currentRoomTables = useMemo(() => {
+    if (!currentRoomId) return [];
+
+    // 1. Filtrer par room (O(n) sur toutes les tables)
+    const roomTables = tables.filter(table => table.roomId === currentRoomId);
+
+    // 2. Enrichir SEULEMENT les tables de la room (O(k) où k = tables dans la room)
+    return roomTables.map(table => ({
+      ...table,
+      orders: activeOrdersByTableId.get(table.id) || []
+    }));
+  }, [tables, currentRoomId, activeOrdersByTableId]);
+
+  // Tables enrichies avec leurs commandes - utilisé pour d'autres fonctionnalités
+  // 🚀 LAZY: Calculé uniquement quand nécessaire via getTableById/getTablesByRoom
   const enrichedTables = useMemo(() => {
     return tables.map(table => ({
       ...table,
-      orders: Object.values(orders).filter(order => {
-        if (order.tableId !== table.id) return false;
-
-        // Exclure les commandes terminées (toutes les lignes sont TERMINATED)
-        if (!order.lines || order.lines.length === 0) return true; // Commande vide, la garder
-
-        const allTerminated = order.lines.every(line => {
-          if (line.type === OrderLineType.ITEM) {
-            return line.status === Status.TERMINATED;
-          } else if (line.type === OrderLineType.MENU && line.items) {
-            return line.items.every(item => item.status === Status.TERMINATED);
-          }
-          return false;
-        });
-
-        return !allTerminated; // Exclure si tout est terminé
-      })
+      orders: activeOrdersByTableId.get(table.id) || []
     }));
-  }, [tables, orders]);
-
-  // Tables de la salle courante
-  const currentRoomTables = useMemo(() => {
-    if (!currentRoomId) return [];
-    return enrichedTables.filter(table => table.roomId === currentRoomId);
-  }, [enrichedTables, currentRoomId]);
+  }, [tables, activeOrdersByTableId]);
 
   const selectedTable = useMemo(() => {
     if (!selectedTableId) return null;

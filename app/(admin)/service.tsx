@@ -9,7 +9,6 @@ import { Table } from "~/types/table.types";
 import OrderList from "~/components/Service/OrderList";
 import { SearchBar } from "~/components/Service/SearchBar";
 import { useOrderFilters } from "~/hooks/useOrderFilters";
-import StartOrderCard from "~/components/Service/StartOrderCard";
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { RoomTabsHeader } from '~/components/Service/RoomTabsHeader';
@@ -26,7 +25,7 @@ import {
 import { useSelector } from 'react-redux';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
-import { Plus, LayoutDashboard } from 'lucide-react-native';
+import { Play } from 'lucide-react-native';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { OrderDetailView, OrderDetailHeader } from '~/components/OrderDetail';
@@ -783,16 +782,9 @@ export default function ServicePage() {
                 ) : (
                   // Afficher la room normalement
                   <>
-                    {selectedTable && !selectedTableOrder && (
-                      <StartOrderCard
-                        table={selectedTable}
-                        onStartPress={handleCreateOrder}
-                      />
-                    )}
-
                     <RoomComponent
+                      key={currentRoom?.id || 'no-room'}
                       tables={currentRoomTables}
-                      orders={currentRoomOrders}
                       editingTableId={selectedTableId ?? undefined}
                       editionMode={false}
                       isLoading={loading}
@@ -802,6 +794,16 @@ export default function ServicePage() {
                       onTableLongPress={handleTablePress}
                       onTableUpdate={() => { }}
                     />
+
+                    {/* Bouton Start flottant - visible quand une table vide est sélectionnée */}
+                    {selectedTable && !selectedTableOrder && (
+                      <Pressable
+                        onPress={handleCreateOrder}
+                        style={styles.startButton}
+                      >
+                        <Play size={28} color="white" fill="white" />
+                      </Pressable>
+                    )}
                   </>
                 )}
               </View>
@@ -977,5 +979,22 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  startButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    backgroundColor: '#1A1A1A',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
   },
 });
