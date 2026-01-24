@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Switch } from 'react-native';
 import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
@@ -253,7 +253,7 @@ export default function ConfigurationRestoPage() {
         </View>
 
         {/* Main Content */}
-        <View style={[styles.mainContent, isCompactSidebar ? styles.mainContentCompact : styles.mainContentNormal]}>
+        <View style={styles.mainContent}>
           {activeTab === 'item-types' && (
             <ItemTypesTab
               itemTypes={itemTypes}
@@ -360,7 +360,6 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
           ))
         )}
       </ScrollView>
-
     </View>
   );
 };
@@ -412,7 +411,6 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
           ))
         )}
       </ScrollView>
-
     </View>
   );
 };
@@ -635,36 +633,38 @@ const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType
   const iconName = iconData?.name || 'glass-wine';
 
   return (
-    <View style={styles.tagItem}>
-      <View style={styles.tagItemHeader}>
-        <View style={[styles.tagItemIcon, { backgroundColor }]}>
-          <MaterialCommunityIcons name={iconName as any} size={20} color={iconColor} />
-        </View>
-        <View style={styles.tagItemContent}>
-          <Text style={styles.tagItemTitle}>{itemType.name}</Text>
-          <View style={styles.tagItemMeta}>
-            <View style={[styles.tagBadge, { backgroundColor, borderColor: iconColor }]}>
-              <Text style={[styles.tagBadgeText, { color: iconColor }]}>
-                {isBar ? 'Bar' : 'Cuisine'}
-              </Text>
-            </View>
-            <View style={[styles.tagBadge, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}>
-              <Text style={[styles.tagBadgeText, { color: '#64748B' }]}>
-                Priorité {itemType.priorityOrder || 0}
-              </Text>
+    <Pressable>
+      <View style={styles.tagItem}>
+        <View style={styles.tagItemHeader}>
+          <View style={[styles.tagItemIcon, { backgroundColor }]}>
+            <MaterialCommunityIcons name={iconName as any} size={20} color={iconColor} />
+          </View>
+          <View style={styles.tagItemContent}>
+            <Text style={styles.tagItemTitle}>{itemType.name}</Text>
+            <View style={styles.tagItemMeta}>
+              <View style={[styles.tagBadge, { backgroundColor, borderColor: iconColor }]}>
+                <Text style={[styles.tagBadgeText, { color: iconColor }]}>
+                  {isBar ? 'Bar' : 'Cuisine'}
+                </Text>
+              </View>
+              <View style={[styles.tagBadge, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}>
+                <Text style={[styles.tagBadgeText, { color: '#64748B' }]}>
+                  Priorité {itemType.priorityOrder || 0}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
-        <View style={styles.tagItemActions}>
-          <TouchableOpacity style={styles.tagActionButton} onPress={onEdit}>
-            <Text style={styles.tagActionButtonText}>Modifier</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
-            <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
-          </TouchableOpacity>
+          <View style={styles.tagItemActions}>
+            <Pressable style={styles.tagActionButton} onPress={onEdit}>
+              <Text style={styles.tagActionButtonText}>Modifier</Text>
+            </Pressable>
+            <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
+              <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
+            </Pressable>
+          </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 });
 
@@ -677,52 +677,56 @@ interface TagListItemProps {
   onDelete: () => void;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, onEdit, onDelete }) => {
+const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, onEdit, onDelete }) => {
   const optionsCount = tag.options?.length || 0;
   const optionsPreview = tag.options?.slice(0, 3).map(opt => opt.label).join(', ') || '';
   const hasMore = optionsCount > 3;
 
   return (
-    <View style={styles.tagItem}>
-      <View style={styles.tagItemHeader}>
-        <View style={styles.tagItemIcon}>
-          <TagsIcon size={20} color="#A855F7" strokeWidth={2} />
-        </View>
-        <View style={styles.tagItemContent}>
-          <Text style={styles.tagItemTitle}>{tag.label}</Text>
-          <View style={styles.tagItemMeta}>
-            <View style={styles.tagBadge}>
-              <Text style={styles.tagBadgeText}>{getTagFieldTypeLabel(tag.fieldType)}</Text>
+    <Pressable>
+      <View style={styles.tagItem}>
+        <View style={styles.tagItemHeader}>
+          <View style={styles.tagItemIcon}>
+            <TagsIcon size={20} color="#A855F7" strokeWidth={2} />
+          </View>
+          <View style={styles.tagItemContent}>
+            <Text style={styles.tagItemTitle}>{tag.label}</Text>
+            <View style={styles.tagItemMeta}>
+              <View style={styles.tagBadge}>
+                <Text style={styles.tagBadgeText}>{getTagFieldTypeLabel(tag.fieldType)}</Text>
+              </View>
+              {tag.isRequired && (
+                <View style={[styles.tagBadge, styles.tagBadgeRequired]}>
+                  <Text style={styles.tagBadgeText}>Obligatoire</Text>
+                </View>
+              )}
+              {(tag.fieldType === 'select' || tag.fieldType === 'multi-select') && (
+                <View style={[styles.tagBadge, optionsCount === 0 ? styles.tagBadgeWarning : styles.tagBadgeSuccess]}>
+                  <Text style={styles.tagBadgeText}>{optionsCount} option{optionsCount > 1 ? 's' : ''}</Text>
+                </View>
+              )}
             </View>
-            {tag.isRequired && (
-              <View style={[styles.tagBadge, styles.tagBadgeRequired]}>
-                <Text style={styles.tagBadgeText}>Obligatoire</Text>
-              </View>
-            )}
-            {(tag.fieldType === 'select' || tag.fieldType === 'multi-select') && (
-              <View style={[styles.tagBadge, optionsCount === 0 ? styles.tagBadgeWarning : styles.tagBadgeSuccess]}>
-                <Text style={styles.tagBadgeText}>{optionsCount} option{optionsCount > 1 ? 's' : ''}</Text>
-              </View>
+            {optionsPreview && (
+              <Text style={styles.tagItemOptions}>
+                {optionsPreview}{hasMore ? '...' : ''}
+              </Text>
             )}
           </View>
-          {optionsPreview && (
-            <Text style={styles.tagItemOptions}>
-              {optionsPreview}{hasMore ? '...' : ''}
-            </Text>
-          )}
-        </View>
-        <View style={styles.tagItemActions}>
-          <TouchableOpacity style={styles.tagActionButton} onPress={onEdit}>
-            <Text style={styles.tagActionButtonText}>Modifier</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
-            <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
-          </TouchableOpacity>
+          <View style={styles.tagItemActions}>
+            <Pressable style={styles.tagActionButton} onPress={onEdit}>
+              <Text style={styles.tagActionButtonText}>Modifier</Text>
+            </Pressable>
+            <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
+              <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
+            </Pressable>
+          </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
-};
+});
+
+TagListItem.displayName = 'TagListItem';
 
 // View Mode Mockup Component
 interface ViewModeMockupProps {
@@ -831,23 +835,14 @@ const ViewModeMockup: React.FC<ViewModeMockupProps> = ({ type, isSelected, onSel
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: '#F8FAFC',
-    overflow: 'hidden',
   },
   content: {
-    height: '100%',
+    flex: 1,
     flexDirection: 'row',
   },
   sidebar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
     width: 240,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 1,
@@ -856,7 +851,6 @@ const styles = StyleSheet.create({
     borderRightColor: '#E2E8F0',
     padding: 16,
     gap: 8,
-    zIndex: 10,
   },
   sidebarCompact: {
     width: 72,
@@ -887,16 +881,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mainContent: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
-  },
-  mainContentNormal: {
-    left: 240,
-  },
-  mainContentCompact: {
-    left: 72,
+    flex: 1,
   },
   tabContent: {
     flex: 1,

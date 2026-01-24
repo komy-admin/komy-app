@@ -54,15 +54,21 @@ export default function ConfigPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
-      <ConfigSidebar 
-        currentSection={currentSection} 
+      <ConfigSidebar
+        currentSection={currentSection}
         onSectionChange={setCurrentSection}
       />
-      <ScrollView style={{ flex: 1 , height: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={{ flex: 1, minHeight: '100%'}}>
+      {currentSection === 'configuration' ? (
+        <View style={{ flex: 1, height: '100%' }}>
           {renderSection()}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView style={{ flex: 1, height: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={{ flex: 1, minHeight: '100%' }}>
+            {renderSection()}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
