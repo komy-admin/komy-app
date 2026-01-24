@@ -186,7 +186,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingVertical: 20 }}
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={Platform.OS === 'android'}
           scrollEventThrottle={16}
