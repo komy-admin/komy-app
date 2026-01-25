@@ -107,10 +107,10 @@ export class SocketService {
 
 export const socketService = new SocketService();
 
-// Expose le service globalement en développement pour debug via console
-if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
-  (window as any).__SOCKET_SERVICE__ = socketService;
-  console.log(
-    "[SocketService] 🧪 DEBUG: Socket service exposed as window.__SOCKET_SERVICE__"
-  );
-}
+// // Expose le service globalement en développement pour debug via console
+// if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
+//   (window as any).__SOCKET_SERVICE__ = socketService;
+//   console.log(
+//     "[SocketService] 🧪 DEBUG: Socket service exposed as window.__SOCKET_SERVICE__"
+//   );
+// }

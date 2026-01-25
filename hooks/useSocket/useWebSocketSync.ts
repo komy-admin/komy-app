@@ -5,9 +5,9 @@ import { entitiesActions, sessionActions } from '~/store';
 import {
   WEBSOCKET_EVENT_MAP,
   WebSocketEvent,
+  InvalidateEvent,
   formatEventPayload,
   getEventName,
-  getReduxAction
 } from './websocket.config';
 
 /**
@@ -70,7 +70,8 @@ export const useWebSocketSync = () => {
 };
 
 /**
- * Hook pour logger tous les événements WebSocket (debug uniquement)
+ * Hook pour logger les événements WebSocket (debug uniquement)
+ * Utilise onAny pour éviter de muter les méthodes du socket
  */
 export const useWebSocketDebugger = () => {
   const context = useContext(SocketContext);
@@ -86,27 +87,28 @@ export const useWebSocketDebugger = () => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    // Logger tous les événements pour debug
-    const originalEmit = socket.emit;
-    socket.emit = function(ev: string, ...args: any[]) {
-      console.log('🚀 WebSocket emit:', ev, args[0]);
-      return originalEmit.apply(socket, [ev, ...args] as [string, ...any[]]);
+    // Utiliser onAny pour logger tous les événements reçus sans mutation
+    const logReceive = (eventName: string, ...args: any[]) => {
+      if (!eventName.startsWith('connect') && !eventName.startsWith('disconnect')) {
+        console.log('📥 WebSocket receive:', eventName, args[0]);
+      }
     };
 
-    const originalOn = socket.on;
-    socket.on = function(event: string, handler: Function) {
-      const wrappedHandler = (...args: any[]) => {
-        if (!event.startsWith('connect') && !event.startsWith('disconnect')) {
-          console.log('📥 WebSocket receive:', event, args[0]);
-        }
-        return handler(...args);
-      };
-      return originalOn.call(socket, event, wrappedHandler);
+    // Utiliser onAnyOutgoing pour logger les événements émis (si disponible)
+    const logEmit = (eventName: string, ...args: any[]) => {
+      console.log('🚀 WebSocket emit:', eventName, args[0]);
     };
+
+    socket.onAny(logReceive);
+    if (typeof socket.onAnyOutgoing === 'function') {
+      socket.onAnyOutgoing(logEmit);
+    }
 
     return () => {
-      socket.emit = originalEmit;
-      socket.on = originalOn;
+      socket.offAny(logReceive);
+      if (typeof socket.offAnyOutgoing === 'function') {
+        socket.offAnyOutgoing(logEmit);
+      }
     };
   }, [socketService, isConnected]);
 };
@@ -172,4 +174,45 @@ export const useWebSocketReconnection = (onReconnect?: () => void) => {
   }, [socketService, dispatch]);
 
   return { isConnected };
+};
+
+/**
+ * Hook pour écouter les événements d'invalidation du backend
+ * Déclenche un refetch des ressources spécifiées
+ */
+export const useInvalidationListener = (
+  refetchResources: (resources: string[]) => Promise<void>
+) => {
+  const context = useContext(SocketContext);
+  const refetchResourcesRef = useRef(refetchResources);
+
+  useEffect(() => {
+    refetchResourcesRef.current = refetchResources;
+  }, [refetchResources]);
+
+  if (!context) return;
+
+  const { socket: socketService, isConnected } = context;
+
+  useEffect(() => {
+    if (!socketService || !isConnected) return;
+
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const handleInvalidate = (data: InvalidateEvent | InvalidateEvent[]) => {
+      const events = Array.isArray(data) ? data : [data];
+      events.forEach((event) => {
+        refetchResourcesRef.current(event.resources).catch((error) => {
+          console.error('[Invalidation] Refetch error:', error);
+        });
+      });
+    };
+
+    socket.on('invalidate', handleInvalidate);
+
+    return () => {
+      socket.off('invalidate', handleInvalidate);
+    };
+  }, [socketService, isConnected]);
 };

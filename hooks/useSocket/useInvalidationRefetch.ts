@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { ResourceName } from './websocket.config';
 import { useRooms } from '../useRooms';
 import { useOrders } from '../useOrders';
@@ -10,48 +10,52 @@ import { useAccountConfig } from '../useAccountConfig';
 /**
  * Hook centralisé pour gérer le refetch des ressources invalidées
  * Utilisé par le système d'invalidation WebSocket
+ * Instancié une seule fois dans WebSocketListener
  */
 export const useInvalidationRefetch = () => {
-  const roomsHook = useRooms();
-  const ordersHook = useOrders();
-  const menuHook = useMenu();
-  const menusHook = useMenus();
-  const usersHook = useUsers();
-  const accountConfigHook = useAccountConfig();
+  const { loadRooms } = useRooms();
+  const { loadAllOrders } = useOrders();
+  const { loadItems, loadItemTypes } = useMenu();
+  const { loadAllMenus } = useMenus();
+  const { loadUsers } = useUsers();
+  const { loadConfig } = useAccountConfig();
+
+  // Protection contre les appels multiples simultanés
+  const isRefetchingRef = useRef(false);
 
   /**
-   * Mapping des noms de ressources backend vers les fonctions de refetch
+   * Mapping mémorisé des ressources vers les fonctions de refetch
    */
-  const refetchMap: Record<ResourceName, (() => Promise<any>) | undefined> = {
+  const refetchMap = useMemo<Record<ResourceName, (() => Promise<any>) | undefined>>(() => ({
     // Menu & Items
-    items: menuHook.loadItems,
-    itemTypes: menuHook.loadItemTypes,
+    items: loadItems,
+    itemTypes: loadItemTypes,
 
-    // Menus & Categories
-    menus: menusHook.loadAllMenus,
-    menuCategories: menusHook.loadAllMenus, // MenuCategories sont incluses dans les menus
-    menuCategoryItems: menusHook.loadAllMenus, // MenuCategoryItems sont incluses dans les menus
+    // Menus & Categories (tous chargés ensemble)
+    menus: loadAllMenus,
+    menuCategories: loadAllMenus,
+    menuCategoryItems: loadAllMenus,
 
-    // Rooms & Tables
-    rooms: roomsHook.loadRooms,
-    tables: roomsHook.loadRooms, // Tables sont incluses dans les rooms
+    // Rooms & Tables (tables incluses dans rooms)
+    rooms: loadRooms,
+    tables: loadRooms,
 
-    // Orders
-    orders: ordersHook.loadAllOrders,
-    orderLines: ordersHook.loadAllOrders, // OrderLines sont incluses dans les orders
-    orderLineItems: ordersHook.loadAllOrders, // OrderLineItems sont incluses dans les orders
+    // Orders (orderLines et items inclus)
+    orders: loadAllOrders,
+    orderLines: loadAllOrders,
+    orderLineItems: loadAllOrders,
 
     // Users
-    users: usersHook.loadUsers,
+    users: loadUsers,
 
     // Account Config
-    accountConfig: accountConfigHook.loadConfig,
+    accountConfig: loadConfig,
 
-    // Resources non implémentées pour le moment
+    // Non implémentées
     tags: undefined,
     statuses: undefined,
     accounts: undefined,
-  };
+  }), [loadRooms, loadAllOrders, loadItems, loadItemTypes, loadAllMenus, loadUsers, loadConfig]);
 
   /**
    * Refetch une seule ressource
@@ -60,70 +64,73 @@ export const useInvalidationRefetch = () => {
     const refetchFn = refetchMap[resource];
 
     if (!refetchFn) {
-      console.warn(`⚠️ Pas de fonction de refetch disponible pour la ressource: ${resource}`);
+      console.warn(`⚠️ Pas de fonction de refetch pour: ${resource}`);
       return;
     }
 
     try {
-      console.log(`🔄 Refetch de la ressource: ${resource}`);
       await refetchFn();
-      console.log(`✅ Ressource refetch avec succès: ${resource}`);
     } catch (error) {
-      console.error(`❌ Erreur lors du refetch de ${resource}:`, error);
+      console.error(`❌ Erreur refetch ${resource}:`, error);
       throw error;
     }
-  }, [refetchMap]);
-
-  const refetchResources = useCallback(async (resources: string[]): Promise<void> => {
-    const uniqueResources = Array.from(new Set(resources)) as ResourceName[];
-    const validResources = uniqueResources.filter(resource => resource in refetchMap);
-
-    if (validResources.length === 0) {
-      console.warn('[Invalidation] No valid resources to refetch:', resources);
-      return;
-    }
-
-    const refetchGroups = new Map<Function, ResourceName[]>();
-
-    validResources.forEach(resource => {
-      const refetchFn = refetchMap[resource];
-      if (refetchFn) {
-        const group = refetchGroups.get(refetchFn) || [];
-        group.push(resource);
-        refetchGroups.set(refetchFn, group);
-      }
-    });
-
-    const refetchPromises = Array.from(refetchGroups.entries()).map(([refetchFn]) => {
-      return refetchFn().catch((error: any) => {
-        console.error('[Invalidation] Refetch error:', error);
-      });
-    });
-
-    await Promise.all(refetchPromises);
   }, [refetchMap]);
 
   /**
-   * Refetch toutes les ressources principales (utilisé lors de la reconnexion WebSocket)
+   * Refetch plusieurs ressources (avec déduplication des appels)
+   */
+  const refetchResources = useCallback(async (resources: string[]): Promise<void> => {
+    const uniqueResources = [...new Set(resources)] as ResourceName[];
+    const validResources = uniqueResources.filter(r => refetchMap[r]);
+
+    if (validResources.length === 0) {
+      console.warn('[Invalidation] Aucune ressource valide:', resources);
+      return;
+    }
+
+    // Grouper par fonction pour éviter les appels dupliqués
+    const refetchFns = new Set<() => Promise<any>>();
+    validResources.forEach(resource => {
+      const fn = refetchMap[resource];
+      if (fn) refetchFns.add(fn);
+    });
+
+    await Promise.all(
+      [...refetchFns].map(fn => fn().catch(err => console.error('[Invalidation] Erreur:', err)))
+    );
+  }, [refetchMap]);
+
+  /**
+   * Refetch toutes les ressources (reconnexion WebSocket)
+   * Protégé contre les appels multiples simultanés
    */
   const refetchAll = useCallback(async (): Promise<void> => {
+    if (isRefetchingRef.current) {
+      console.log('⏳ Refetch déjà en cours, ignoré');
+      return;
+    }
+
+    isRefetchingRef.current = true;
     console.log('🔄 Refetch de toutes les ressources...');
+
     try {
       await Promise.all([
-        roomsHook.loadRooms(),
-        ordersHook.loadAllOrders(),
-        menuHook.loadItems(),
-        menuHook.loadItemTypes(),
-        menusHook.loadAllMenus(),
-        usersHook.loadUsers(),
-        accountConfigHook.loadConfig(),
+        loadRooms(),
+        loadAllOrders(),
+        loadItems(),
+        loadItemTypes(),
+        loadAllMenus(),
+        loadUsers(),
+        loadConfig(),
       ]);
       console.log('✅ Toutes les ressources synchronisées');
     } catch (error) {
-      console.error('❌ Erreur lors du refetch global:', error);
+      console.error('❌ Erreur refetch global:', error);
       throw error;
+    } finally {
+      isRefetchingRef.current = false;
     }
-  }, [roomsHook, ordersHook, menuHook, menusHook, usersHook, accountConfigHook]);
+  }, [loadRooms, loadAllOrders, loadItems, loadItemTypes, loadAllMenus, loadUsers, loadConfig]);
 
   return {
     refetchResource,
