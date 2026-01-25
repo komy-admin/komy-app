@@ -510,107 +510,109 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         contentContainerStyle={styles.viewsContainer}
         showsVerticalScrollIndicator={false}
       >
+        <Pressable style={styles.viewsCardsWrapper}>
         {/* Vue Équipe */}
-        <View style={styles.viewCard}>
-          <View style={styles.viewCardHeader}>
-            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-              <Users size={24} color="#3B82F6" strokeWidth={2} />
+          <View style={styles.viewCard}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <Users size={24} color="#3B82F6" strokeWidth={2} />
+              </View>
+              <View style={styles.viewCardContent}>
+                <Text style={styles.viewCardTitle}>Équipe</Text>
+                <Text style={styles.viewCardDescription}>Gestion des utilisateurs et profils</Text>
+              </View>
+              <Switch
+                value={localTeamEnabled}
+                onValueChange={setLocalTeamEnabled}
+                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                thumbColor={localTeamEnabled ? '#FFFFFF' : '#F3F4F6'}
+                disabled={configLoading}
+              />
             </View>
-            <View style={styles.viewCardContent}>
-              <Text style={styles.viewCardTitle}>Équipe</Text>
-              <Text style={styles.viewCardDescription}>Gestion des utilisateurs et profils</Text>
-            </View>
-            <Switch
-              value={localTeamEnabled}
-              onValueChange={setLocalTeamEnabled}
-              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-              thumbColor={localTeamEnabled ? '#FFFFFF' : '#F3F4F6'}
-              disabled={configLoading}
-            />
           </View>
-        </View>
 
         {/* Vue Cuisine */}
-        <View style={styles.viewCard}>
-          <View style={styles.viewCardHeader}>
-            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-              <ChefHat size={24} color="#10B981" strokeWidth={2} />
-            </View>
-            <View style={styles.viewCardContent}>
-              <Text style={styles.viewCardTitle}>Cuisine</Text>
-              <Text style={styles.viewCardDescription}>Préparation des plats</Text>
-            </View>
-            <Switch
-              value={localKitchenEnabled}
-              onValueChange={setLocalKitchenEnabled}
-              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-              thumbColor={localKitchenEnabled ? '#FFFFFF' : '#F3F4F6'}
-              disabled={configLoading}
-            />
-          </View>
-
-          {/* Mode d'affichage Cuisine - affiché seulement si activé */}
-          {localKitchenEnabled && (
-            <View style={styles.viewModeSection}>
-              <Text style={styles.viewModeTitle}>Mode d'affichage</Text>
-              <View style={styles.viewModeOptions}>
-                <ViewModeMockup
-                  type="tickets"
-                  isSelected={localKitchenViewMode === 'tickets'}
-                  onSelect={() => setLocalKitchenViewMode('tickets')}
-                  disabled={configLoading}
-                />
-                <ViewModeMockup
-                  type="columns"
-                  isSelected={localKitchenViewMode === 'columns'}
-                  onSelect={() => setLocalKitchenViewMode('columns')}
-                  disabled={configLoading}
-                />
+          <View style={styles.viewCard}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                <ChefHat size={24} color="#10B981" strokeWidth={2} />
               </View>
+              <View style={styles.viewCardContent}>
+                <Text style={styles.viewCardTitle}>Cuisine</Text>
+                <Text style={styles.viewCardDescription}>Préparation des plats</Text>
+              </View>
+              <Switch
+                value={localKitchenEnabled}
+                onValueChange={setLocalKitchenEnabled}
+                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                thumbColor={localKitchenEnabled ? '#FFFFFF' : '#F3F4F6'}
+                disabled={configLoading}
+              />
             </View>
-          )}
-        </View>
+
+            {/* Mode d'affichage Cuisine - affiché seulement si activé */}
+            {localKitchenEnabled && (
+              <View style={styles.viewModeSection}>
+                <Text style={styles.viewModeTitle}>Mode d'affichage</Text>
+                <View style={styles.viewModeOptions}>
+                  <ViewModeMockup
+                    type="tickets"
+                    isSelected={localKitchenViewMode === 'tickets'}
+                    onSelect={() => setLocalKitchenViewMode('tickets')}
+                    disabled={configLoading}
+                  />
+                  <ViewModeMockup
+                    type="columns"
+                    isSelected={localKitchenViewMode === 'columns'}
+                    onSelect={() => setLocalKitchenViewMode('columns')}
+                    disabled={configLoading}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
 
         {/* Vue Bar */}
-        <View style={styles.viewCard}>
-          <View style={styles.viewCardHeader}>
-            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
-              <Wine size={24} color="#A855F7" strokeWidth={2} />
-            </View>
-            <View style={styles.viewCardContent}>
-              <Text style={styles.viewCardTitle}>Bar</Text>
-              <Text style={styles.viewCardDescription}>Préparation des boissons</Text>
-            </View>
-            <Switch
-              value={localBarEnabled}
-              onValueChange={setLocalBarEnabled}
-              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-              thumbColor={localBarEnabled ? '#FFFFFF' : '#F3F4F6'}
-              disabled={configLoading}
-            />
-          </View>
-
-          {/* Mode d'affichage Bar - affiché seulement si activé */}
-          {localBarEnabled && (
-            <View style={styles.viewModeSection}>
-              <Text style={styles.viewModeTitle}>Mode d'affichage</Text>
-              <View style={styles.viewModeOptions}>
-                <ViewModeMockup
-                  type="tickets"
-                  isSelected={localBarViewMode === 'tickets'}
-                  onSelect={() => setLocalBarViewMode('tickets')}
-                  disabled={configLoading}
-                />
-                <ViewModeMockup
-                  type="columns"
-                  isSelected={localBarViewMode === 'columns'}
-                  onSelect={() => setLocalBarViewMode('columns')}
-                  disabled={configLoading}
-                />
+          <View style={styles.viewCard}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
+                <Wine size={24} color="#A855F7" strokeWidth={2} />
               </View>
+              <View style={styles.viewCardContent}>
+                <Text style={styles.viewCardTitle}>Bar</Text>
+                <Text style={styles.viewCardDescription}>Préparation des boissons</Text>
+              </View>
+              <Switch
+                value={localBarEnabled}
+                onValueChange={setLocalBarEnabled}
+                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                thumbColor={localBarEnabled ? '#FFFFFF' : '#F3F4F6'}
+                disabled={configLoading}
+              />
             </View>
-          )}
-        </View>
+
+            {/* Mode d'affichage Bar - affiché seulement si activé */}
+            {localBarEnabled && (
+              <View style={styles.viewModeSection}>
+                <Text style={styles.viewModeTitle}>Mode d'affichage</Text>
+                <View style={styles.viewModeOptions}>
+                  <ViewModeMockup
+                    type="tickets"
+                    isSelected={localBarViewMode === 'tickets'}
+                    onSelect={() => setLocalBarViewMode('tickets')}
+                    disabled={configLoading}
+                  />
+                  <ViewModeMockup
+                    type="columns"
+                    isSelected={localBarViewMode === 'columns'}
+                    onSelect={() => setLocalBarViewMode('columns')}
+                    disabled={configLoading}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -1037,8 +1039,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   viewsContainer: {
-    gap: 16,
     paddingBottom: 24,
+  },
+  viewsCardsWrapper: {
+    gap: 16,
   },
   viewCard: {
     backgroundColor: '#FFFFFF',

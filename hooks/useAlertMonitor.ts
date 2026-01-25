@@ -99,8 +99,8 @@ export const useAlertMonitor = () => {
           if (line.type === 'MENU' && line.items && line.items.length > 0) {
             line.items.forEach(menuItem => {
               if (menuItem.status && [Status.PENDING, Status.INPROGRESS, Status.READY].includes(menuItem.status)) {
-                // Utiliser updatedAt si disponible, sinon createdAt
-                const dateToCheck = menuItem.updatedAt || menuItem.createdAt;
+                // Utiliser updatedAt si disponible, sinon la date de la ligne parente
+                const dateToCheck = menuItem.updatedAt || line.createdAt;
                 if (dateToCheck) {
                   const itemDate = new Date(dateToCheck);
                   const diffMinutes = Math.floor((now.getTime() - itemDate.getTime()) / (1000 * 60));
@@ -137,6 +137,10 @@ export const useAlertMonitor = () => {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      // Nettoyer les alertes existantes dans le store
+      dispatch(sessionActions.setOverdueOrders([]));
+      dispatch(sessionActions.setOverdueOrderItems([]));
+      setAlertResults({ overdueOrderIds: [], overdueOrderItemIds: [] });
       return;
     }
 
@@ -155,7 +159,7 @@ export const useAlertMonitor = () => {
         intervalRef.current = null;
       }
     };
-  }, [updateAlertState, reminderNotificationsEnabled, isAuthenticated]);
+  }, [updateAlertState, reminderNotificationsEnabled, isAuthenticated, dispatch]);
 
   return {
     overdueOrderIds: alertResults.overdueOrderIds,

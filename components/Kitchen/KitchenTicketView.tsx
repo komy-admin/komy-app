@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ScrollView, StyleSheet, View, Text } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, Pressable, Platform } from 'react-native';
 import KitchenCardTicket from './cards/variants/KitchenCardTicket';
 import { ItemGroup } from '~/types/kitchen.types';
 import { Status } from '~/types/status.enum';
@@ -97,23 +97,32 @@ export const KitchenTicketView: React.FC<KitchenTicketViewProps> = ({
       contentContainerStyle={styles.contentContainer}
       showsHorizontalScrollIndicator={false}
       showsVerticalScrollIndicator={false}
+      directionalLockEnabled={true}
+      {...(Platform.OS === 'ios' ? {
+        snapToInterval: 316,
+        decelerationRate: 'fast',
+      } : {
+        overScrollMode: 'never',
+        disableIntervalMomentum: true,
+      })}
       onLayout={handleLayout}
     >
-      {groupedByOrder.map((itemGroup) => {
-        const isNotified = notifiedIds.has(itemGroup.id);
-
-        return (
-          <View key={itemGroup.orderId} style={[styles.cardContainer, { height: containerHeight }]}>
-            <KitchenCardTicket
-              itemGroup={itemGroup}
-              viewMode="list"
-              onStatusChange={onStatusChange}
-              isNotified={isNotified}
-              onNotify={() => handleNotify(itemGroup.id)}
-            />
-          </View>
-        );
-      })}
+      <Pressable style={styles.ticketsRow}>
+        {groupedByOrder.map((itemGroup) => {
+          const isNotified = notifiedIds.has(itemGroup.id);
+          return (
+            <View key={itemGroup.orderId} style={[styles.cardContainer, { height: containerHeight }]}>
+              <KitchenCardTicket
+                itemGroup={itemGroup}
+                viewMode="list"
+                onStatusChange={onStatusChange}
+                isNotified={isNotified}
+                onNotify={() => handleNotify(itemGroup.id)}
+              />
+            </View>
+          );
+        })}
+      </Pressable>
     </ScrollView>
   );
 };
@@ -126,6 +135,8 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingVertical: 16,
     paddingHorizontal: 16,
+  },
+  ticketsRow: {
     flexDirection: 'row',
     gap: 16,
   },

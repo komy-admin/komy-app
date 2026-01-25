@@ -1,4 +1,4 @@
-import { ScrollView, View, StyleSheet } from "react-native";
+import { ScrollView, View, StyleSheet, Pressable } from "react-native";
 import { getStatusColor, getStatusText } from "~/lib/utils";
 import { Status } from "~/types/status.enum";
 import { ItemGroup } from "~/types/kitchen.types";
@@ -29,12 +29,13 @@ export default function KitchenColumnView({ itemGroups = [], status, onStatusCha
       >
         {itemGroups && itemGroups.length > 0 ? (
           itemGroups.map((itemGroup) => (
-            <KitchenCardColumn
-              key={itemGroup.id}
-              itemGroup={itemGroup}
-              status={status}
-              onStatusChange={onStatusChange}
-            />
+            <Pressable key={itemGroup.id}>
+              <KitchenCardColumn
+                itemGroup={itemGroup}
+                status={status}
+                onStatusChange={onStatusChange}
+              />
+            </Pressable>
           ))
         ) : (
           <View style={styles.emptyContainer}>

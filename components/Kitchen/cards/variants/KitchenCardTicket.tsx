@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, StyleSheet, Text as RNText } from 'react-native';
+import { View, StyleSheet, Text as RNText, Pressable } from 'react-native';
 import { KitchenCard } from '../KitchenCard';
 import { KitchenCardTicketProps } from '../../shared/types/kitchen-card.types';
 import { Status } from '~/types/status.enum';
@@ -32,7 +32,7 @@ export default function KitchenCardTicket({
   }, [itemGroup.items]);
 
   return (
-    <View style={styles.wrapper}>
+    <Pressable style={styles.wrapper}>
       <View style={styles.cardContainer}>
         <KitchenCard
           variant="ticket"
@@ -56,7 +56,7 @@ export default function KitchenCardTicket({
           <RNText style={styles.notifiedBannerText}>À SERVIR</RNText>
         </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 

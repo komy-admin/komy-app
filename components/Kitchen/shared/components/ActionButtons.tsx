@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Text as RNText, StyleSheet, Modal, Pressable } from 'react-native';
-import { Bell, X } from 'lucide-react-native';
+import { Bell, X, Play, Check } from 'lucide-react-native';
 import { Status } from '~/types/status.enum';
 import { ItemGroup } from '~/types/kitchen.types';
 
@@ -96,6 +96,8 @@ export function ActionButtons({
       return null;
     }
 
+    const isDualVisible = hasPendingItems && hasInProgressItems;
+
     return (
       <>
         <View style={styles.buttonsContainer}>
@@ -104,12 +106,15 @@ export function ActionButtons({
               style={[
                 styles.actionButtonBase,
                 styles.startButton,
-                hasInProgressItems && styles.dualButtonLeft,
               ]}
               onPress={handleStart}
               activeOpacity={0.7}
             >
-              <RNText style={styles.startButtonText}>▶ Commencer</RNText>
+              {isDualVisible ? (
+                <Play size={18} color="#FFFFFF" strokeWidth={2.5} fill="#FFFFFF" />
+              ) : (
+                <RNText style={styles.startButtonText}>▶ Commencer</RNText>
+              )}
             </TouchableOpacity>
           )}
 
@@ -118,12 +123,15 @@ export function ActionButtons({
               style={[
                 styles.actionButtonBase,
                 styles.readyButton,
-                hasPendingItems && styles.dualButtonRight,
               ]}
               onPress={handleReady}
               activeOpacity={0.7}
             >
-              <RNText style={styles.readyButtonText}>✓ Prêt à servir</RNText>
+              {isDualVisible ? (
+                <Check size={20} color="#FFFFFF" strokeWidth={3} />
+              ) : (
+                <RNText style={styles.readyButtonText}>✓ Prêt à servir</RNText>
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -236,8 +244,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
-  dualButtonLeft: {},
-  dualButtonRight: {},
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { useMemo } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { formatDate, getTableShortId, DateFormat } from '~/lib/utils';
 import { KitchenCardProps } from '../shared/types/kitchen-card.types';
 import { getCardConfig } from './config/card-variants.config';
@@ -81,15 +81,17 @@ export function KitchenCard({
     isNotified && styles.cardNotified,
   ];
 
-  // Conteneur pour le contenu (scrollable ou non)
-  const ContentContainer = config.scrollable ? ScrollView : View;
-  const contentContainerProps = config.scrollable
-    ? {
-        style: styles.content,
-        contentContainerStyle: styles.contentInner,
-        showsVerticalScrollIndicator: false,
-      }
-    : { style: styles.content };
+  // Contenu des catégories
+  const categoriesContent = itemsByCategory.map(([category, items], index) => (
+    <CategorySection
+      key={category}
+      category={category}
+      items={items}
+      isLastSection={index === itemsByCategory.length - 1}
+      showStatusBadges={config.showStatusBadges}
+      showItemBackgroundColors={config.showItemBackgroundColors}
+    />
+  ));
 
   return (
     <View style={cardStyle}>
@@ -103,18 +105,26 @@ export function KitchenCard({
         />
       )}
 
-      <ContentContainer {...contentContainerProps}>
-        {itemsByCategory.map(([category, items], index) => (
-          <CategorySection
-            key={category}
-            category={category}
-            items={items}
-            isLastSection={index === itemsByCategory.length - 1}
-            showStatusBadges={config.showStatusBadges}
-            showItemBackgroundColors={config.showItemBackgroundColors}
-          />
-        ))}
-      </ContentContainer>
+      {config.scrollable ? (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentInner}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+          directionalLockEnabled={true}
+          {...(Platform.OS === 'android' && {
+            overScrollMode: 'never',
+          })}
+        >
+          <Pressable style={Platform.OS === 'ios' ? styles.contentPressable : undefined}>
+            {categoriesContent}
+          </Pressable>
+        </ScrollView>
+      ) : (
+        <View style={styles.content}>
+          {categoriesContent}
+        </View>
+      )}
 
       {config.showButtons && (
         <ActionButtons
@@ -174,5 +184,8 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
     flexGrow: 1,
+  },
+  contentPressable: {
+    flex: 1,
   },
 });
