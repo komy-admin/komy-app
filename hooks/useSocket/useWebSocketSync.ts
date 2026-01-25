@@ -1,4 +1,4 @@
-import { useEffect, useContext } from 'react';
+import { useEffect, useContext, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { SocketContext } from './SockerProvider';
 import { entitiesActions, sessionActions } from '~/store';
@@ -113,10 +113,18 @@ export const useWebSocketDebugger = () => {
 
 /**
  * Hook pour gérer la reconnexion et la réconciliation des données
+ * Utilise useRef pour éviter les re-renders infinis avec le callback
  */
 export const useWebSocketReconnection = (onReconnect?: () => void) => {
   const context = useContext(SocketContext);
   const dispatch = useDispatch();
+  const onReconnectRef = useRef(onReconnect);
+  const hasConnectedOnce = useRef(false);
+
+  // Mettre à jour la ref quand le callback change
+  useEffect(() => {
+    onReconnectRef.current = onReconnect;
+  }, [onReconnect]);
 
   if (!context) {
     return { isConnected: false };
@@ -130,29 +138,38 @@ export const useWebSocketReconnection = (onReconnect?: () => void) => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    const handleReconnect = () => {
-      console.log('🔄 WebSocket reconnecté, réconciliation des données...');
-
-      // Mettre à jour le statut de connexion
+    const handleConnect = () => {
       dispatch(sessionActions.setWebSocketConnected(true));
 
-      // Callback optionnel pour re-fetch les données
-      onReconnect?.();
+      // Ne déclencher le refetch que si c'est une REconnexion (pas la première connexion)
+      if (hasConnectedOnce.current) {
+        console.log('🔄 WebSocket reconnecté, réconciliation des données...');
+        onReconnectRef.current?.();
+      } else {
+        console.log('✅ WebSocket connecté (première connexion)');
+        hasConnectedOnce.current = true;
+      }
     };
 
-    const handleDisconnect = () => {
-      console.log('❌ WebSocket déconnecté');
+    const handleDisconnect = (reason: string) => {
+      console.log('❌ WebSocket déconnecté:', reason);
       dispatch(sessionActions.setWebSocketConnected(false));
     };
 
-    socket.on('connect', handleReconnect);
+    socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
 
+    // Si déjà connecté au moment du mount, mettre à jour le state
+    if (socket.connected) {
+      dispatch(sessionActions.setWebSocketConnected(true));
+      hasConnectedOnce.current = true;
+    }
+
     return () => {
-      socket.off('connect', handleReconnect);
+      socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
     };
-  }, [socketService, dispatch, onReconnect]);
+  }, [socketService, dispatch]);
 
   return { isConnected };
 };

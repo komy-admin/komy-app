@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { ResourceName } from './websocket.config';
 import { useRooms } from '../useRooms';
-import { useTables } from '../useTables';
 import { useOrders } from '../useOrders';
 import { useMenu } from '../useMenu';
 import { useMenus } from '../useMenus';
@@ -14,7 +13,6 @@ import { useAccountConfig } from '../useAccountConfig';
  */
 export const useInvalidationRefetch = () => {
   const roomsHook = useRooms();
-  const tablesHook = useTables();
   const ordersHook = useOrders();
   const menuHook = useMenu();
   const menusHook = useMenus();
@@ -105,8 +103,31 @@ export const useInvalidationRefetch = () => {
     await Promise.all(refetchPromises);
   }, [refetchMap]);
 
+  /**
+   * Refetch toutes les ressources principales (utilisé lors de la reconnexion WebSocket)
+   */
+  const refetchAll = useCallback(async (): Promise<void> => {
+    console.log('🔄 Refetch de toutes les ressources...');
+    try {
+      await Promise.all([
+        roomsHook.loadRooms(),
+        ordersHook.loadAllOrders(),
+        menuHook.loadItems(),
+        menuHook.loadItemTypes(),
+        menusHook.loadAllMenus(),
+        usersHook.loadUsers(),
+        accountConfigHook.loadConfig(),
+      ]);
+      console.log('✅ Toutes les ressources synchronisées');
+    } catch (error) {
+      console.error('❌ Erreur lors du refetch global:', error);
+      throw error;
+    }
+  }, [roomsHook, ordersHook, menuHook, menusHook, usersHook, accountConfigHook]);
+
   return {
     refetchResource,
     refetchResources,
+    refetchAll,
   };
 };
