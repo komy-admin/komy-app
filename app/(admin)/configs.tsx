@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { ConfigSidebar } from '~/components/admin/ConfigSideBar';
-import PersonalInfoPage from '~/components/config/personal';
-import PasswordPage from '~/components/config/password';
+import ProfilePage from '~/components/config/profile';
 import NotificationsPage from '~/components/config/notifications';
 import DashboardPage from '~/components/config/dashboard';
 import ConfigurationRestoPage from '@/components/config/configuration';
@@ -10,7 +9,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
 
-type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications' | 'configuration';
+type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration';
 
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
@@ -37,10 +36,8 @@ export default function ConfigPage() {
 
   const renderSection = () => {
     switch (currentSection) {
-      case 'personal':
-        return <PersonalInfoPage/>;
-      case 'password':
-        return <PasswordPage/>;
+      case 'profile':
+        return <ProfilePage/>;
       case 'notifications':
         return <NotificationsPage/>;
       case 'dashboard':

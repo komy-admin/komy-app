@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo, memo } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform, Alert, Dimensions, ImageSourcePropType } from 'react-native';
-import { User, ShieldCheck, Bell, LogOut, PenTool, Database, Settings } from 'lucide-react-native';
+import { User, Bell, LogOut, PenTool, Database, Settings } from 'lucide-react-native';
 import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
 
-type ConfigSection = 'dashboard' | 'personal' | 'password' | 'notifications' | 'configuration';
+type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration';
 
 // Composant Avatar mémorisé pour éviter les reloads d'image sur resize
 const ProfileAvatar = memo(({
@@ -34,8 +34,7 @@ const ProfileAvatar = memo(({
 
 const CONFIG_ITEMS = [
   { id: 'dashboard', Icon: Database, label: 'Dashboard', color: '#3B82F6' },
-  { id: 'personal', Icon: User, label: 'Informations personnels', color: '#10B981' },
-  { id: 'password', Icon: ShieldCheck, label: 'Sécurité', color: '#F59E0B' },
+  { id: 'profile', Icon: User, label: 'Profil', color: '#10B981' },
   { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
   { id: 'configuration', Icon: Settings, label: 'Paramètre du restaurant', color: '#A855F7' },
 ];
