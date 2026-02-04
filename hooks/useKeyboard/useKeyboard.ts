@@ -8,15 +8,12 @@
 import { useMemo, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { isWeb, getKeyboardController, logKeyboardEvent } from '~/utils/keyboard.utils';
-import { KEYBOARD_STATE, KEYBOARD_THRESHOLDS } from '~/constants/keyboard.constants';
-import { useKeyboardConfig } from './useKeyboardConfig';
+import { KEYBOARD_STATE } from '~/constants/keyboard.constants';
 import { useKeyboardVisibility } from './useKeyboardVisibility';
 import type {
   UseKeyboardReturn,
   KeyboardState,
   KeyboardDismissOptions,
-  UserRole,
-  KeyboardConfig,
   KeyboardReanimatedValues,
 } from './types';
 
@@ -27,16 +24,12 @@ import type {
  * - State tracking
  * - Animation values (Reanimated)
  * - Controller methods
- * - Configuration
- * - Debug info
  *
- * @param role - User role for configuration
- * @param initialConfig - Optional configuration overrides
  * @returns Complete keyboard API
  *
  * @example
  * ```tsx
- * const { state, animated, dismiss, config } = useKeyboard('SERVER');
+ * const { state, animated, dismiss } = useKeyboard();
  *
  * // Use animation values with Reanimated
  * const animatedStyle = useAnimatedStyle(() => ({
@@ -49,13 +42,7 @@ import type {
  * };
  * ```
  */
-export const useKeyboard = (
-  role: UserRole = 'DEFAULT',
-  initialConfig?: Partial<KeyboardConfig>
-): UseKeyboardReturn => {
-  // Get configuration
-  const { config } = useKeyboardConfig(role, initialConfig);
-
+export const useKeyboard = (): UseKeyboardReturn => {
   // Get visibility state
   const visibility = useKeyboardVisibility();
 
@@ -178,30 +165,6 @@ export const useKeyboard = (
     [keyboardModule]
   );
 
-  /**
-   * Debug info (only in DEV)
-   */
-  const debug = useMemo(() => {
-    if (!__DEV__) return null;
-
-    return {
-      currentState: state,
-      focusedInput: null, // Could be enhanced with useFocusedInputHandler
-      performance: {
-        frameDrops: 0,
-        averageFrameTime: 0,
-        lastEventTimestamp: state.timestamp,
-      },
-      config,
-      platform: {
-        os: Platform.OS,
-        version: Platform.Version,
-        isTablet: (Platform.OS === 'ios' && (Platform as any).isPad) || false,
-        supportsInteractiveDismiss: config.enableGestureDismiss,
-      },
-    };
-  }, [state, config]);
-
   return {
     // State
     state,
@@ -215,11 +178,5 @@ export const useKeyboard = (
     // Controller methods
     dismiss,
     setFocusTo,
-
-    // Config
-    config,
-
-    // Debug
-    debug,
   };
 };

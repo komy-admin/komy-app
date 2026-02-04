@@ -39,7 +39,6 @@ export const AuthScreenLayout: React.FC<AuthScreenLayoutProps> = ({ children, st
   // Form content wrapped in KeyboardSafeFormView
   const formContent = (
     <KeyboardSafeFormView
-      role="AUTH"
       behavior="padding"
       keyboardVerticalOffset={keyboardVerticalOffset}
       style={[styles.container, style]}

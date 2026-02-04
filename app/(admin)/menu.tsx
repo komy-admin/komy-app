@@ -462,7 +462,6 @@ export default function MenuPage() {
         onCollapsedChange={setIsPanelCollapsed}
       >
         <KeyboardSafeFormView
-          role="FILTER"
           behavior="padding"
           keyboardVerticalOffset={200}
           style={{ flex: 1 }}

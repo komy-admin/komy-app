@@ -14,7 +14,7 @@
  *
  * Usage pattern (see team.tsx):
  * ```tsx
- * <KeyboardSafeFormView role="ADMIN">
+ * <KeyboardSafeFormView keyboardVerticalOffset={150}>
  *   <ScrollView keyboardShouldPersistTaps="handled">
  *     <AdminFormView
  *       mode="edit"

@@ -5,10 +5,24 @@
  */
 
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { KeyboardAvoidingViewWrapper } from './KeyboardWrapper';
-import { useKeyboardConfig } from '~/hooks/useKeyboard';
-import type { KeyboardSafeFormViewProps } from '~/hooks/useKeyboard/types';
+import type { KeyboardBehavior } from '~/hooks/useKeyboard/types';
+
+interface KeyboardSafeFormViewProps {
+  /** Behavior of KeyboardAvoidingView (default: 'padding') */
+  behavior?: KeyboardBehavior;
+  /** Vertical offset for keyboard (default: 0) */
+  keyboardVerticalOffset?: number;
+  /** Content container style */
+  contentContainerStyle?: ViewStyle;
+  /** Enable/disable keyboard avoidance (default: true) */
+  enabled?: boolean;
+  /** Style for the container */
+  style?: StyleProp<ViewStyle>;
+  /** Children components */
+  children: React.ReactNode;
+}
 
 /**
  * KeyboardSafeFormView
@@ -16,32 +30,26 @@ import type { KeyboardSafeFormViewProps } from '~/hooks/useKeyboard/types';
  * Form container that handles keyboard avoidance
  *
  * @example
- *   <KeyboardSafeFormView role="ADMIN">
+ *   <KeyboardSafeFormView keyboardVerticalOffset={150}>
  *     <TextInput placeholder="Item name" />
  *     <TextInput placeholder="Item price" />
  *   </KeyboardSafeFormView>
  */
 export const KeyboardSafeFormView: React.FC<KeyboardSafeFormViewProps> = ({
-  role = 'DEFAULT',
-  debugMode = false,
-  behavior,
-  keyboardVerticalOffset,
+  behavior = 'padding',
+  keyboardVerticalOffset = 0,
+  contentContainerStyle,
+  enabled = true,
   children,
   style,
   ...props
 }) => {
-  // Get role-based configuration
-  const { config } = useKeyboardConfig(role);
-
-  // Use config values or prop overrides
-  const finalBehavior = behavior ?? config.behavior;
-  const finalVerticalOffset = keyboardVerticalOffset ?? config.verticalOffset;
-
   return (
     <KeyboardAvoidingViewWrapper
-      behavior={finalBehavior}
-      keyboardVerticalOffset={finalVerticalOffset}
-      enabled={true}
+      behavior={behavior}
+      keyboardVerticalOffset={keyboardVerticalOffset}
+      contentContainerStyle={contentContainerStyle}
+      enabled={enabled}
       style={[styles.container, style]}
       {...props}
     >

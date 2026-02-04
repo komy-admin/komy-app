@@ -151,7 +151,6 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
 
       {/* Content avec KeyboardSafeFormView */}
       <KeyboardSafeFormView
-        role="ADMIN"
         behavior="padding"
         keyboardVerticalOffset={150}
         style={styles.keyboardView}

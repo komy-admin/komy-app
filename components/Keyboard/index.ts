@@ -12,6 +12,3 @@ export {
 
 // Pre-configured components
 export { KeyboardSafeFormView } from './KeyboardSafeFormView';
-
-// Debug components
-export { KeyboardDebugOverlay } from './KeyboardDebugOverlay';

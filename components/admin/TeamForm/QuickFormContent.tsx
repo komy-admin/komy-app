@@ -55,7 +55,6 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
 
       {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
       <KeyboardSafeFormView
-        role="ADMIN"
         behavior="padding"
         keyboardVerticalOffset={150}
         style={styles.keyboardView}

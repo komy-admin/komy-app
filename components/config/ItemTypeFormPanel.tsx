@@ -201,7 +201,6 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
 
       {/* KeyboardSafeFormView - Pattern B (ADMIN) avec optimisations GPU */}
       <KeyboardSafeFormView
-        role="ADMIN"
         behavior="padding"
         keyboardVerticalOffset={150}
         style={styles.keyboardView}

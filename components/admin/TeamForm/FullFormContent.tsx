@@ -253,7 +253,6 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
 
       {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
       <KeyboardSafeFormView
-        role="ADMIN"
         behavior="padding"
         keyboardVerticalOffset={150}
         style={styles.keyboardView}

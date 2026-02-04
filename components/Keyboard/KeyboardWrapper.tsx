@@ -1,73 +1,15 @@
 /**
  * Keyboard Wrapper Components
  *
- * ════════════════════════════════════════════════════════════════════════════
  * Platform-aware wrappers around react-native-keyboard-controller components
- * ════════════════════════════════════════════════════════════════════════════
- *
- * This file provides platform-aware wrappers for keyboard management components
  * with graceful fallbacks for Web and error handling.
  *
- * ════════════════════════════════════════════════════════════════════════════
- * Usage Pattern A: Short Auth Forms (Login, PIN)
- * ════════════════════════════════════════════════════════════════════════════
- *
- * Pattern A uses KeyboardAvoidingViewWrapper without ScrollView:
- *
- * @example
- *   <Pressable onPress={Keyboard.dismiss}>
- *     <KeyboardSafeFormView role="AUTH">
- *       <View style={{ flex: 1, justifyContent: 'center' }}>
- *         2-4 inputs, centered
- *       </View>
- *     </KeyboardSafeFormView>
- *   </Pressable>
- *
- * Components used:
- * - KeyboardProviderWrapper (root level)
- * - KeyboardAvoidingViewWrapper (via KeyboardSafeFormView)
- *
- * See: login.tsx, pin-verification.tsx, AuthScreenLayout.tsx
- *
- * ════════════════════════════════════════════════════════════════════════════
- * Usage Pattern B: Long Admin Forms (Team, Menu, Room)
- * ════════════════════════════════════════════════════════════════════════════
- *
- * Pattern B uses KeyboardAvoidingViewWrapper + ScrollView:
- *
- * @example
- *   <KeyboardSafeFormView role="ADMIN">
- *     <ScrollView
- *       keyboardShouldPersistTaps="handled"
- *       contentContainerStyle={{ flexGrow: 1 }}
- *     >
- *       <AdminFormView>
- *         10+ inputs, scrollable
- *       </AdminFormView>
+ * Usage:
+ *   <KeyboardSafeFormView keyboardVerticalOffset={150}>
+ *     <ScrollView keyboardShouldPersistTaps="handled">
+ *       <TextInput />
  *     </ScrollView>
  *   </KeyboardSafeFormView>
- *
- * Components used:
- * - KeyboardProviderWrapper (root level)
- * - KeyboardAvoidingViewWrapper (via KeyboardSafeFormView)
- * - Regular ScrollView
- *
- * See: team.tsx, room.tsx, menu.tsx, AdminFormLayout.tsx
- *
- * ════════════════════════════════════════════════════════════════════════════
- * Component Reference
- * ════════════════════════════════════════════════════════════════════════════
- *
- * KeyboardProviderWrapper:
- *   - Required at root level of app
- *   - Web: pass-through, Native: initializes keyboard controller
- *
- * KeyboardAvoidingViewWrapper:
- *   - Core component for keyboard avoidance (behavior: "padding")
- *   - Web: regular View, Native: uses keyboard-controller
- *   - Used in both Pattern A and Pattern B
- *
- * ════════════════════════════════════════════════════════════════════════════
  */
 
 import React from 'react';

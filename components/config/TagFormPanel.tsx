@@ -178,7 +178,6 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
 
       {/* KeyboardSafeFormView - Pattern B (ADMIN) avec optimisations GPU */}
       <KeyboardSafeFormView
-        role="ADMIN"
         behavior="padding"
         keyboardVerticalOffset={150}
         style={styles.keyboardView}

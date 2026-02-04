@@ -209,7 +209,6 @@ export default function RoomListPage() {
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
       <SidePanel title="Filtrage" width={width / 4} isCollapsed={isPanelCollapsed} onCollapsedChange={setIsPanelCollapsed}>
         <KeyboardSafeFormView
-          role="FILTER"
           behavior="padding"
           keyboardVerticalOffset={200}
           style={{ flex: 1 }}

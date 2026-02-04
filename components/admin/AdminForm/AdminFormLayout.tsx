@@ -94,7 +94,6 @@ export const AdminFormLayout: React.FC<AdminFormLayoutProps> = ({
 
       {/* KeyboardSafeFormView - SCROLLABLE content with keyboard handling */}
       <KeyboardSafeFormView
-        role="ADMIN"
         behavior="padding"
         keyboardVerticalOffset={keyboardVerticalOffset}
         style={styles.keyboardView}

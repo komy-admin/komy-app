@@ -108,7 +108,6 @@ export function ItemSelectionPanelContent({
 
         {/* Form - Wrapped with KeyboardSafeFormView for keyboard handling */}
         <KeyboardSafeFormView
-          role="ADMIN"
           behavior="padding"
           keyboardVerticalOffset={150}
           style={styles.keyboardView}

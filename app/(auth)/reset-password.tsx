@@ -115,7 +115,6 @@ export default function ResetPasswordScreen() {
   return (
     <View style={styles.container}>
       <KeyboardSafeFormView
-        role="AUTH"
         behavior="padding"
         keyboardVerticalOffset={150}
         style={styles.keyboardView}

@@ -285,7 +285,6 @@ export default function TeamPage() {
           onCollapsedChange={setIsPanelCollapsed}
         >
           <KeyboardSafeFormView
-            role="FILTER"
             behavior="padding"
             keyboardVerticalOffset={200}
             style={{ flex: 1 }}

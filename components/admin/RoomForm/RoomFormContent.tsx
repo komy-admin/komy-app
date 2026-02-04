@@ -125,7 +125,6 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
 
       {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
       <KeyboardSafeFormView
-        role="ADMIN"
         behavior="padding"
         keyboardVerticalOffset={150}
         style={styles.keyboardView}
