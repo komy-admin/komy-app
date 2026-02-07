@@ -321,12 +321,10 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
   },
 
   // Structure en grille
   formGrid: {
-    flex: 1,
   },
 
   section: {

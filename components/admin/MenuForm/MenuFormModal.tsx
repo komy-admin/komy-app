@@ -26,6 +26,7 @@
  */
 
 import React, { useRef } from 'react';
+import { Pressable, Keyboard } from 'react-native';
 import { AdminFormLayout } from '~/components/admin/AdminForm/AdminFormLayout';
 import { AdminFormView, AdminFormViewRef } from '../AdminForm/AdminFormView';
 import { MenuEditor } from '@/components/admin/MenuForm';
@@ -105,24 +106,27 @@ export const MenuFormModal: React.FC<MenuFormModalProps> = ({
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1 }}
         bottomOffset={40}
+        scrollEventThrottle={16}
       >
-        <AdminFormView
-          ref={formRef}
-          visible={true}
-          mode={mode}
-          onClose={onClose}
-          onCancel={onClose}
-          onSave={onSave}
-          hideHeaderAndActions={true}
-        >
-          <MenuEditor
-            menu={menu}
-            items={items}
-            itemTypes={itemTypes}
-            onCreateMenuCategoryItem={onCreateMenuCategoryItem}
-            onLoadMenuCategoryItems={onLoadMenuCategoryItems}
-          />
-        </AdminFormView>
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+          <AdminFormView
+            ref={formRef}
+            visible={true}
+            mode={mode}
+            onClose={onClose}
+            onCancel={onClose}
+            onSave={onSave}
+            hideHeaderAndActions={true}
+          >
+            <MenuEditor
+              menu={menu}
+              items={items}
+              itemTypes={itemTypes}
+              onCreateMenuCategoryItem={onCreateMenuCategoryItem}
+              onLoadMenuCategoryItems={onLoadMenuCategoryItems}
+            />
+          </AdminFormView>
+        </Pressable>
       </KeyboardAwareScrollViewWrapper>
     </AdminFormLayout>
   );

@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   Pressable,
+  Keyboard,
   Switch,
   TouchableOpacity,
   Platform,
@@ -256,7 +257,9 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         bottomOffset={40}
+        scrollEventThrottle={16}
       >
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
         {/* Banner Article sélectionné - Compact */}
         <View style={[
           styles.selectedItemBanner,
@@ -327,6 +330,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
             ))}
           </View>
         )}
+        </Pressable>
       </KeyboardAwareScrollViewWrapper>
 
       {/* Footer - FIXED at bottom */}
@@ -675,6 +679,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 20,
     borderBottomWidth: 1,
+    marginBottom: 10,
     borderBottomColor: '#E2E8F0',
     gap: 16,
   },

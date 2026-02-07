@@ -25,6 +25,7 @@
  */
 
 import React, { useRef } from 'react';
+import { Pressable, Keyboard } from 'react-native';
 import { AdminFormLayout } from '~/components/admin/AdminForm/AdminFormLayout';
 import { AdminFormView, AdminFormViewRef } from '../AdminForm/AdminFormView';
 import { ItemForm } from '~/components/admin/ItemForm/ItemForm'
@@ -100,18 +101,21 @@ export const ItemFormModal: React.FC<ItemFormModalProps> = ({
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1 }}
         bottomOffset={40}
+        scrollEventThrottle={16}
       >
-        <AdminFormView
-          ref={formRef}
-          visible={true}
-          mode={mode}
-          onClose={onClose}
-          onCancel={onClose}
-          onSave={onSave}
-          hideHeaderAndActions={true}
-        >
-          <ItemForm item={item} itemTypes={itemTypes} tags={tags} activeTab={activeTab} />
-        </AdminFormView>
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+          <AdminFormView
+            ref={formRef}
+            visible={true}
+            mode={mode}
+            onClose={onClose}
+            onCancel={onClose}
+            onSave={onSave}
+            hideHeaderAndActions={true}
+          >
+            <ItemForm item={item} itemTypes={itemTypes} tags={tags} activeTab={activeTab} />
+          </AdminFormView>
+        </Pressable>
       </KeyboardAwareScrollViewWrapper>
     </AdminFormLayout>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard } from 'react-native';
 import { X, Check, Users } from 'lucide-react-native';
 import { UserProfile } from '~/types/user.types';
 import { getUserProfileText } from '~/lib/utils';
@@ -58,7 +58,9 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         bottomOffset={40}
+        scrollEventThrottle={16}
       >
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
           {/* Info Badge */}
           <View style={styles.infoBadge}>
             <Text style={styles.infoBadgeText}>
@@ -110,6 +112,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
               • Vous pourrez compléter les informations plus tard
             </Text>
           </View>
+        </Pressable>
       </KeyboardAwareScrollViewWrapper>
 
       <View style={styles.panelFooter}>

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   Pressable,
+  Keyboard,
   Platform,
 } from 'react-native';
 import { X, Check, Search } from 'lucide-react-native';
@@ -110,7 +111,9 @@ export function ItemSelectionPanelContent({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           bottomOffset={20}
+          scrollEventThrottle={16}
         >
+          <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
           {/* Étape 1: Sélection d'article (mode add seulement, avant configuration) */}
           {mode === 'add' && !showConfiguration && (
             <>
@@ -237,6 +240,7 @@ export function ItemSelectionPanelContent({
               </View>
             </>
           )}
+          </Pressable>
         </KeyboardAwareScrollViewWrapper>
 
         {/* Footer */}

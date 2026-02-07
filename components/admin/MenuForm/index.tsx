@@ -290,10 +290,8 @@ export type { MenuEditorProps, MenuEditorRef } from './MenuEditor/MenuEditor.typ
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
   },
   formGrid: {
-    flex: 1,
   },
   section: {
     backgroundColor: '#FFFFFF',
@@ -332,15 +330,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#EFF6FF',
     borderRadius: 12,
-    padding: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: '#BFDBFE',
     borderStyle: 'dashed',
   },
   addCategoryButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#3B82F6',
-    marginLeft: 8,
+    marginLeft: 10,
   },
 });

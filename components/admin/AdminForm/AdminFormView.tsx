@@ -471,7 +471,6 @@ export function useAdminFormView() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: COMMON_STYLES.colors.backgroundSecondary,
     padding: COMMON_STYLES.spacing.lg,
   },

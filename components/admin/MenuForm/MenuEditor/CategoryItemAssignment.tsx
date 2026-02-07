@@ -209,16 +209,16 @@ const styles = StyleSheet.create({
 
   addItemButtonOptimized: {
     backgroundColor: '#3B82F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
   },
 
   addItemButtonOptimizedText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
   },
 

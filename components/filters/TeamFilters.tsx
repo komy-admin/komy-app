@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Pressable, Keyboard, Platform } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export interface TeamFilterState {
@@ -38,7 +38,9 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
       style={styles.filterContainer}
       contentContainerStyle={styles.filterContent}
       bottomOffset={40}
+      scrollEventThrottle={16}
     >
+      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
       {/* Prénom */}
       <View style={styles.filterGroup}>
         <Text style={styles.filterLabel}>Prénom</Text>
@@ -108,6 +110,7 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
           </Text>
         </Pressable>
       </View>
+      </Pressable>
     </KeyboardAwareScrollViewWrapper>
   );
 };
@@ -127,7 +130,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2A2E33',
-    marginBottom: 8,
+    marginBottom: 2,
   },
   textInput: {
     backgroundColor: '#FFFFFF',
@@ -136,6 +139,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    marginBottom: 15,
     minHeight: 40,
     fontSize: 14,
     color: '#2A2E33',

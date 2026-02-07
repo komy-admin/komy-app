@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
@@ -128,7 +128,9 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         bottomOffset={40}
+        scrollEventThrottle={16}
       >
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
         {/* Room Name */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Nom de la salle *</Text>
@@ -222,6 +224,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
             • Vous pourrez ajuster les tables en mode édition
           </Text>
         </View>
+        </Pressable>
       </KeyboardAwareScrollViewWrapper>
 
       <View style={styles.panelFooter}>

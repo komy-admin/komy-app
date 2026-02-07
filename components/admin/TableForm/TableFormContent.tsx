@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, Text as RNText, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text as RNText, TouchableOpacity, Pressable, Keyboard } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
 import { TextInput, NumberInput } from '~/components/ui';
@@ -154,7 +154,9 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         bottomOffset={40}
+        scrollEventThrottle={16}
       >
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
           {/* Formulaire d'édition */}
           <View style={styles.formGroup}>
             <RNText style={styles.formLabel}>Nom de la table *</RNText>
@@ -202,6 +204,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
               <RNText style={styles.formHelpText}>Entre 1 et 20 couverts</RNText>
             )}
           </View>
+        </Pressable>
       </KeyboardAwareScrollViewWrapper>
 
       {/* Footer avec boutons */}
