@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform } from 'react-native';
-import { X, Check, LayoutDashboard } from 'lucide-react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { X, Check } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { NumberInput } from '~/components/ui';
 
 interface RoomFormContentProps {
@@ -123,118 +123,106 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={40}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
-          {/* Room Name */}
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Nom de la salle *</Text>
-            <TextInput
-              value={formData.name}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-              onBlur={() => markFieldAsTouched('name')}
-              placeholder="Entrez le nom de la salle"
-              placeholderTextColor="#A0A0A0"
+        {/* Room Name */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Nom de la salle *</Text>
+          <TextInput
+            value={formData.name}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+            onBlur={() => markFieldAsTouched('name')}
+            placeholder="Entrez le nom de la salle"
+            placeholderTextColor="#A0A0A0"
+            style={[
+              styles.formInput,
+              getFieldError('name') && styles.formInputError
+            ]}
+            autoComplete="off"
+          />
+          {getFieldError('name') && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{getFieldError('name')}</Text>
+              <Text style={styles.exampleText}>Exemple : Salle principale, Terrasse, Étage 1</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Dimensions Row */}
+        <View style={styles.dimensionsRow}>
+          {/* Width */}
+          <View style={[styles.formGroup, styles.dimensionField]}>
+            <Text style={styles.formLabel}>Largeur *</Text>
+            <Text style={styles.formHelpText}>
+              Largeur de la salle (15-50)
+            </Text>
+            <NumberInput
+              value={formData.width}
+              onChangeText={(value) => {
+                markFieldAsTouched('width');
+                setFormData(prev => ({ ...prev, width: value || 15 }));
+              }}
+              placeholder="Largeur (15-50)"
+              decimalPlaces={0}
+              min={15}
+              max={50}
               style={[
                 styles.formInput,
-                getFieldError('name') && styles.formInputError
+                getFieldError('width') && styles.formInputError
               ]}
-              autoComplete="off"
             />
-            {getFieldError('name') && (
+            {getFieldError('width') && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{getFieldError('name')}</Text>
-                <Text style={styles.exampleText}>Exemple : Salle principale, Terrasse, Étage 1</Text>
+                <Text style={styles.errorText}>{getFieldError('width')}</Text>
+                <Text style={styles.exampleText}>Recommandé : 15-30</Text>
               </View>
             )}
           </View>
 
-          {/* Dimensions Row */}
-          <View style={styles.dimensionsRow}>
-            {/* Width */}
-            <View style={[styles.formGroup, styles.dimensionField]}>
-              <Text style={styles.formLabel}>Largeur *</Text>
-              <Text style={styles.formHelpText}>
-                Largeur de la salle (15-50)
-              </Text>
-              <NumberInput
-                value={formData.width}
-                onChangeText={(value) => {
-                  markFieldAsTouched('width');
-                  setFormData(prev => ({ ...prev, width: value || 15 }));
-                }}
-                placeholder="Largeur (15-50)"
-                decimalPlaces={0}
-                min={15}
-                max={50}
-                style={[
-                  styles.formInput,
-                  getFieldError('width') && styles.formInputError
-                ]}
-              />
-              {getFieldError('width') && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{getFieldError('width')}</Text>
-                  <Text style={styles.exampleText}>Recommandé : 15-30</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Height */}
-            <View style={[styles.formGroup, styles.dimensionField]}>
-              <Text style={styles.formLabel}>Hauteur *</Text>
-              <Text style={styles.formHelpText}>
-                Hauteur de la salle (15-50)
-              </Text>
-              <NumberInput
-                value={formData.height}
-                onChangeText={(value) => {
-                  markFieldAsTouched('height');
-                  setFormData(prev => ({ ...prev, height: value || 15 }));
-                }}
-                placeholder="Hauteur (15-50)"
-                decimalPlaces={0}
-                min={15}
-                max={50}
-                style={[
-                  styles.formInput,
-                  getFieldError('height') && styles.formInputError
-                ]}
-              />
-              {getFieldError('height') && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{getFieldError('height')}</Text>
-                  <Text style={styles.exampleText}>Recommandé : 15-30</Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Info Card */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>À propos des dimensions</Text>
-            <Text style={styles.infoCardText}>
-              • Les dimensions définissent l'espace disponible pour placer les tables{'\n'}
-              • Une unité = 1 carré dans le rendu visuel{'\n'}
-              • Vous pourrez ajuster les tables en mode édition
+          {/* Height */}
+          <View style={[styles.formGroup, styles.dimensionField]}>
+            <Text style={styles.formLabel}>Hauteur *</Text>
+            <Text style={styles.formHelpText}>
+              Hauteur de la salle (15-50)
             </Text>
+            <NumberInput
+              value={formData.height}
+              onChangeText={(value) => {
+                markFieldAsTouched('height');
+                setFormData(prev => ({ ...prev, height: value || 15 }));
+              }}
+              placeholder="Hauteur (15-50)"
+              decimalPlaces={0}
+              min={15}
+              max={50}
+              style={[
+                styles.formInput,
+                getFieldError('height') && styles.formInputError
+              ]}
+            />
+            {getFieldError('height') && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{getFieldError('height')}</Text>
+                <Text style={styles.exampleText}>Recommandé : 15-30</Text>
+              </View>
+            )}
           </View>
-        </ScrollView>
-      </KeyboardSafeFormView>
+        </View>
+
+        {/* Info Card */}
+        <View style={styles.infoCard}>
+          <Text style={styles.infoCardTitle}>À propos des dimensions</Text>
+          <Text style={styles.infoCardText}>
+            • Les dimensions définissent l'espace disponible pour placer les tables{'\n'}
+            • Une unité = 1 carré dans le rendu visuel{'\n'}
+            • Vous pourrez ajuster les tables en mode édition
+          </Text>
+        </View>
+      </KeyboardAwareScrollViewWrapper>
 
       <View style={styles.panelFooter}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
@@ -259,9 +247,15 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   panelHeader: {
     flexDirection: 'row',

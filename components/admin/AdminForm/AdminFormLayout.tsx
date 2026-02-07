@@ -41,7 +41,6 @@
 import React from 'react';
 import { View, Text as RNText, Pressable, StyleSheet, Platform } from 'react-native';
 import { FormHeader } from '~/components/admin/AdminForm/FormHeader';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
 
 export interface AdminFormLayoutProps {
   /** Title displayed in the header */
@@ -92,14 +91,10 @@ export const AdminFormLayout: React.FC<AdminFormLayoutProps> = ({
       {/* FormHeader - FIXED at top */}
       <FormHeader title={title} onBack={onBack} rightElement={headerRight} />
 
-      {/* KeyboardSafeFormView - SCROLLABLE content with keyboard handling */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={keyboardVerticalOffset}
-        style={styles.keyboardView}
-      >
+      {/* Content area - keyboard handling delegated to KeyboardAwareScrollView in children */}
+      <View style={styles.keyboardView}>
         {children}
-      </KeyboardSafeFormView>
+      </View>
 
       {/* Footer Actions - FIXED at bottom (covered by keyboard when open) */}
       <View style={styles.footerActions}>

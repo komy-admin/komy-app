@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Pressable,
@@ -11,7 +10,7 @@ import {
 } from 'react-native';
 import { X, Check, Search } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 /**
  * Props pour le contenu du panel de sélection d'articles
@@ -106,23 +105,12 @@ export function ItemSelectionPanelContent({
           </TouchableOpacity>
         </View>
 
-        {/* Form - Wrapped with KeyboardSafeFormView for keyboard handling */}
-        <KeyboardSafeFormView
-          behavior="padding"
-          keyboardVerticalOffset={150}
-          style={styles.keyboardView}
+        {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+        <KeyboardAwareScrollViewWrapper
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          bottomOffset={20}
         >
-          <ScrollView
-            style={styles.panelForm}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 40 }}
-            keyboardShouldPersistTaps="handled"
-            removeClippedSubviews={Platform.OS === 'android'}
-            scrollEventThrottle={16}
-            overScrollMode="never"
-            bounces={false}
-            directionalLockEnabled={true}
-          >
           {/* Étape 1: Sélection d'article (mode add seulement, avant configuration) */}
           {mode === 'add' && !showConfiguration && (
             <>
@@ -249,8 +237,7 @@ export function ItemSelectionPanelContent({
               </View>
             </>
           )}
-          </ScrollView>
-        </KeyboardSafeFormView>
+        </KeyboardAwareScrollViewWrapper>
 
         {/* Footer */}
         <View style={styles.panelFooter}>
@@ -280,9 +267,14 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 20,
+    paddingBottom: 40,
   },
   panelHeader: {
     flexDirection: 'row',
@@ -303,10 +295,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     lineHeight: 18,
-  },
-  panelForm: {
-    flex: 1,
-    padding: 20,
   },
   searchContainer: {
     flexDirection: 'row',

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { X, Check, Users } from 'lucide-react-native';
 import { User, UserProfile } from '~/types/user.types';
 import { getUserProfileText } from '~/lib/utils';
 import { validateForm, ValidationRules } from '~/components/lib/formValidation';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { SelectButton } from '~/components/ui';
 
 // Profils affichables (exclure superadmin et admin)
@@ -251,23 +251,12 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={40}
       >
-        <ScrollView
-          style={{ flex: 1, marginTop: 20 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20}}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
           {/* Section Rôle */}
           <View style={styles.formGroup}>
             <View style={styles.sectionHeader}>
@@ -444,8 +433,7 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
               )}
             </View>
           </View>
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
 
       <View style={styles.panelFooter}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
@@ -468,9 +456,14 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   panelHeader: {
     flexDirection: 'row',

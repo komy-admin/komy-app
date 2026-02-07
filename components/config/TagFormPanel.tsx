@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { X, Check, Plus, Trash2 } from 'lucide-react-native';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { eurosToCents, centsToEuros } from '~/lib/utils';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 interface TagFormPanelProps {
   tag: Tag | null;
@@ -176,23 +176,12 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         </View>
       )}
 
-      {/* KeyboardSafeFormView - Pattern B (ADMIN) avec optimisations GPU */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingVertical: 20 }}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
         {/* Étape 1: Sélection du type de champ (avant configuration) */}
         {!showConfiguration && (
           <View style={styles.formGroup}>
@@ -337,8 +326,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
             )}
           </>
         )}
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
 
       <View style={styles.panelFooter}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
@@ -361,9 +349,14 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   panelHeader: {
     flexDirection: 'row',

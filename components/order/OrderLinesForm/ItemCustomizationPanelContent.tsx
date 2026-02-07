@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback, useEffect, ReactNode } from 'rea
 import {
   View,
   StyleSheet,
-  ScrollView,
   Pressable,
   Switch,
   TouchableOpacity,
@@ -15,7 +14,7 @@ import { Tag } from '~/types/tag.types';
 import { SelectedTag } from '~/types/order-line.types';
 import { StickyNote, Tag as TagIcon, X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash } from 'lucide-react-native';
 import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 // Type pour les valeurs des tags (union de tous les types possibles)
 type TagValue = string | number | boolean | string[] | null | undefined;
@@ -252,18 +251,12 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
         </TouchableOpacity>
       </View>
 
-      {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={40}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-        >
         {/* Banner Article sélectionné - Compact */}
         <View style={[
           styles.selectedItemBanner,
@@ -334,8 +327,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
             ))}
           </View>
         )}
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
 
       {/* Footer - FIXED at bottom */}
       <View style={styles.panelFooter}>
@@ -695,9 +687,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   // Banner article sélectionné - Compact (style ItemSelectionPanel)
   selectedItemBanner: {
@@ -743,12 +740,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 8,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 14,
     color: '#1E293B',
     backgroundColor: '#F8FAFC',
-    minHeight: 80,
-    maxHeight: 80,
+    minHeight: 44,
     textAlignVertical: 'top',
   },
   formHint: {

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export interface TeamFilterState {
   firstName: string;
@@ -33,11 +34,10 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollViewWrapper
       style={styles.filterContainer}
       contentContainerStyle={styles.filterContent}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+      bottomOffset={40}
     >
       {/* Prénom */}
       <View style={styles.filterGroup}>
@@ -108,7 +108,7 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
           </Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollViewWrapper>
   );
 };
 

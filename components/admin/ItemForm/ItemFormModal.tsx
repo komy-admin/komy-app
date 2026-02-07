@@ -25,13 +25,13 @@
  */
 
 import React, { useRef } from 'react';
-import { ScrollView } from 'react-native';
 import { AdminFormLayout } from '~/components/admin/AdminForm/AdminFormLayout';
 import { AdminFormView, AdminFormViewRef } from '../AdminForm/AdminFormView';
 import { ItemForm } from '~/components/admin/ItemForm/ItemForm'
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { Tag } from '~/types/tag.types';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export interface ItemFormModalProps {
   /** Modal visibility */
@@ -96,11 +96,10 @@ export const ItemFormModal: React.FC<ItemFormModalProps> = ({
       isSaving={isSaving}
       saveButtonText={saveButtonText}
     >
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        bottomOffset={40}
       >
         <AdminFormView
           ref={formRef}
@@ -113,7 +112,7 @@ export const ItemFormModal: React.FC<ItemFormModalProps> = ({
         >
           <ItemForm item={item} itemTypes={itemTypes} tags={tags} activeTab={activeTab} />
         </AdminFormView>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </AdminFormLayout>
   );
 };

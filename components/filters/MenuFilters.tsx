@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { NumberInput } from '~/components/ui/number-input';
 
 export interface MenuFilterState {
@@ -34,11 +35,10 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollViewWrapper
       style={styles.filterContainer}
       contentContainerStyle={styles.filterContent}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+      bottomOffset={40}
     >
       {/* Nom de l'article */}
       <View style={styles.filterGroup}>
@@ -137,7 +137,7 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
           </Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollViewWrapper>
   );
 };
 

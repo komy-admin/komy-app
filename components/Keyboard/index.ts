@@ -1,14 +1,12 @@
 /**
  * Keyboard Components - Public API
- *
- * Exports all keyboard-related components
  */
 
-// Platform-aware wrappers
 export {
   KeyboardProviderWrapper,
-  KeyboardAvoidingViewWrapper,
+  KeyboardAwareScrollViewWrapper,
 } from './KeyboardWrapper';
 
-// Pre-configured components
+export type { KeyboardAwareScrollViewWrapperProps } from './KeyboardWrapper';
+
 export { KeyboardSafeFormView } from './KeyboardSafeFormView';

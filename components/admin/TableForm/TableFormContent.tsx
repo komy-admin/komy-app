@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, Text as RNText, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, Text as RNText, TouchableOpacity } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
 import { TextInput, NumberInput } from '~/components/ui';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 interface TableFormContentProps {
   table: Table;
@@ -149,23 +149,12 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Content avec KeyboardSafeFormView */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={40}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
           {/* Formulaire d'édition */}
           <View style={styles.formGroup}>
             <RNText style={styles.formLabel}>Nom de la table *</RNText>
@@ -213,8 +202,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
               <RNText style={styles.formHelpText}>Entre 1 et 20 couverts</RNText>
             )}
           </View>
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
 
       {/* Footer avec boutons */}
       <View style={styles.footer}>
@@ -248,9 +236,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   header: {
     flexDirection: 'row',

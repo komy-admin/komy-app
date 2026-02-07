@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { X, Check, Users } from 'lucide-react-native';
 import { UserProfile } from '~/types/user.types';
 import { getUserProfileText } from '~/lib/utils';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { SelectButton } from '~/components/ui';
 
 // Profils affichables (exclure superadmin et admin)
@@ -53,23 +53,12 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
         </TouchableOpacity>
       </View>
 
-      {/* KeyboardSafeFormView - Pattern B (ADMIN) */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={40}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
           {/* Info Badge */}
           <View style={styles.infoBadge}>
             <Text style={styles.infoBadgeText}>
@@ -121,8 +110,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
               • Vous pourrez compléter les informations plus tard
             </Text>
           </View>
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
 
       <View style={styles.panelFooter}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
@@ -145,9 +133,14 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   panelHeader: {
     flexDirection: 'row',

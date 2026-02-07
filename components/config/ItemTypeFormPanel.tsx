@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { X, Check, ChefHat, Wine, ArrowLeft, Plus } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ItemType } from '~/types/item-type.types';
 import { useItemTypes } from '~/hooks/useItemTypes';
 import { useToast } from '~/components/ToastProvider';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { IconSelector, AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 
 // Filtres de catégories pré-calculés (constants - pas besoin de recalculer à chaque render)
@@ -199,23 +199,12 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
         </TouchableOpacity>
       </View>
 
-      {/* KeyboardSafeFormView - Pattern B (ADMIN) avec optimisations GPU */}
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 20, paddingTop: 20 }}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
         {/* Nom du type */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Nom du type & Icône</Text>
@@ -365,8 +354,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
             </View>
           )}
         </View>
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
 
       <View style={styles.panelFooter}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
@@ -388,9 +376,14 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
-  keyboardView: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   panelHeader: {
     flexDirection: 'row',
@@ -414,13 +407,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#64748B',
-  },
-  panelForm: {
-    flex: 1,
-    padding: 20,
-  },
-  scrollContent: {
-    paddingBottom: 40,
   },
   iconSelectionView: {
     flex: 1,

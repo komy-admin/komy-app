@@ -26,13 +26,13 @@
  */
 
 import React, { useRef } from 'react';
-import { ScrollView } from 'react-native';
 import { AdminFormLayout } from '~/components/admin/AdminForm/AdminFormLayout';
 import { AdminFormView, AdminFormViewRef } from '../AdminForm/AdminFormView';
 import { MenuEditor } from '@/components/admin/MenuForm';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export interface MenuFormModalProps {
   /** Modal visibility */
@@ -101,11 +101,10 @@ export const MenuFormModal: React.FC<MenuFormModalProps> = ({
       isSaving={isSaving}
       saveButtonText={saveButtonText}
     >
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        bottomOffset={40}
       >
         <AdminFormView
           ref={formRef}
@@ -124,7 +123,7 @@ export const MenuFormModal: React.FC<MenuFormModalProps> = ({
             onLoadMenuCategoryItems={onLoadMenuCategoryItems}
           />
         </AdminFormView>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </AdminFormLayout>
   );
 };
