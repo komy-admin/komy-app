@@ -206,6 +206,7 @@ const Room: React.FC<RoomProps> = ({
                       status={tableStatuses[table.id]}
                       CELL_SIZE={CELL_SIZE}
                       isSelected={isEditing}
+                      editionMode={editionMode}
                       onPress={onTablePress}
                       onLongPress={onTableLongPress}
                     />

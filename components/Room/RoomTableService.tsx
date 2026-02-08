@@ -37,6 +37,7 @@ interface RoomTableServiceProps {
   status?: Status;
   CELL_SIZE: number;
   isSelected: boolean;
+  editionMode?: boolean;
   onPress: (table: Table) => void;
   onLongPress: (table: Table) => void;
 }
@@ -46,6 +47,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   status,
   CELL_SIZE,
   isSelected,
+  editionMode,
   onPress,
   onLongPress,
 }) => {
@@ -84,6 +86,8 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     Gesture.Exclusive(longPressGesture, tapGesture),
     [longPressGesture, tapGesture]);
 
+  const hasOrder = !!status;
+
   // Style de la table basé sur le statut + bordure de sélection
   const tableStyle = useMemo(() => {
     // Bordure noire si sélectionnée
@@ -113,12 +117,13 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     width: table.width * CELL_SIZE,
     height: table.height * CELL_SIZE,
     zIndex: isSelected ? 10000 : 1000,
+    ...(!editionMode && !hasOrder && !isSelected && { opacity: 0.35 }),
     ...(Platform.OS === 'web' && {
       userSelect: 'none' as any,
       WebkitUserSelect: 'none' as any,
       cursor: 'pointer' as any,
     }),
-  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected]);
+  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected, hasOrder]);
 
   return (
     <View style={containerStyle}>
@@ -153,6 +158,7 @@ const RoomTableServiceMemoized = React.memo(RoomTableService, (prevProps, nextPr
     prevProps.table.seats === nextProps.table.seats &&
     prevProps.status === nextProps.status &&
     prevProps.isSelected === nextProps.isSelected &&
+    prevProps.editionMode === nextProps.editionMode &&
     prevProps.CELL_SIZE === nextProps.CELL_SIZE
   );
 });
