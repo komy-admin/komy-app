@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
-  ScrollView,
   Pressable,
 } from 'react-native';
 import { Button, Text, TextInput, PinInput } from '~/components/ui';
@@ -15,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { getHomeRoute } from '~/constants/routes';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export default function SetupAccountScreen() {
   const [password, setPassword] = useState('');
@@ -216,10 +216,11 @@ export default function SetupAccountScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
+        style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        bottomOffset={40}
+        scrollEventThrottle={16}
       >
         <View style={styles.contentContainer}>
           <View style={styles.headerContainer}>
@@ -340,7 +341,7 @@ export default function SetupAccountScreen() {
             </Text>
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 }

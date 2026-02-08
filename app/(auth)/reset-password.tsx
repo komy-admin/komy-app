@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
-  ScrollView,
 } from 'react-native';
 import { Button, Text, TextInput } from '~/components/ui';
 import { authApiService } from '~/api/auth.api';
@@ -12,7 +11,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { ChevronLeft, Lock, Eye, EyeOff } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -114,22 +113,12 @@ export default function ResetPasswordScreen() {
 
   return (
     <View style={styles.container}>
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContainer}
+        bottomOffset={40}
+        scrollEventThrottle={16}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
           <View style={styles.contentContainer}>
             <Button
               variant="ghost"
@@ -237,18 +226,13 @@ export default function ResetPasswordScreen() {
               </Text>
             </View>
           </View>
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },

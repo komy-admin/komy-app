@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } f
 import {
   View,
   TextInput,
+  Pressable,
   StyleSheet,
   Platform,
   Text,
@@ -83,8 +84,14 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
     }
   };
 
+  const handleContainerPress = () => {
+    if (!disabled) {
+      inputRef.current?.focus();
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={handleContainerPress}>
       {/* Visual boxes */}
       <View style={styles.boxContainer}>
         {Array.from({ length }, (_, index) => {
@@ -137,7 +144,7 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
         blurOnSubmit={false}
         caretHidden
       />
-    </View>
+    </Pressable>
   );
 });
 

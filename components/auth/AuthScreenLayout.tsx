@@ -4,13 +4,16 @@
  * Unified layout wrapper for authentication screens (login, PIN verification, etc.)
  *
  * Handles:
- * - Platform-conditional Pressable wrapper (web vs mobile/tablet)
- * - KeyboardSafeFormView with AUTH role
- * - Automatic keyboard offset calculation based on orientation
+ * - KeyboardAwareScrollViewWrapper for auto-scroll to focused input
+ * - Consistent behavior across iOS and Android (no platform-specific offset needed)
  *
  * Architecture Pattern:
- * - Web: No Pressable wrapper (inputs are directly selectable)
- * - Mobile/Tablet: Pressable wrapper allows keyboard dismiss on tap outside
+ * - Uses KeyboardAwareScrollViewWrapper instead of KeyboardAvoidingView
+ * - Auto-scrolls to the focused input with a consistent bottomOffset gap
+ * - Keyboard dismiss is handled by keyboardShouldPersistTaps="handled" (default in wrapper):
+ *   → Tap on TextInput: keyboard stays, input gets focus
+ *   → Tap on empty area: keyboard dismisses
+ * - No Pressable wrapper needed (it blocks PinInput re-focus on iOS)
  *
  * @example
  * ```tsx
@@ -24,9 +27,8 @@
  */
 
 import React from 'react';
-import { Platform, Pressable, Keyboard, StyleSheet, ViewStyle } from 'react-native';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
-import { useAuthKeyboardOffset } from '~/hooks/useAuthKeyboardOffset';
+import { StyleSheet, ViewStyle } from 'react-native';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 interface AuthScreenLayoutProps {
   children: React.ReactNode;
@@ -34,37 +36,24 @@ interface AuthScreenLayoutProps {
 }
 
 export const AuthScreenLayout: React.FC<AuthScreenLayoutProps> = ({ children, style }) => {
-  const keyboardVerticalOffset = useAuthKeyboardOffset();
-
-  // Form content wrapped in KeyboardSafeFormView
-  const formContent = (
-    <KeyboardSafeFormView
-      behavior="padding"
-      keyboardVerticalOffset={keyboardVerticalOffset}
+  return (
+    <KeyboardAwareScrollViewWrapper
       style={[styles.container, style]}
+      contentContainerStyle={styles.scrollContent}
+      bottomOffset={40}
+      scrollEventThrottle={16}
     >
       {children}
-    </KeyboardSafeFormView>
-  );
-
-  // Platform-conditional rendering:
-  // - Web: No Pressable (allows direct input selection)
-  // - Mobile/Tablet: Pressable wrapper (enables keyboard dismiss on tap)
-  return Platform.OS === 'web' ? (
-    formContent
-  ) : (
-    <Pressable style={styles.pressableContainer} onPress={Keyboard.dismiss}>
-      {formContent}
-    </Pressable>
+    </KeyboardAwareScrollViewWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  pressableContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
 });

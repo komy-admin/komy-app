@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
-  ScrollView,
 } from 'react-native';
 import { Button, Text, PinInput } from '~/components/ui';
 import { authApiService } from '~/api/auth.api';
@@ -14,7 +13,7 @@ import { useDispatch } from 'react-redux';
 import { sessionActions } from '~/store';
 import { storageService } from '~/lib/storageService';
 import * as Haptics from 'expo-haptics';
-import { KeyboardSafeFormView } from '~/components/Keyboard';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export default function ResetPinScreen() {
   const [pin, setPin] = useState('');
@@ -136,22 +135,12 @@ export default function ResetPinScreen() {
 
   return (
     <View style={styles.container}>
-      <KeyboardSafeFormView
-        behavior="padding"
-        keyboardVerticalOffset={150}
-        style={styles.keyboardView}
+      <KeyboardAwareScrollViewWrapper
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContainer}
+        bottomOffset={40}
+        scrollEventThrottle={16}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews={Platform.OS === 'android'}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-          directionalLockEnabled={true}
-        >
           <View style={styles.contentContainer}>
             <View style={styles.headerContainer}>
               <RNText style={styles.title}>
@@ -203,18 +192,13 @@ export default function ResetPinScreen() {
               </Text>
             </View>
           </View>
-        </ScrollView>
-      </KeyboardSafeFormView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
