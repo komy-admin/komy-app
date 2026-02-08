@@ -80,9 +80,21 @@ export const usePayments = () => {
   /**
    * Crée un nouveau paiement via API et met à jour Redux
    */
-  const createPayment = useCallback(async (paymentData: Partial<Payment>): Promise<Payment> => {
+  const createPayment = useCallback(async (paymentData: {
+    orderId: string;
+    amount: number;
+    paymentMethod: Payment['paymentMethod'];
+    tipAmount?: number;
+    transactionReference?: string;
+    metadata?: any;
+    notes?: string;
+    allocations: Array<{
+      orderLineId: string;
+      quantityFraction: number;
+    }>;
+  }): Promise<Payment> => {
     try {
-      const newPayment = await paymentApiService.createPayment(paymentData as any);
+      const newPayment = await paymentApiService.createPayment(paymentData);
       dispatch(entitiesActions.createPayment({ payment: newPayment }));
       return newPayment;
     } catch (err) {

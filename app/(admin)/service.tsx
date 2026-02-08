@@ -284,23 +284,9 @@ export default function ServicePage() {
     if (!selectedTableOrder) return;
 
     try {
-      const orderLineIds: string[] = [];
-      const orderLineItemIds: string[] = [];
-
-      selectedTableOrder.lines?.forEach((line) => {
-        if (line.type === OrderLineType.ITEM) {
-          orderLineIds.push(line.id);
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          line.items.forEach((item) => {
-            orderLineItemIds.push(item.id);
-          });
-        }
-      });
-
-      await updateOrderStatus(selectedTableOrder.id, {
-        status: Status.TERMINATED,
-        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
-        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
+      // Utiliser le nouveau champ isClosed au lieu de modifier les statuts des lignes
+      await updateOrder(selectedTableOrder.id, {
+        isClosed: true
       });
 
       showToast('Commande terminée avec succès', 'success');
@@ -311,7 +297,7 @@ export default function ServicePage() {
       showToast('Erreur lors de la terminaison de la commande', 'error');
       console.error('Erreur terminate:', error);
     }
-  }, [selectedTableOrder, updateOrderStatus, showToast, setSelectedTable]);
+  }, [selectedTableOrder, updateOrder, showToast, setSelectedTable]);
 
   const handleDelete = useCallback(() => {
     setShowDeleteDialog(true);

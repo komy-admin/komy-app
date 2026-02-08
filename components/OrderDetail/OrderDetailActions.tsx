@@ -1,10 +1,9 @@
 import React, { memo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { ArrowRightLeft, CreditCard, CheckCircle, Trash2 } from 'lucide-react-native';
-import { Status } from '~/types/status.enum';
 
 export interface OrderDetailActionsProps {
-  orderStatus: Status;
+  isClosed: boolean;
   onReassignTable: () => void;
   onPayment: () => void;
   onTerminate: () => void;
@@ -12,7 +11,7 @@ export interface OrderDetailActionsProps {
 }
 
 export const OrderDetailActions = memo<OrderDetailActionsProps>(({
-  orderStatus,
+  isClosed,
   onReassignTable,
   onPayment,
   onTerminate,
@@ -47,8 +46,8 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           </View>
         </Pressable>
 
-        {/* Terminer (seulement si pas déjà terminé) */}
-        {orderStatus !== Status.TERMINATED && (
+        {/* Terminer (seulement si pas déjà fermé) */}
+        {!isClosed && (
           <Pressable
             style={styles.actionButton}
             onPress={onTerminate}

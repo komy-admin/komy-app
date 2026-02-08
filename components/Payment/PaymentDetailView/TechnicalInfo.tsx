@@ -1,46 +1,46 @@
-import { View, Text } from 'react-native'
-import { CheckCircle } from 'lucide-react-native'
-import type { Payment, LedgerEvent } from '~/api/payment.api'
-import { InfoRow } from '../shared/InfoRow'
+import { View, Text, StyleSheet } from 'react-native';
+import { CheckCircle } from 'lucide-react-native';
+import type { Payment, LedgerEvent } from '~/api/payment.api';
+import { InfoRow } from '../shared/InfoRow';
 
 interface TechnicalInfoProps {
-  payment: Payment
-  auditLogs?: LedgerEvent[]
+  payment: Payment;
+  auditLogs?: LedgerEvent[];
 }
 
 export function TechnicalInfo({ payment, auditLogs }: TechnicalInfoProps) {
   return (
-    <View className="bg-white p-4 border-t border-gray-200">
-      <Text className="text-sm font-semibold text-gray-600 mb-3">INFORMATIONS TECHNIQUES</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>INFORMATIONS TECHNIQUES</Text>
 
-      <View className="space-y-2">
+      <View style={styles.content}>
         {payment.transactionReference && (
           <InfoRow
             label="Référence transaction:"
             value={payment.transactionReference}
-            valueStyle="font-mono text-sm"
+            valueStyle={styles.monoText}
           />
         )}
         <InfoRow
           label="ID Paiement:"
           value={payment.id}
-          valueStyle="font-mono text-xs text-gray-600"
+          valueStyle={styles.monoTextSmall}
         />
         <InfoRow
           label="ID Commande:"
           value={payment.orderId}
-          valueStyle="font-mono text-xs text-gray-600"
+          valueStyle={styles.monoTextSmall}
         />
 
         {auditLogs && auditLogs.length > 0 && (
           <>
-            <View className="h-px bg-gray-200 my-2" />
+            <View style={styles.divider} />
             <InfoRow
               label="Audit NF525:"
               value={
-                <View className="flex-row items-center gap-1">
+                <View style={styles.auditContainer}>
                   <CheckCircle size={16} color="#059669" />
-                  <Text className="text-green-600">Vérifié</Text>
+                  <Text style={styles.auditText}>Vérifié</Text>
                 </View>
               }
             />
@@ -50,11 +50,55 @@ export function TechnicalInfo({ payment, auditLogs }: TechnicalInfoProps) {
               value={`${auditLogs[0].hash.substring(0, 8)}...${auditLogs[0].hash.substring(
                 auditLogs[0].hash.length - 4
               )}`}
-              valueStyle="font-mono text-xs text-gray-600"
+              valueStyle={styles.monoTextSmall}
             />
           </>
         )}
       </View>
     </View>
-  )
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  content: {
+    gap: 8,
+  },
+  monoText: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    color: '#374151',
+  },
+  monoTextSmall: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+  },
+  auditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  auditText: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '500',
+  },
+});

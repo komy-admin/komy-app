@@ -1,22 +1,47 @@
-import { View, Text } from 'react-native'
-import type { ReactNode } from 'react'
+import { View, Text, StyleSheet } from 'react-native';
+import type { ReactNode } from 'react';
 
 interface InfoRowProps {
-  label: string
-  value: string | ReactNode
-  labelStyle?: string
-  valueStyle?: string
+  label: string;
+  value: string | ReactNode;
+  labelStyle?: any;
+  valueStyle?: any;
 }
 
 export function InfoRow({ label, value, labelStyle, valueStyle }: InfoRowProps) {
   return (
-    <View className="flex-row justify-between items-start">
-      <Text className={`text-gray-600 flex-1 ${labelStyle || ''}`}>{label}</Text>
+    <View style={styles.container}>
+      <Text style={[styles.label, labelStyle]}>{label}</Text>
       {typeof value === 'string' ? (
-        <Text className={`text-right flex-1 ${valueStyle || ''}`}>{value}</Text>
+        <Text style={[styles.value, valueStyle]}>{value}</Text>
       ) : (
-        <View className="flex-1 items-end">{value}</View>
+        <View style={styles.valueContainer}>{value}</View>
       )}
     </View>
-  )
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  label: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+    flex: 1,
+  },
+  value: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '500',
+    textAlign: 'right',
+    flex: 1,
+  },
+  valueContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+});

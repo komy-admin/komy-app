@@ -6,15 +6,16 @@ export type Order = {
   id: string;
   tableId: string;
   table: Table;
-  
+
   // 🆕 Structure unifiée OrderLine
   lines: OrderLine[];
-  
+
   status: Status;
   account: string;
+  isClosed: boolean;
   createdAt: string;
   updatedAt: string;
-  
+
   // Propriétés optionnelles pour compatibilité
   orderNumber?: string;
   orderItems?: OrderLine[]; // Alias temporaire pour migration

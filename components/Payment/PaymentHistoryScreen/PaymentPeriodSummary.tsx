@@ -1,12 +1,12 @@
-import { View, Text, ScrollView } from 'react-native'
-import type { PeriodSummary, PaymentHistoryFilters } from '~/types/payment-history.types'
-import { formatPrice } from '~/lib/utils'
-import { SelectButton } from '~/components/ui/select-button'
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import type { PeriodSummary, PaymentHistoryFilters } from '~/types/payment-history.types';
+import { formatPrice } from '~/lib/utils';
+import { SelectButton } from '~/components/ui/select-button';
 
 interface PaymentPeriodSummaryProps {
-  summary: PeriodSummary
-  filters: PaymentHistoryFilters
-  onFiltersChange: (filters: PaymentHistoryFilters) => void
+  summary: PeriodSummary;
+  filters: PaymentHistoryFilters;
+  onFiltersChange: (filters: PaymentHistoryFilters) => void;
 }
 
 const PERIOD_OPTIONS = [
@@ -14,7 +14,7 @@ const PERIOD_OPTIONS = [
   { value: 'yesterday', label: 'Hier' },
   { value: 'this_week', label: 'Cette semaine' },
   { value: 'this_month', label: 'Ce mois' },
-] as const
+] as const;
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tous' },
@@ -22,7 +22,7 @@ const STATUS_OPTIONS = [
   { value: 'partially_paid', label: 'Partiel' },
   { value: 'unpaid', label: 'Impayé' },
   { value: 'refunded', label: 'Remboursé' },
-] as const
+] as const;
 
 export function PaymentPeriodSummary({
   summary,
@@ -30,30 +30,30 @@ export function PaymentPeriodSummary({
   onFiltersChange,
 }: PaymentPeriodSummaryProps) {
   return (
-    <View className="bg-white m-4 p-4 rounded-lg shadow-sm">
-      <Text className="text-sm font-semibold text-gray-600 mb-3">RÉSUMÉ DE LA PÉRIODE</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>RÉSUMÉ DE LA PÉRIODE</Text>
 
       {/* Statistiques */}
-      <View className="space-y-2 mb-4">
-        <View className="flex-row justify-between">
-          <Text className="text-gray-600">Commandes avec paiements:</Text>
-          <Text className="font-bold">{summary.ordersCount}</Text>
+      <View style={styles.statsContainer}>
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>Commandes avec paiements:</Text>
+          <Text style={styles.statValue}>{summary.ordersCount}</Text>
         </View>
-        <View className="flex-row justify-between">
-          <Text className="text-gray-600">Total encaissé:</Text>
-          <Text className="font-bold text-green-600">{formatPrice(summary.totalAmount)}</Text>
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>Total encaissé:</Text>
+          <Text style={styles.totalAmount}>{formatPrice(summary.totalAmount)}</Text>
         </View>
-        <View className="flex-row justify-between">
-          <Text className="text-gray-600">Paiements enregistrés:</Text>
-          <Text className="font-bold">{summary.paymentsCount}</Text>
+        <View style={styles.statRow}>
+          <Text style={styles.statLabel}>Paiements enregistrés:</Text>
+          <Text style={styles.statValue}>{summary.paymentsCount}</Text>
         </View>
       </View>
 
       {/* Filtre Période */}
-      <View className="mb-3">
-        <Text className="text-sm font-medium text-gray-700 mb-2">Période</Text>
+      <View style={styles.filterSection}>
+        <Text style={styles.filterLabel}>Période</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row gap-2">
+          <View style={styles.filterButtons}>
             {PERIOD_OPTIONS.map((option) => (
               <SelectButton
                 key={option.value}
@@ -66,6 +66,8 @@ export function PaymentPeriodSummary({
                   })
                 }
                 variant="pill"
+                activeColor="#6366F1"
+                activeBgColor="#EEF2FF"
               />
             ))}
           </View>
@@ -74,9 +76,9 @@ export function PaymentPeriodSummary({
 
       {/* Filtre Status */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-2">Statut</Text>
+        <Text style={styles.filterLabel}>Statut</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row gap-2">
+          <View style={styles.filterButtons}>
             {STATUS_OPTIONS.map((option) => (
               <SelectButton
                 key={option.value}
@@ -89,11 +91,71 @@ export function PaymentPeriodSummary({
                   })
                 }
                 variant="pill"
+                activeColor="#6366F1"
+                activeBgColor="#EEF2FF"
               />
             ))}
           </View>
         </ScrollView>
       </View>
     </View>
-  )
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    padding: 16,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  statsContainer: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  totalAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  filterSection: {
+    marginBottom: 12,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+});
