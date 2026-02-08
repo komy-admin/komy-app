@@ -27,6 +27,7 @@ import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/se
 import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { Play } from 'lucide-react-native';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
+import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { OrderDetailView, OrderDetailHeader } from '~/components/OrderDetail';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
@@ -606,6 +607,9 @@ export default function ServicePage() {
 
   const windowDimensions = useWindowDimensions();
 
+  // Mesure du conteneur de la room pour le zoom auto-fill
+  const { dimensions: roomContainerDimensions, onLayout: handleRoomContainerLayout } = useContainerLayout();
+
   // ✅ useMemo : Dimensions de la modal de réassignation
   const reassignModalDimensions = useMemo(() => ({
     width: Math.min(windowDimensions.width * 0.55, 600),
@@ -782,18 +786,22 @@ export default function ServicePage() {
                 ) : (
                   // Afficher la room normalement
                   <>
-                    <RoomComponent
-                      key={currentRoom?.id || 'no-room'}
-                      tables={currentRoomTables}
-                      editingTableId={selectedTableId ?? undefined}
-                      editionMode={false}
-                      isLoading={loading}
-                      width={currentRoom?.width}
-                      height={currentRoom?.height}
-                      onTablePress={handleTablePress}
-                      onTableLongPress={handleTablePress}
-                      onTableUpdate={() => { }}
-                    />
+                    <View style={{ flex: 1 }} onLayout={handleRoomContainerLayout}>
+                      <RoomComponent
+                        key={currentRoom?.id || 'no-room'}
+                        tables={currentRoomTables}
+                        editingTableId={selectedTableId ?? undefined}
+                        editionMode={false}
+                        isLoading={loading}
+                        width={currentRoom?.width}
+                        height={currentRoom?.height}
+                        containerDimensions={roomContainerDimensions}
+                        fillContainer
+                        onTablePress={handleTablePress}
+                        onTableLongPress={handleTablePress}
+                        onTableUpdate={() => { }}
+                      />
+                    </View>
 
                     {/* Bouton Start flottant - visible quand une table vide est sélectionnée */}
                     {selectedTable && !selectedTableOrder && (

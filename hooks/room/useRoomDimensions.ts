@@ -18,6 +18,7 @@ interface UseRoomDimensionsProps {
   roomHeight: number; // Hauteur en cellules
   isLoading: boolean;
   containerDimensions?: { width: number; height: number };
+  fillContainer?: boolean;
 }
 
 interface RoomDimensions {
@@ -30,12 +31,15 @@ export const useRoomDimensions = ({
   roomWidth,
   roomHeight,
   isLoading,
-  containerDimensions
+  containerDimensions,
+  fillContainer
 }: UseRoomDimensionsProps) => {
 
   // 🚀 Calcul synchrone des dimensions - plus besoin d'effet
   const dimensions = useMemo((): RoomDimensions | null => {
     if (isLoading) return null;
+    // Attendre la mesure réelle du conteneur avant de calculer le zoom
+    if (fillContainer && !containerDimensions) return null;
 
     const screenWidth = Dimensions.get('window').width;
     const roomWidthPx = roomWidth * CELL_SIZE;
@@ -46,29 +50,31 @@ export const useRoomDimensions = ({
     const extendedHeight = roomHeightPx + (EXTRA_LINES * 2 * CELL_SIZE);
 
     // Calcul du zoom optimal
-    let availableWidth: number;
-    let availableHeight: number;
+    let optimalZoom: number;
 
-    if (containerDimensions) {
+    if (fillContainer && containerDimensions) {
+      // Mode fillContainer : remplir le conteneur mesuré avec ~8% de marge
+      const horizontalZoom = containerDimensions.width / roomWidthPx;
+      const verticalZoom = containerDimensions.height / roomHeightPx;
+      optimalZoom = Math.min(horizontalZoom, verticalZoom) * 0.92;
+    } else if (containerDimensions) {
       // Pour les modales : utiliser les dimensions du conteneur avec padding
-      availableWidth = containerDimensions.width - 40;
-      availableHeight = containerDimensions.height - 40;
+      const availableWidth = containerDimensions.width - 40;
+      const availableHeight = containerDimensions.height - 40;
+      const horizontalZoom = (availableWidth * 0.95) / roomWidthPx;
+      const verticalZoom = (availableHeight * 0.9) / roomHeightPx;
+      optimalZoom = Math.min(horizontalZoom, verticalZoom) * 0.9;
     } else {
-      // Comportement normal pour la vue service
+      // Fallback sans mesure conteneur : estimation statique via window
       const SIDE_PANEL_WIDTH = screenWidth / 4;
-      availableWidth = screenWidth - SIDE_PANEL_WIDTH;
-      availableHeight = Dimensions.get('window').height * 0.9;
-    }
-
-    const horizontalZoom = (availableWidth * 0.95) / roomWidthPx;
-    const verticalZoom = (availableHeight * 0.9) / roomHeightPx;
-
-    let optimalZoom = Math.min(horizontalZoom, verticalZoom);
-
-    if (containerDimensions) {
-      optimalZoom *= 0.9;
-    } else if (roomWidth > 1 || roomHeight > 1) {
-      optimalZoom *= 0.7;
+      const availableWidth = screenWidth - SIDE_PANEL_WIDTH;
+      const availableHeight = Dimensions.get('window').height * 0.9;
+      const horizontalZoom = (availableWidth * 0.95) / roomWidthPx;
+      const verticalZoom = (availableHeight * 0.9) / roomHeightPx;
+      optimalZoom = Math.min(horizontalZoom, verticalZoom);
+      if (roomWidth > 1 || roomHeight > 1) {
+        optimalZoom *= 0.7;
+      }
     }
 
     // Contraindre entre 0.2 et 1.5
@@ -79,7 +85,7 @@ export const useRoomDimensions = ({
       gridHeight: extendedHeight,
       initialZoom
     };
-  }, [roomWidth, roomHeight, isLoading, containerDimensions]);
+  }, [roomWidth, roomHeight, isLoading, containerDimensions, fillContainer]);
 
   // 🚀 isGridReady est maintenant dérivé directement de dimensions
   // Plus de double rendu avec setState(false) puis setState(true)

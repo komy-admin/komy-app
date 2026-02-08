@@ -52,6 +52,7 @@ import { useRooms, useTables } from '~/hooks/useRestaurant';
 import { useTableEditor } from '~/hooks/useTableEditor';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { generateTableName, findAvailablePosition } from '~/lib/room-utils';
+import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { ArrowLeftToLine } from 'lucide-react-native';
 
 // Constantes
@@ -70,6 +71,9 @@ export default function RoomEditionMode() {
 
   // Panel portal pour le formulaire d'édition
   const { renderPanel, clearPanel } = usePanelPortal();
+
+  // Mesure du conteneur de la room pour le zoom auto-fill
+  const { dimensions: roomContainerDimensions, onLayout: handleRoomContainerLayout } = useContainerLayout();
 
   // Variables d'état local pour l'UI
   const [isCreatingTable, setIsCreatingTable] = useState(false);
@@ -301,7 +305,7 @@ export default function RoomEditionMode() {
 
       {/* Zone de la grille avec RoomComponent */}
       {currentRoom && (
-        <View style={styles.roomContainer}>
+        <View style={styles.roomContainer} onLayout={handleRoomContainerLayout}>
           <RoomComponent
             key={currentRoom.id}
             tables={currentRoomTables}
@@ -310,6 +314,8 @@ export default function RoomEditionMode() {
             width={currentRoom.width}
             height={currentRoom.height}
             isLoading={roomsLoading}
+            containerDimensions={roomContainerDimensions}
+            fillContainer
             onTablePress={handleTablePress}
             onTableLongPress={handleTablePress}
             onTableUpdate={handleTableUpdate}

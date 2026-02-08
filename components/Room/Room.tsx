@@ -29,6 +29,7 @@ interface RoomProps {
   onTableLongPress: (table: Table | null) => void;
   onTablePress: (table: Table | null) => void;
   containerDimensions?: { width: number; height: number };
+  fillContainer?: boolean;
 }
 
 const Room: React.FC<RoomProps> = ({
@@ -41,14 +42,16 @@ const Room: React.FC<RoomProps> = ({
   onTableUpdate,
   onTableLongPress,
   onTablePress,
-  containerDimensions
+  containerDimensions,
+  fillContainer
 }) => {
   // 🎯 HOOK: Gestion des dimensions et du zoom optimal
   const { dimensions, isGridReady, CELL_SIZE, EXTRA_LINES } = useRoomDimensions({
     roomWidth: width,
     roomHeight: height,
     isLoading,
-    containerDimensions
+    containerDimensions,
+    fillContainer
   });
 
   // 🎯 HOOK: Gestion du zoom (pan, pinch, wheel)
