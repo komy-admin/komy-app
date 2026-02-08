@@ -1,69 +1,116 @@
-import { io, Socket } from 'socket.io-client';
-import { storageService } from '~/lib/storageService';
+import { io, Socket } from "socket.io-client";
+import { storageService } from "~/lib/storageService";
 
 export class SocketService {
-    private socket: Socket | null = null;
+  private socket: Socket | null = null;
+  private currentToken: string | null = null;
 
-    async connect(url: string, sessionToken?: string) {
-      const token = sessionToken || await storageService.getItem('sessionToken');
+  async connect(url: string, sessionToken?: string): Promise<void> {
+    const token =
+      sessionToken || (await storageService.getItem("sessionToken"));
 
-      if (!token) {
-        console.error('[SocketService] No session token available');
-        return;
-      }
+    if (!token) {
+      console.error("[SocketService] No session token available");
+      return;
+    }
 
+    // Si déjà connecté avec le même token, ne rien faire
+    if (this.socket?.connected && this.currentToken === token) {
+      console.log("[SocketService] Already connected with same token");
+      return;
+    }
+
+    // Déconnecter proprement l'ancienne connexion si elle existe
+    if (this.socket) {
+      console.log("[SocketService] Disconnecting old socket before reconnect");
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
+    this.currentToken = token;
+
+    return new Promise((resolve, reject) => {
       this.socket = io(url, {
-        auth: { token }
+        auth: { token },
+        autoConnect: true,
+        // Options de reconnexion automatique
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
       });
 
-      this.socket.on('connect', () => {
-          console.log('[SocketService] Connected');
+      const onConnect = () => {
+        console.log("[SocketService] Connected successfully");
+        this.socket?.off("connect_error", onConnectError);
+        resolve();
+      };
+
+      const onConnectError = (error: Error) => {
+        console.error("[SocketService] Connection error:", error);
+        this.socket?.off("connect", onConnect);
+        reject(error);
+      };
+
+      this.socket.once("connect", onConnect);
+      this.socket.once("connect_error", onConnectError);
+
+      this.socket.on("disconnect", (reason) => {
+        console.log("[SocketService] Disconnected:", reason);
       });
+    });
+  }
 
-      this.socket.on('disconnect', (reason) => {
-          console.log('[SocketService] Disconnected:', reason);
-      });
+  emit(event: string, payload: any) {
+    if (this.socket) {
+      this.socket.emit(event, payload);
+    } else {
+      console.error("[SocketService] Socket is not connected");
     }
+  }
 
-    emit(event: string, payload: any) {
-        if (this.socket) {
-          this.socket.emit(event, payload);
-        } else {
-            console.error('[SocketService] Socket is not connected');
-        }
+  on(event: string, callback: (...args: any[]) => void) {
+    if (this.socket) {
+      this.socket.on(event, callback);
     }
+  }
 
-    on(event: string, callback: (...args: any[]) => void) {
-        if (this.socket) {
-          this.socket.on(event, callback);
-        }
+  off(event: string, callback?: (...args: any[]) => void) {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off(event, callback);
+      } else {
+        this.socket.off(event);
+      }
     }
+  }
 
-    off(event: string, callback?: (...args: any[]) => void) {
-        if (this.socket) {
-            if (callback) {
-                this.socket.off(event, callback);
-            } else {
-                this.socket.off(event);
-            }
-        }
-    }
+  isConnected() {
+    return this.socket?.connected || false;
+  }
 
-    isConnected() {
-        return this.socket?.connected || false;
-    }
+  getSocket() {
+    return this.socket;
+  }
 
-    getSocket() {
-        return this.socket;
+  disconnect() {
+    if (this.socket) {
+      console.log("[SocketService] Disconnecting socket");
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+      this.currentToken = null;
     }
-
-    disconnect() {
-        if (this.socket) {
-            this.socket.offAny();
-            this.socket.disconnect();
-            this.socket = null;
-        }
-    }
+  }
 }
 
 export const socketService = new SocketService();
+
+// // Expose le service globalement en développement pour debug via console
+// if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
+//   (window as any).__SOCKET_SERVICE__ = socketService;
+//   console.log(
+//     "[SocketService] 🧪 DEBUG: Socket service exposed as window.__SOCKET_SERVICE__"
+//   );
+// }

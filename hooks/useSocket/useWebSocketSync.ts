@@ -1,13 +1,13 @@
-import { useEffect, useContext } from 'react';
+import { useEffect, useContext, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { SocketContext } from './SockerProvider';
 import { entitiesActions, sessionActions } from '~/store';
 import {
   WEBSOCKET_EVENT_MAP,
   WebSocketEvent,
+  InvalidateEvent,
   formatEventPayload,
   getEventName,
-  getReduxAction
 } from './websocket.config';
 
 /**
@@ -30,7 +30,7 @@ export const useWebSocketSync = () => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    const listeners: Array<[string, Function]> = [];
+    const listeners: Array<[string, (...args: any[]) => void]> = [];
 
     Object.entries(WEBSOCKET_EVENT_MAP).forEach(([model, actions]) => {
       Object.entries(actions).forEach(([eventType, reduxActionName]) => {
@@ -70,7 +70,8 @@ export const useWebSocketSync = () => {
 };
 
 /**
- * Hook pour logger tous les événements WebSocket (debug uniquement)
+ * Hook pour logger les événements WebSocket (debug uniquement)
+ * Utilise onAny pour éviter de muter les méthodes du socket
  */
 export const useWebSocketDebugger = () => {
   const context = useContext(SocketContext);
@@ -86,37 +87,46 @@ export const useWebSocketDebugger = () => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    // Logger tous les événements pour debug
-    const originalEmit = socket.emit;
-    socket.emit = function(...args: any[]) {
-      console.log('🚀 WebSocket emit:', args[0], args[1]);
-      return originalEmit.apply(socket, args);
+    // Utiliser onAny pour logger tous les événements reçus sans mutation
+    const logReceive = (eventName: string, ...args: any[]) => {
+      if (!eventName.startsWith('connect') && !eventName.startsWith('disconnect')) {
+        console.log('📥 WebSocket receive:', eventName, args[0]);
+      }
     };
 
-    const originalOn = socket.on;
-    socket.on = function(event: string, handler: Function) {
-      const wrappedHandler = (...args: any[]) => {
-        if (!event.startsWith('connect') && !event.startsWith('disconnect')) {
-          console.log('📥 WebSocket receive:', event, args[0]);
-        }
-        return handler(...args);
-      };
-      return originalOn.call(socket, event, wrappedHandler);
+    // Utiliser onAnyOutgoing pour logger les événements émis (si disponible)
+    const logEmit = (eventName: string, ...args: any[]) => {
+      console.log('🚀 WebSocket emit:', eventName, args[0]);
     };
+
+    socket.onAny(logReceive);
+    if (typeof socket.onAnyOutgoing === 'function') {
+      socket.onAnyOutgoing(logEmit);
+    }
 
     return () => {
-      socket.emit = originalEmit;
-      socket.on = originalOn;
+      socket.offAny(logReceive);
+      if (typeof socket.offAnyOutgoing === 'function') {
+        socket.offAnyOutgoing(logEmit);
+      }
     };
   }, [socketService, isConnected]);
 };
 
 /**
  * Hook pour gérer la reconnexion et la réconciliation des données
+ * Utilise useRef pour éviter les re-renders infinis avec le callback
  */
 export const useWebSocketReconnection = (onReconnect?: () => void) => {
   const context = useContext(SocketContext);
   const dispatch = useDispatch();
+  const onReconnectRef = useRef(onReconnect);
+  const hasConnectedOnce = useRef(false);
+
+  // Mettre à jour la ref quand le callback change
+  useEffect(() => {
+    onReconnectRef.current = onReconnect;
+  }, [onReconnect]);
 
   if (!context) {
     return { isConnected: false };
@@ -130,29 +140,79 @@ export const useWebSocketReconnection = (onReconnect?: () => void) => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    const handleReconnect = () => {
-      console.log('🔄 WebSocket reconnecté, réconciliation des données...');
-
-      // Mettre à jour le statut de connexion
+    const handleConnect = () => {
       dispatch(sessionActions.setWebSocketConnected(true));
 
-      // Callback optionnel pour re-fetch les données
-      onReconnect?.();
+      // Ne déclencher le refetch que si c'est une REconnexion (pas la première connexion)
+      if (hasConnectedOnce.current) {
+        console.log('🔄 WebSocket reconnecté, réconciliation des données...');
+        onReconnectRef.current?.();
+      } else {
+        console.log('✅ WebSocket connecté (première connexion)');
+        hasConnectedOnce.current = true;
+      }
     };
 
-    const handleDisconnect = () => {
-      console.log('❌ WebSocket déconnecté');
+    const handleDisconnect = (reason: string) => {
+      console.log('❌ WebSocket déconnecté:', reason);
       dispatch(sessionActions.setWebSocketConnected(false));
     };
 
-    socket.on('connect', handleReconnect);
+    socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
 
+    // Si déjà connecté au moment du mount, mettre à jour le state
+    if (socket.connected) {
+      dispatch(sessionActions.setWebSocketConnected(true));
+      hasConnectedOnce.current = true;
+    }
+
     return () => {
-      socket.off('connect', handleReconnect);
+      socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
     };
-  }, [socketService, dispatch, onReconnect]);
+  }, [socketService, dispatch]);
 
   return { isConnected };
+};
+
+/**
+ * Hook pour écouter les événements d'invalidation du backend
+ * Déclenche un refetch des ressources spécifiées
+ */
+export const useInvalidationListener = (
+  refetchResources: (resources: string[]) => Promise<void>
+) => {
+  const context = useContext(SocketContext);
+  const refetchResourcesRef = useRef(refetchResources);
+
+  useEffect(() => {
+    refetchResourcesRef.current = refetchResources;
+  }, [refetchResources]);
+
+  if (!context) return;
+
+  const { socket: socketService, isConnected } = context;
+
+  useEffect(() => {
+    if (!socketService || !isConnected) return;
+
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const handleInvalidate = (data: InvalidateEvent | InvalidateEvent[]) => {
+      const events = Array.isArray(data) ? data : [data];
+      events.forEach((event) => {
+        refetchResourcesRef.current(event.resources).catch((error) => {
+          console.error('[Invalidation] Refetch error:', error);
+        });
+      });
+    };
+
+    socket.on('invalidate', handleInvalidate);
+
+    return () => {
+      socket.off('invalidate', handleInvalidate);
+    };
+  }, [socketService, isConnected]);
 };
