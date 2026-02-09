@@ -2,6 +2,7 @@ import { memo, useState } from 'react';
 import { View, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { FileText } from 'lucide-react-native';
 import { Text } from '~/components/ui';
+import { NumberInput } from '~/components/ui/number-input';
 import { SectionHeader } from '~/components/admin/SectionHeader';
 import { MenuFormData } from '~/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 
@@ -43,13 +44,17 @@ export const MenuBasicInfo = memo<MenuBasicInfoProps>(({
 
         <View style={[styles.field, styles.fieldSmall]}>
           <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Prix de base (€) *</Text>
-          <TextInput
-            value={formData.basePrice}
-            onChangeText={(text) => onUpdateField('basePrice', text)}
+          <NumberInput
+            value={formData.basePrice ? parseFloat(formData.basePrice) : null}
+            onChangeText={(val) => onUpdateField('basePrice', val !== null ? val.toString() : '')}
+            decimalPlaces={2}
+            min={0}
             placeholder="0.00"
-            keyboardType="decimal-pad"
             placeholderTextColor="#A0A0A0"
-            style={[styles.input, errors.basePrice && { borderColor: '#EF4444' }]}
+            style={{
+              ...styles.input,
+              ...(errors.basePrice ? { borderColor: '#EF4444' } : {}),
+            }}
           />
           {errors.basePrice && (
             <Text style={styles.errorText}>{errors.basePrice}</Text>

@@ -1,9 +1,10 @@
 import React, { memo, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { MenuCategoryFormData } from '~/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 import { ItemType } from '~/types/item-type.types';
 import { IconButton } from '~/components/ui/IconButton';
 import { SelectButton } from '~/components/ui/select-button';
+import { NumberInput } from '~/components/ui/number-input';
 
 interface CategoryEditorProps {
   category: MenuCategoryFormData;
@@ -42,12 +43,12 @@ export const CategoryEditor = memo<CategoryEditorProps>(({
     onUpdateCategory(categoryIndex, 'itemTypeId', itemTypeId);
   }, [onUpdateCategory, categoryIndex]);
 
-  const handleUpdateMaxSelections = useCallback((text: string) => {
-    onUpdateCategory(categoryIndex, 'maxSelections', text);
+  const handleUpdateMaxSelections = useCallback((val: number | null) => {
+    onUpdateCategory(categoryIndex, 'maxSelections', val !== null ? val.toString() : '');
   }, [onUpdateCategory, categoryIndex]);
 
-  const handleUpdatePriceModifier = useCallback((text: string) => {
-    onUpdateCategory(categoryIndex, 'priceModifier', text);
+  const handleUpdatePriceModifier = useCallback((val: number | null) => {
+    onUpdateCategory(categoryIndex, 'priceModifier', val !== null ? val.toString() : '');
   }, [onUpdateCategory, categoryIndex]);
 
   const handleToggleRequired = useCallback(() => {
@@ -115,14 +116,17 @@ export const CategoryEditor = memo<CategoryEditorProps>(({
           <View style={[styles.row, { marginBottom: 12 }]}>
             <View style={[styles.field, styles.fieldSmall]}>
               <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Sélections max *</Text>
-              <TextInput
-                value={category.maxSelections}
+              <NumberInput
+                value={category.maxSelections ? parseInt(category.maxSelections, 10) : null}
                 onChangeText={handleUpdateMaxSelections}
-                keyboardType="number-pad"
-                style={[
-                  styles.input,
-                  errors[`category_${categoryIndex}_max`] && { borderColor: '#EF4444' }
-                ]}
+                decimalPlaces={0}
+                min={1}
+                max={99}
+                placeholder="1"
+                style={{
+                  ...styles.input,
+                  ...(errors[`category_${categoryIndex}_max`] ? { borderColor: '#EF4444' } : {}),
+                }}
               />
               {errors[`category_${categoryIndex}_max`] && (
                 <Text style={styles.errorText}>{errors[`category_${categoryIndex}_max`]}</Text>
@@ -131,15 +135,16 @@ export const CategoryEditor = memo<CategoryEditorProps>(({
 
             <View style={[styles.field, styles.fieldSmall]}>
               <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Modificateur prix (€)</Text>
-              <TextInput
-                value={category.priceModifier}
+              <NumberInput
+                value={category.priceModifier ? parseFloat(category.priceModifier) : null}
                 onChangeText={handleUpdatePriceModifier}
+                decimalPlaces={2}
+                min={0}
                 placeholder="0.00"
-                keyboardType="decimal-pad"
-                style={[
-                  styles.input,
-                  errors[`category_${categoryIndex}_price`] && { borderColor: '#EF4444' }
-                ]}
+                style={{
+                  ...styles.input,
+                  ...(errors[`category_${categoryIndex}_price`] ? { borderColor: '#EF4444' } : {}),
+                }}
               />
               {errors[`category_${categoryIndex}_price`] && (
                 <Text style={styles.errorText}>{errors[`category_${categoryIndex}_price`]}</Text>

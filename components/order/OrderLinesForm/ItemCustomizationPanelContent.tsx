@@ -9,7 +9,7 @@ import {
   Platform,
   Text as RNText,
 } from 'react-native';
-import { Text, TextInput, NumberInput } from '~/components/ui';
+import { TextInput, NumberInput } from '~/components/ui';
 import { Item } from '~/types/item.types';
 import { Tag } from '~/types/tag.types';
 import { SelectedTag } from '~/types/order-line.types';

@@ -12,6 +12,7 @@ import {
 import { X, Check, Search } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { NumberInput } from '~/components/ui/number-input';
 
 /**
  * Props pour le contenu du panel de sélection d'articles
@@ -196,13 +197,14 @@ export function ItemSelectionPanelContent({
               {/* Supplément */}
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Supplément (€)</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={supplement}
-                  onChangeText={setSupplement}
-                  keyboardType="decimal-pad"
+                <NumberInput
+                  value={supplement ? parseFloat(supplement) : null}
+                  onChangeText={(val) => setSupplement(val !== null ? val.toString() : '0')}
+                  decimalPlaces={2}
+                  min={0}
                   placeholder="0.00"
                   placeholderTextColor="#94A3B8"
+                  style={styles.formInput}
                 />
                 <Text style={styles.formHint}>
                   Prix supplémentaire ajouté au prix de base de l'article
