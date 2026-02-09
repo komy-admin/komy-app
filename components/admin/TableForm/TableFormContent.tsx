@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, Text as RNText, TouchableOpacity, Pressable, Keyboard } from 'react-native';
+import { View, StyleSheet, Text as RNText, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
 import { TextInput, NumberInput } from '~/components/ui';
@@ -156,7 +156,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         bottomOffset={40}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Formulaire d'édition */}
           <View style={styles.formGroup}>
             <RNText style={styles.formLabel}>Nom de la table *</RNText>

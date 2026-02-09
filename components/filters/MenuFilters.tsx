@@ -41,7 +41,7 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
       bottomOffset={40}
       scrollEventThrottle={16}
     >
-      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+      <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
       {/* Nom de l'article */}
       <View style={styles.filterGroup}>
         <Text style={styles.filterLabel}>Nom de l'article</Text>

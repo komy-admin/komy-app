@@ -47,7 +47,7 @@ export const RoomFilters: React.FC<RoomFiltersProps> = ({
       bottomOffset={40}
       scrollEventThrottle={16}
     >
-      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+      <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
       {/* Nom de la salle */}
       <View style={styles.filterGroup}>
         <Text style={styles.filterLabel}>Nom de la salle</Text>

@@ -113,7 +113,7 @@ export function ItemSelectionPanelContent({
           bottomOffset={20}
           scrollEventThrottle={16}
         >
-          <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+          <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Étape 1: Sélection d'article (mode add seulement, avant configuration) */}
           {mode === 'add' && !showConfiguration && (
             <>

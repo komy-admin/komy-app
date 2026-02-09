@@ -40,7 +40,7 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
       bottomOffset={40}
       scrollEventThrottle={16}
     >
-      <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+      <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
       {/* Prénom */}
       <View style={styles.filterGroup}>
         <Text style={styles.filterLabel}>Prénom</Text>

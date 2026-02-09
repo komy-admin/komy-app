@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
 import { X, Check, Plus, Trash2 } from 'lucide-react-native';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { eurosToCents, centsToEuros } from '~/lib/utils';
@@ -183,7 +183,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         bottomOffset={20}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
         {/* Étape 1: Sélection du type de champ (avant configuration) */}
         {!showConfiguration && (
           <View style={styles.formGroup}>

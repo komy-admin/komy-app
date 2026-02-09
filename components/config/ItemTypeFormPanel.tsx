@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform, ScrollView } from 'react-native';
 import { X, Check, ChefHat, Wine, ArrowLeft, Plus } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ItemType } from '~/types/item-type.types';
@@ -206,7 +206,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
         bottomOffset={20}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
         {/* Nom du type */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Nom du type & Icône</Text>

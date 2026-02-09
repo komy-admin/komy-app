@@ -259,7 +259,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
         bottomOffset={40}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
         {/* Banner Article sélectionné - Compact */}
         <View style={[
           styles.selectedItemBanner,

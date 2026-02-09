@@ -26,7 +26,7 @@
  */
 
 import React, { useRef } from 'react';
-import { Pressable, Keyboard } from 'react-native';
+import { Pressable, Keyboard, Platform } from 'react-native';
 import { AdminFormLayout } from '~/components/admin/AdminForm/AdminFormLayout';
 import { AdminFormView, AdminFormViewRef } from '../AdminForm/AdminFormView';
 import { MenuEditor } from '@/components/admin/MenuForm';
@@ -108,7 +108,7 @@ export const MenuFormModal: React.FC<MenuFormModalProps> = ({
         bottomOffset={40}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <AdminFormView
             ref={formRef}
             visible={true}

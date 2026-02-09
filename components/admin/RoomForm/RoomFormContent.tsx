@@ -130,7 +130,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         bottomOffset={40}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
         {/* Room Name */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Nom de la salle *</Text>
