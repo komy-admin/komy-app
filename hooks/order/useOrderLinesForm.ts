@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { useMenus } from '~/hooks/useMenus';
-import { useToast } from '~/components/ToastProvider';
+
+/**
+ * Groupe d'items par itemType pour le rendu en sections
+ */
+export interface ItemsByTypeGroup {
+  itemType: ItemType;
+  items: Item[];
+}
 
 /**
  * Interface pour les props du hook simplifié (UI state seulement)
@@ -10,10 +17,6 @@ import { useToast } from '~/components/ToastProvider';
 export interface UseOrderLinesFormProps {
   items: Item[];
   itemTypes: ItemType[];
-  onConfigurationModeChange?: (isConfiguring: boolean) => void;
-  onConfigurationActionsChange?: (actions: { onCancel: () => void; onConfirm: () => void } | null) => void;
-  onMenuConfigured?: (menuData: any) => void;
-  onError?: (error: Error) => void;
 }
 
 /**
@@ -25,22 +28,11 @@ export interface UseOrderLinesFormReturn {
   setActiveMainTab: (tab: string) => void;
   activeItemType: string;
   setActiveItemType: (itemType: string) => void;
-  
-  // Configuration de menu
-  isConfiguringMenu: boolean;
-  setIsConfiguringMenu: (configuring: boolean) => void;
-  menuBeingConfigured: any | null;
-  setMenuBeingConfigured: (menu: any | null) => void;
-  tempMenuSelections: Record<string, string[]>;
-  setTempMenuSelections: (selections: Record<string, string[]>) => void;
-  startMenuConfiguration?: (menu: any) => Promise<void>;
-  cancelMenuConfiguration?: () => void;
-  confirmMenuConfiguration?: () => void;
-  updateTempMenuSelection?: (categoryId: string, itemId: string, isSelected: boolean) => void;
-  
+
   // Données
   activeMenus: any[];
   activeItems: Item[];
+  itemsByType: ItemsByTypeGroup[];
   allItemTypes: ItemType[];
 }
 
@@ -54,33 +46,31 @@ export interface UseOrderLinesFormReturn {
 export const useOrderLinesForm = ({
   items,
   itemTypes,
-  onConfigurationModeChange,
-  onConfigurationActionsChange,
-  onMenuConfigured,
-  onError
 }: UseOrderLinesFormProps): UseOrderLinesFormReturn => {
   
   // États de navigation UI
-  const [activeMainTab, setActiveMainTab] = useState<string>('ITEMS');
+  const [activeMainTab, setActiveMainTab] = useState<string>('MENUS');
   const [activeItemType, setActiveItemType] = useState<string>('');
   
-  // États de configuration de menu
-  const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
-  const [menuBeingConfigured, setMenuBeingConfigured] = useState<any | null>(null);
-  const [tempMenuSelections, setTempMenuSelections] = useState<Record<string, string[]>>({});
-  
   // Hooks externes
-  const { showToast } = useToast();
-  const { activeMenus, getMenuCategoryItems } = useMenus();
+  const { activeMenus } = useMenus();
   
-  // Filtrer les items actifs par type
-  const activeItems = items.filter(item => {
-    if (!item.isActive) return false;
-    if (activeItemType === '') return true;
-    // Utiliser itemType.id en priorité, sinon itemTypeId
-    const itemTypeId = item.itemType?.id || item.itemTypeId;
-    return itemTypeId === activeItemType;
-  });
+  // Tous les items actifs (sans filtrage par type)
+  const activeItems = items.filter(item => item.isActive);
+
+  // Items groupés par itemType, triés par priorityOrder
+  const itemsByType = useMemo<ItemsByTypeGroup[]>(() => {
+    const sortedTypes = [...itemTypes].sort((a, b) => a.priorityOrder - b.priorityOrder);
+    return sortedTypes
+      .map(itemType => ({
+        itemType,
+        items: activeItems.filter(item => {
+          const typeId = item.itemType?.id || item.itemTypeId;
+          return typeId === itemType.id;
+        }),
+      }))
+      .filter(group => group.items.length > 0);
+  }, [activeItems, itemTypes]);
   
   // Initialisation des itemTypes (une seule fois)
   useEffect(() => {
@@ -90,23 +80,13 @@ export const useOrderLinesForm = ({
   }, [itemTypes, activeItemType]);
   
   return {
-    // États de navigation
     activeMainTab,
     setActiveMainTab,
     activeItemType,
     setActiveItemType,
-    
-    // Configuration de menu
-    isConfiguringMenu,
-    setIsConfiguringMenu,
-    menuBeingConfigured,
-    setMenuBeingConfigured,
-    tempMenuSelections,
-    setTempMenuSelections,
-    
-    // Données
     activeMenus,
     activeItems,
-    allItemTypes: itemTypes,
+    itemsByType,
+    allItemTypes: itemsByType.map(group => group.itemType),
   };
 };

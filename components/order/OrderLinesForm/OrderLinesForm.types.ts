@@ -31,6 +31,7 @@ export interface MenuSelections {
  */
 export interface OrderLinesFormProps {
   // Données (read-only)
+  title?: string;
   lines: OrderLine[];
   items: Item[];
   itemTypes: ItemType[];
@@ -42,6 +43,12 @@ export interface OrderLinesFormProps {
   onUpdateMenu: (lineId: string, menu: Menu, selections: MenuSelections, itemTypes: ItemType[]) => void;
   onDeleteLine: (lineId: string) => void;
   onClearAll?: () => void;
+
+  // Actions globales (Enregistrer / Annuler)
+  onSave?: () => void;
+  onCancel?: () => void;
+  hasChanges?: boolean;
+  isProcessing?: boolean;
 
   // Configuration (optionnel - pour service.tsx)
   onConfigurationModeChange?: (isConfiguring: boolean) => void;

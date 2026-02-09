@@ -1,18 +1,29 @@
-import React, { memo, useCallback, useMemo } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, Text as RNText } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent, Text as RNText, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
+import { Menu } from '~/types/menu.types';
+import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
 import { formatPrice, getContrastColor } from '~/lib/utils';
+import { getMenuPrice } from '~/lib/color-utils';
 import { TableFilterButton } from './TableFilterTooltip';
+
+const MENUS_SECTION_KEY = '__MENUS__';
 
 /**
  * Props pour le composant OrderItemsTableView
  */
 export interface OrderItemsTableViewProps {
   items: Item[];
+  itemsByType: ItemsByTypeGroup[];
   activeItemType: string;
+  onActiveItemTypeChange: (itemType: string) => void;
   onOpenCustomization: (item: Item) => void;
+  activeMenus: Menu[];
+  handleMenuAdd: (menu: Menu) => void;
+  activeMainTab: string;
+  onMainTabChange: (tab: string) => void;
 }
 
 /**
@@ -40,7 +51,6 @@ const OrderItemRow = memo<OrderItemRowProps>(({
       style={styles.row}
       onPress={handleAdd}
     >
-      {/* Lettre circulaire */}
       <View style={styles.letterCell}>
         <View style={[styles.letterCircle, { backgroundColor: itemColor }]}>
           <Text style={[styles.letterText, { color: buttonIconColor }]}>
@@ -49,7 +59,6 @@ const OrderItemRow = memo<OrderItemRowProps>(({
         </View>
       </View>
 
-      {/* Nom */}
       <View style={styles.nameCell}>
         <Text
           style={styles.nameText}
@@ -59,14 +68,12 @@ const OrderItemRow = memo<OrderItemRowProps>(({
         </Text>
       </View>
 
-      {/* Prix */}
       <View style={styles.priceCell}>
         <Text style={styles.priceText}>
           {formatPrice(item.price)}
         </Text>
       </View>
 
-      {/* Tags */}
       <View style={styles.tagsCell}>
         {item.tags && item.tags.length > 0 && (
           <View style={styles.tagsContainer}>
@@ -96,7 +103,6 @@ const OrderItemRow = memo<OrderItemRowProps>(({
         )}
       </View>
 
-      {/* Bouton Ajouter */}
       <View style={styles.actionCell}>
         <View
           style={[
@@ -114,27 +120,162 @@ const OrderItemRow = memo<OrderItemRowProps>(({
 OrderItemRow.displayName = 'OrderItemRow';
 
 /**
- * Composant de vue liste (table) pour les items
+ * Composant pour afficher une ligne de menu dans la table
+ */
+interface MenuRowProps {
+  menu: Menu;
+  onMenuAdd: (menu: Menu) => void;
+}
+
+const MenuRow = memo<MenuRowProps>(({
+  menu,
+  onMenuAdd
+}) => {
+  const menuColor = '#6366F1';
+
+  return (
+    <Pressable
+      style={styles.row}
+      onPress={() => onMenuAdd(menu)}
+    >
+      <View style={styles.letterCell}>
+        <View style={[styles.letterCircle, { backgroundColor: menuColor }]}>
+          <RNText style={styles.menuLetterText}>
+            {menu.name.charAt(0).toUpperCase()}
+          </RNText>
+        </View>
+      </View>
+
+      <View style={styles.nameCell}>
+        <RNText
+          style={styles.nameText}
+          numberOfLines={1}
+        >
+          {menu.name}
+        </RNText>
+        {menu.description && (
+          <RNText
+            style={styles.descriptionText}
+            numberOfLines={1}
+          >
+            {menu.description}
+          </RNText>
+        )}
+      </View>
+
+      <View style={styles.priceCell}>
+        <RNText style={styles.priceText}>
+          À partir de {formatPrice(getMenuPrice(menu))}
+        </RNText>
+      </View>
+
+      <View style={styles.tagsCell}>
+        <RNText style={styles.categoriesText}>
+          {menu.categories?.length || 0} catégorie{(menu.categories?.length || 0) > 1 ? 's' : ''}
+        </RNText>
+      </View>
+
+      <View style={styles.actionCell}>
+        <View style={[styles.addButton, { backgroundColor: menuColor }]}>
+          <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
+        </View>
+      </View>
+    </Pressable>
+  );
+});
+
+MenuRow.displayName = 'MenuRow';
+
+/**
+ * Vue liste unifiée : menus + articles dans un seul scroll
  */
 export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
   items,
+  itemsByType,
   activeItemType,
-  onOpenCustomization
+  onActiveItemTypeChange,
+  onOpenCustomization,
+  activeMenus,
+  handleMenuAdd,
+  activeMainTab,
+  onMainTabChange,
 }) => {
-  // Les items reçus sont déjà filtrés par le hook useOrderLinesForm (activeItems)
-  // Pas besoin de re-filtrer ici
-  const filteredItems = items;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const sectionPositions = useRef<Record<string, number>>({});
+  const isProgrammaticScroll = useRef(false);
+  const scrollTriggeredUpdate = useRef(false);
+  const activeItemTypeRef = useRef(activeItemType);
+  const activeMainTabRef = useRef(activeMainTab);
+  activeItemTypeRef.current = activeItemType;
+  activeMainTabRef.current = activeMainTab;
 
-  // Si aucun article disponible
-  if (filteredItems.length === 0) {
+  const handleSectionLayout = useCallback((sectionKey: string, event: LayoutChangeEvent) => {
+    const { y } = event.nativeEvent.layout;
+    sectionPositions.current[sectionKey] = y;
+  }, []);
+
+  // Auto-scroll vers la section active
+  useEffect(() => {
+    if (scrollTriggeredUpdate.current) {
+      scrollTriggeredUpdate.current = false;
+      return;
+    }
+    const targetKey = activeMainTab === 'MENUS' ? MENUS_SECTION_KEY : activeItemType;
+    if (targetKey && sectionPositions.current[targetKey] !== undefined) {
+      isProgrammaticScroll.current = true;
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(0, sectionPositions.current[targetKey] - 12),
+        animated: true,
+      });
+      setTimeout(() => { isProgrammaticScroll.current = false; }, 400);
+    }
+  }, [activeItemType, activeMainTab]);
+
+  // Scroll handler : détecte la section visible
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (isProgrammaticScroll.current) return;
+    const scrollY = event.nativeEvent.contentOffset.y;
+    const entries = Object.entries(sectionPositions.current).sort((a, b) => a[1] - b[1]);
+    if (entries.length === 0) return;
+    let currentSection = entries[0][0];
+    for (const [key, position] of entries) {
+      if (position <= scrollY + 50) {
+        currentSection = key;
+      }
+    }
+    if (!currentSection) return;
+
+    if (currentSection === MENUS_SECTION_KEY) {
+      if (activeMainTabRef.current !== 'MENUS') {
+        scrollTriggeredUpdate.current = true;
+        onMainTabChange('MENUS');
+      }
+    } else {
+      if (activeMainTabRef.current !== 'ITEMS' || currentSection !== activeItemTypeRef.current) {
+        scrollTriggeredUpdate.current = true;
+        if (activeMainTabRef.current !== 'ITEMS') {
+          onMainTabChange('ITEMS');
+        }
+        onActiveItemTypeChange(currentSection);
+      }
+    }
+  }, [onActiveItemTypeChange, onMainTabChange]);
+
+  const filteredMenus = useMemo(() => {
+    return activeMenus.filter(menu => menu.isActive);
+  }, [activeMenus]);
+
+  if (items.length === 0 && filteredMenus.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
-          Aucun article disponible dans cette catégorie
+          Aucun article disponible
         </Text>
       </View>
     );
   }
+
+  let globalRowIndex = 0;
 
   return (
     <View style={styles.container}>
@@ -144,7 +285,7 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
           <TableFilterButton activeFiltersCount={0} />
         </View>
         <View style={styles.nameCell}>
-          <Text style={styles.headerText}>Article</Text>
+          <Text style={styles.headerText}>Nom</Text>
         </View>
         <View style={styles.priceCell}>
           <Text style={styles.headerText}>Prix</Text>
@@ -159,22 +300,66 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
 
       {/* Contenu de la table */}
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
-        {filteredItems.map((item, index) => (
-          <View
-            key={item.id}
-            style={index % 2 === 0 ? styles.evenRow : styles.oddRow}
-          >
-            <OrderItemRow
-              item={item}
-              onOpenCustomization={onOpenCustomization}
-            />
+        {/* Section Menus */}
+        {filteredMenus.length > 0 && (
+          <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>Menus</Text>
+            </View>
+            {filteredMenus.map((menu) => {
+              const rowIndex = globalRowIndex++;
+              return (
+                <View
+                  key={menu.id}
+                  style={rowIndex % 2 === 0 ? styles.evenRow : styles.oddRow}
+                >
+                  <MenuRow
+                    menu={menu}
+                    onMenuAdd={handleMenuAdd}
+                  />
+                </View>
+              );
+            })}
           </View>
-        ))}
+        )}
+
+        {/* Sections par itemType */}
+        {itemsByType.map((group) => {
+          const sectionRows = group.items.map((item) => {
+            const rowIndex = globalRowIndex++;
+            return (
+              <View
+                key={item.id}
+                style={rowIndex % 2 === 0 ? styles.evenRow : styles.oddRow}
+              >
+                <OrderItemRow
+                  item={item}
+                  onOpenCustomization={onOpenCustomization}
+                />
+              </View>
+            );
+          });
+
+          return (
+            <View
+              key={group.itemType.id}
+              onLayout={(e) => handleSectionLayout(group.itemType.id, e)}
+            >
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>{group.itemType.name}</Text>
+              </View>
+              {sectionRows}
+            </View>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -209,6 +394,19 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+
+  // Section header
+  sectionHeader: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingLeft: 24,
+    paddingVertical: 10,
+  },
+  sectionHeaderText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
   },
 
   // Header
@@ -268,6 +466,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0,
   },
+  menuLetterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0,
+  },
   nameCell: {
     flex: 3,
     padding: 16,
@@ -276,6 +480,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '400',
     color: '#2A2E33',
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    lineHeight: 16,
+    marginTop: 2,
   },
   priceCell: {
     flex: 1.5,
@@ -312,6 +523,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
     fontWeight: '500',
+  },
+  categoriesText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
   },
   actionCell: {
     flex: 1,

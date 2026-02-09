@@ -1,8 +1,9 @@
-import React, { memo } from 'react';
-import { View, Pressable, ScrollView } from 'react-native';
-import { SelectButton } from '~/components/ui';
+import { memo } from 'react';
+import { View, Pressable, ScrollView, Platform, Text as RNText } from 'react-native';
 import { ItemType } from '~/types/item-type.types';
-import { LayoutGrid, List } from 'lucide-react-native';
+import { LayoutGrid, List, Menu } from 'lucide-react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 
 /**
  * Props pour le composant OrderLinesNavigation
@@ -13,127 +14,139 @@ export interface OrderLinesNavigationProps {
   activeItemType: string;
   onItemTypeChange: (itemType: string) => void;
   itemTypes: ItemType[];
-  getTotalItemsCount: () => number;
-  getTotalMenusCount: () => number;
   isConfiguringMenu?: boolean;
   viewMode: 'card' | 'list';
   onViewModeChange: (mode: 'card' | 'list') => void;
 }
 
 /**
- * Composant de navigation pour OrderLinesForm
- * Gère les tabs principales (ITEMS/MENUS) et la sous-navigation par type d'item
- * Layout horizontal optimisé pour tablettes
- *
- * @param props - Props du composant
- * @returns Composant de navigation mémorisé
+ * Composant de navigation verticale pour OrderLinesForm
+ * Sidebar droite avec switch card/list, MENUS, et itemTypes avec icônes
  */
-
 export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
   activeMainTab,
   onMainTabChange,
   activeItemType,
   onItemTypeChange,
   itemTypes,
-  getTotalItemsCount,
-  getTotalMenusCount,
   isConfiguringMenu = false,
   viewMode,
   onViewModeChange
 }) => {
-  // Ne pas afficher la navigation pendant la configuration de menu
   if (isConfiguringMenu) {
     return null;
   }
 
   return (
-    <View style={styles.navigationContainer}>
-      <View style={styles.horizontalLayout}>
-        {/* Navigation principale ITEMS/MENUS */}
-        <View style={styles.mainTabsHorizontal}>
-          <SelectButton
-            label="Menus"
-            count={getTotalMenusCount()}
-            isActive={activeMainTab === 'MENUS'}
-            onPress={() => onMainTabChange('MENUS')}
-            variant="pill"
-            activeColor="#6366F1"
-            activeBgColor="rgba(99, 102, 241, 0.12)"
+    <View style={styles.sidebar}>
+      {/* Switch Card / List en haut */}
+      <View style={styles.viewModeSection}>
+        <Pressable
+          style={[
+            styles.viewModeButton,
+            viewMode === 'card' && styles.viewModeButtonActive
+          ]}
+          onPress={() => onViewModeChange('card')}
+        >
+          <LayoutGrid
+            size={20}
+            color={viewMode === 'card' ? '#6366F1' : '#9CA3AF'}
+            strokeWidth={2}
           />
-          <SelectButton
-            label="Articles"
-            count={getTotalItemsCount()}
-            isActive={activeMainTab === 'ITEMS'}
-            onPress={() => onMainTabChange('ITEMS')}
-            variant="pill"
-            activeColor="#6B7280"
-            activeBgColor="rgba(107, 114, 128, 0.12)"
+        </Pressable>
+        <Pressable
+          style={[
+            styles.viewModeButton,
+            viewMode === 'list' && styles.viewModeButtonActive
+          ]}
+          onPress={() => onViewModeChange('list')}
+        >
+          <List
+            size={20}
+            color={viewMode === 'list' ? '#6366F1' : '#9CA3AF'}
+            strokeWidth={2}
           />
-        </View>
-
-        {/* Séparateur vertical */}
-        {activeMainTab === 'ITEMS' && (
-          <View style={styles.verticalDivider} />
-        )}
-
-        {/* Types d'items (visible seulement pour les articles) */}
-        {activeMainTab === 'ITEMS' && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.categoryScrollView}
-            contentContainerStyle={styles.categoryScrollContent}
-          >
-            {itemTypes.map((itemType) => (
-              <SelectButton
-                key={itemType.id}
-                label={itemType.name}
-                isActive={activeItemType === itemType.id}
-                onPress={() => onItemTypeChange(itemType.id)}
-                variant="sub"
-              />
-            ))}
-          </ScrollView>
-        )}
-
-        {/* Spacer flexible quand on est en mode MENUS (pas d'itemTypes) */}
-        {activeMainTab === 'MENUS' && (
-          <View style={{ flex: 1 }} />
-        )}
-
-        {/* Séparateur vertical */}
-        <View style={styles.verticalDivider} />
-
-        {/* Switch View Mode */}
-        <View style={styles.viewModeSwitch}>
-          <Pressable
-            style={[
-              styles.viewModeButton,
-              viewMode === 'card' && styles.viewModeButtonActive
-            ]}
-            onPress={() => onViewModeChange('card')}
-          >
-            <LayoutGrid
-              size={20}
-              color={viewMode === 'card' ? '#6366F1' : '#9CA3AF'}
-              strokeWidth={2}
-            />
-          </Pressable>
-          <Pressable
-            style={[
-              styles.viewModeButton,
-              viewMode === 'list' && styles.viewModeButtonActive
-            ]}
-            onPress={() => onViewModeChange('list')}
-          >
-            <List
-              size={20}
-              color={viewMode === 'list' ? '#6366F1' : '#9CA3AF'}
-              strokeWidth={2}
-            />
-          </Pressable>
-        </View>
+        </Pressable>
       </View>
+
+      {/* Séparateur */}
+      <View style={styles.horizontalDivider} />
+
+      {/* MENUS + ItemTypes dans le même scroll */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.itemTypesScroll}
+        contentContainerStyle={styles.itemTypesContent}
+      >
+        {/* MENUS */}
+        <Pressable
+          style={[
+            styles.navItem,
+            activeMainTab === 'MENUS' && styles.navItemActive
+          ]}
+          onPress={() => onMainTabChange('MENUS')}
+        >
+          <View style={styles.navIconWrapper}>
+            <Menu
+              size={22}
+              color={activeMainTab === 'MENUS' ? '#6366F1' : '#9CA3AF'}
+              strokeWidth={2}
+            />
+          </View>
+          <RNText
+            style={[
+              styles.navLabel,
+              activeMainTab === 'MENUS' && styles.navLabelActive
+            ]}
+            numberOfLines={1}
+          >
+            MENUS
+          </RNText>
+        </Pressable>
+
+        {/* Séparateur */}
+        <View style={styles.horizontalDivider} />
+
+        {/* ItemTypes */}
+        {itemTypes.map((itemType) => {
+          const isActive = activeMainTab === 'ITEMS' && activeItemType === itemType.id;
+          const iconData = AVAILABLE_ICONS.find(i => i.name === itemType.icon);
+          const iconName = iconData?.name || 'silverware-fork-knife';
+
+          return (
+            <Pressable
+              key={itemType.id}
+              style={[
+                styles.navItem,
+                isActive && styles.navItemActive
+              ]}
+              onPress={() => {
+                if (activeMainTab !== 'ITEMS') {
+                  onMainTabChange('ITEMS');
+                }
+                onItemTypeChange(itemType.id);
+              }}
+            >
+              <View style={styles.navIconWrapper}>
+                <MaterialCommunityIcons
+                  name={iconName as any}
+                  size={22}
+                  color={isActive ? '#6366F1' : '#9CA3AF'}
+                />
+              </View>
+              <RNText
+                style={[
+                  styles.navLabel,
+                  isActive && styles.navLabelActive
+                ]}
+                numberOfLines={1}
+              >
+                {itemType.name}
+              </RNText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 });
@@ -141,49 +154,25 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
 OrderLinesNavigation.displayName = 'OrderLinesNavigation';
 
 const styles = {
-  navigationContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  horizontalLayout: {
-    flexDirection: 'row' as const,
+  sidebar: {
+    width: 82,
+    backgroundColor: '#F8FAFC',
+    borderLeftWidth: 1,
+    borderLeftColor: '#E5E7EB',
+    paddingTop: 12,
     alignItems: 'center' as const,
-    gap: 16,
   },
-  mainTabsHorizontal: {
-    flexDirection: 'row' as const,
-    gap: 8,
-  },
-  verticalDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: '#E5E7EB',
-  },
-  categoryScrollView: {
-    flex: 1,
-    maxHeight: 44,
-  },
-  categoryScrollContent: {
-    flexDirection: 'row' as const,
-    gap: 8,
-    alignItems: 'center' as const,
-    paddingRight: 8,
-  },
-  viewModeSwitch: {
-    flexDirection: 'row' as const,
+
+  // View mode switch
+  viewModeSection: {
     gap: 4,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    padding: 4,
+    alignItems: 'center' as const,
+    paddingHorizontal: 8,
   },
   viewModeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     backgroundColor: 'transparent',
@@ -195,5 +184,63 @@ const styles = {
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+
+  // Divider
+  horizontalDivider: {
+    width: 48,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 10,
+  },
+
+  // Nav items
+  navItem: {
+    alignItems: 'center' as const,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    width: 72,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    } as any),
+  },
+  navItemActive: {
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+  },
+  navIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: 'transparent',
+  },
+  navLabel: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: '#9CA3AF',
+    textAlign: 'center' as const,
+    marginTop: 2,
+    letterSpacing: 0.3,
+    ...(Platform.OS === 'web' && {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      userSelect: 'none',
+    } as any),
+  },
+  navLabelActive: {
+    color: '#6366F1',
+    fontWeight: '700' as const,
+  },
+
+  // ItemTypes scroll
+  itemTypesScroll: {
+    flex: 1,
+    width: '100%' as const,
+  },
+  itemTypesContent: {
+    alignItems: 'center' as const,
+    gap: 2,
+    paddingBottom: 20,
   },
 };

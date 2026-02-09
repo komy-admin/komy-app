@@ -1,32 +1,13 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText } from 'react-native';
-import { Edit2, Trash2, X, ShoppingBag } from 'lucide-react-native';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText, Platform, Animated } from 'react-native';
+import { Trash2, ShoppingBag, ArrowLeftToLine } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
-import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
+import { formatPrice } from '~/lib/utils';
 
 // ========================================
 // HELPERS
 // ========================================
 
-// Helper: Récupère la couleur pour le badge de prix selon le type de champ
-const getPriceBadgeColor = (fieldType: string): string => {
-  switch (fieldType) {
-    case 'select':
-      return '#BFDBFE'; // Bleu plus foncé
-    case 'multi-select':
-      return '#DDD6FE'; // Violet plus foncé
-    case 'toggle':
-      return '#A7F3D0'; // Vert plus foncé
-    case 'number':
-      return '#FCD34D'; // Jaune plus foncé
-    case 'text':
-      return '#F9A8D4'; // Rose plus foncé
-    default:
-      return '#CBD5E1'; // Gris plus foncé
-  }
-};
-
-// Helper: Formater la valeur d'un tag
 const formatTagValue = (tag: any): string => {
   if (tag.value === null || tag.value === undefined) return '';
   if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
@@ -34,388 +15,476 @@ const formatTagValue = (tag: any): string => {
   return String(tag.value);
 };
 
+// Fingerprint: identical item + tags + note = same line
+const getLineFingerprint = (line: OrderLine): string => {
+  const itemId = line.item?.id || '';
+  const note = line.note || '';
+  const tags = (line.tags || [])
+    .filter(t => t && t.tagSnapshot)
+    .sort((a, b) => a.tagId.localeCompare(b.tagId))
+    .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
+    .join('|');
+  return `${itemId}__${tags}__${note}`;
+};
+
+// A grouped row: identical lines merged with quantity
+interface GroupedLine {
+  line: OrderLine;
+  quantity: number;
+  originalIndices: number[];
+  totalPrice: number;
+}
+
+// Group ITEM lines by itemType, preserving original index
+interface GroupedSection {
+  itemTypeId: string;
+  itemTypeName: string;
+  priorityOrder: number;
+  lines: { line: OrderLine; originalIndex: number }[];
+  groupedLines: GroupedLine[];
+}
+
 interface DraftReviewPanelContentProps {
+  title?: string;
   draftLines: OrderLine[];
   onEdit: (index: number) => void;
   onEditMenu?: (menuLine: OrderLine) => void;
   onDelete: (index: number) => void;
-  onClose: () => void;
-  onClearAll: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
+  hasChanges?: boolean;
+  isProcessing?: boolean;
+  cancelDeleteRef?: React.RefObject<(() => void) | null>;
 }
 
 export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = ({
+  title,
   draftLines,
   onEdit,
   onEditMenu,
   onDelete,
-  onClose,
-  onClearAll
+  onSave,
+  onCancel,
+  hasChanges = false,
+  isProcessing = false,
+  cancelDeleteRef,
 }) => {
-  const totalLines = draftLines.length;
+  // Track which row is pending delete (by originalIndex)
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
 
-  // Trier les lignes ET créer une map d'index en une seule passe
-  const { sortedLines, indexMap, newLinesCount } = React.useMemo(() => {
-    // Créer la map d'index original
-    const map = new Map<string, number>();
-    let newCount = 0;
+  const handleDeleteRequest = useCallback((index: number) => {
+    setPendingDeleteIndex(index);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (pendingDeleteIndex !== null) {
+      onDelete(pendingDeleteIndex);
+      setPendingDeleteIndex(null);
+    }
+  }, [pendingDeleteIndex, onDelete]);
+
+  const handleCancelDelete = useCallback(() => {
+    setPendingDeleteIndex(null);
+  }, []);
+
+  // Expose cancel to parent via ref
+  useEffect(() => {
+    if (cancelDeleteRef) {
+      cancelDeleteRef.current = handleCancelDelete;
+    }
+    return () => {
+      if (cancelDeleteRef) cancelDeleteRef.current = null;
+    };
+  }, [cancelDeleteRef, handleCancelDelete]);
+
+  // Group ITEM lines by itemType, then merge identical lines
+  const { itemSections, menuLines } = useMemo(() => {
+    const sectionsMap = new Map<string, GroupedSection>();
+    const menus: { line: OrderLine; originalIndex: number }[] = [];
 
     draftLines.forEach((line, index) => {
-      map.set(line.id || `temp-${index}`, index);
-      if (!line.id || line.id.startsWith('draft-')) {
-        newCount++;
+      if (line.type === OrderLineType.MENU) {
+        menus.push({ line, originalIndex: index });
+        return;
+      }
+
+      if (line.type === OrderLineType.ITEM && line.item) {
+        const itemType = line.item.itemType;
+        const key = itemType?.id || 'unknown';
+        if (!sectionsMap.has(key)) {
+          sectionsMap.set(key, {
+            itemTypeId: key,
+            itemTypeName: itemType?.name || 'Autre',
+            priorityOrder: itemType?.priorityOrder ?? 999,
+            lines: [],
+            groupedLines: [],
+          });
+        }
+        sectionsMap.get(key)!.lines.push({ line, originalIndex: index });
       }
     });
 
-    // Trier les lignes
-    const sorted = [...draftLines].sort((a, b) => {
-      const aIsNew = !a.id || a.id.startsWith('draft-');
-      const bIsNew = !b.id || b.id.startsWith('draft-');
-
-      // Les nouveaux items en premier
-      if (aIsNew && !bIsNew) return -1;
-      if (!aIsNew && bIsNew) return 1;
-      return 0; // Garder l'ordre original sinon
+    // Merge identical lines within each section
+    sectionsMap.forEach((section) => {
+      const groups = new Map<string, GroupedLine>();
+      section.lines.forEach(({ line, originalIndex }) => {
+        const fp = getLineFingerprint(line);
+        if (groups.has(fp)) {
+          const g = groups.get(fp)!;
+          g.quantity += 1;
+          g.originalIndices.push(originalIndex);
+          g.totalPrice += (line.totalPrice || 0);
+        } else {
+          groups.set(fp, {
+            line,
+            quantity: 1,
+            originalIndices: [originalIndex],
+            totalPrice: line.totalPrice || 0,
+          });
+        }
+      });
+      section.groupedLines = Array.from(groups.values());
     });
 
-    return { sortedLines: sorted, indexMap: map, newLinesCount: newCount };
+    const sorted = Array.from(sectionsMap.values()).sort(
+      (a, b) => a.priorityOrder - b.priorityOrder
+    );
+
+    return { itemSections: sorted, menuLines: menus };
   }, [draftLines]);
+
+  const totalLines = draftLines.length;
 
   return (
     <View style={styles.panelContent}>
       {/* Header */}
       <View style={styles.panelHeader}>
-        <View>
-          <RNText style={[styles.panelTitle, { fontWeight: '600' }]}>
-            Récapitulatif de la commande
-          </RNText>
-          <RNText style={[styles.panelSubtitle, { lineHeight: 18 }]}>
-            {totalLines} ligne{totalLines > 1 ? 's' : ''}
-            {newLinesCount > 0 && ` · ${newLinesCount} nouvelle${newLinesCount > 1 ? 's' : ''}`}
+        <Pressable onPress={onCancel} style={styles.backButton}>
+          <ArrowLeftToLine size={20} color="#2A2E33" />
+        </Pressable>
+        <View style={styles.titleContainer}>
+          <RNText style={styles.titleText} numberOfLines={1}>
+            {title || 'Commande'}
           </RNText>
         </View>
-        <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <X size={24} color="#64748B" strokeWidth={2} />
-        </TouchableOpacity>
       </View>
 
       {/* Content */}
       <ScrollView
-        style={styles.panelForm}
+        style={styles.scrollArea}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
+        onScrollBeginDrag={handleCancelDelete}
       >
         {totalLines === 0 ? (
           <View style={styles.emptyState}>
             <ShoppingBag size={64} color="#CBD5E1" strokeWidth={1.5} />
-            <RNText style={[styles.emptyTitle, { fontWeight: '600' }]}>Commande vide</RNText>
+            <RNText style={styles.emptyTitle}>Commande vide</RNText>
             <RNText style={styles.emptyText}>
               Ajoutez des articles pour commencer
             </RNText>
           </View>
         ) : (
-          sortedLines.map((line, sortedIndex) => {
-            // Récupérer l'index original depuis la Map (O(1))
-            const originalIndex = indexMap.get(line.id || `temp-${sortedIndex}`) ?? sortedIndex;
-            return (
-              <DraftLineCard
-                key={line.id || originalIndex}
-                line={line}
-                index={originalIndex}
-                onEdit={onEdit}
-                onEditMenu={onEditMenu}
-                onDelete={onDelete}
-              />
-            );
-          })
+          <>
+            {/* Item sections grouped by itemType */}
+            {itemSections.map((section) => (
+              <View key={section.itemTypeId} style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <RNText style={styles.sectionTitle}>
+                    {section.lines.length}x {section.itemTypeName}
+                  </RNText>
+                </View>
+
+                <View style={styles.sectionBlock}>
+                  {section.groupedLines.map((group) => (
+                    <ReceiptItemRow
+                      key={group.originalIndices.join('-')}
+                      line={group.line}
+                      quantity={group.quantity}
+                      totalPrice={group.totalPrice}
+                      originalIndex={group.originalIndices[0]}
+                      isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
+                      hasPendingDelete={pendingDeleteIndex !== null}
+                      onEdit={onEdit}
+                      onDeleteRequest={handleDeleteRequest}
+                      onConfirmDelete={handleConfirmDelete}
+                      onCancelDelete={handleCancelDelete}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))}
+
+            {/* Menu section */}
+            {menuLines.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <RNText style={styles.sectionTitle}>
+                    {menuLines.length}x Menu{menuLines.length > 1 ? 's' : ''}
+                  </RNText>
+                </View>
+
+                <View style={styles.sectionBlock}>
+                  {menuLines.map(({ line, originalIndex }) => (
+                    <ReceiptMenuRow
+                      key={line.id || `temp-${originalIndex}`}
+                      line={line}
+                      originalIndex={originalIndex}
+                      isPendingDelete={pendingDeleteIndex === originalIndex}
+                      hasPendingDelete={pendingDeleteIndex !== null}
+                      onEditMenu={onEditMenu}
+                      onDeleteRequest={handleDeleteRequest}
+                      onConfirmDelete={handleConfirmDelete}
+                      onCancelDelete={handleCancelDelete}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
       {/* Footer */}
       <View style={styles.panelFooter}>
-        {totalLines > 0 && (
-          <Pressable style={styles.clearButton} onPress={onClearAll}>
-            <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-            <RNText style={[styles.clearButtonText, { fontWeight: '600' }]}>
-              Tout supprimer
-            </RNText>
-          </Pressable>
-        )}
-        <Pressable
-          style={[styles.closeButton, totalLines === 0 && styles.closeButtonFull]}
-          onPress={onClose}
+        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <RNText style={styles.cancelButtonText}>Annuler</RNText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.saveButton, (!hasChanges || isProcessing) && styles.saveButtonDisabled]}
+          onPress={onSave}
+          disabled={!hasChanges || isProcessing}
         >
-          <RNText style={[styles.closeButtonText, { fontWeight: '600' }]}>
-            Fermer
+          <RNText style={styles.saveButtonText}>
+            {isProcessing ? 'Sauvegarde...' : 'Enregistrer'}
           </RNText>
-        </Pressable>
+        </TouchableOpacity>
       </View>
+
+      {/* Backdrop: cliquer n'importe où annule la confirmation */}
+      {pendingDeleteIndex !== null && (
+        <Pressable style={styles.dismissBackdrop} onPress={handleCancelDelete} />
+      )}
     </View>
   );
 };
 
 // ========================================
-// DRAFT LINE CARD COMPONENTS
+// INLINE DELETE CONFIRMATION OVERLAY
 // ========================================
 
-interface DraftLineCardProps {
-  line: OrderLine;
-  index: number;
-  onEdit: (index: number) => void;
-  onEditMenu?: (menuLine: OrderLine) => void;
-  onDelete: (index: number) => void;
-}
+const DeleteConfirmOverlay: React.FC<{
+  onConfirm: () => void;
+}> = ({ onConfirm }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
 
-const DraftLineCard: React.FC<DraftLineCardProps> = ({ line, index, onEdit, onEditMenu, onDelete }) => {
-  // Items à la carte
-  if (line.type === OrderLineType.ITEM && line.item) {
-    return <DraftItemCard line={line} index={index} onEdit={onEdit} onDelete={onDelete} />;
-  }
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
-  // Menus
-  if (line.type === OrderLineType.MENU && line.menu) {
-    return <DraftMenuCard line={line} index={index} onEditMenu={onEditMenu} onDelete={onDelete} />;
-  }
-
-  return null;
+  return (
+    <Animated.View style={[styles.deleteOverlay, { opacity }]}>
+      <Pressable onPress={onConfirm} style={styles.deleteOverlayButton}>
+        <Trash2 size={16} color="#FFFFFF" strokeWidth={2} />
+        <RNText style={styles.deleteOverlayText}>Confirmer la suppression</RNText>
+      </Pressable>
+    </Animated.View>
+  );
 };
 
 // ========================================
-// ITEM CARD
+// RECEIPT ITEM ROW
 // ========================================
 
-const DraftItemCard: React.FC<Omit<DraftLineCardProps, 'onEditMenu'>> = React.memo(({
+interface ReceiptItemRowProps {
+  line: OrderLine;
+  quantity: number;
+  totalPrice: number;
+  originalIndex: number;
+  isPendingDelete: boolean;
+  hasPendingDelete: boolean;
+  onEdit: (index: number) => void;
+  onDeleteRequest: (index: number) => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+}
+
+const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   line,
-  index,
+  quantity,
+  totalPrice,
+  originalIndex,
+  isPendingDelete,
+  hasPendingDelete,
   onEdit,
-  onDelete
+  onDeleteRequest,
+  onConfirmDelete,
+  onCancelDelete,
 }) => {
   const hasNote = line.note && line.note.trim().length > 0;
   const hasTags = line.tags && line.tags.length > 0;
-  const isNewDraft = !line.id || line.id.startsWith('draft-');
+  const itemName = line.item?.name || 'Article';
+
+  const handlePress = () => {
+    if (hasPendingDelete) {
+      onCancelDelete();
+    } else {
+      onEdit(originalIndex);
+    }
+  };
 
   return (
-    <View style={[
-      styles.itemCard,
-      isNewDraft && styles.itemCardNew
-    ]}>
-      <View style={styles.mainContent}>
-        <View style={styles.leftColumn}>
-          <View style={styles.nameRow}>
-            <RNText
-              style={[styles.itemName, { fontWeight: '700' }]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {line.item?.name || ''}
-            </RNText>
-          </View>
-
-          <View style={styles.footerInfo}>
-            {isNewDraft && (
-              <View style={styles.newBadge}>
-                <RNText style={[styles.newBadgeText, { fontWeight: '700' }]}>
-                  NOUVEAU
-                </RNText>
-              </View>
-            )}
-
-            {hasTags && line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => {
-              const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
-              const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
-              return (
-                <View key={idx} style={[styles.tag, { backgroundColor: config.bgColor }]}>
-                  <RNText style={[styles.tagLabel, { color: config.textColor, fontWeight: '600' }]}>
-                    {tag.tagSnapshot.label}:
-                  </RNText>
-                  <RNText style={[styles.tagValue, { color: config.textColor, fontWeight: '500' }]}>
-                    {formatTagValue(tag)}
-                  </RNText>
-                  {tag.priceModifier != null && tag.priceModifier !== 0 && (
-                    <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
-                      <RNText style={[styles.tagPriceText, { color: config.textColor, fontWeight: '700' }]}>
-                        {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
-                      </RNText>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-
-            {hasNote && (
-              <View style={styles.noteContainer}>
-                <RNText style={styles.noteLabel}>Note :</RNText>
-                <RNText style={styles.noteText} numberOfLines={1} ellipsizeMode="tail">
-                  {line.note || ''}
-                </RNText>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.priceTimeColumn}>
-          <RNText style={[styles.itemPrice, { fontWeight: '800' }]}>
-            {formatPrice(line.totalPrice || 0)}
+    <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
+      <Pressable onPress={handlePress} style={styles.receiptRow}>
+        <View style={styles.receiptMainLine}>
+          <RNText style={styles.receiptQty}>{quantity}x</RNText>
+          <RNText style={styles.receiptName} numberOfLines={1} ellipsizeMode="tail">
+            {itemName}
           </RNText>
+          <View style={styles.receiptDots} />
+          <RNText style={styles.receiptPrice}>{formatPrice(totalPrice)}</RNText>
+          <Pressable
+            onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
+            style={styles.trashButton}
+            hitSlop={6}
+          >
+            <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+          </Pressable>
         </View>
 
-        <View style={styles.actionsColumn}>
-          <Pressable
-            style={styles.editButton}
-            onPress={() => onEdit(index)}
-          >
-            <Edit2 size={16} color="#3B82F6" strokeWidth={2} />
-          </Pressable>
-          <Pressable style={styles.deleteButton} onPress={() => onDelete(index)}>
-            <Trash2 size={16} color="#EF4444" strokeWidth={2} />
-          </Pressable>
-        </View>
-      </View>
+        {hasTags && (
+          <View style={styles.receiptDetails}>
+            {line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => (
+              <RNText key={idx} style={styles.receiptTag}>
+                {tag.tagSnapshot.label}: {formatTagValue(tag)}
+                {tag.priceModifier != null && tag.priceModifier !== 0
+                  ? ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`
+                  : ''}
+              </RNText>
+            ))}
+          </View>
+        )}
+
+        {hasNote && (
+          <RNText style={styles.receiptNote} numberOfLines={1} ellipsizeMode="tail">
+            Note: {line.note}
+          </RNText>
+        )}
+      </Pressable>
+
+      {isPendingDelete && (
+        <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
+      )}
     </View>
   );
 });
 
 // ========================================
-// MENU CARD
+// RECEIPT MENU ROW
 // ========================================
 
-const DraftMenuCard: React.FC<Pick<DraftLineCardProps, 'line' | 'index' | 'onEditMenu' | 'onDelete'>> = React.memo(({
+interface ReceiptMenuRowProps {
+  line: OrderLine;
+  originalIndex: number;
+  isPendingDelete: boolean;
+  hasPendingDelete: boolean;
+  onEditMenu?: (menuLine: OrderLine) => void;
+  onDeleteRequest: (index: number) => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+}
+
+const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   line,
-  index,
+  originalIndex,
+  isPendingDelete,
+  hasPendingDelete,
   onEditMenu,
-  onDelete
+  onDeleteRequest,
+  onConfirmDelete,
+  onCancelDelete,
 }) => {
   if (!line.menu || !line.items) return null;
 
   const hasNote = line.note && line.note.trim().length > 0;
-  const isNewDraft = !line.id || line.id.startsWith('draft-');
+  const menuName = line.menu.name || 'Menu';
+
+  const handlePress = () => {
+    if (hasPendingDelete) {
+      onCancelDelete();
+    } else {
+      onEditMenu?.(line);
+    }
+  };
 
   return (
-    <View style={[
-      styles.menuCard,
-      isNewDraft && styles.menuCardNew
-    ]}>
-      {/* Header */}
-      <View style={styles.mainContent}>
-        <View style={styles.leftColumn}>
-          <View style={styles.nameRow}>
-            <RNText
-              style={[styles.menuName, { fontWeight: '700' }]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {line.menu.name || ''}
-            </RNText>
-          </View>
-
-          <View style={styles.footerInfo}>
+    <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
+      <Pressable onPress={handlePress} style={styles.receiptRow}>
+        <View style={styles.receiptMainLine}>
+          <View style={styles.menuLabelWrap}>
             <View style={styles.menuBadge}>
-              <RNText style={[styles.menuBadgeText, { fontWeight: '700' }]}>
-                MENU
-              </RNText>
+              <RNText style={styles.menuBadgeText}>MENU</RNText>
             </View>
-            {isNewDraft && (
-              <View style={styles.newBadge}>
-                <RNText style={[styles.newBadgeText, { fontWeight: '700' }]}>
-                  NOUVEAU
-                </RNText>
-              </View>
-            )}
-            <RNText style={styles.itemCount}>
-              {line.items.length} article{line.items.length > 1 ? 's' : ''}
+            <RNText style={styles.receiptName} numberOfLines={1} ellipsizeMode="tail">
+              {menuName}
             </RNText>
           </View>
-        </View>
-
-        <View style={styles.priceTimeColumn}>
-          <RNText style={[styles.menuPrice, { fontWeight: '800' }]}>
-            {formatPrice(line.totalPrice || 0)}
-          </RNText>
-        </View>
-
-        <View style={styles.actionsColumn}>
-          {onEditMenu && (
-            <Pressable style={styles.editButton} onPress={() => onEditMenu(line)}>
-              <Edit2 size={16} color="#3B82F6" strokeWidth={2} />
-            </Pressable>
-          )}
-          <Pressable style={styles.deleteButton} onPress={() => onDelete(index)}>
-            <Trash2 size={16} color="#EF4444" strokeWidth={2} />
+          <View style={styles.receiptDots} />
+          <RNText style={styles.receiptPrice}>{formatPrice(line.totalPrice || 0)}</RNText>
+          <Pressable
+            onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
+            style={styles.trashButton}
+            hitSlop={6}
+          >
+            <Trash2 size={18} color="#EF4444" strokeWidth={2} />
           </Pressable>
         </View>
-      </View>
 
-      {/* Items du menu */}
-      <View style={styles.menuItemsSection}>
-        {line.items.map((menuItem: any, idx: number) => {
-          const itemHasNote = menuItem.note && menuItem.note.trim().length > 0;
-          const itemHasTags = menuItem.tags && menuItem.tags.length > 0;
+        <View style={styles.menuItemsList}>
+          {line.items.map((menuItem: any, idx: number) => {
+            const itemHasTags = menuItem.tags && menuItem.tags.length > 0;
+            const itemHasNote = menuItem.note && menuItem.note.trim().length > 0;
 
-          return (
-            <View key={idx} style={styles.menuItemRow}>
-              <View style={styles.menuItemContent}>
-                <RNText style={[styles.menuItemCategory, { fontWeight: '600', textTransform: 'uppercase' }]}>
-                  {menuItem.categoryName}
-                </RNText>
-                <RNText style={[styles.menuItemName, { fontWeight: '600' }]}>
+            return (
+              <View key={idx} style={styles.menuSubItem}>
+                <RNText style={styles.menuSubItemText}>
+                  <RNText style={styles.menuSubCategory}>{menuItem.categoryName}: </RNText>
                   {menuItem.item?.name || ''}
+                  {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
                 </RNText>
-                {menuItem.supplementPrice > 0 && (
-                  <RNText style={[styles.menuItemSupplement, { fontWeight: '600' }]}>
-                    +{formatPrice(menuItem.supplementPrice)}
+
+                {itemHasTags && menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => (
+                  <RNText key={tagIdx} style={styles.receiptTag}>
+                    {tag.tagSnapshot.label}: {formatTagValue(tag)}
+                    {tag.priceModifier != null && tag.priceModifier !== 0
+                      ? ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`
+                      : ''}
+                  </RNText>
+                ))}
+
+                {itemHasNote && (
+                  <RNText style={styles.receiptNote} numberOfLines={1}>
+                    Note: {menuItem.note}
                   </RNText>
                 )}
-
-                {/* Tags et note inline */}
-                {(itemHasTags || itemHasNote) && (
-                  <View style={styles.menuItemFooter}>
-                    {itemHasTags && menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => {
-                      const config = getTagFieldTypeConfig(tag.tagSnapshot.fieldType);
-                      const priceBgColor = getPriceBadgeColor(tag.tagSnapshot.fieldType);
-                      return (
-                        <View key={tagIdx} style={[styles.tag, { backgroundColor: config.bgColor }]}>
-                          <RNText style={[styles.tagLabel, { fontWeight: '600', color: config.textColor }]}>
-                            {tag.tagSnapshot.label}:
-                          </RNText>
-                          <RNText style={[styles.tagValue, { fontWeight: '500', color: config.textColor }]}>
-                            {formatTagValue(tag)}
-                          </RNText>
-                          {tag.priceModifier != null && tag.priceModifier !== 0 && (
-                            <View style={[styles.tagPriceBadge, { backgroundColor: priceBgColor }]}>
-                              <RNText style={[styles.tagPriceText, { fontWeight: '700', color: config.textColor }]}>
-                                {tag.priceModifier > 0 ? '+' : ''}{formatPrice(tag.priceModifier)}
-                              </RNText>
-                            </View>
-                          )}
-                        </View>
-                      );
-                    })}
-
-                    {itemHasNote && (
-                      <View style={styles.noteContainer}>
-                        <RNText style={styles.noteLabel}>Note :</RNText>
-                        <RNText style={styles.noteText} numberOfLines={1} ellipsizeMode="tail">
-                          {menuItem.note}
-                        </RNText>
-                      </View>
-                    )}
-                  </View>
-                )}
               </View>
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Note globale du menu */}
-      {hasNote && (
-        <View style={styles.menuNoteSection}>
-          <View style={styles.noteContainer}>
-            <RNText style={styles.noteLabel}>Note :</RNText>
-            <RNText style={styles.noteText} numberOfLines={1} ellipsizeMode="tail">
-              {line.note || ''}
-            </RNText>
-          </View>
+            );
+          })}
         </View>
+
+        {hasNote && (
+          <RNText style={styles.receiptNote} numberOfLines={1} ellipsizeMode="tail">
+            Note: {line.note}
+          </RNText>
+        )}
+      </Pressable>
+
+      {isPendingDelete && (
+        <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
       )}
     </View>
   );
@@ -430,26 +499,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   panelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 20,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 16,
+    borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 60,
+    paddingHorizontal: 4,
+    elevation: 0,
   },
-  panelTitle: {
-    fontSize: 18,
-    color: '#1E293B',
-    marginBottom: 4,
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#F3F4F6',
+    height: '100%',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
-  panelSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  panelForm: {
+  titleContainer: {
     flex: 1,
-    padding: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2A2E33',
+    letterSpacing: 0.5,
+  },
+  scrollArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
   },
 
   // Empty State
@@ -462,6 +544,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
+    fontWeight: '600',
     color: '#64748B',
     marginTop: 16,
   },
@@ -471,268 +554,212 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Card commune (Item et Menu)
-  mainContent: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 12,
+  // Section
+  section: {
+    marginBottom: 2,
   },
-  leftColumn: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    gap: 8,
-  },
-  nameRow: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  footerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  priceTimeColumn: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    alignSelf: 'center',
-    gap: 4,
-  },
-  actionsColumn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-
-  // Item Card
-  itemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
+    backgroundColor: '#F3F4F6',
   },
-  itemCardNew: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
-  },
-  itemName: {
-    fontSize: 16,
-    color: '#1F2937',
-    flexShrink: 1,
-  },
-  itemPrice: {
-    fontSize: 16,
-    color: '#1F2937',
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
-  // Menu Card
-  menuCard: {
+  // Section block (white)
+  sectionBlock: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 0,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#6366F1', // Indigo pour les menus
   },
-  menuCardNew: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+
+  // Receipt row wrapper (for overlay positioning)
+  receiptRowWrapper: {
+    position: 'relative',
+    overflow: 'hidden',
   },
-  menuName: {
-    fontSize: 16,
+  receiptRowWrapperElevated: {
+    zIndex: 20,
+    elevation: 20,
+  },
+
+  // Dismiss backdrop (covers everything, sits below elevated row)
+  dismissBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    elevation: 10,
+  },
+
+  // Receipt row
+  receiptRow: {
+    paddingLeft: 20,
+    paddingRight: 10,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  receiptMainLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  receiptQty: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginRight: 6,
+    flexShrink: 0,
+  },
+  receiptName: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#1F2937',
     flexShrink: 1,
   },
-  menuPrice: {
-    fontSize: 16,
+  receiptDots: {
+    flex: 1,
+    minWidth: 8,
+  },
+  receiptPrice: {
+    fontSize: 14,
+    fontWeight: '700',
     color: '#1F2937',
+    flexShrink: 0,
+  },
+  trashButton: {
+    marginLeft: 10,
+    padding: 4,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+
+  // Tags & notes (simple inline)
+  receiptDetails: {
+    marginTop: 4,
+    gap: 2,
+  },
+  receiptTag: {
+    fontSize: 11,
+    color: '#6B7280',
+    paddingLeft: 4,
+  },
+  receiptNote: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    color: '#92400E',
+    marginTop: 3,
+    paddingLeft: 4,
+  },
+
+  // Inline delete confirmation overlay
+  deleteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(239, 68, 68, 0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteOverlayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    flex: 1,
+    width: '100%',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  deleteOverlayText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Menu specific
+  menuLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
   },
   menuBadge: {
     backgroundColor: '#6366F1',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  menuBadgeText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  itemCount: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-
-  // Menu Items Section
-  menuItemsSection: {
-    marginTop: 12,
-    gap: 0,
-  },
-  menuItemRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    marginHorizontal: -12,
-  },
-  menuItemContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 3,
-  },
-  menuItemCategory: {
-    fontSize: 10,
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  menuItemName: {
-    fontSize: 14,
-    color: '#1E293B',
-  },
-  menuItemSupplement: {
-    fontSize: 12,
-    color: '#F59E0B',
-  },
-  menuItemFooter: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 6,
-  },
-  menuNoteSection: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    marginHorizontal: -12,
-  },
-
-  // Tags
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  tagLabel: {
-    fontSize: 10,
-  },
-  tagValue: {
-    fontSize: 10,
-  },
-  tagPriceBadge: {
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
-  tagPriceText: {
-    fontSize: 10,
-  },
-
-  // Note inline
-  noteContainer: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#FEF3C7',
-    borderRadius: 6,
-    flexDirection: 'row',
-    gap: 5,
-    maxWidth: '100%',
-    flexShrink: 1,
-  },
-  noteLabel: {
-    fontSize: 10,
+  menuBadgeText: {
+    fontSize: 9,
     fontWeight: '700',
-    color: '#92400E',
-  },
-  noteText: {
-    fontSize: 10,
-    color: '#92400E',
-    flexShrink: 1,
-    minWidth: 0,
-  },
-
-  // New Badge
-  newBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  newBadgeText: {
-    fontSize: 10,
     color: '#FFFFFF',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
-
-  // Actions
-  editButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    justifyContent: 'center',
-    alignItems: 'center',
+  menuItemsList: {
+    marginTop: 6,
+    paddingLeft: 8,
+    gap: 4,
   },
-  deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    justifyContent: 'center',
-    alignItems: 'center',
+  menuSubItem: {
+    gap: 1,
+  },
+  menuSubItemText: {
+    fontSize: 12,
+    color: '#4B5563',
+  },
+  menuSubCategory: {
+    fontWeight: '600',
+    color: '#9CA3AF',
+    fontSize: 11,
   },
 
   // Footer
   panelFooter: {
     flexDirection: 'row',
-    padding: 20,
+    gap: 12,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    gap: 12,
+    backgroundColor: '#FFFFFF',
   },
-  clearButton: {
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  saveButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  clearButtonText: {
-    color: '#EF4444',
-    fontSize: 14,
-  },
-  closeButton: {
-    flex: 1,
-    backgroundColor: '#2A2E33',
-    borderRadius: 8,
-    paddingVertical: 12,
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
   },
-  closeButtonFull: {
-    flex: undefined,
-    width: '100%',
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
-  closeButtonText: {
-    color: '#FFFFFF',
+  saveButtonText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

@@ -24,7 +24,7 @@ import {
 } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
-import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
+import { OrderLinesForm, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { Play } from 'lucide-react-native';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
@@ -202,9 +202,9 @@ export default function ServicePage() {
     // La commande sera créée à la fin quand le serveur validera avec les OrderLines
     cameFromDetailViewRef.current = false; // On ne vient pas de la detail view
     setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
-    setOrderModalTitle(`Prendre la commande - ${selectedTable?.name}`);
+    setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTable?.name || 'Table'}`);
     setShowOrderModal(true); // Ouvrir la modal
-  }, [selectedTableId, currentRoomOrders, selectedTable, showToast]);
+  }, [selectedTableId, currentRoomOrders, selectedTable, currentRoom, showToast]);
 
 
 
@@ -271,9 +271,9 @@ export default function ServicePage() {
     cameFromDetailViewRef.current = true; // Marquer qu'on vient de la detail view
     setShowOrderDetail(false);
     setOrderCreatedFromStart(false);
-    setOrderModalTitle(selectedTableOrder ? `Modifier la commande - ${selectedTableOrder.table?.name || selectedTable?.name || 'Table'}` : "Modifier la commande");
+    setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTableOrder?.table?.name || selectedTable?.name || 'Table'}`);
     setShowOrderModal(true);
-  }, [selectedTableOrder, selectedTable]);
+  }, [selectedTableOrder, selectedTable, currentRoom]);
 
   const handleUpdateItemStatus = useCallback(async (orderLine: any, newStatus: Status) => {
     if (!selectedTableOrder) return;
@@ -632,16 +632,10 @@ export default function ServicePage() {
       {/* OrderLinesForm en pleine page - remplace tout le layout */}
       {showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
         <View style={{ flex: 1, flexDirection: 'column' }}>
-          {/* Header avec titre et bouton retour - masqué pendant la configuration de menu */}
-          <OrderLinesHeader
-            title={orderModalTitle}
-            onClose={handleSmartCloseOrderModal}
-            isVisible={!isConfiguringMenu}
-          />
-
           {/* OrderLinesForm */}
           <View style={{ flex: 1 }}>
             <OrderLinesForm
+              title={orderModalTitle}
               lines={orderLinesManager.orderLines}
               items={allItems.filter(item => item.isActive)}
               itemTypes={allItemTypes}
@@ -651,30 +645,14 @@ export default function ServicePage() {
               onUpdateMenu={orderLinesManager.updateMenu}
               onDeleteLine={orderLinesManager.deleteLine}
               onClearAll={orderLinesManager.clearAllLines}
+              onSave={orderLinesManager.save}
+              onCancel={handleSmartCloseOrderModal}
+              hasChanges={orderLinesManager.hasChanges}
+              isProcessing={orderLinesManager.isProcessing}
               onConfigurationModeChange={handleConfigurationModeChange}
               onConfigurationActionsChange={handleConfigurationActionsChange}
             />
           </View>
-
-          {/* Boutons d'action */}
-          {!isConfiguringMenu && (
-            <View style={styles.actionButtonsContainer}>
-              <OrderLinesButton
-                variant="secondary"
-                onPress={handleSmartCloseOrderModal}
-              >
-                Annuler
-              </OrderLinesButton>
-              <OrderLinesButton
-                variant="primary"
-                onPress={orderLinesManager.save}
-                disabled={!orderLinesManager.hasChanges || orderLinesManager.isProcessing}
-                flex={2}
-              >
-                {orderLinesManager.isProcessing ? 'Sauvegarde...' : 'Sauvegarder'}
-              </OrderLinesButton>
-            </View>
-          )}
 
           {/* Boutons de configuration de menu */}
           {isConfiguringMenu && menuConfigActions && (

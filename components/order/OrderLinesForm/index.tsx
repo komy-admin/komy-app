@@ -1,18 +1,15 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
 import { OrderItemsCardView } from '~/components/order/OrderLinesForm/OrderItemsCardView';
-import { OrderMenusCardView } from '~/components/order/OrderLinesForm/OrderMenusCardView';
 import { OrderItemsTableView } from '~/components/order/OrderLinesForm/OrderItemsTableView';
-import { OrderMenusTableView } from '~/components/order/OrderLinesForm/OrderMenusTableView';
 import { MenuConfiguration } from '~/components/order/OrderLinesForm/MenuConfiguration';
 import { OrderLinesFormProps, MenuSelections } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm/ItemCustomizationPanelContent';
-import { DraftFloatingButton } from '~/components/order/OrderLinesForm/DraftFloatingButton';
 import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { SidePanel } from '~/components/SidePanel';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
@@ -34,6 +31,7 @@ import { MenuCategory, MenuCategoryItem, MenuItemWithCustomization } from '~/typ
  * - Fix : édition de menu sans suppression/recréation
  */
 export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
+  title,
   lines,
   items,
   itemTypes,
@@ -43,6 +41,10 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   onUpdateMenu,
   onDeleteLine,
   onClearAll,
+  onSave,
+  onCancel,
+  hasChanges,
+  isProcessing,
   onConfigurationModeChange,
   onConfigurationActionsChange,
 }) => {
@@ -53,6 +55,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // Panel Portal
   const { renderPanel, clearPanel } = usePanelPortal();
 
+  // Ref to cancel pending delete from outside the side panel
+  const cancelDeleteRef = useRef<(() => void) | null>(null);
+
   // Navigation
   const {
     activeMainTab,
@@ -61,6 +66,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     setActiveItemType,
     activeMenus,
     activeItems,
+    itemsByType,
     allItemTypes,
   } = useOrderLinesForm({ items, itemTypes });
 
@@ -88,8 +94,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     categoryId: string;
   } | null>(null);
 
-  const [draftReviewPanelVisible, setDraftReviewPanelVisible] = useState(false);
-  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   // ====================================================================
   // HANDLERS - ITEMS
@@ -213,7 +217,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       setMenuBeingConfigured(fullMenu);
       setTempMenuSelections(selections);
       setIsConfiguringMenu(true);
-      setDraftReviewPanelVisible(false);
       onConfigurationModeChange?.(true);
     },
     [activeMenus, itemTypes, onConfigurationModeChange]
@@ -344,36 +347,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   ]);
 
   // ====================================================================
-  // HANDLERS - COMMANDE
-  // ====================================================================
-
-  const handleClearAllDraft = useCallback(() => {
-    setDraftReviewPanelVisible(false); // Fermer le panel de revue
-    setShowClearAllConfirm(true); // Ouvrir la confirmation
-  }, []);
-
-  const handleConfirmClearAll = useCallback(() => {
-    if (onClearAll) {
-      onClearAll();
-    }
-    setShowClearAllConfirm(false);
-    // Ne pas rouvrir le DraftReviewPanel après suppression
-  }, [onClearAll]);
-
-  const handleCancelClearAll = useCallback(() => {
-    setShowClearAllConfirm(false);
-    setDraftReviewPanelVisible(true); // Rouvrir le panel de revue si annulé
-  }, []);
-
-  const handleCloseDraftReview = useCallback(() => {
-    setDraftReviewPanelVisible(false);
-  }, []);
-
-  const handleOpenDraftReview = useCallback(() => {
-    setDraftReviewPanelVisible(true);
-  }, []);
-
-  // ====================================================================
   // HANDLERS POUR DRAFTREVIEWPANEL (mémoïsés pour éviter re-renders)
   // ====================================================================
 
@@ -412,11 +385,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    * Gestion unifiée des panels avec priorités :
    * 1. Panel customisation d'item normal
    * 2. Panel customisation d'item de menu
-   * 3. Panel de revue de la commande
    *
-   * Note: Les handlers (handleCancel*, handleConfirm*, etc.) sont stables grâce à useCallback
-   * renderPanel et clearPanel sont fournis par usePanelPortal et devraient être stables
-   * 'lines' est inclus pour mettre à jour le DraftReviewPanelContent quand la commande change
+   * Note: Le récapitulatif de commande est maintenant un side panel permanent (pas dans le portal)
    */
   useEffect(() => {
     if (customizationPanelVisible && itemToCustomize) {
@@ -445,20 +415,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           />
         </SlidePanel>
       );
-    } else if (draftReviewPanelVisible) {
-      // Priorité 3 : Panel de revue de la commande
-      renderPanel(
-        <SlidePanel visible={true} onClose={handleCloseDraftReview} width="35%" minWidth={350} maxWidth={600}>
-          <DraftReviewPanelContent
-            draftLines={lines}
-            onEdit={handleDraftEdit}
-            onEditMenu={handleDraftEditMenu}
-            onDelete={handleDraftDelete}
-            onClose={handleCloseDraftReview}
-            onClearAll={handleClearAllDraft}
-          />
-        </SlidePanel>
-      );
     } else {
       // Aucun panel actif : nettoyer
       clearPanel();
@@ -468,17 +424,10 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     itemToCustomize,
     menuItemPanelVisible,
     menuItemToCustomize,
-    draftReviewPanelVisible,
-    lines, // ✅ Inclus pour mettre à jour le panel quand la commande change
     handleCancelCustomization,
     handleConfirmCustomization,
     handleCancelMenuItemCustomization,
     handleConfirmMenuItemCustomization,
-    handleCloseDraftReview,
-    handleClearAllDraft,
-    handleDraftEdit,
-    handleDraftEditMenu,
-    handleDraftDelete,
     renderPanel,
     clearPanel,
   ]);
@@ -505,20 +454,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   );
 
   // ====================================================================
-  // COMPTEURS MÉMORISÉS POUR PERFORMANCE
-  // ====================================================================
-
-  const getTotalItemsCount = useCallback(
-    () => lines.filter((l) => l.type === OrderLineType.ITEM).length,
-    [lines]
-  );
-
-  const getTotalMenusCount = useCallback(
-    () => lines.filter((l) => l.type === OrderLineType.MENU).length,
-    [lines]
-  );
-
-  // ====================================================================
   // RENDER
   // ====================================================================
 
@@ -534,65 +469,79 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           itemTypes={itemTypes}
         />
       ) : (
-        <View style={styles.mainContent}>
-          <OrderLinesNavigation
-            activeMainTab={activeMainTab}
-            onMainTabChange={setActiveMainTab}
-            activeItemType={activeItemType}
-            onItemTypeChange={setActiveItemType}
-            itemTypes={allItemTypes}
-            getTotalItemsCount={getTotalItemsCount}
-            getTotalMenusCount={getTotalMenusCount}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
+        <View style={styles.mainContentRow}>
+          {/* Side panel gauche : récapitulatif de commande */}
+          <SidePanel
+            title=""
+            hideCloseButton={true}
+            hideHeader={true}
+            width={400}
+          >
+            <View style={styles.sidePanelContent}>
+              <DraftReviewPanelContent
+                title={title}
+                draftLines={lines}
+                onEdit={handleDraftEdit}
+                onEditMenu={handleDraftEditMenu}
+                onDelete={handleDraftDelete}
+                onSave={onSave}
+                onCancel={onCancel}
+                hasChanges={hasChanges}
+                isProcessing={isProcessing}
+                cancelDeleteRef={cancelDeleteRef}
+              />
+            </View>
+          </SidePanel>
 
-          {activeMainTab === 'ITEMS' && viewMode === 'card' && (
-            <OrderItemsCardView
-              items={activeItems}
-              activeItemType={activeItemType}
-              onOpenCustomization={handleOpenCustomization}
-            />
-          )}
+          {/* Contenu principal droite : items/menus + navigation verticale */}
+          <View style={styles.mainContent} onTouchStart={() => cancelDeleteRef.current?.()}>
+            <View style={styles.contentWithNav}>
+              {/* Zone de contenu (menus + articles dans un seul scroll) */}
+              <View style={styles.contentArea}>
+                {viewMode === 'card' && (
+                  <OrderItemsCardView
+                    items={activeItems}
+                    itemsByType={itemsByType}
+                    activeItemType={activeItemType}
+                    onActiveItemTypeChange={setActiveItemType}
+                    onOpenCustomization={handleOpenCustomization}
+                    activeMenus={activeMenus}
+                    handleMenuAdd={startMenuConfiguration}
+                    activeMainTab={activeMainTab}
+                    onMainTabChange={setActiveMainTab}
+                  />
+                )}
 
-          {activeMainTab === 'ITEMS' && viewMode === 'list' && (
-            <OrderItemsTableView
-              items={activeItems}
-              activeItemType={activeItemType}
-              onOpenCustomization={handleOpenCustomization}
-            />
-          )}
+                {viewMode === 'list' && (
+                  <OrderItemsTableView
+                    items={activeItems}
+                    itemsByType={itemsByType}
+                    activeItemType={activeItemType}
+                    onActiveItemTypeChange={setActiveItemType}
+                    onOpenCustomization={handleOpenCustomization}
+                    activeMenus={activeMenus}
+                    handleMenuAdd={startMenuConfiguration}
+                    activeMainTab={activeMainTab}
+                    onMainTabChange={setActiveMainTab}
+                  />
+                )}
+              </View>
 
-          {activeMainTab === 'MENUS' && viewMode === 'card' && (
-            <OrderMenusCardView
-              activeMenus={activeMenus}
-              handleMenuAdd={startMenuConfiguration}
-            />
-          )}
-
-          {activeMainTab === 'MENUS' && viewMode === 'list' && (
-            <OrderMenusTableView
-              activeMenus={activeMenus}
-              handleMenuAdd={startMenuConfiguration}
-            />
-          )}
-
-          {/* Bouton flottant pour accéder à la commande */}
-          <DraftFloatingButton count={lines.length} onPress={handleOpenDraftReview} />
+              {/* Navigation verticale à droite */}
+              <OrderLinesNavigation
+                activeMainTab={activeMainTab}
+                onMainTabChange={setActiveMainTab}
+                activeItemType={activeItemType}
+                onItemTypeChange={setActiveItemType}
+                itemTypes={allItemTypes}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+              />
+            </View>
+          </View>
         </View>
       )}
 
-      {/* Modal de confirmation pour tout supprimer */}
-      <DeleteConfirmationModal
-        isVisible={showClearAllConfirm}
-        onClose={handleCancelClearAll}
-        onConfirm={handleConfirmClearAll}
-        entityName="toutes les lignes"
-        entityType=""
-        isLoading={false}
-        usePortal={true}
-        portalName="clear-all-confirmation-modal"
-      />
     </View>
   );
 };
@@ -602,9 +551,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  mainContentRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidePanelContent: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   mainContent: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  contentWithNav: {
+    flex: 1,
+    flexDirection: 'row' as const,
+  },
+  contentArea: {
+    flex: 1,
   },
 });
 

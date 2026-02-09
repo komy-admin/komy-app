@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { OrderLinesForm, OrderLinesHeader, OrderLinesButton } from '~/components/order/OrderLinesForm';
+import { OrderLinesForm, OrderLinesButton } from '~/components/order/OrderLinesForm';
 import { useToast } from '~/components/ToastProvider';
-import { useOrders, useMenu, useTables } from '~/hooks/useRestaurant';
+import { useOrders, useMenu, useTables, useRooms } from '~/hooks/useRestaurant';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 
 /**
@@ -21,10 +21,12 @@ export default function OrderFormPage() {
   // Données
   const { getOrderById } = useOrders();
   const { getTableById } = useTables();
+  const { getRoomById } = useRooms();
   const { items, itemTypes } = useMenu();
 
   const existingOrder = orderId ? getOrderById(orderId as string) : null;
   const table = getTableById(tableId as string);
+  const room = table ? getRoomById(table.roomId) : null;
 
   // États UI
   const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
@@ -47,20 +49,10 @@ export default function OrderFormPage() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'column' }}>
-      {/* Header */}
-      <OrderLinesHeader
-        title={
-          mode === 'create'
-            ? `Prendre la commande - ${table?.name || 'Table'}`
-            : `Modifier la commande - ${table?.name || 'Table'}`
-        }
-        onClose={() => router.back()}
-        isVisible={!isConfiguringMenu}
-      />
-
       {/* Formulaire */}
       <View style={{ flex: 1 }}>
         <OrderLinesForm
+          title={`${room?.name || 'Salle'} - ${table?.name || 'Table'}`}
           lines={manager.orderLines}
           items={items.filter((item) => item.isActive)}
           itemTypes={itemTypes}
@@ -70,43 +62,17 @@ export default function OrderFormPage() {
           onUpdateMenu={manager.updateMenu}
           onDeleteLine={manager.deleteLine}
           onClearAll={manager.clearAllLines}
+          onSave={manager.save}
+          onCancel={() => {
+            manager.reset();
+            router.back();
+          }}
+          hasChanges={manager.hasChanges}
+          isProcessing={manager.isProcessing}
           onConfigurationModeChange={setIsConfiguringMenu}
           onConfigurationActionsChange={setMenuConfigActions}
         />
       </View>
-
-      {/* Boutons d'action */}
-      {!isConfiguringMenu && (
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            borderTopWidth: 1,
-            borderTopColor: '#e5e7eb',
-            flexDirection: 'row',
-            justifyContent: 'flex-end',
-            padding: 16,
-            gap: 12,
-          }}
-        >
-          <OrderLinesButton
-            variant="secondary"
-            onPress={() => {
-              manager.reset();
-              router.back();
-            }}
-          >
-            Annuler
-          </OrderLinesButton>
-          <OrderLinesButton
-            variant="primary"
-            onPress={manager.save}
-            disabled={!manager.hasChanges || manager.isProcessing}
-            flex={2}
-          >
-            {manager.isProcessing ? 'Sauvegarde...' : 'Sauvegarder'}
-          </OrderLinesButton>
-        </View>
-      )}
 
       {/* Boutons de configuration de menu */}
       {isConfiguringMenu && menuConfigActions && (
