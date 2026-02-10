@@ -7,6 +7,7 @@ import { Menu } from '~/types/menu.types';
 import type { MenuSelections } from '~/components/order/OrderLinesForm/OrderLinesForm.types';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useOrders } from '~/hooks/useOrders';
+import { useToast } from '~/components/ToastProvider';
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -34,6 +35,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
   const { initialLines = [], mode, orderId, tableId, onSuccess, onError } = options;
   const { createOrderWithLines } = useOrderLines();
   const { updateOrderWithLines } = useOrders();
+  const { showToast } = useToast();
 
   // ✅ État unique centralisé
   const [orderLines, setOrderLines] = useState<OrderLine[]>(initialLines);
@@ -84,8 +86,9 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       };
 
       setOrderLines((prev) => [...prev, newLine]);
+      showToast(`${item.name} ajouté`, 'success');
     },
-    []
+    [showToast]
   );
 
   /**
@@ -183,8 +186,9 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       };
 
       setOrderLines((prev) => [...prev, newLine]);
+      showToast(`${menu.name} ajouté`, 'success');
     },
-    []
+    [showToast]
   );
 
   /**
@@ -256,8 +260,17 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
    * Supprimer une ligne
    */
   const deleteLine = useCallback((lineId: string) => {
-    setOrderLines((prev) => prev.filter((l) => l.id !== lineId));
-  }, []);
+    setOrderLines((prev) => {
+      const line = prev.find((l) => l.id === lineId);
+      if (line) {
+        const name = line.type === OrderLineType.MENU
+          ? line.menu?.name || 'Menu'
+          : line.item?.name || 'Article';
+        showToast(`${name} supprimé`, 'warning');
+      }
+      return prev.filter((l) => l.id !== lineId);
+    });
+  }, [showToast]);
 
   /**
    * Réinitialiser toutes les lignes (vider le panier)
