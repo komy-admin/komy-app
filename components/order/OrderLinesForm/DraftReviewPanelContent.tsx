@@ -261,10 +261,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
         </TouchableOpacity>
       </View>
 
-      {/* Backdrop: cliquer n'importe où annule la confirmation */}
-      {pendingDeleteIndex !== null && (
-        <Pressable style={styles.dismissBackdrop} onPress={handleCancelDelete} />
-      )}
     </View>
   );
 };
@@ -670,6 +666,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.88)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 30,
+    elevation: 30,
   },
   deleteOverlayButton: {
     flexDirection: 'row',

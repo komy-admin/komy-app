@@ -287,28 +287,32 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
           </View>
         </View>
 
-        <View style={styles.divider} />
+        {/* Section Notes - visible uniquement si hasNote activé */}
+        {item.hasNote && (
+          <>
+            <View style={styles.divider} />
 
-        {/* Section Notes */}
-        <View style={styles.formGroup}>
-          <View style={styles.labelRow}>
-            <StickyNote size={16} color="#F59E0B" strokeWidth={2} />
-            <RNText style={[styles.formLabel, { fontWeight: '600' }]}>Notes & Instructions</RNText>
-          </View>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            placeholder="Ex: Sans oignons, bien cuit, sauce à part..."
-            placeholderTextColor="#94A3B8"
-            style={styles.noteInput}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
-          <RNText style={[styles.formHint, { lineHeight: 16 }]}>
-            Ajoutez des instructions spéciales pour la cuisine
-          </RNText>
-        </View>
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <StickyNote size={16} color="#F59E0B" strokeWidth={2} />
+                <RNText style={[styles.formLabel, { fontWeight: '600' }]}>Notes & Instructions</RNText>
+              </View>
+              <TextInput
+                value={note}
+                onChangeText={setNote}
+                placeholder="Ex: Sans oignons, bien cuit, sauce à part..."
+                placeholderTextColor="#94A3B8"
+                style={styles.noteInput}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+              <RNText style={[styles.formHint, { lineHeight: 16 }]}>
+                Ajoutez des instructions spéciales pour la cuisine
+              </RNText>
+            </View>
+          </>
+        )}
 
         {/* Divider si tags présents */}
         {availableTags.length > 0 && <View style={styles.divider} />}

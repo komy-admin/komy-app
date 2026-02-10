@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent, Text as RNText, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Pressable, StyleSheet, LayoutChangeEvent, Text as RNText, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
@@ -304,62 +305,63 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        bounces={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        {/* Section Menus */}
-        {filteredMenus.length > 0 && (
-          <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionHeaderText}>Menus</Text>
+        <Pressable>
+          {/* Section Menus */}
+          {filteredMenus.length > 0 && (
+            <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>Menus</Text>
+              </View>
+              {filteredMenus.map((menu) => {
+                const rowIndex = globalRowIndex++;
+                return (
+                  <View
+                    key={menu.id}
+                    style={rowIndex % 2 === 0 ? styles.evenRow : styles.oddRow}
+                  >
+                    <MenuRow
+                      menu={menu}
+                      onMenuAdd={handleMenuAdd}
+                    />
+                  </View>
+                );
+              })}
             </View>
-            {filteredMenus.map((menu) => {
+          )}
+
+          {/* Sections par itemType */}
+          {itemsByType.map((group) => {
+            const sectionRows = group.items.map((item) => {
               const rowIndex = globalRowIndex++;
               return (
                 <View
-                  key={menu.id}
+                  key={item.id}
                   style={rowIndex % 2 === 0 ? styles.evenRow : styles.oddRow}
                 >
-                  <MenuRow
-                    menu={menu}
-                    onMenuAdd={handleMenuAdd}
+                  <OrderItemRow
+                    item={item}
+                    onOpenCustomization={onOpenCustomization}
                   />
                 </View>
               );
-            })}
-          </View>
-        )}
+            });
 
-        {/* Sections par itemType */}
-        {itemsByType.map((group) => {
-          const sectionRows = group.items.map((item) => {
-            const rowIndex = globalRowIndex++;
             return (
               <View
-                key={item.id}
-                style={rowIndex % 2 === 0 ? styles.evenRow : styles.oddRow}
+                key={group.itemType.id}
+                onLayout={(e) => handleSectionLayout(group.itemType.id, e)}
               >
-                <OrderItemRow
-                  item={item}
-                  onOpenCustomization={onOpenCustomization}
-                />
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionHeaderText}>{group.itemType.name}</Text>
+                </View>
+                {sectionRows}
               </View>
             );
-          });
-
-          return (
-            <View
-              key={group.itemType.id}
-              onLayout={(e) => handleSectionLayout(group.itemType.id, e)}
-            >
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderText}>{group.itemType.name}</Text>
-              </View>
-              {sectionRows}
-            </View>
-          );
-        })}
+          })}
+        </Pressable>
       </ScrollView>
     </View>
   );

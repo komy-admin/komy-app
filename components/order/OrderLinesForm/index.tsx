@@ -104,12 +104,23 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    */
   const handleOpenCustomization = useCallback(
     (item: Item) => {
+      // Annuler toute suppression en cours
+      cancelDeleteRef.current?.();
+
       // Récupérer l'item complet depuis la liste
       const fullItem = items.find((i) => i.id === item.id) || item;
+
+      // Si pas de notes et pas de tags, ajouter directement sans panel
+      const hasTags = fullItem.tags && fullItem.tags.length > 0;
+      if (!fullItem.hasNote && !hasTags) {
+        onAddItem(fullItem, { tags: [] });
+        return;
+      }
+
       setItemToCustomize({ item: fullItem });
       setCustomizationPanelVisible(true);
     },
-    [items]
+    [items, onAddItem]
   );
 
   /**
@@ -119,11 +130,16 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     (line: OrderLine) => {
       if (line.type !== OrderLineType.ITEM || !line.item) return;
 
-      // Récupérer l'item complet
-      const fullItem = items.find((i) => i.id === line.item!.id) || line.item;
+      // Récupérer l'item complet (préférer l'item actuel du catalogue au snapshot)
+      const fullItem = items.find((i) => i.id === line.item!.id) as Item | undefined;
+      if (!fullItem) return;
+
+      // Si pas de notes et pas de tags, rien à éditer
+      const hasTags = fullItem.tags && fullItem.tags.length > 0;
+      if (!fullItem.hasNote && !hasTags) return;
 
       setItemToCustomize({
-        item: fullItem as Item,
+        item: fullItem,
         lineId: line.id,
         initialData: {
           tags: line.tags || [],
@@ -228,6 +244,21 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   const handleOpenMenuItemCustomization = useCallback(
     (item: Item, categoryId: string) => {
       const fullItem = items.find((i) => i.id === item.id) || item;
+
+      // Si pas de notes et pas de tags, sélectionner directement sans panel
+      const hasTags = fullItem.tags && fullItem.tags.length > 0;
+      if (!fullItem.hasNote && !hasTags) {
+        setTempMenuSelections((prev) => ({
+          ...prev,
+          [categoryId]: {
+            itemId: fullItem.id,
+            tags: [],
+            note: undefined,
+          },
+        }));
+        return;
+      }
+
       setMenuItemToCustomize({ item: fullItem, categoryId });
       setMenuItemPanelVisible(true);
     },
@@ -494,7 +525,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           </SidePanel>
 
           {/* Contenu principal droite : items/menus + navigation verticale */}
-          <View style={styles.mainContent} onTouchStart={() => cancelDeleteRef.current?.()}>
+          <View style={styles.mainContent}>
             <View style={styles.contentWithNav}>
               {/* Zone de contenu (menus + articles dans un seul scroll) */}
               <View style={styles.contentArea}>

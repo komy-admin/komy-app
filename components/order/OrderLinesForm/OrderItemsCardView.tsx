@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, LayoutChangeEvent, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Pressable, StyleSheet, LayoutChangeEvent, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
@@ -278,18 +279,17 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.gridContainer}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={true}
-        nestedScrollEnabled={true}
-        bounces={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
+    <ScrollView
+      ref={scrollViewRef}
+      style={[styles.container, styles.scrollView]}
+      contentContainerStyle={styles.gridContainer}
+      showsVerticalScrollIndicator={false}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+    >
+      {/* Pressable global : assure que tout le contenu participe au gesture system
+          pour que le scroll fonctionne partout (espaces vides, headers, gaps) sur iOS/Android */}
+      <Pressable>
         {/* Section Menus */}
         {filteredMenus.length > 0 && (
           <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
@@ -336,8 +336,8 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             </View>
           </View>
         ))}
-      </ScrollView>
-    </View>
+      </Pressable>
+    </ScrollView>
   );
 });
 
