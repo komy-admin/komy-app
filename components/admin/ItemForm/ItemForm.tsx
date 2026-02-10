@@ -36,6 +36,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     itemTypeId: item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : ''),
     color: item?.color || '',
     isActive: item?.isActive ?? true,
+    hasNote: item?.hasNote ?? false,
     selectedTags: item?.tags?.map(t => t.id) || []
   });
 
@@ -76,6 +77,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         itemTypeId: item.itemType?.id || '',
         color: item.color || '',
         isActive: item.isActive ?? true,
+        hasNote: item.hasNote ?? false,
         selectedTags: item.tags?.map(t => t.id) || []
       });
       setSelectedItemTypeId(item.itemType?.id || '');
@@ -86,6 +88,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
         color: '',
         isActive: true,
+        hasNote: false,
         selectedTags: []
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
@@ -143,6 +146,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           itemTypeId: selectedItemTypeId,
           itemType: selectedItemType!,
           isActive: formData.isActive,
+          hasNote: formData.hasNote,
           tags: selectedTags
         };
       }
@@ -161,6 +165,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         itemTypeId: activeTab !== 'ALL' ? activeTab : '',
         color: '',
         isActive: true,
+        hasNote: false,
         selectedTags: []
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
@@ -257,6 +262,51 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
                     ]}
                   >
                     {formData.isActive ? 'Visible' : 'Masqué'}
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
+
+            <View style={[styles.field, styles.fieldSmall, { marginLeft: 12, justifyContent: 'center' }]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280' }]}>Notes</Text>
+              <Pressable
+                style={[styles.statusToggleV2, formData.hasNote && styles.noteToggleActive]}
+                onPress={() => setFormData(prev => ({ ...prev, hasNote: !prev.hasNote }))}
+              >
+                <View style={[styles.statusIconContainer, formData.hasNote && styles.statusIconContainerActive]}>
+                  <View style={[styles.statusPulse, formData.hasNote && styles.notePulseActive]} />
+                  <View style={[styles.statusCore, formData.hasNote && styles.noteCoreActive]} />
+                </View>
+                <View style={[styles.statusTextContainer, Platform.OS === 'web' && { paddingVertical: 0, gap: 2 }]}>
+                  <Text
+                    style={[
+                      styles.statusLabelV2,
+                      formData.hasNote && styles.noteLabelActive,
+                      Platform.OS === 'web' && {
+                        fontSize: 13,
+                        fontWeight: formData.hasNote ? '700' : '600',
+                        color: formData.hasNote ? '#92400E' : '#6B7280',
+                        lineHeight: 18,
+                        marginBottom: 0,
+                      }
+                    ]}
+                  >
+                    {formData.hasNote ? 'Activé' : 'Désactivé'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statusSubtext,
+                      formData.hasNote && styles.noteSubtextActive,
+                      Platform.OS === 'web' && {
+                        fontSize: 11,
+                        fontWeight: '500',
+                        color: formData.hasNote ? '#B45309' : '#9CA3AF',
+                        marginTop: 0,
+                        lineHeight: 14,
+                      }
+                    ]}
+                  >
+                    {formData.hasNote ? 'Note visible' : 'Note masquée'}
                   </Text>
                 </View>
               </Pressable>
@@ -524,6 +574,56 @@ const styles = StyleSheet.create({
       android: { elevation: 0 },
       web: { elevation: 2 },
     }),
+  },
+
+  // Note toggle styles (amber theme)
+  noteToggleActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FBBF24',
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: {
+        elevation: 3,
+        boxShadow: '0 0 0 3px rgba(251, 191, 36, 0.1), 0 4px 12px rgba(245, 158, 11, 0.15)',
+      },
+    }),
+  },
+
+  notePulseActive: {
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+
+  noteCoreActive: {
+    backgroundColor: '#F59E0B',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0 },
+      web: { elevation: 2 },
+    }),
+  },
+
+  noteLabelActive: {
+    color: '#92400E',
+    fontWeight: '700',
+    ...(Platform.OS === 'web' ? {
+      fontWeight: 700,
+    } : {})
+  },
+
+  noteSubtextActive: {
+    color: '#B45309',
+    ...(Platform.OS === 'web' ? {
+      color: '#B45309',
+    } : {})
   },
 
   statusTextContainer: {

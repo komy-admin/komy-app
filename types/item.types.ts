@@ -11,5 +11,6 @@ export type Item = {
   itemType: ItemType;
   itemTypeId?: string;
   isActive: boolean;
+  hasNote: boolean;
   tags?: Tag[];
 };
