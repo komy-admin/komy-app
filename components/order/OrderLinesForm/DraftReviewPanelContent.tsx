@@ -73,16 +73,18 @@ const formatTagValue = (tag: any): string => {
   return String(tag.value);
 };
 
-// Fingerprint: identical item + tags + note = same line
+// Fingerprint: identical item + tags + note + status = same line
+// Items with different statuses are never merged together
 const getLineFingerprint = (line: OrderLine): string => {
   const itemId = line.item?.id || '';
   const note = line.note || '';
+  const status = getEffectiveStatus(line) || 'draft';
   const tags = (line.tags || [])
     .filter(t => t && t.tagSnapshot)
     .sort((a, b) => a.tagId.localeCompare(b.tagId))
     .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
     .join('|');
-  return `${itemId}__${tags}__${note}`;
+  return `${status}__${itemId}__${tags}__${note}`;
 };
 
 // A grouped row: identical lines merged with quantity
@@ -207,7 +209,9 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
           });
         }
       });
-      section.groupedLines = Array.from(groups.values());
+      section.groupedLines = Array.from(groups.values()).sort(
+        (a, b) => (a.line.item?.name || '').localeCompare(b.line.item?.name || '')
+      );
     });
 
     const sorted = Array.from(sectionsMap.values()).sort(
