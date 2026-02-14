@@ -97,35 +97,37 @@ export const OrderLinesFormLegacy: React.FC<OrderLinesFormLegacyProps> = ({
       const menuItems: any[] = [];
       let totalPrice = menu.basePrice || 0;
 
-      Object.entries(selections).forEach(([categoryId, selection]) => {
+      Object.entries(selections).forEach(([categoryId, selectionsArray]) => {
         const category = menu.categories?.find((c) => c.id === categoryId);
         if (!category) return;
 
-        const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
-        if (!menuCategoryItem?.item) return;
+        for (const selection of selectionsArray) {
+          const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
+          if (!menuCategoryItem?.item) continue;
 
-        const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
+          const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
 
-        menuItems.push({
-          id: `menu-item-${Date.now()}-${Math.random()}`,
-          categoryId,
-          categoryName: itemTypesParam.find((t) => t.id === category.itemTypeId)?.name || '',
-          status: 'draft',
-          item: {
-            id: menuCategoryItem.item.id,
-            name: menuCategoryItem.item.name,
-            price: menuCategoryItem.supplement || 0,
-            description: menuCategoryItem.item.description,
-            allergens: menuCategoryItem.item.allergens,
-            itemType: menuCategoryItem.item.itemType,
-            snapshotAt: new Date().toISOString(),
-          },
-          supplementPrice: menuCategoryItem.supplement || 0,
-          tags: selection.tags,
-          note: selection.note,
-        });
+          menuItems.push({
+            id: `menu-item-${Date.now()}-${Math.random()}`,
+            categoryId,
+            categoryName: itemTypesParam.find((t) => t.id === category.itemTypeId)?.name || '',
+            status: 'draft',
+            item: {
+              id: menuCategoryItem.item.id,
+              name: menuCategoryItem.item.name,
+              price: menuCategoryItem.supplement || 0,
+              description: menuCategoryItem.item.description,
+              allergens: menuCategoryItem.item.allergens,
+              itemType: menuCategoryItem.item.itemType,
+              snapshotAt: new Date().toISOString(),
+            },
+            supplementPrice: menuCategoryItem.supplement || 0,
+            tags: selection.tags,
+            note: selection.note,
+          });
 
-        totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+          totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+        }
       });
 
       const newLine: any = {
@@ -160,35 +162,37 @@ export const OrderLinesFormLegacy: React.FC<OrderLinesFormLegacyProps> = ({
         const menuItems: any[] = [];
         let totalPrice = menu.basePrice || 0;
 
-        Object.entries(selections).forEach(([categoryId, selection]) => {
+        Object.entries(selections).forEach(([categoryId, selectionsArray]) => {
           const category = menu.categories?.find((c) => c.id === categoryId);
           if (!category) return;
 
-          const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
-          if (!menuCategoryItem?.item) return;
+          for (const selection of selectionsArray) {
+            const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
+            if (!menuCategoryItem?.item) continue;
 
-          const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
+            const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
 
-          menuItems.push({
-            id: `menu-item-${Date.now()}-${Math.random()}`,
-            categoryId,
-            categoryName: itemTypesParam.find((t) => t.id === category.itemTypeId)?.name || '',
-            status: 'draft',
-            item: {
-              id: menuCategoryItem.item.id,
-              name: menuCategoryItem.item.name,
-              price: menuCategoryItem.supplement || 0,
-              description: menuCategoryItem.item.description,
-              allergens: menuCategoryItem.item.allergens,
-              itemType: menuCategoryItem.item.itemType,
-              snapshotAt: new Date().toISOString(),
-            },
-            supplementPrice: menuCategoryItem.supplement || 0,
-            tags: selection.tags,
-            note: selection.note,
-          });
+            menuItems.push({
+              id: `menu-item-${Date.now()}-${Math.random()}`,
+              categoryId,
+              categoryName: itemTypesParam.find((t) => t.id === category.itemTypeId)?.name || '',
+              status: 'draft',
+              item: {
+                id: menuCategoryItem.item.id,
+                name: menuCategoryItem.item.name,
+                price: menuCategoryItem.supplement || 0,
+                description: menuCategoryItem.item.description,
+                allergens: menuCategoryItem.item.allergens,
+                itemType: menuCategoryItem.item.itemType,
+                snapshotAt: new Date().toISOString(),
+              },
+              supplementPrice: menuCategoryItem.supplement || 0,
+              tags: selection.tags,
+              note: selection.note,
+            });
 
-          totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+            totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+          }
         });
 
         return {

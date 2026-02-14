@@ -122,11 +122,11 @@ export interface OrderLinePayload {
   itemId?: string;
   menuId?: string;
   tags?: Record<string, any>;
-  selectedItems?: Record<string, {
+  selectedItems?: Record<string, Array<{
     itemId: string;
     tags?: Record<string, any>;
     note?: string;
-  }>;
+  }>>;
 }
 
 /**
@@ -173,7 +173,7 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): BulkUpdatePay
       // ✅ IMPORTANT: On envoie selectedItems SEULEMENT si le menu a été modifié
       // Pour un menu inchangé (unchanged), on ne touche pas aux items
       if (lineState.status === 'modified' && line.items && line.items.length > 0) {
-        const selectedItems: Record<string, any> = {};
+        const selectedItems: Record<string, any[]> = {};
 
         line.items.forEach((item: any) => {
           if (item.categoryId) {
@@ -184,11 +184,14 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): BulkUpdatePay
               });
             }
 
-            selectedItems[item.categoryId] = {
+            if (!selectedItems[item.categoryId]) {
+              selectedItems[item.categoryId] = [];
+            }
+            selectedItems[item.categoryId].push({
               itemId: item.item.id,
               tags: Object.keys(tags).length > 0 ? tags : undefined,
               note: item.note
-            };
+            });
           }
         });
 
@@ -234,7 +237,7 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): BulkUpdatePay
 
       // selectedItems
       if (line.items) {
-        const selectedItems: Record<string, any> = {};
+        const selectedItems: Record<string, any[]> = {};
 
         line.items.forEach((item: any) => {
           if (item.categoryId) {
@@ -245,10 +248,13 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): BulkUpdatePay
               });
             }
 
-            selectedItems[item.categoryId] = {
+            if (!selectedItems[item.categoryId]) {
+              selectedItems[item.categoryId] = [];
+            }
+            selectedItems[item.categoryId].push({
               itemId: item.item.id,
               tags: Object.keys(tags).length > 0 ? tags : undefined
-            };
+            });
           }
         });
 

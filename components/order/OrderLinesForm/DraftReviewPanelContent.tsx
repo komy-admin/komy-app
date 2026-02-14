@@ -9,16 +9,37 @@ import { formatPrice } from '~/lib/utils';
 // LOCK HELPERS
 // ========================================
 
+/**
+ * Dériver le statut effectif d'une ligne MENU à partir de ses OrderLineItems.
+ * Pour les ITEM, on utilise directement line.status.
+ */
+const getEffectiveStatus = (line: OrderLine): string | undefined => {
+  if (line.type === OrderLineType.MENU && line.items && line.items.length > 0) {
+    const statuses = line.items.map(item => item.status);
+    if (statuses.every(s => s === Status.DRAFT)) return Status.DRAFT;
+    if (statuses.some(s => s === Status.INPROGRESS)) return Status.INPROGRESS;
+    if (statuses.some(s => s === Status.PENDING)) return Status.PENDING;
+    if (statuses.every(s => s === Status.READY)) return Status.READY;
+    if (statuses.every(s => s === Status.SERVED)) return Status.SERVED;
+    if (statuses.every(s => s === Status.TERMINATED)) return Status.TERMINATED;
+    if (statuses.some(s => s === Status.ERROR)) return Status.ERROR;
+    return Status.PENDING;
+  }
+  return line.status;
+};
+
 /** A line is locked if it's a saved server line with a non-draft status */
 const isLineLocked = (line: OrderLine): boolean => {
   if (line.id.startsWith('draft-')) return false;
-  return line.status !== Status.DRAFT;
+  const effectiveStatus = getEffectiveStatus(line);
+  return effectiveStatus !== Status.DRAFT;
 };
 
 const getStatusLabel = (status: string): string => {
   switch (status) {
+    case Status.DRAFT: return 'Brouillon';
     case Status.PENDING: return 'En attente';
-    case Status.INPROGRESS: return 'En cours';
+    case Status.INPROGRESS: return 'En préparation';
     case Status.READY: return 'Prêt';
     case Status.SERVED: return 'Servi';
     case Status.TERMINATED: return 'Terminé';
@@ -29,10 +50,11 @@ const getStatusLabel = (status: string): string => {
 
 const getStatusColor = (status: string): string => {
   switch (status) {
+    case Status.DRAFT: return '#9CA3AF';
     case Status.PENDING: return '#F59E0B';
-    case Status.INPROGRESS: return '#3B82F6';
-    case Status.READY: return '#10B981';
-    case Status.SERVED: return '#6366F1';
+    case Status.INPROGRESS: return '#FB923C';
+    case Status.READY: return '#3B82F6';
+    case Status.SERVED: return '#10B981';
     case Status.TERMINATED: return '#6B7280';
     case Status.ERROR: return '#EF4444';
     default: return '#6B7280';
@@ -268,7 +290,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                       originalIndex={originalIndex}
                       isPendingDelete={pendingDeleteIndex === originalIndex}
                       hasPendingDelete={pendingDeleteIndex !== null}
-                      isLocked={isLineLocked(line)}
+                      isLocked={false}
                       onEditMenu={onEditMenu}
                       onDeleteRequest={handleDeleteRequest}
                       onConfirmDelete={handleConfirmDelete}
@@ -487,10 +509,10 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
           {isLocked ? (
             <View style={styles.lockIconWrap}>
-              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(line.status || '')}18` }]}>
-                <Lock size={11} color={getStatusColor(line.status || '')} strokeWidth={2.5} />
-                <RNText style={[styles.statusBadgeText, { color: getStatusColor(line.status || '') }]}>
-                  {getStatusLabel(line.status || '')}
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(getEffectiveStatus(line) || '')}18` }]}>
+                <Lock size={11} color={getStatusColor(getEffectiveStatus(line) || '')} strokeWidth={2.5} />
+                <RNText style={[styles.statusBadgeText, { color: getStatusColor(getEffectiveStatus(line) || '') }]}>
+                  {getStatusLabel(getEffectiveStatus(line) || '')}
                 </RNText>
               </View>
             </View>

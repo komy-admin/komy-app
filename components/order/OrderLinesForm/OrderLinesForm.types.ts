@@ -15,12 +15,14 @@ export interface ConfigurationActions {
 /**
  * Sélections de menu (format simplifié)
  */
+export interface MenuItemSelectionData {
+  itemId: string;
+  tags: SelectedTag[];
+  note?: string;
+}
+
 export interface MenuSelections {
-  [categoryId: string]: {
-    itemId: string;
-    tags: SelectedTag[];
-    note?: string;
-  };
+  [categoryId: string]: MenuItemSelectionData[];
 }
 
 /**

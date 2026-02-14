@@ -41,9 +41,9 @@ export interface MenuItemSelection {
  */
 export interface MenuConfigurationProps {
   menu: Menu;
-  tempMenuSelections: Record<string, MenuItemSelection>;
+  tempMenuSelections: Record<string, MenuItemSelection[]>;
   onSelectMenuItem: (item: Item, categoryId: string) => void;
-  onDeselectMenuItem: (categoryId: string) => void;
+  onDeselectMenuItem: (categoryId: string, itemId: string) => void;
   getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryNameFromItemTypeId?: (itemTypeId: string) => string;
   itemTypes: ItemType[];
@@ -55,7 +55,7 @@ export interface MenuConfigurationProps {
 interface MenuCategoryProps {
   category: MenuCategoryType;
   index: number;
-  selectedItem: MenuItemSelection | null;
+  selectedItems: MenuItemSelection[];
   onToggleItem: (categoryId: string, item: Item) => void;
   getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryName: (itemTypeId: string) => string;
@@ -64,7 +64,7 @@ interface MenuCategoryProps {
 const MenuCategory = memo<MenuCategoryProps>(({
   category,
   index,
-  selectedItem,
+  selectedItems,
   onToggleItem,
   getMenuCategoryItems,
   getCategoryName
@@ -111,7 +111,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
               {categoryName}
             </RNText>
             <RNText style={styles.categoryHeaderSubtitle}>
-              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItem ? 1 : 0} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
+              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItems.length} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
             </RNText>
           </View>
 
@@ -134,7 +134,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
             if (!item) return null;
 
             const supplement = menuCategoryItem.supplement || 0;
-            const isSelected = selectedItem?.itemId === item.id;
+            const isSelected = selectedItems.some(s => s.itemId === item.id);
             const hasSupplementPrice = supplement > 0;
 
             return (
@@ -244,12 +244,12 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
   }, [getCategoryNameFromItemTypeId, itemTypes]);
 
   const handleToggleItem = useCallback((categoryId: string, item: Item) => {
-    const selectedItem = tempMenuSelections[categoryId];
-    const isSelected = selectedItem?.itemId === item.id;
+    const selections = tempMenuSelections[categoryId] || [];
+    const isSelected = selections.some(s => s.itemId === item.id);
 
     if (isSelected) {
       // Désélectionner l'item
-      onDeselectMenuItem(categoryId);
+      onDeselectMenuItem(categoryId, item.id);
     } else {
       // Sélectionner l'item -> ouvrir la modale de customisation
       onSelectMenuItem(item, categoryId);
@@ -289,13 +289,13 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
         {menu.categories && menu.categories.length > 0 ? (
           <View style={styles.categoriesContainer}>
             {menu.categories.map((category: MenuCategoryType, index: number) => {
-              const selectedItem = tempMenuSelections[category.id] || null;
+              const selectedItems = tempMenuSelections[category.id] || [];
               return (
                 <MenuCategory
                   key={category.id}
                   category={category}
                   index={index}
-                  selectedItem={selectedItem}
+                  selectedItems={selectedItems}
                   onToggleItem={handleToggleItem}
                   getMenuCategoryItems={getMenuCategoryItems}
                   getCategoryName={getCategoryName}

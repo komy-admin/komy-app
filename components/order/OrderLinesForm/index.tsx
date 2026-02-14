@@ -186,13 +186,46 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    */
   const startMenuConfiguration = useCallback(
     (menu: Menu) => {
+      // Auto-add : si toutes les catégories sont obligatoires, chacune a 1 seul item disponible,
+      // et aucun item n'a de tags ni de note → ajouter directement sans configuration
+      const categories = menu.categories || [];
+      if (categories.length > 0) {
+        const canAutoAdd = categories.every((cat: MenuCategory) => {
+          if (!cat.isRequired) return false;
+          const availableItems = (cat.items || []).filter((mci: MenuCategoryItem) => {
+            if (mci.isAvailable === false) return false;
+            const fullItem = mci.item || items.find((i) => i.id === mci.itemId);
+            return !!fullItem;
+          });
+          if (availableItems.length !== 1) return false;
+          const fullItem = availableItems[0].item || items.find((i) => i.id === availableItems[0].itemId);
+          if (!fullItem) return false;
+          const hasTags = fullItem.tags && fullItem.tags.length > 0;
+          return !fullItem.hasNote && !hasTags;
+        });
+
+        if (canAutoAdd) {
+          const selections: MenuSelections = {};
+          categories.forEach((cat: MenuCategory) => {
+            const availableItems = (cat.items || []).filter((mci: MenuCategoryItem) => {
+              if (mci.isAvailable === false) return false;
+              return !!(mci.item || items.find((i) => i.id === mci.itemId));
+            });
+            const fullItem = availableItems[0].item || items.find((i) => i.id === availableItems[0].itemId);
+            selections[cat.id] = [{ itemId: fullItem!.id, tags: [], note: undefined }];
+          });
+          onAddMenu(menu, selections, itemTypes);
+          return;
+        }
+      }
+
       setMenuBeingConfigured(menu);
       setTempMenuSelections({});
       setEditingMenuLineId(null);
       setIsConfiguringMenu(true);
       onConfigurationModeChange?.(true);
     },
-    [onConfigurationModeChange]
+    [onConfigurationModeChange, items, itemTypes, onAddMenu]
   );
 
   /**
@@ -206,7 +239,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       const fullMenu = activeMenus.find((m) => m.id === menuLine.menu?.id);
       if (!fullMenu) return;
 
-      // Reconstruire tempMenuSelections depuis menuLine.items
+      // Reconstruire tempMenuSelections depuis menuLine.items (groupé par catégorie)
       const selections: MenuSelections = {};
       menuLine.items.forEach((menuItem) => {
         // Type guard : menuItem devrait avoir item et categoryName
@@ -220,11 +253,14 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
         if (category && 'id' in category) {
           // Cast pour accéder aux propriétés tags et note qui peuvent exister sur menuItem
           const itemWithCustomization = menuItem as unknown as MenuItemWithCustomization;
-          selections[category.id] = {
+          if (!selections[category.id]) {
+            selections[category.id] = [];
+          }
+          selections[category.id].push({
             itemId: menuItem.item.id,
             tags: itemWithCustomization.tags || [],
             note: itemWithCustomization.note,
-          };
+          });
         }
       });
 
@@ -245,16 +281,23 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     (item: Item, categoryId: string) => {
       const fullItem = items.find((i) => i.id === item.id) || item;
 
+      // Vérifier maxSelections pour cette catégorie
+      const category = menuBeingConfigured?.categories?.find((c: any) => c.id === categoryId);
+      const maxSelections = category?.maxSelections || 1;
+      const currentSelections = tempMenuSelections[categoryId] || [];
+
+      // Si déjà au max et max > 1, ne rien faire
+      // Si max = 1, remplacer la sélection (comportement radio)
+      if (currentSelections.length >= maxSelections && maxSelections > 1) return;
+
       // Si pas de notes et pas de tags, sélectionner directement sans panel
       const hasTags = fullItem.tags && fullItem.tags.length > 0;
       if (!fullItem.hasNote && !hasTags) {
         setTempMenuSelections((prev) => ({
           ...prev,
-          [categoryId]: {
-            itemId: fullItem.id,
-            tags: [],
-            note: undefined,
-          },
+          [categoryId]: maxSelections === 1
+            ? [{ itemId: fullItem.id, tags: [], note: undefined }]
+            : [...(prev[categoryId] || []), { itemId: fullItem.id, tags: [], note: undefined }],
         }));
         return;
       }
@@ -262,7 +305,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       setMenuItemToCustomize({ item: fullItem, categoryId });
       setMenuItemPanelVisible(true);
     },
-    [items]
+    [items, menuBeingConfigured, tempMenuSelections]
   );
 
   /**
@@ -274,20 +317,21 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
       const { item, categoryId } = menuItemToCustomize;
 
-      // Ajouter/remplacer la sélection pour cette catégorie
+      // Vérifier maxSelections pour comportement radio vs multi
+      const category = menuBeingConfigured?.categories?.find((c: any) => c.id === categoryId);
+      const maxSelections = category?.maxSelections || 1;
+
       setTempMenuSelections((prev) => ({
         ...prev,
-        [categoryId]: {
-          itemId: item.id,
-          tags: customization.tags,
-          note: customization.note,
-        },
+        [categoryId]: maxSelections === 1
+          ? [{ itemId: item.id, tags: customization.tags, note: customization.note }]
+          : [...(prev[categoryId] || []), { itemId: item.id, tags: customization.tags, note: customization.note }],
       }));
 
       setMenuItemPanelVisible(false);
       setMenuItemToCustomize(null);
     },
-    [menuItemToCustomize]
+    [menuItemToCustomize, menuBeingConfigured]
   );
 
   const handleCancelMenuItemCustomization = useCallback(() => {
@@ -298,11 +342,16 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   /**
    * Désélectionner un item de menu
    */
-  const handleDeselectMenuItem = useCallback((categoryId: string) => {
+  const handleDeselectMenuItem = useCallback((categoryId: string, itemId: string) => {
     setTempMenuSelections((prev) => {
-      const newSelections = { ...prev };
-      delete newSelections[categoryId];
-      return newSelections;
+      const currentSelections = prev[categoryId] || [];
+      const filtered = currentSelections.filter(s => s.itemId !== itemId);
+      if (filtered.length === 0) {
+        const newSelections = { ...prev };
+        delete newSelections[categoryId];
+        return newSelections;
+      }
+      return { ...prev, [categoryId]: filtered };
     });
   }, []);
 
@@ -351,7 +400,8 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
     return menuBeingConfigured.categories.every((category: MenuCategory) => {
       if (!category.isRequired) return true;
-      return tempMenuSelections[category.id] !== undefined;
+      const selections = tempMenuSelections[category.id];
+      return selections && selections.length >= 1;
     });
   }, [menuBeingConfigured, tempMenuSelections]);
 

@@ -127,35 +127,37 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       const menuItems: DraftMenuItemWithMeta[] = [];
       let totalPrice = menu.basePrice || 0;
 
-      Object.entries(selections).forEach(([categoryId, selection]) => {
+      Object.entries(selections).forEach(([categoryId, selectionsArray]) => {
         const category = menu.categories?.find((c) => c.id === categoryId);
         if (!category) return;
 
-        const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
-        if (!menuCategoryItem?.item) return;
+        for (const selection of selectionsArray) {
+          const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
+          if (!menuCategoryItem?.item) continue;
 
-        const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
+          const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
 
-        menuItems.push({
-          id: `menu-item-${Date.now()}-${Math.random()}`,
-          categoryId,
-          categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
-          status: Status.PENDING,
-          item: {
-            id: menuCategoryItem.item.id,
-            name: menuCategoryItem.item.name,
-            price: menuCategoryItem.supplement || 0,
-            description: menuCategoryItem.item.description,
-            allergens: menuCategoryItem.item.allergens,
-            itemType: menuCategoryItem.item.itemType,
-            snapshotAt: new Date().toISOString(),
-          },
-          supplementPrice: menuCategoryItem.supplement || 0,
-          tags: selection.tags,
-          note: selection.note,
-        });
+          menuItems.push({
+            id: `menu-item-${Date.now()}-${Math.random()}`,
+            categoryId,
+            categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
+            status: Status.PENDING,
+            item: {
+              id: menuCategoryItem.item.id,
+              name: menuCategoryItem.item.name,
+              price: menuCategoryItem.supplement || 0,
+              description: menuCategoryItem.item.description,
+              allergens: menuCategoryItem.item.allergens,
+              itemType: menuCategoryItem.item.itemType,
+              snapshotAt: new Date().toISOString(),
+            },
+            supplementPrice: menuCategoryItem.supplement || 0,
+            tags: selection.tags,
+            note: selection.note,
+          });
 
-        totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+          totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+        }
       });
 
       const newLine: OrderLine = {
@@ -201,42 +203,42 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       setOrderLines((prev) =>
         prev.map((line) => {
           if (line.id !== lineId || line.type !== OrderLineType.MENU) return line;
-          // Prevent modifying non-draft saved lines
-          if (!line.id.startsWith('draft-') && line.status !== Status.DRAFT) return line;
 
           // Reconstruire les items du menu
           const menuItems: DraftMenuItemWithMeta[] = [];
           let totalPrice = menu.basePrice || 0;
 
-          Object.entries(selections).forEach(([categoryId, selection]) => {
+          Object.entries(selections).forEach(([categoryId, selectionsArray]) => {
             const category = menu.categories?.find((c) => c.id === categoryId);
             if (!category) return;
 
-            const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
-            if (!menuCategoryItem?.item) return;
+            for (const selection of selectionsArray) {
+              const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
+              if (!menuCategoryItem?.item) continue;
 
-            const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
+              const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
 
-            menuItems.push({
-              id: `menu-item-${Date.now()}-${Math.random()}`,
-              categoryId,
-              categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
-              status: Status.PENDING,
-              item: {
-                id: menuCategoryItem.item.id,
-                name: menuCategoryItem.item.name,
-                price: menuCategoryItem.supplement || 0,
-                description: menuCategoryItem.item.description,
-                allergens: menuCategoryItem.item.allergens,
-                itemType: menuCategoryItem.item.itemType,
-                snapshotAt: new Date().toISOString(),
-              },
-              supplementPrice: menuCategoryItem.supplement || 0,
-              tags: selection.tags,
-              note: selection.note,
-            });
+              menuItems.push({
+                id: `menu-item-${Date.now()}-${Math.random()}`,
+                categoryId,
+                categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
+                status: Status.PENDING,
+                item: {
+                  id: menuCategoryItem.item.id,
+                  name: menuCategoryItem.item.name,
+                  price: menuCategoryItem.supplement || 0,
+                  description: menuCategoryItem.item.description,
+                  allergens: menuCategoryItem.item.allergens,
+                  itemType: menuCategoryItem.item.itemType,
+                  snapshotAt: new Date().toISOString(),
+                },
+                supplementPrice: menuCategoryItem.supplement || 0,
+                tags: selection.tags,
+                note: selection.note,
+              });
 
-            totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+              totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+            }
           });
 
           return {
@@ -267,8 +269,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     setOrderLines((prev) => {
       const line = prev.find((l) => l.id === lineId);
       if (!line) return prev;
-      // Prevent deleting non-draft saved lines
-      if (!line.id.startsWith('draft-') && line.status !== Status.DRAFT) return prev;
+      // Prevent deleting non-draft saved lines (ITEM only, MENU always editable)
+      if (!line.id.startsWith('draft-') && line.type !== OrderLineType.MENU && line.status !== Status.DRAFT) return prev;
       const name = line.type === OrderLineType.MENU
         ? line.menu?.name || 'Menu'
         : line.item?.name || 'Article';
@@ -374,23 +376,26 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
             : undefined,
         };
       } else {
-        // MENU
+        // MENU - grouper les items par categoryId
+        const selectedItems: Record<string, Array<{ itemId: string; tags?: Record<string, any>; note?: string }>> = {};
+        const menuItems = (line.items as DraftMenuItemWithMeta[] | undefined) || [];
+        for (const item of menuItems) {
+          if (!selectedItems[item.categoryId]) {
+            selectedItems[item.categoryId] = [];
+          }
+          selectedItems[item.categoryId].push({
+            itemId: item.item.id,
+            tags: item.tags?.length
+              ? Object.fromEntries(item.tags.map((t) => [t.tagId, t.value]))
+              : undefined,
+            note: item.note,
+          });
+        }
         return {
           type: OrderLineType.MENU,
           menuId: line.menu!.id,
           note: line.note,
-          selectedItems: Object.fromEntries(
-            (line.items as DraftMenuItemWithMeta[] | undefined)?.map((item) => [
-              item.categoryId,
-              {
-                itemId: item.item.id,
-                tags: item.tags?.length
-                  ? Object.fromEntries(item.tags.map((t) => [t.tagId, t.value]))
-                  : undefined,
-                note: item.note,
-              },
-            ]) || []
-          ),
+          selectedItems,
         };
       }
     });

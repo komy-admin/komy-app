@@ -22,7 +22,7 @@ export interface BulkUpdateOrderPayload {
     itemId?: string; // Pour création ITEM
     menuId?: string; // Pour création MENU
     tags?: Record<string, any>; // Tags pour ITEM
-    selectedItems?: Record<string, { itemId: string; tags?: Record<string, any> }>; // Pour MENU
+    selectedItems?: Record<string, Array<{ itemId: string; tags?: Record<string, any> }>>; // Pour MENU
   }>;
 }
 

@@ -101,7 +101,7 @@ export type CreateOrderLineMenuRequest = {
   type: OrderLineType.MENU;
   menuId: string;
   note?: string;
-  selectedItems: Record<string, { itemId: string; tags?: Record<string, any>; note?: string }>; // categoryId -> { itemId, tags?, note? }
+  selectedItems: Record<string, Array<{ itemId: string; tags?: Record<string, any>; note?: string }>>; // categoryId -> [{ itemId, tags?, note? }]
 };
 
 export type CreateOrderLineRequest = CreateOrderLineItemRequest | CreateOrderLineMenuRequest;
