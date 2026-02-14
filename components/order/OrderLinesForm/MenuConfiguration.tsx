@@ -47,6 +47,9 @@ export interface MenuConfigurationProps {
   getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
   getCategoryNameFromItemTypeId?: (itemTypeId: string) => string;
   itemTypes: ItemType[];
+  onCancel?: () => void;
+  onConfirm?: () => void;
+  isValid?: boolean;
 }
 
 /**
@@ -229,7 +232,10 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
   onDeselectMenuItem,
   getMenuCategoryItems,
   getCategoryNameFromItemTypeId,
-  itemTypes
+  itemTypes,
+  onCancel,
+  onConfirm,
+  isValid,
 }) => {
 
   // Fonction pour obtenir le nom d'une catégorie
@@ -312,6 +318,24 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
           </View>
         )}
       </ScrollView>
+
+      {/* Footer avec boutons Annuler / Valider */}
+      {(onCancel || onConfirm) && (
+        <View style={styles.configFooter}>
+          <Pressable style={styles.configCancelButton} onPress={onCancel}>
+            <RNText style={styles.configCancelButtonText}>Annuler</RNText>
+          </Pressable>
+          <Pressable
+            style={[styles.configConfirmButton, !isValid && styles.configConfirmButtonDisabled]}
+            onPress={onConfirm}
+            disabled={!isValid}
+          >
+            <RNText style={styles.configConfirmButtonText}>
+              Valider le menu
+            </RNText>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 });
@@ -339,7 +363,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
 
   // Configuration Header
@@ -569,5 +593,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+
+  // Footer
+  configFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.background,
+  },
+  configCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  configCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  configConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  configConfirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  configConfirmButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.background,
   },
 });

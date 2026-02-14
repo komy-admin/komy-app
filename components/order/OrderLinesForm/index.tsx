@@ -46,7 +46,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   hasChanges,
   isProcessing,
   onConfigurationModeChange,
-  onConfigurationActionsChange,
 }) => {
   // ====================================================================
   // ÉTAT UI UNIQUEMENT (pas de données métier)
@@ -364,8 +363,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     setTempMenuSelections({});
     setEditingMenuLineId(null);
     onConfigurationModeChange?.(false);
-    onConfigurationActionsChange?.(null);
-  }, [onConfigurationModeChange, onConfigurationActionsChange]);
+  }, [onConfigurationModeChange]);
 
   /**
    * Confirmer la configuration de menu
@@ -404,28 +402,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       return selections && selections.length >= 1;
     });
   }, [menuBeingConfigured, tempMenuSelections]);
-
-  /**
-   * Notifier le parent des actions de configuration
-   */
-  useEffect(() => {
-    if (isConfiguringMenu && menuBeingConfigured) {
-      onConfigurationActionsChange?.({
-        onCancel: handleCancelMenuConfiguration,
-        onConfirm: handleConfirmMenuConfiguration,
-        isValid: isMenuConfigurationValid,
-      });
-    } else {
-      onConfigurationActionsChange?.(null);
-    }
-  }, [
-    isConfiguringMenu,
-    menuBeingConfigured,
-    isMenuConfigurationValid,
-    handleCancelMenuConfiguration,
-    handleConfirmMenuConfiguration,
-    onConfigurationActionsChange,
-  ]);
 
   // ====================================================================
   // HANDLERS POUR DRAFTREVIEWPANEL (mémoïsés pour éviter re-renders)
@@ -540,42 +516,46 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
   return (
     <View style={styles.container}>
-      {isConfiguringMenu && menuBeingConfigured ? (
-        <MenuConfiguration
-          menu={menuBeingConfigured}
-          tempMenuSelections={tempMenuSelections}
-          onSelectMenuItem={handleOpenMenuItemCustomization}
-          onDeselectMenuItem={handleDeselectMenuItem}
-          getMenuCategoryItems={getMenuCategoryItems}
-          itemTypes={itemTypes}
-        />
-      ) : (
-        <View style={styles.mainContentRow}>
-          {/* Side panel gauche : récapitulatif de commande */}
-          <SidePanel
-            title=""
-            hideCloseButton={true}
-            hideHeader={true}
-            width={400}
-          >
-            <View style={styles.sidePanelContent}>
-              <DraftReviewPanelContent
-                title={title}
-                draftLines={lines}
-                onEdit={handleDraftEdit}
-                onEditMenu={handleDraftEditMenu}
-                onDelete={handleDraftDelete}
-                onSave={onSave}
-                onCancel={onCancel}
-                hasChanges={hasChanges}
-                isProcessing={isProcessing}
-                cancelDeleteRef={cancelDeleteRef}
-              />
-            </View>
-          </SidePanel>
+      <View style={styles.mainContentRow}>
+        {/* Side panel gauche : récapitulatif de commande */}
+        <SidePanel
+          title=""
+          hideCloseButton={true}
+          hideHeader={true}
+          width={400}
+        >
+          <View style={styles.sidePanelContent}>
+            <DraftReviewPanelContent
+              title={title}
+              draftLines={lines}
+              onEdit={handleDraftEdit}
+              onEditMenu={handleDraftEditMenu}
+              onDelete={handleDraftDelete}
+              onSave={onSave}
+              onCancel={onCancel}
+              hasChanges={hasChanges}
+              isProcessing={isProcessing}
+              cancelDeleteRef={cancelDeleteRef}
+              hideFooter={isConfiguringMenu}
+            />
+          </View>
+        </SidePanel>
 
-          {/* Contenu principal droite : items/menus + navigation verticale */}
-          <View style={styles.mainContent}>
+        {/* Contenu principal droite : config menu OU items/menus + navigation */}
+        <View style={styles.mainContent}>
+          {isConfiguringMenu && menuBeingConfigured ? (
+            <MenuConfiguration
+              menu={menuBeingConfigured}
+              tempMenuSelections={tempMenuSelections}
+              onSelectMenuItem={handleOpenMenuItemCustomization}
+              onDeselectMenuItem={handleDeselectMenuItem}
+              getMenuCategoryItems={getMenuCategoryItems}
+              itemTypes={itemTypes}
+              onCancel={handleCancelMenuConfiguration}
+              onConfirm={handleConfirmMenuConfiguration}
+              isValid={isMenuConfigurationValid}
+            />
+          ) : (
             <View style={styles.contentWithNav}>
               {/* Zone de contenu (menus + articles dans un seul scroll) */}
               <View style={styles.contentArea}>
@@ -619,10 +599,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
                 onViewModeChange={setViewMode}
               />
             </View>
-          </View>
+          )}
         </View>
-      )}
-
+      </View>
     </View>
   );
 };

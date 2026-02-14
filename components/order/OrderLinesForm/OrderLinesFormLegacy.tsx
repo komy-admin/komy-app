@@ -22,7 +22,6 @@ interface OrderLinesFormLegacyProps {
   itemTypes: ItemType[];
   onLinesChange: (lines: OrderLine[]) => void;
   onConfigurationModeChange?: (isConfiguring: boolean) => void;
-  onConfigurationActionsChange?: (actions: any) => void;
 }
 
 export const OrderLinesFormLegacy: React.FC<OrderLinesFormLegacyProps> = ({
@@ -31,7 +30,6 @@ export const OrderLinesFormLegacy: React.FC<OrderLinesFormLegacyProps> = ({
   itemTypes,
   onLinesChange,
   onConfigurationModeChange,
-  onConfigurationActionsChange,
 }) => {
   // Convertir l'ancienne interface vers la nouvelle
 
@@ -226,7 +224,6 @@ export const OrderLinesFormLegacy: React.FC<OrderLinesFormLegacyProps> = ({
       onUpdateMenu={handleUpdateMenu}
       onDeleteLine={handleDeleteLine}
       onConfigurationModeChange={onConfigurationModeChange}
-      onConfigurationActionsChange={onConfigurationActionsChange}
     />
   );
 };

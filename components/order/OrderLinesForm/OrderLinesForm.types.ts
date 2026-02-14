@@ -4,15 +4,6 @@ import { ItemType } from '~/types/item-type.types';
 import { Menu } from '~/types/menu.types';
 
 /**
- * Actions de configuration pour les menus
- */
-export interface ConfigurationActions {
-  onCancel: () => void;
-  onConfirm: () => void;
-  isValid?: boolean;
-}
-
-/**
  * Sélections de menu (format simplifié)
  */
 export interface MenuItemSelectionData {
@@ -54,7 +45,6 @@ export interface OrderLinesFormProps {
 
   // Configuration (optionnel - pour service.tsx)
   onConfigurationModeChange?: (isConfiguring: boolean) => void;
-  onConfigurationActionsChange?: (actions: ConfigurationActions | null) => void;
 }
 
 /**

@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { OrderLinesForm, OrderLinesButton } from '~/components/order/OrderLinesForm';
+import { OrderLinesForm } from '~/components/order/OrderLinesForm';
 import { useToast } from '~/components/ToastProvider';
 import { useOrders, useMenu, useTables, useRooms } from '~/hooks/useRestaurant';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
@@ -27,10 +26,6 @@ export default function OrderFormPage() {
   const existingOrder = orderId ? getOrderById(orderId as string) : null;
   const table = getTableById(tableId as string);
   const room = table ? getRoomById(table.roomId) : null;
-
-  // États UI
-  const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
-  const [menuConfigActions, setMenuConfigActions] = useState<any>(null);
 
   // ✅ TOUTE LA LOGIQUE dans le hook
   const manager = useOrderLinesManager({
@@ -69,37 +64,9 @@ export default function OrderFormPage() {
           }}
           hasChanges={manager.hasChanges}
           isProcessing={manager.isProcessing}
-          onConfigurationModeChange={setIsConfiguringMenu}
-          onConfigurationActionsChange={setMenuConfigActions}
         />
       </View>
 
-      {/* Boutons de configuration de menu */}
-      {isConfiguringMenu && menuConfigActions && (
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            borderTopWidth: 1,
-            borderTopColor: '#e5e7eb',
-            flexDirection: 'row',
-            justifyContent: 'flex-end',
-            padding: 16,
-            gap: 12,
-          }}
-        >
-          <OrderLinesButton variant="configCancel" onPress={menuConfigActions.onCancel}>
-            Annuler
-          </OrderLinesButton>
-          <OrderLinesButton
-            variant="config"
-            onPress={menuConfigActions.onConfirm}
-            disabled={!menuConfigActions.isValid}
-            flex={2}
-          >
-            Confirmer la sélection
-          </OrderLinesButton>
-        </View>
-      )}
     </View>
   );
 }

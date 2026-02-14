@@ -41,7 +41,6 @@ import { Status } from '~/types/status.enum';
 export default function ServicePage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderCreatedFromStart, setOrderCreatedFromStart] = useState<boolean>(false);
-  const [isConfiguringMenu, setIsConfiguringMenu] = useState<boolean>(false);
   const [orderModalTitle, setOrderModalTitle] = useState<string>('');
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -54,12 +53,6 @@ export default function ServicePage() {
   const [showServeConfirmModal, setShowServeConfirmModal] = useState(false);
   const [itemsToClaimData, setItemsToClaimData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; itemTypeName: string; count: number; itemNames: string[] } | null>(null);
   const [itemsToServeData, setItemsToServeData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; count: number; itemNames: string[] } | null>(null);
-  const [menuConfigActions, setMenuConfigActions] = useState<{
-    onCancel: () => void;
-    onConfirm: () => void;
-    isValid?: boolean;
-  } | null>(null);
-
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useSelector(selectAppInitialized);
   const appLoading = useSelector(selectIsAppInitializing);
@@ -241,17 +234,6 @@ export default function ServicePage() {
   };
 
   const handleSmartCloseOrderModal = useSmartOrderClose();
-
-  const handleConfigurationModeChange = useCallback((configuring: boolean) => {
-    setIsConfiguringMenu(configuring);
-    if (!configuring) {
-      setMenuConfigActions(null);
-    }
-  }, []);
-
-  const handleConfigurationActionsChange = useCallback((actions: { onCancel: () => void; onConfirm: () => void; isValid?: boolean } | null) => {
-    setMenuConfigActions(actions);
-  }, []);
 
   const handleDeleteOrder = useCallback(async () => {
     if (!selectedTableOrder) return;
@@ -649,30 +631,9 @@ export default function ServicePage() {
               onCancel={handleSmartCloseOrderModal}
               hasChanges={orderLinesManager.hasChanges}
               isProcessing={orderLinesManager.isProcessing}
-              onConfigurationModeChange={handleConfigurationModeChange}
-              onConfigurationActionsChange={handleConfigurationActionsChange}
             />
           </View>
 
-          {/* Boutons de configuration de menu */}
-          {isConfiguringMenu && menuConfigActions && (
-            <View style={styles.actionButtonsContainer}>
-              <OrderLinesButton
-                variant="configCancel"
-                onPress={menuConfigActions.onCancel}
-              >
-                Annuler
-              </OrderLinesButton>
-              <OrderLinesButton
-                variant="config"
-                onPress={menuConfigActions.onConfirm}
-                disabled={!menuConfigActions.isValid}
-                flex={2}
-              >
-                Confirmer la sélection
-              </OrderLinesButton>
-            </View>
-          )}
         </View>
       ) : (
         // Layout normal service avec SidePanel + Room

@@ -112,6 +112,7 @@ interface DraftReviewPanelContentProps {
   hasChanges?: boolean;
   isProcessing?: boolean;
   cancelDeleteRef?: React.RefObject<(() => void) | null>;
+  hideFooter?: boolean;
 }
 
 export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = ({
@@ -125,6 +126,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   hasChanges = false,
   isProcessing = false,
   cancelDeleteRef,
+  hideFooter = false,
 }) => {
   // Track which row is pending delete (by originalIndex)
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
@@ -305,20 +307,22 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
       </ScrollView>
 
       {/* Footer */}
-      <View style={styles.panelFooter}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-          <RNText style={styles.cancelButtonText}>Annuler</RNText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.saveButton, (!hasChanges || isProcessing) && styles.saveButtonDisabled]}
-          onPress={onSave}
-          disabled={!hasChanges || isProcessing}
-        >
-          <RNText style={styles.saveButtonText}>
-            {isProcessing ? 'Sauvegarde...' : 'Enregistrer'}
-          </RNText>
-        </TouchableOpacity>
-      </View>
+      {!hideFooter && (
+        <View style={styles.panelFooter}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <RNText style={styles.cancelButtonText}>Annuler</RNText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.saveButton, (!hasChanges || isProcessing) && styles.saveButtonDisabled]}
+            onPress={onSave}
+            disabled={!hasChanges || isProcessing}
+          >
+            <RNText style={styles.saveButtonText}>
+              {isProcessing ? 'Sauvegarde...' : 'Enregistrer'}
+            </RNText>
+          </TouchableOpacity>
+        </View>
+      )}
 
     </View>
   );
