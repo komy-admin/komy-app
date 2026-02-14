@@ -1,8 +1,43 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText, Platform, Animated } from 'react-native';
-import { Trash2, ShoppingBag, ArrowLeftToLine } from 'lucide-react-native';
+import { Trash2, ShoppingBag, ArrowLeftToLine, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
+import { Status } from '~/types/status.enum';
 import { formatPrice } from '~/lib/utils';
+
+// ========================================
+// LOCK HELPERS
+// ========================================
+
+/** A line is locked if it's a saved server line with a non-draft status */
+const isLineLocked = (line: OrderLine): boolean => {
+  if (line.id.startsWith('draft-')) return false;
+  return line.status !== Status.DRAFT;
+};
+
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case Status.PENDING: return 'En attente';
+    case Status.INPROGRESS: return 'En cours';
+    case Status.READY: return 'Prêt';
+    case Status.SERVED: return 'Servi';
+    case Status.TERMINATED: return 'Terminé';
+    case Status.ERROR: return 'Erreur';
+    default: return status;
+  }
+};
+
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case Status.PENDING: return '#F59E0B';
+    case Status.INPROGRESS: return '#3B82F6';
+    case Status.READY: return '#10B981';
+    case Status.SERVED: return '#6366F1';
+    case Status.TERMINATED: return '#6B7280';
+    case Status.ERROR: return '#EF4444';
+    default: return '#6B7280';
+  }
+};
 
 // ========================================
 // HELPERS
@@ -205,6 +240,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                       originalIndex={group.originalIndices[0]}
                       isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
                       hasPendingDelete={pendingDeleteIndex !== null}
+                      isLocked={isLineLocked(group.line)}
                       onEdit={onEdit}
                       onDeleteRequest={handleDeleteRequest}
                       onConfirmDelete={handleConfirmDelete}
@@ -232,6 +268,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                       originalIndex={originalIndex}
                       isPendingDelete={pendingDeleteIndex === originalIndex}
                       hasPendingDelete={pendingDeleteIndex !== null}
+                      isLocked={isLineLocked(line)}
                       onEditMenu={onEditMenu}
                       onDeleteRequest={handleDeleteRequest}
                       onConfirmDelete={handleConfirmDelete}
@@ -303,6 +340,7 @@ interface ReceiptItemRowProps {
   originalIndex: number;
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
+  isLocked: boolean;
   onEdit: (index: number) => void;
   onDeleteRequest: (index: number) => void;
   onConfirmDelete: () => void;
@@ -316,6 +354,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   originalIndex,
   isPendingDelete,
   hasPendingDelete,
+  isLocked,
   onEdit,
   onDeleteRequest,
   onConfirmDelete,
@@ -326,6 +365,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   const itemName = line.item?.name || 'Article';
 
   const handlePress = () => {
+    if (isLocked) return;
     if (hasPendingDelete) {
       onCancelDelete();
     } else {
@@ -335,27 +375,38 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
 
   return (
     <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
-      <Pressable onPress={handlePress} style={styles.receiptRow}>
+      <Pressable onPress={handlePress} style={[styles.receiptRow, isLocked && styles.lockedRow]}>
         <View style={styles.receiptMainLine}>
-          <RNText style={styles.receiptQty}>{quantity}x</RNText>
-          <RNText style={styles.receiptName} numberOfLines={1} ellipsizeMode="tail">
+          <RNText style={[styles.receiptQty, isLocked && styles.lockedText]}>{quantity}x</RNText>
+          <RNText style={[styles.receiptName, isLocked && styles.lockedText]} numberOfLines={1} ellipsizeMode="tail">
             {itemName}
           </RNText>
           <View style={styles.receiptDots} />
-          <RNText style={styles.receiptPrice}>{formatPrice(totalPrice)}</RNText>
-          <Pressable
-            onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
-            style={styles.trashButton}
-            hitSlop={6}
-          >
-            <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-          </Pressable>
+          <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(totalPrice)}</RNText>
+          {isLocked ? (
+            <View style={styles.lockIconWrap}>
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(line.status || '')}18` }]}>
+                <Lock size={11} color={getStatusColor(line.status || '')} strokeWidth={2.5} />
+                <RNText style={[styles.statusBadgeText, { color: getStatusColor(line.status || '') }]}>
+                  {getStatusLabel(line.status || '')}
+                </RNText>
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
+              style={styles.trashButton}
+              hitSlop={6}
+            >
+              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+            </Pressable>
+          )}
         </View>
 
         {hasTags && (
           <View style={styles.receiptDetails}>
             {line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => (
-              <RNText key={idx} style={styles.receiptTag}>
+              <RNText key={idx} style={[styles.receiptTag, isLocked && styles.lockedText]}>
                 {tag.tagSnapshot.label}: {formatTagValue(tag)}
                 {tag.priceModifier != null && tag.priceModifier !== 0
                   ? ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`
@@ -366,7 +417,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
         )}
 
         {hasNote && (
-          <RNText style={styles.receiptNote} numberOfLines={1} ellipsizeMode="tail">
+          <RNText style={[styles.receiptNote, isLocked && styles.lockedText]} numberOfLines={1} ellipsizeMode="tail">
             Note: {line.note}
           </RNText>
         )}
@@ -388,6 +439,7 @@ interface ReceiptMenuRowProps {
   originalIndex: number;
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
+  isLocked: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
   onDeleteRequest: (index: number) => void;
   onConfirmDelete: () => void;
@@ -399,6 +451,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   originalIndex,
   isPendingDelete,
   hasPendingDelete,
+  isLocked,
   onEditMenu,
   onDeleteRequest,
   onConfirmDelete,
@@ -410,6 +463,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   const menuName = line.menu.name || 'Menu';
 
   const handlePress = () => {
+    if (isLocked) return;
     if (hasPendingDelete) {
       onCancelDelete();
     } else {
@@ -419,25 +473,36 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
 
   return (
     <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
-      <Pressable onPress={handlePress} style={styles.receiptRow}>
+      <Pressable onPress={handlePress} style={[styles.receiptRow, isLocked && styles.lockedRow]}>
         <View style={styles.receiptMainLine}>
           <View style={styles.menuLabelWrap}>
-            <View style={styles.menuBadge}>
+            <View style={[styles.menuBadge, isLocked && { opacity: 0.5 }]}>
               <RNText style={styles.menuBadgeText}>MENU</RNText>
             </View>
-            <RNText style={styles.receiptName} numberOfLines={1} ellipsizeMode="tail">
+            <RNText style={[styles.receiptName, isLocked && styles.lockedText]} numberOfLines={1} ellipsizeMode="tail">
               {menuName}
             </RNText>
           </View>
           <View style={styles.receiptDots} />
-          <RNText style={styles.receiptPrice}>{formatPrice(line.totalPrice || 0)}</RNText>
-          <Pressable
-            onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
-            style={styles.trashButton}
-            hitSlop={6}
-          >
-            <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-          </Pressable>
+          <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
+          {isLocked ? (
+            <View style={styles.lockIconWrap}>
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(line.status || '')}18` }]}>
+                <Lock size={11} color={getStatusColor(line.status || '')} strokeWidth={2.5} />
+                <RNText style={[styles.statusBadgeText, { color: getStatusColor(line.status || '') }]}>
+                  {getStatusLabel(line.status || '')}
+                </RNText>
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
+              style={styles.trashButton}
+              hitSlop={6}
+            >
+              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.menuItemsList}>
@@ -447,14 +512,14 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
 
             return (
               <View key={idx} style={styles.menuSubItem}>
-                <RNText style={styles.menuSubItemText}>
-                  <RNText style={styles.menuSubCategory}>{menuItem.categoryName}: </RNText>
+                <RNText style={[styles.menuSubItemText, isLocked && styles.lockedText]}>
+                  <RNText style={[styles.menuSubCategory, isLocked && styles.lockedText]}>{menuItem.categoryName}: </RNText>
                   {menuItem.item?.name || ''}
                   {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
                 </RNText>
 
                 {itemHasTags && menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => (
-                  <RNText key={tagIdx} style={styles.receiptTag}>
+                  <RNText key={tagIdx} style={[styles.receiptTag, isLocked && styles.lockedText]}>
                     {tag.tagSnapshot.label}: {formatTagValue(tag)}
                     {tag.priceModifier != null && tag.priceModifier !== 0
                       ? ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`
@@ -463,7 +528,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
                 ))}
 
                 {itemHasNote && (
-                  <RNText style={styles.receiptNote} numberOfLines={1}>
+                  <RNText style={[styles.receiptNote, isLocked && styles.lockedText]} numberOfLines={1}>
                     Note: {menuItem.note}
                   </RNText>
                 )}
@@ -473,7 +538,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
         </View>
 
         {hasNote && (
-          <RNText style={styles.receiptNote} numberOfLines={1} ellipsizeMode="tail">
+          <RNText style={[styles.receiptNote, isLocked && styles.lockedText]} numberOfLines={1} ellipsizeMode="tail">
             Note: {line.note}
           </RNText>
         )}
@@ -585,17 +650,6 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
 
-  // Dismiss backdrop (covers everything, sits below elevated row)
-  dismissBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-    elevation: 10,
-  },
-
   // Receipt row
   receiptRow: {
     paddingLeft: 20,
@@ -682,6 +736,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  // Locked state
+  lockedRow: {
+    opacity: 0.55,
+  },
+  lockedText: {
+    opacity: 0.7,
+  },
+  lockIconWrap: {
+    marginLeft: 10,
+    flexShrink: 0,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  statusBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
 
   // Menu specific

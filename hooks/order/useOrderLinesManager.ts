@@ -99,6 +99,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       setOrderLines((prev) =>
         prev.map((line) => {
           if (line.id !== lineId || line.type !== OrderLineType.ITEM) return line;
+          // Prevent modifying non-draft saved lines
+          if (!line.id.startsWith('draft-') && line.status !== Status.DRAFT) return line;
 
           const tagsPrice = customization.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
           const totalPrice = line.item!.price + tagsPrice;
@@ -199,6 +201,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       setOrderLines((prev) =>
         prev.map((line) => {
           if (line.id !== lineId || line.type !== OrderLineType.MENU) return line;
+          // Prevent modifying non-draft saved lines
+          if (!line.id.startsWith('draft-') && line.status !== Status.DRAFT) return line;
 
           // Reconstruire les items du menu
           const menuItems: DraftMenuItemWithMeta[] = [];
@@ -262,12 +266,13 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
   const deleteLine = useCallback((lineId: string) => {
     setOrderLines((prev) => {
       const line = prev.find((l) => l.id === lineId);
-      if (line) {
-        const name = line.type === OrderLineType.MENU
-          ? line.menu?.name || 'Menu'
-          : line.item?.name || 'Article';
-        showToast(`${name} supprimé`, 'warning');
-      }
+      if (!line) return prev;
+      // Prevent deleting non-draft saved lines
+      if (!line.id.startsWith('draft-') && line.status !== Status.DRAFT) return prev;
+      const name = line.type === OrderLineType.MENU
+        ? line.menu?.name || 'Menu'
+        : line.item?.name || 'Article';
+      showToast(`${name} supprimé`, 'warning');
       return prev.filter((l) => l.id !== lineId);
     });
   }, [showToast]);
