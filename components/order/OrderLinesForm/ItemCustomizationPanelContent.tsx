@@ -162,7 +162,8 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
 
     Object.entries(tagValues).forEach(([tagId, value]) => {
       const tag = availableTags.find(t => t.id === tagId);
-      if (!tag || value === undefined || value === null || value === '') return;
+      if (!tag || value === undefined || value === null || value === '' || value === false) return;
+      if (Array.isArray(value) && value.length === 0) return;
 
       let priceModifier = 0;
 
@@ -488,7 +489,7 @@ const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
                 styles.radioOption,
                 isSelected && styles.radioOptionActive
               ]}
-              onPress={() => onChange(option.value)}
+              onPress={() => onChange(isSelected ? undefined : option.value)}
               activeOpacity={1}
             >
               <View style={styles.radio}>

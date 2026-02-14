@@ -164,6 +164,9 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): BulkUpdatePay
           tags[tag.tagId] = tag.value;
         });
         payload.tags = tags;
+      } else if (lineState.status === 'modified') {
+        // Tags vidés : envoyer {} pour que l'API supprime les tags existants
+        payload.tags = {};
       }
     } else if (line.type === OrderLineType.MENU) {
       if (line.menu) {
