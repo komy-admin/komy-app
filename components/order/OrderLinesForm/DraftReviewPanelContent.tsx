@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText, Platform, Animated } from 'react-native';
 import { Trash2, ShoppingBag, ArrowLeftToLine, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
+import { ItemType } from '~/types/item-type.types';
 import { Status } from '~/types/status.enum';
 import { formatPrice } from '~/lib/utils';
 
@@ -113,6 +114,7 @@ interface DraftReviewPanelContentProps {
   isProcessing?: boolean;
   cancelDeleteRef?: React.RefObject<(() => void) | null>;
   hideFooter?: boolean;
+  itemTypes?: ItemType[];
 }
 
 export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = ({
@@ -127,6 +129,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   isProcessing = false,
   cancelDeleteRef,
   hideFooter = false,
+  itemTypes,
 }) => {
   // Track which row is pending delete (by originalIndex)
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
@@ -168,13 +171,15 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
       }
 
       if (line.type === OrderLineType.ITEM && line.item) {
-        const itemType = line.item.itemType;
-        const key = itemType?.id || 'unknown';
+        const snapshotType = line.item.itemType;
+        const key = snapshotType?.id || 'unknown';
         if (!sectionsMap.has(key)) {
+          // Chercher priorityOrder depuis itemTypes (source de vérité) plutôt que le snapshot
+          const fullItemType = itemTypes?.find(t => t.id === key);
           sectionsMap.set(key, {
             itemTypeId: key,
-            itemTypeName: itemType?.name || 'Autre',
-            priorityOrder: itemType?.priorityOrder ?? 999,
+            itemTypeName: fullItemType?.name || snapshotType?.name || 'Autre',
+            priorityOrder: fullItemType?.priorityOrder ?? snapshotType?.priorityOrder ?? 999,
             lines: [],
             groupedLines: [],
           });
@@ -210,7 +215,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
     );
 
     return { itemSections: sorted, menuLines: menus };
-  }, [draftLines]);
+  }, [draftLines, itemTypes]);
 
   const totalLines = draftLines.length;
 

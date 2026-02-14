@@ -537,6 +537,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
               isProcessing={isProcessing}
               cancelDeleteRef={cancelDeleteRef}
               hideFooter={isConfiguringMenu}
+              itemTypes={itemTypes}
             />
           </View>
         </SidePanel>
