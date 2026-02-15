@@ -31,7 +31,14 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
   onDeleteMenuLine,
 }) => {
   const [activeTab, setActiveTab] = useState('ALL');
+  const [prevOrderId, setPrevOrderId] = useState(order.id);
   const { showToast } = useToast();
+
+  // Reset synchrone du tab quand on change de commande (pas de flash)
+  if (order.id !== prevOrderId) {
+    setPrevOrderId(order.id);
+    setActiveTab('ALL');
+  }
 
   // ✅ Hook custom pour la logique de filtrage (séparé pour la réutilisabilité)
   const { filteredItems, counts } = useOrderDetailFiltering(order.lines, activeTab, itemTypes);
@@ -166,7 +173,7 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
   }, []);
 
   // ✅ keyExtractor optimisé
-  const keyExtractor = useCallback((item: FilteredItem, index: number) => {
+  const keyExtractor = useCallback((item: FilteredItem) => {
     if (item.type === 'menu') {
       return `menu-${(item.data as OrderLine).id}`;
     }
