@@ -31,9 +31,14 @@ export const useOrderDetailFiltering = (
     };
   }, [orderLines]);
 
-  // ✅ Étape 2 : Créer le Map de priorités (dépend seulement de itemTypes)
+  // ✅ Étape 2 : Créer les Maps de priorités et noms (dépend seulement de itemTypes)
   const itemTypePriorityMap = useMemo(
     () => new Map(itemTypes.map((it) => [it.id, it.priorityOrder])),
+    [itemTypes]
+  );
+
+  const itemTypeNameMap = useMemo(
+    () => new Map(itemTypes.map((it) => [it.id, it.name])),
     [itemTypes]
   );
 
@@ -86,11 +91,14 @@ export const useOrderDetailFiltering = (
         items.push({ type: 'menu', data: menuLine });
       });
 
-      // Trier les items par priorityOrder de leur itemType
+      // Trier les items par priorityOrder de leur itemType, puis alphabétiquement
       const sortedItemLines = [...itemLines].sort((a, b) => {
         const priorityA = itemTypePriorityMap.get(a.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
         const priorityB = itemTypePriorityMap.get(b.item?.itemType?.id || '') ?? Number.MAX_SAFE_INTEGER;
-        return priorityA - priorityB;
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        const nameA = itemTypeNameMap.get(a.item?.itemType?.id || '') ?? '';
+        const nameB = itemTypeNameMap.get(b.item?.itemType?.id || '') ?? '';
+        return nameA.localeCompare(nameB);
       });
 
       sortedItemLines.forEach((line) => {
@@ -126,7 +134,7 @@ export const useOrderDetailFiltering = (
     }
 
     return items;
-  }, [activeTab, menuLines, itemLines, itemTypePriorityMap]);
+  }, [activeTab, menuLines, itemLines, itemTypePriorityMap, itemTypeNameMap]);
 
   return { filteredItems, counts };
 };

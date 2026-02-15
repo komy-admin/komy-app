@@ -51,7 +51,7 @@ export default function ServicePage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showClaimConfirmModal, setShowClaimConfirmModal] = useState(false);
   const [showServeConfirmModal, setShowServeConfirmModal] = useState(false);
-  const [itemsToClaimData, setItemsToClaimData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; itemTypeName: string; count: number; itemNames: string[] } | null>(null);
+  const [itemsToClaimData, setItemsToClaimData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; itemTypeNames: string[]; count: number; itemNames: string[] } | null>(null);
   const [itemsToServeData, setItemsToServeData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; count: number; itemNames: string[] } | null>(null);
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useSelector(selectAppInitialized);
@@ -359,14 +359,17 @@ export default function ServicePage() {
 
     const orderLineIds = itemsToClaim.filter(item => item.orderLineId).map(item => item.orderLineId!);
     const orderLineItemIds = itemsToClaim.filter(item => item.orderLineItemId).map(item => item.orderLineItemId!);
-    const itemTypeName = allItemTypes.find(it => it.priorityOrder === minPriority)?.name || 'Articles';
+    const itemTypeNames = allItemTypes
+      .filter(it => it.priorityOrder === minPriority)
+      .map(it => it.name)
+      .sort();
     const itemNames = itemsToClaim.map(item => item.itemName);
 
     // Stocker les données et afficher la modal de confirmation
     setItemsToClaimData({
       orderLineIds,
       orderLineItemIds,
-      itemTypeName,
+      itemTypeNames,
       count: itemsToClaim.length,
       itemNames
     });
@@ -378,7 +381,7 @@ export default function ServicePage() {
 
     try {
       await handleBulkUpdateStatus(itemsToClaimData.orderLineIds, itemsToClaimData.orderLineItemIds, Status.PENDING);
-      showToast(`${itemsToClaimData.itemTypeName} réclamé${itemsToClaimData.count > 1 ? 's' : ''} (${itemsToClaimData.count})`, 'success');
+      showToast(`${itemsToClaimData.itemTypeNames.join(' + ')} réclamé${itemsToClaimData.count > 1 ? 's' : ''} (${itemsToClaimData.count})`, 'success');
       setShowClaimConfirmModal(false);
       setItemsToClaimData(null);
     } catch (error) {

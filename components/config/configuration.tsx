@@ -651,7 +651,7 @@ const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType
               </View>
               <View style={[styles.tagBadge, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}>
                 <Text style={[styles.tagBadgeText, { color: '#64748B' }]}>
-                  Priorité {itemType.priorityOrder || 0}
+                  Niveau {itemType.priorityOrder}
                 </Text>
               </View>
             </View>

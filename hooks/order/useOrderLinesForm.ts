@@ -60,7 +60,10 @@ export const useOrderLinesForm = ({
 
   // Items groupés par itemType, triés par priorityOrder
   const itemsByType = useMemo<ItemsByTypeGroup[]>(() => {
-    const sortedTypes = [...itemTypes].sort((a, b) => a.priorityOrder - b.priorityOrder);
+    const sortedTypes = [...itemTypes].sort((a, b) => {
+      if (a.priorityOrder !== b.priorityOrder) return a.priorityOrder - b.priorityOrder;
+      return a.name.localeCompare(b.name);
+    });
     return sortedTypes
       .map(itemType => ({
         itemType,

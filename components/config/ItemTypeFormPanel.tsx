@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform, ScrollView } from 'react-native';
 import { X, Check, ChefHat, Wine, ArrowLeft, Plus } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -15,7 +15,7 @@ const DESSERTS_ICONS = AVAILABLE_ICONS.filter(i => i.category === 'desserts');
 
 interface ItemTypeFormPanelProps {
   itemType: ItemType | null;
-  onSave: (itemTypeData: Partial<ItemType>) => void;
+  onSave: (itemTypeData: Partial<ItemType>) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -27,9 +27,10 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
   const [icon, setIcon] = useState<string>(itemType?.icon || ''); // Vide par défaut en création
   const [isSelectingIcon, setIsSelectingIcon] = useState(false); // Navigation vers vue sélection icône
 
-  // États d'erreur pour afficher les bordures rouges
+  // États d'erreur et de traitement
   const [nameError, setNameError] = useState(false);
   const [iconError, setIconError] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Récupérer les icônes déjà utilisées par d'autres itemTypes (pour éviter les doublons)
   const usedIcons = useMemo(() => {
@@ -39,27 +40,38 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
       .filter(Boolean) as string[]; // Enlever les undefined/null
   }, [itemTypes, itemType?.id]);
 
-  // Calculer le nombre de positions disponibles
-  // En création : N+1 (pour permettre d'insérer à la fin)
-  // En édition : N (on peut réorganiser parmi les existants)
-  const totalPositions = useMemo(() => {
-    return itemType
-      ? itemTypes.length  // En édition : peut choisir parmi 1 à N
-      : itemTypes.length + 1;  // En création : peut choisir parmi 1 à N+1
-  }, [itemType, itemTypes.length]);
+  // Calculer le prochain niveau disponible (basé sur les données réelles, pas la simulation)
+  const nextNewLevel = useMemo(() => {
+    if (itemTypes.length === 0) return 1;
+    return Math.max(...itemTypes.map(it => it.priorityOrder)) + 1;
+  }, [itemTypes]);
 
   const [priorityOrder, setPriorityOrder] = useState<number>(
-    itemType?.priorityOrder || totalPositions  // Par défaut : dernière position
+    itemType?.priorityOrder || nextNewLevel  // Par défaut : nouveau niveau
   );
 
-  // State pour la validation (nécessaire pour garantir le re-render visuel du bouton)
-  const [isFormValid, setIsFormValid] = useState(false);
-
-  // Mettre à jour la validation quand les champs changent
-  useEffect(() => {
-    const valid = name.trim().length > 0 && icon.length > 0;
-    setIsFormValid(valid);
-  }, [name, icon]);
+  // Simuler les niveaux avec l'item en cours déplacé à la position sélectionnée
+  const priorityLevels = useMemo(() => {
+    const levelMap = new Map<number, { name: string; isCurrent: boolean }[]>();
+    itemTypes.forEach(it => {
+      const isCurrent = it.id === itemType?.id;
+      const effectivePriority = isCurrent ? priorityOrder : it.priorityOrder;
+      const displayName = isCurrent ? (name.trim() || it.name) : it.name;
+      if (!levelMap.has(effectivePriority)) levelMap.set(effectivePriority, []);
+      levelMap.get(effectivePriority)!.push({ name: displayName, isCurrent });
+    });
+    // En création, ajouter l'item virtuel
+    if (!itemType && name.trim()) {
+      if (!levelMap.has(priorityOrder)) levelMap.set(priorityOrder, []);
+      levelMap.get(priorityOrder)!.push({ name: name.trim(), isCurrent: true });
+    }
+    return Array.from(levelMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([level, items]) => ({
+        level,
+        items: items.sort((a, b) => a.name.localeCompare(b.name)),
+      }));
+  }, [itemTypes, itemType?.id, priorityOrder, name]);
 
   // Callback explicite pour la sélection d'icône (force le re-render)
   const handleIconSelect = useCallback((iconName: string) => {
@@ -76,7 +88,9 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
     }
   }, []);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
+    if (isProcessing) return;
+
     // Réinitialiser les erreurs
     setNameError(false);
     setIconError(false);
@@ -103,13 +117,18 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
     }
 
     // Si tout est valide, sauvegarder
-    onSave({
-      name: trimmedName,
-      type,
-      icon,
-      priorityOrder
-    });
-  }, [onSave, name, type, icon, priorityOrder, showToast]);
+    setIsProcessing(true);
+    try {
+      await onSave({
+        name: trimmedName,
+        type,
+        icon,
+        priorityOrder
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [onSave, name, type, icon, priorityOrder, showToast, isProcessing]);
 
   // Vue de sélection d'icône (full-screen dans le panel)
   if (isSelectingIcon) {
@@ -284,77 +303,84 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           </View>
         </View>
 
-        {/* Ordre de priorité */}
+        {/* Groupe de service */}
         <View style={styles.formGroup}>
-          <Text style={styles.formLabel}>Ordre de priorité</Text>
+          <Text style={styles.formLabel}>Groupe de service</Text>
           <Text style={styles.formHelpText}>
-            {itemType
-              ? "Changer la position réorganisera automatiquement les autres types"
-              : "Les types suivants seront décalés automatiquement"}
+            Les catégories d'un même groupe sont réclamées ensemble en service
           </Text>
-          <View style={styles.priorityGrid}>
-            {Array.from({ length: totalPositions }, (_, i) => i + 1).map((position) => {
-              // Trouver quel type occupe actuellement cette position
-              const typeAtPosition = itemTypes.find(it => it.priorityOrder === position);
-              const isCurrentPosition = itemType?.priorityOrder === position;
-
+          <View style={styles.levelList}>
+            {priorityLevels.map(({ level, items: levelItems }, index) => {
+              const isSelected = priorityOrder === level;
+              const displayIndex = index + 1;
               return (
                 <TouchableOpacity
-                  key={position}
+                  key={level}
                   style={[
-                    styles.priorityButton,
-                    priorityOrder === position && styles.priorityButtonActive,
-                    isCurrentPosition && !priorityOrder && styles.priorityButtonCurrent
+                    styles.levelRow,
+                    isSelected && styles.levelRowActive,
                   ]}
-                  onPress={() => setPriorityOrder(position)}
+                  onPress={() => setPriorityOrder(level)}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.priorityButtonText,
-                      priorityOrder === position && styles.priorityButtonTextActive
-                    ]}
-                  >
-                    {position}
+                  <View style={[styles.levelBadge, isSelected && styles.levelBadgeActive]}>
+                    <Text style={[styles.levelBadgeText, isSelected && styles.levelBadgeTextActive]}>{displayIndex}</Text>
+                  </View>
+                  <Text style={[styles.levelNames, isSelected && styles.levelNamesActive]} numberOfLines={1}>
+                    {levelItems.map((it, i) => (
+                      <Text key={i} style={it.isCurrent ? styles.levelNameCurrent : undefined}>
+                        {i > 0 ? ', ' : ''}{it.name}
+                      </Text>
+                    ))}
                   </Text>
-                  {typeAtPosition && !itemType && (
-                    <Text style={styles.priorityButtonLabel} numberOfLines={1}>
-                      {typeAtPosition.name}
-                    </Text>
+                  {isSelected && (
+                    <Check size={14} color="#A855F7" strokeWidth={3} />
                   )}
                 </TouchableOpacity>
               );
             })}
+
+            {/* Bouton nouveau niveau */}
+            <TouchableOpacity
+              style={[
+                styles.levelRow,
+                styles.levelRowNew,
+                priorityOrder === nextNewLevel && styles.levelRowActive,
+              ]}
+              onPress={() => setPriorityOrder(nextNewLevel)}
+              activeOpacity={0.7}
+            >
+              <Plus size={16} color={priorityOrder === nextNewLevel ? '#A855F7' : '#94A3B8'} strokeWidth={2} />
+              <Text style={[styles.levelNewText, priorityOrder === nextNewLevel && styles.levelNamesActive]}>
+                Nouveau niveau
+              </Text>
+              {priorityOrder === nextNewLevel && (
+                <Check size={14} color="#A855F7" strokeWidth={3} />
+              )}
+            </TouchableOpacity>
           </View>
-          {priorityOrder && (
-            <View style={styles.priorityFeedbackCard}>
-              <View style={styles.priorityFeedbackHeader}>
-                <View style={styles.priorityBadge}>
-                  <Text style={styles.priorityBadgeText}>
-                    {priorityOrder === 1 && "1ère priorité"}
-                    {priorityOrder === 2 && "2ème priorité"}
-                    {priorityOrder === 3 && "3ème priorité"}
-                    {priorityOrder > 3 && `${priorityOrder}ème priorité`}
-                  </Text>
+
+          {/* Feedback card */}
+          {priorityOrder && (() => {
+            const matchedLevel = priorityLevels.find(l => l.level === priorityOrder);
+            const otherNames = matchedLevel?.items.filter(it => !it.isCurrent).map(it => it.name) || [];
+            return (
+              <View style={styles.priorityFeedbackCard}>
+                <View style={styles.priorityFeedbackContent}>
+                  {otherNames.length > 0 ? (
+                    <Text style={styles.priorityFeedbackUsage}>
+                      <Text style={styles.priorityFeedbackUsageBold}>Même groupe que : </Text>
+                      {otherNames.join(', ')}
+                    </Text>
+                  ) : (
+                    <Text style={styles.priorityFeedbackUsage}>
+                      <Text style={styles.priorityFeedbackUsageBold}>Groupe de service isolé</Text>
+                    </Text>
+                  )}
                 </View>
               </View>
-              <View style={styles.priorityFeedbackContent}>
-                {/* <Text style={styles.priorityFeedbackTitle}>
-                  {itemType ? "Réorganisation" : "Insertion"}
-                </Text>
-                <Text style={styles.priorityFeedbackDescription}>
-                  {itemType
-                    ? `Ce type prendra la position ${priorityOrder}. Les autres types seront automatiquement réorganisés pour maintenir l'ordre.`
-                    : `Ce type sera inséré en position ${priorityOrder}. Les types suivants seront décalés vers le bas.`}
-                </Text> */}
-                {/* <View style={styles.priorityFeedbackDivider} /> */}
-                <Text style={styles.priorityFeedbackUsage}>
-                  <Text style={styles.priorityFeedbackUsageBold}>Affichage :</Text> Les types seront affichés dans cet ordre partout dans l'application.{'\n'}
-                  <Text style={styles.priorityFeedbackUsageBold}>Autogestion :</Text> Détermine l'ordre de préparation en cuisine/bar.
-                </Text>
-              </View>
-            </View>
-          )}
+            );
+          })()}
         </View>
         </Pressable>
       </KeyboardAwareScrollViewWrapper>
@@ -364,11 +390,12 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.saveButton}
+          style={[styles.saveButton, isProcessing && styles.saveButtonDisabled]}
           onPress={handleSave}
+          disabled={isProcessing}
         >
           <Check size={20} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.saveButtonText}>Enregistrer</Text>
+          <Text style={styles.saveButtonText}>{isProcessing ? 'Enregistrement...' : 'Enregistrer'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -405,11 +432,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748B',
   },
   iconSelectionView: {
     flex: 1,
@@ -549,92 +571,75 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     fontWeight: '500',
   },
-  priorityGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  levelList: {
+    gap: 6,
   },
-  priorityButton: {
-    minWidth: 48,
-    height: 48,
-    paddingHorizontal: 8,
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 8,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 10,
+  },
+  levelRowActive: {
+    borderColor: '#A855F7',
+    backgroundColor: '#FAF5FF',
+  },
+  levelRowNew: {
+    borderStyle: 'dashed',
+  },
+  levelBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  priorityButtonActive: {
-    borderColor: '#A855F7',
-    backgroundColor: '#F8F4FF',
+  levelBadgeActive: {
+    backgroundColor: '#A855F7',
   },
-  priorityButtonCurrent: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
-  },
-  priorityButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  priorityButtonTextActive: {
-    color: '#A855F7',
-  },
-  priorityButtonLabel: {
-    fontSize: 9,
-    color: '#94A3B8',
-    marginTop: 2,
-    maxWidth: 60,
-    textAlign: 'center',
-  },
-  priorityFeedbackCard: {
-    marginTop: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-    overflow: 'hidden',
-  },
-  priorityFeedbackHeader: {
-    backgroundColor: '#EFF6FF',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#BFDBFE',
-  },
-  priorityBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  priorityBadgeText: {
+  levelBadgeText: {
     fontSize: 13,
     fontWeight: '700',
+    color: '#64748B',
+  },
+  levelBadgeTextActive: {
     color: '#FFFFFF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  },
+  levelNames: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+  },
+  levelNamesActive: {
+    color: '#6B21A8',
+    fontWeight: '500',
+  },
+  levelNameCurrent: {
+    fontWeight: '700',
+    color: '#A855F7',
+  },
+  levelNewText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  priorityFeedbackCard: {
+    marginTop: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
   },
   priorityFeedbackContent: {
-    padding: 16,
-  },
-  priorityFeedbackTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
-  },
-  priorityFeedbackDescription: {
-    fontSize: 14,
-    color: '#475569',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  priorityFeedbackDivider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 12,
+    padding: 12,
   },
   priorityFeedbackUsage: {
     fontSize: 13,

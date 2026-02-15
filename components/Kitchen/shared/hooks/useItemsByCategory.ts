@@ -36,7 +36,8 @@ export function useItemsByCategory(
     return Array.from(groups.entries()).sort((a, b) => {
       const priorityA = priorityMap.get(a[0]) || 999;
       const priorityB = priorityMap.get(b[0]) || 999;
-      return priorityA - priorityB;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a[0].localeCompare(b[0]);
     });
   }, [items, priorityMap]);
 }

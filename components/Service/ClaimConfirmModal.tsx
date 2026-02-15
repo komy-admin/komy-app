@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback } from 'react';
+import { memo, useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { CustomModal } from '@/components/CustomModal';
 import { ItemNameRow } from './ItemNameRow';
@@ -8,7 +8,7 @@ interface ClaimConfirmModalProps {
   itemsData: {
     orderLineIds: string[];
     orderLineItemIds: string[];
-    itemTypeName: string;
+    itemTypeNames: string[];
     count: number;
     itemNames: string[];
   } | null;
@@ -50,7 +50,7 @@ export const ClaimConfirmModal = memo<ClaimConfirmModalProps>(({
             Vous êtes sur le point de réclamer {itemsData.count} article{itemsData.count > 1 ? 's' : ''} de type{' '}
           </Text>
           <Text style={styles.itemTypeName}>
-            "{itemsData.itemTypeName}"
+            {itemsData.itemTypeNames.map(n => `"${n}"`).join(' + ')}
           </Text>
           <Text style={styles.descriptionText}>
             {' '}:

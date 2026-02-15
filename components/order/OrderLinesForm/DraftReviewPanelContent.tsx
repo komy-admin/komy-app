@@ -214,9 +214,10 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
       );
     });
 
-    const sorted = Array.from(sectionsMap.values()).sort(
-      (a, b) => a.priorityOrder - b.priorityOrder
-    );
+    const sorted = Array.from(sectionsMap.values()).sort((a, b) => {
+      if (a.priorityOrder !== b.priorityOrder) return a.priorityOrder - b.priorityOrder;
+      return a.itemTypeName.localeCompare(b.itemTypeName);
+    });
 
     return { itemSections: sorted, menuLines: menus };
   }, [draftLines, itemTypes]);
