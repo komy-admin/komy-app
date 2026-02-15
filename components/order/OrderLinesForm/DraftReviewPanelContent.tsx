@@ -225,7 +225,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   const totalLines = draftLines.length;
 
   return (
-    <View style={styles.panelContent}>
+    <Pressable style={styles.panelContent} onPress={pendingDeleteIndex !== null ? handleCancelDelete : undefined}>
       {/* Header */}
       <View style={styles.panelHeader}>
         <Pressable onPress={onCancel} style={styles.backButton}>
@@ -334,7 +334,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
         </View>
       )}
 
-    </View>
+    </Pressable>
   );
 };
 
