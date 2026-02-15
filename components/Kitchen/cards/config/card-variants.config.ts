@@ -46,7 +46,7 @@ export const CARD_VARIANTS: Record<CardVariant, CardVariantConfig> = {
     showTimer: true,
     showItemCount: true,
     showStatusBadges: true,
-    showItemBackgroundColors: true,
+    showItemBackgroundColors: false,
     scrollable: true,
     clickable: false,
     showButtons: true,
