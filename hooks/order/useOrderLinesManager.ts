@@ -66,7 +66,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
         type: OrderLineType.ITEM,
         unitPrice: totalPrice,
         totalPrice: totalPrice,
-        status: Status.PENDING,
+        status: Status.DRAFT,
         note: customization.note,
         tags: customization.tags,
         item: {
@@ -141,7 +141,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
             id: `menu-item-${Date.now()}-${Math.random()}`,
             categoryId,
             categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
-            status: Status.PENDING,
+            status: Status.DRAFT,
             item: {
               id: menuCategoryItem.item.id,
               name: menuCategoryItem.item.name,
@@ -166,7 +166,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
         type: OrderLineType.MENU,
         unitPrice: totalPrice,
         totalPrice: totalPrice,
-        status: Status.PENDING,
+        status: Status.DRAFT,
         item: null,
         menu: {
           id: menu.id,
@@ -222,7 +222,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
                 id: `menu-item-${Date.now()}-${Math.random()}`,
                 categoryId,
                 categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
-                status: Status.PENDING,
+                status: Status.DRAFT,
                 item: {
                   id: menuCategoryItem.item.id,
                   name: menuCategoryItem.item.name,
