@@ -30,17 +30,14 @@ export function ItemRow({ item, isLastItem, showStatusBadge = false, showBackgro
         showBackgroundColors && item.status === Status.PENDING && styles.containerPending,
         showBackgroundColors && item.status === Status.INPROGRESS && styles.containerInProgress,
         showBackgroundColors && item.status === Status.READY && styles.containerReady,
-        showBackgroundColors && item.isOverdue && styles.containerOverdue, // Rouge si en retard (priorité)
+        item.isOverdue && styles.containerOverdue,
         isDraft && styles.containerDraft, // Items DRAFT grisés
       ]}
     >
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <RNText style={[
-              styles.itemName,
-              !showBackgroundColors && item.isOverdue && styles.itemNameOverdue
-            ]}>
+            <RNText style={styles.itemName}>
               {item.itemName}
             </RNText>
 
@@ -101,7 +98,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#DBEAFE',  // Bleu clair - cohérent avec utils.ts READY
   },
   containerOverdue: {
-    backgroundColor: '#FEE2E2', // Rouge clair pour items en retard
+    backgroundColor: '#FEE2E2',
   },
   containerDraft: {
     opacity: 0.3, // Items DRAFT grisés (pas encore demandés)
@@ -126,9 +123,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#1F2937',
-  },
-  itemNameOverdue: {
-    color: '#DC2626', // Rouge pour items en retard (CardColumn)
   },
   menuBadge: {
     fontSize: 10,
