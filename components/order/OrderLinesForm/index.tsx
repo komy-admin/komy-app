@@ -40,7 +40,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   onAddMenu,
   onUpdateMenu,
   onDeleteLine,
-  onClearAll,
   onSave,
   onCancel,
   hasChanges,
@@ -77,6 +76,15 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   const [menuBeingConfigured, setMenuBeingConfigured] = useState<Menu | null>(null);
   const [tempMenuSelections, setTempMenuSelections] = useState<MenuSelections>({});
   const [editingMenuLineId, setEditingMenuLineId] = useState<string | null>(null);
+
+  // Fermer la configuration menu si la ligne éditée a été supprimée
+  if (editingMenuLineId && isConfiguringMenu && !lines.some(l => l.id === editingMenuLineId)) {
+    setIsConfiguringMenu(false);
+    setMenuBeingConfigured(null);
+    setTempMenuSelections({});
+    setEditingMenuLineId(null);
+    onConfigurationModeChange?.(false);
+  }
 
   // Customisation d'item (via SlidePanel)
   const [customizationPanelVisible, setCustomizationPanelVisible] = useState(false);
