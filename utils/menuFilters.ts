@@ -1,28 +1,43 @@
 import { Item } from '~/types/item.types';
+import { Menu } from '~/types/menu.types';
 import { MenuFilterState } from '~/components/filters/MenuFilters';
 import { eurosToCents } from '~/lib/utils';
 
 /**
- * Filtre une liste d'articles de menu selon les critères spécifiés
+ * Filtre par nom, prix (centimes) et statut — logique commune items & menus
+ */
+const matchesFilters = (
+  name: string | undefined,
+  priceCents: number,
+  isActive: boolean,
+  filters: MenuFilterState
+): boolean => {
+  const matchesName = !filters.name || (name?.toLowerCase().includes(filters.name.toLowerCase()) ?? false);
+
+  const minPriceCents = filters.minPrice !== null ? eurosToCents(filters.minPrice) : null;
+  const maxPriceCents = filters.maxPrice !== null ? eurosToCents(filters.maxPrice) : null;
+  const matchesPrice = (minPriceCents === null || priceCents >= minPriceCents) &&
+                      (maxPriceCents === null || priceCents <= maxPriceCents);
+
+  const matchesStatus = filters.status === null ||
+                       (filters.status === 'active' && isActive) ||
+                       (filters.status === 'inactive' && !isActive);
+
+  return matchesName && matchesPrice && matchesStatus;
+};
+
+/**
+ * Filtre une liste d'articles selon les critères spécifiés
  */
 export const filterMenuItems = (items: Item[], filters: MenuFilterState): Item[] => {
-  return items.filter(item => {
-    const matchesName = !filters.name || (item.name?.toLowerCase().includes(filters.name.toLowerCase()) ?? false);
+  return items.filter(item => matchesFilters(item.name, item.price, item.isActive, filters));
+};
 
-    // Convertir les prix du filtre (en euros) en centimes pour comparaison avec item.price (en centimes)
-    const minPriceCents = filters.minPrice !== null ? eurosToCents(filters.minPrice) : null;
-    const maxPriceCents = filters.maxPrice !== null ? eurosToCents(filters.maxPrice) : null;
-
-    const matchesPrice = (minPriceCents === null || item.price >= minPriceCents) &&
-                        (maxPriceCents === null || item.price <= maxPriceCents);
-    
-    // Filtrage par statut
-    const matchesStatus = filters.status === null ||
-                         (filters.status === 'active' && item.isActive) ||
-                         (filters.status === 'inactive' && !item.isActive);
-    
-    return matchesName && matchesPrice && matchesStatus;
-  });
+/**
+ * Filtre une liste de menus selon les critères spécifiés
+ */
+export const filterMenus = (menus: Menu[], filters: MenuFilterState): Menu[] => {
+  return menus.filter(menu => matchesFilters(menu.name, Number(menu.basePrice), menu.isActive, filters));
 };
 
 /**

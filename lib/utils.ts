@@ -1,262 +1,37 @@
-import { Table } from '@/types/table.types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ItemTypes } from '~/types/item-type.enum';
-import { Status } from '~/types/status.enum';
 import { UserProfile } from '~/types/user.types';
-import { OrderLine, OrderLineType } from '~/types/order-line.types';
-import { Order } from '~/types/order.types';
+
+// ========================================
+// Core utilities
+// ========================================
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/**
- * Détermine la couleur de contraste appropriée (noir ou blanc) pour un fond donné
- * @param hexColor - La couleur de fond en format hexadécimal
- * @returns '#000000' pour les fonds clairs, '#FFFFFF' pour les fonds foncés
- */
 export function getContrastColor(hexColor: string): string {
-  // Gérer les cas où la couleur n'est pas valide
-  if (!hexColor || !hexColor.startsWith('#')) {
-    return '#FFFFFF';
-  }
+  if (!hexColor || !hexColor.startsWith('#')) return '#FFFFFF';
 
-  // Convertir hex en RGB
   const hex = hexColor.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16) || 0;
   const g = parseInt(hex.substring(2, 4), 16) || 0;
   const b = parseInt(hex.substring(4, 6), 16) || 0;
 
-  // Calculer la luminance relative (formule WCAG)
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  // Retourner noir pour les couleurs claires, blanc pour les foncées
   return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
-export const getOrderLinesGlobalStatus = (orderLines: OrderLine[]): Status => {
-  const allStatuses: Status[] = [];
-
-  orderLines.forEach(line => {
-    if (line.type === OrderLineType.ITEM) {
-      // Utiliser PENDING par défaut si pas de statut défini
-      allStatuses.push(line.status || Status.PENDING);
-    } else if (line.type === OrderLineType.MENU && line.items) {
-      line.items.forEach(menuItem => {
-        // Utiliser PENDING par défaut si pas de statut défini
-        allStatuses.push(menuItem.status || Status.PENDING);
-      });
-    }
-  });
-
-  return getMostImportantStatus(allStatuses);
-}
-
-export const getOrderGlobalStatus = (order: Order): Status => {
-  return getOrderLinesGlobalStatus(order.lines ?? []);
-}
-
-export const getTableStatus = (table: Table): Status | undefined => {
-  if (!table.orders || table.orders.length === 0) {
-    return undefined;
-  }
-
-  return getOrderGlobalStatus(table.orders[0]);
-}
-
-export const getMostImportantStatus = (statuses: Status[]): Status => {
-  // Si pas de statuts, retourner DRAFT par défaut
-  if (statuses.length === 0) {
-    return Status.DRAFT;
-  }
-  
-  // Ordre de priorité d'affichage: ERROR > SERVED > READY > PENDING > INPROGRESS > DRAFT > TERMINATED
-  // Les index plus HAUTS = plus prioritaires
-  const order = [
-    Status.TERMINATED, // 0 - Moins prioritaire (historique/stats, non affiché)
-    Status.SERVED,     // 1 - Servi
-    Status.DRAFT,      // 2
-    Status.INPROGRESS, // 3
-    Status.PENDING,    // 4
-    Status.READY,      // 5
-    Status.ERROR,      // 6 - Plus prioritaire
-  ];
-  
-  return statuses.reduce((acc, status) => {
-    const accIndex = order.indexOf(acc);
-    const statusIndex = order.indexOf(status);
-    return accIndex > statusIndex ? acc : status;
-  }, statuses[0]);
-}
-
-export const hasDraftWithOtherStatus = (statuses: Status[]): boolean => {
-  const uniqueStatuses = [...new Set(statuses)];
-  return uniqueStatuses.includes(Status.DRAFT) && uniqueStatuses.length > 1;
-}
-
-// Fonction pour détecter si un menu a des items avec des statuts différents
-export const hasMenuMixedStatuses = (statuses: Status[]): boolean => {
-  const uniqueStatuses = [...new Set(statuses)];
-  return uniqueStatuses.length > 1;
-}
-
-export const shouldTableHaveDottedBorder = (table: Table & { orders?: (Order & { lines?: OrderLine[] })[] }): boolean => {
-  const statuses: Status[] = [];
-  
-  table.orders?.forEach(order => {
-    if (order.lines) {
-      order.lines.forEach(line => {
-        if (line.type === OrderLineType.ITEM && line.status) {
-          statuses.push(line.status);
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          line.items.forEach(menuItem => {
-            statuses.push(menuItem.status);
-          });
-        }
-      });
-    }
-  });
-  
-  return hasDraftWithOtherStatus(statuses);
-}
-
-export const getStatusColor = (status: Status) => {
-  const colors = {
-    [Status.READY]: '#D7E3FC',
-    [Status.PENDING]: '#F9F1C8',
-    [Status.INPROGRESS]: '#FFD1AD',
-    [Status.SERVED]: '#B7E1CC',
-    [Status.ERROR]: '#F7BFB5',
-    [Status.TERMINATED]: '#EBEBEB',
-    [Status.DRAFT]: '#EBEBEB', // Gris par défaut pour les tables sans commande
-  };
-  return colors[status] || colors[Status.ERROR];
-}
-
-/**
- * Retourne une version très légère de la couleur du statut pour le background des cards
- * Pré-calculées pour éviter les problèmes de rgba sur React Native
- */
-export const getStatusBackgroundColor = (status: Status): string => {
-  const colors = {
-    [Status.READY]: '#F5F8FE',      // Bleu très clair
-    [Status.PENDING]: '#FEFAF1',    // Jaune très clair
-    [Status.INPROGRESS]: '#FFF5EE', // Orange très clair
-    [Status.SERVED]: '#F0FAF5',     // Vert très clair
-    [Status.ERROR]: '#FEF5F4',      // Rouge très clair
-    [Status.TERMINATED]: '#FAFAFA', // Gris très clair
-    [Status.DRAFT]: '#FAFAFA',      // Gris très clair
-  };
-  return colors[status] || colors[Status.ERROR];
-}
-
-/**
- * Retourne la configuration de couleur pour un type de champ de tag
- * Utilisé pour colorer les tags selon leur type dans les OrderLines
- */
-export const getTagFieldTypeConfig = (fieldType: string): { bgColor: string; textColor: string } => {
-  switch (fieldType) {
-    case 'select':
-      return { bgColor: '#DBEAFE', textColor: '#1D4ED8' }; // Bleu
-    case 'multi-select':
-      return { bgColor: '#EDE9FE', textColor: '#6D28D9' }; // Violet
-    case 'toggle':
-      return { bgColor: '#D1FAE5', textColor: '#047857' }; // Vert
-    case 'number':
-      return { bgColor: '#FDE68A', textColor: '#D97706' }; // Jaune/Orange
-    case 'text':
-      return { bgColor: '#FBCFE8', textColor: '#BE185D' }; // Rose
-    default:
-      return { bgColor: '#E2E8F0', textColor: '#475569' }; // Gris
-  }
-}
-
-// Version spécifique pour les tags de statut dans les OrderItems (avec DRAFT plus visible)
-export const getStatusTagColor = (status: Status) => {
-  const colors = {
-    [Status.READY]: '#D7E3FC',
-    [Status.PENDING]: '#F9F1C8',
-    [Status.INPROGRESS]: '#FFD1AD',
-    [Status.SERVED]: '#B7E1CC',
-    [Status.ERROR]: '#F7BFB5',
-    [Status.TERMINATED]: '#EBEBEB',
-    [Status.DRAFT]: '#D1D5DB', // Gris plus foncé pour une meilleure visibilité des tags
-  };
-  return colors[status] || colors[Status.ERROR];
-}
-
-export const getStatusBorderStyle = (status: Status, table?: Table & { orders?: (Order & { lines?: OrderLine[] })[] }) => {
-  // Vérifier si la table a vraiment des OrderLines (pas juste vide)
-  const hasActualOrderLines = table?.orders?.some(order => 
-    order.lines && order.lines.length > 0
-  ) ?? false;
-  
-  // Bordure pointillée SEULEMENT si:
-  // 1. La table a des OrderLines réels ET le statut est DRAFT
-  // 2. OU il y a du DRAFT mélangé avec d'autres statuts
-  const hasDraftMixed = table ? shouldTableHaveDottedBorder(table) : false;
-  
-  if ((status === Status.DRAFT && hasActualOrderLines) || hasDraftMixed) {
-    return {
-      borderStyle: 'dashed' as const,
-      borderColor: '#2A2E33',
-      borderWidth: 3,
-    };
-  }
-  
-  return {
-    borderStyle: 'solid' as const,
-    borderColor: '#AAAAAA',
-    borderWidth: 2,
-  };
-}
-
-// Style de bordure pour les groupes (menus et articles)
-export const getBorderStyle = (statuses: Status[], baseColor: string) => {
-  const hasMixed = hasMenuMixedStatuses(statuses);
-  
-  return {
-    borderStyle: 'solid' as const,
-    borderColor: baseColor,
-    borderWidth: 2,
-  };
-}
-
-export const getStatusText = (status: Status) => {
-  const texts = {
-    [Status.READY]: 'Prêt',
-    [Status.PENDING]: 'En attente',
-    [Status.INPROGRESS]: 'En préparation',
-    [Status.ERROR]: 'Erreur',
-    [Status.SERVED]: 'Servi',
-    [Status.TERMINATED]: 'Terminé',
-    [Status.DRAFT]: 'Brouillon',
-  };
-  return texts[status];
-}
-
-export const getNextStatus = (currentStatus: Status): Status | null => {
-  const statusProgression: Partial<Record<Status, Status>> = {
-    [Status.DRAFT]: Status.PENDING,
-    [Status.PENDING]: Status.INPROGRESS,
-    [Status.INPROGRESS]: Status.READY,
-    [Status.READY]: Status.SERVED,
-    [Status.SERVED]: Status.TERMINATED,
-  };
-  return statusProgression[currentStatus] || null;
+export const sortActiveFirst = <T extends { isActive: boolean }>(a: T, b: T): number => {
+  if (a.isActive && !b.isActive) return -1;
+  if (!a.isActive && b.isActive) return 1;
+  return 0;
 };
 
-export const getPreviousStatus = (currentStatus: Status): Status | null => {
-  const statusRegression: Partial<Record<Status, Status>> = {
-    [Status.PENDING]: Status.DRAFT,
-    [Status.INPROGRESS]: Status.PENDING,
-    [Status.READY]: Status.INPROGRESS,
-    [Status.SERVED]: Status.READY,
-    [Status.TERMINATED]: Status.SERVED,
-  };
-  return statusRegression[currentStatus] || null;
-};
+// ========================================
+// Enum text helpers
+// ========================================
 
 export const getItemTypeText = (itemType: ItemTypes) => {
   const texts = {
@@ -287,262 +62,63 @@ export const getEnumValue = <T extends { [key: string]: string }>(
   return enumObj[enumKey];
 };
 
-export enum DateFormat {
-  TIME = 'time',
-  SHORT_DATE = 'shortDate',
-  LONG_DATE = 'longDate',
-  DATE_TIME = 'dateTime',
-  MONTH_YEAR = 'monthYear'
-}
-
-export const formatDate = (date: string | Date, format: DateFormat): string => {
-  try {
-    const dateObject = typeof date === 'string' ? new Date(date) : date;
-
-    switch (format) {
-      case DateFormat.TIME:
-        return dateObject.toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-
-      case DateFormat.SHORT_DATE:
-        return dateObject.toLocaleDateString('fr-FR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-
-      case DateFormat.LONG_DATE:
-        return dateObject.toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        });
-
-      case DateFormat.DATE_TIME:
-        return dateObject.toLocaleString('fr-FR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-
-      case DateFormat.MONTH_YEAR:
-        return dateObject.toLocaleDateString('fr-FR', {
-          month: 'long',
-          year: 'numeric'
-        });
-
-      default:
-        return dateObject.toLocaleString('fr-FR');
-    }
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return 'Invalid date';
-  }
-};
-
-// 🆕 Fonctions utilitaires pour OrderLines (nouvelle architecture)
-
-/**
- * Calculer le statut global d'une commande basé sur ses OrderLines
- */
-export const calculateOrderStatusFromLines = (orderLines: OrderLine[]): Status => {
-  if (orderLines.length === 0) return Status.DRAFT;
-
-  const allStatuses: Status[] = [];
-  
-  orderLines.forEach(line => {
-    if (line.type === OrderLineType.ITEM && line.status) {
-      // Items individuels: status sur OrderLine
-      allStatuses.push(line.status);
-    } else if (line.type === OrderLineType.MENU && line.items) {
-      // Menus: collecter les status de tous les OrderLineItems
-      line.items.forEach(menuItem => {
-        allStatuses.push(menuItem.status);
-      });
-    }
-  });
-  
-  return getMostImportantStatus(allStatuses);
-};
-
-/**
- * Calculer la progression d'un menu (OrderLine de type MENU)
- */
-export const calculateMenuProgress = (menuLine: OrderLine) => {
-  if (menuLine.type !== OrderLineType.MENU || !menuLine.items) {
-    return { completed: 0, total: 0, percentage: 0, hasErrors: false };
-  }
-
-  const items = menuLine.items;
-  const completedCount = items.filter(item => 
-    [Status.READY, Status.SERVED, Status.TERMINATED].includes(item.status)
-  ).length;
-  
-  return {
-    completed: completedCount,
-    total: items.length,
-    percentage: Math.round((completedCount / items.length) * 100),
-    hasErrors: items.some(item => item.status === Status.ERROR)
-  };
-};
-
-
-/**
- * Vérifier si un menu a des statuts mixtes (OrderLine de type MENU)
- */
-export const hasMenuLineItemsMixedStatuses = (menuLine: OrderLine): boolean => {
-  if (menuLine.type !== OrderLineType.MENU || !menuLine.items) {
-    return false;
-  }
-  
-  const statuses = menuLine.items.map(item => item.status);
-  return hasMenuMixedStatuses(statuses);
-};
-
-/**
- * Obtenir le style de bordure pour un menu basé sur ses OrderLineItems
- */
-export const getMenuLineBorderStyle = (menuLine: OrderLine, baseColor: string) => {
-  const hasMixed = hasMenuLineItemsMixedStatuses(menuLine);
-  
-  if (hasMixed) {
-    return {
-      borderStyle: 'solid' as const,
-      borderColor: '#2A2E33', // Noir pour les bordures épaisses
-      borderWidth: 2, // Bordure normale pour les statuts mixtes
-    };
-  }
-  
-  return {
-    borderStyle: 'solid' as const,
-    borderColor: baseColor,
-    borderWidth: 2,
-  };
-};
-
-/**
- * Obtenir le texte descriptif du type d'OrderLine
- */
-export const getOrderLineTypeText = (type: OrderLineType): string => {
-  const texts = {
-    [OrderLineType.ITEM]: 'Item individuel',
-    [OrderLineType.MENU]: 'Menu',
-  };
-  return texts[type];
-};
-
-/**
- * Calculer le prix total d'une commande basée sur ses OrderLines
- */
-export const calculateOrderTotalFromLines = (orderLines: OrderLine[]): number => {
-  return orderLines.reduce((total, line) => total + line.totalPrice, 0);
-};
-
-// ========================================
-// 💰 GESTION DES PRIX (Centimes/Euros)
-// ========================================
-
-/**
- * Convertit un prix en centimes vers euros (pour l'affichage)
- * @param centimes - Prix en centimes (ex: 300 pour 3€)
- * @returns Prix en euros (ex: 3)
- */
-export const centsToEuros = (centimes: number): number => {
-  return centimes / 100;
-};
-
-/**
- * Convertit un prix en euros vers centimes (pour l'envoi API)
- * @param euros - Prix en euros (ex: 3 pour 3€)
- * @returns Prix en centimes (ex: 300)
- */
-export const eurosToCents = (euros: number): number => {
-  return Math.round(euros * 100);
-};
-
-/**
- * Formate un prix en centimes pour l'affichage avec le symbole €
- * @param centimes - Prix en centimes (ex: 300 pour 3€)
- * @param decimals - Nombre de décimales (défaut: 2)
- * @returns Prix formaté (ex: "3,00€")
- */
-export const formatPrice = (centimes: number, decimals: number = 2): string => {
-  const euros = centsToEuros(centimes);
-  return `${euros.toFixed(decimals).replace('.', ',')}€`;
-};
-
-/**
- * Formate un prix en centimes pour l'affichage sans symbole
- * @param centimes - Prix en centimes (ex: 300 pour 3€)
- * @param decimals - Nombre de décimales (défaut: 2)
- * @returns Prix formaté sans symbole (ex: "3,00")
- */
-export const formatPriceWithoutSymbol = (centimes: number, decimals: number = 2): string => {
-  const euros = centsToEuros(centimes);
-  return euros.toFixed(decimals).replace('.', ',');
-};
-
-// ========================================
-// 🏷️ GESTION DES TAGS
-// ========================================
-
-/**
- * Configuration des couleurs par type de champ de tag
- */
-export const getFieldTypeConfig = (fieldType: string) => {
-  switch (fieldType) {
-    case 'select':
-      return { bgColor: '#DBEAFE', textColor: '#1D4ED8', priceBgColor: '#BFDBFE' };
-    case 'multi-select':
-      return { bgColor: '#EDE9FE', textColor: '#6D28D9', priceBgColor: '#DDD6FE' };
-    case 'toggle':
-      return { bgColor: '#D1FAE5', textColor: '#047857', priceBgColor: '#A7F3D0' };
-    case 'number':
-      return { bgColor: '#FDE68A', textColor: '#D97706', priceBgColor: '#FCD34D' };
-    case 'text':
-      return { bgColor: '#FBCFE8', textColor: '#BE185D', priceBgColor: '#F9A8D4' };
-    default:
-      return { bgColor: '#E2E8F0', textColor: '#475569', priceBgColor: '#CBD5E1' };
-  }
-};
-
-/**
- * Formate la valeur d'un tag selon son type
- */
-export const formatTagValue = (tag: any): string => {
-  if (tag.value === null || tag.value === undefined) return '';
-  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
-  if (Array.isArray(tag.value)) return tag.value.join(', ');
-  return String(tag.value);
-};
-
-// ========================================
-// 🪑 GESTION DES TABLES
-// ========================================
-
-/**
- * Extrait l'ID court d'une table (ex: "Table A1" -> "TA1")
- */
 export const getTableShortId = (tableName: string): string => {
   if (!tableName) return '';
 
-  // Si le format est "Table A1", on extrait "TA1"
   const match = tableName.match(/Table\s+([A-Z])(\d+)/i);
-  if (match) {
-    return `T${match[1].toUpperCase()}${match[2]}`;
-  }
+  if (match) return `T${match[1].toUpperCase()}${match[2]}`;
 
-  // Si le format est "A1", on extrait "TA1"
   const simpleMatch = tableName.match(/^([A-Z])(\d+)$/i);
-  if (simpleMatch) {
-    return `T${simpleMatch[1].toUpperCase()}${simpleMatch[2]}`;
-  }
+  if (simpleMatch) return `T${simpleMatch[1].toUpperCase()}${simpleMatch[2]}`;
 
-  // Sinon, retourner le nom tel quel mais tronqué
   return tableName.length > 6 ? tableName.substring(0, 6) : tableName;
 };
 
+// ========================================
+// Barrel re-exports — modules spécialisés
+// ========================================
+
+export {
+  getMostImportantStatus,
+  hasDraftWithOtherStatus,
+  hasMenuMixedStatuses,
+  getOrderLinesGlobalStatus,
+  getOrderGlobalStatus,
+  getTableStatus,
+  shouldTableHaveDottedBorder,
+  getNextStatus,
+  getPreviousStatus,
+  getStatusText,
+  getStatusColor,
+  getStatusBackgroundColor,
+  getStatusTagColor,
+  getStatusBorderStyle,
+  getBorderStyle,
+} from './status.utils';
+
+export {
+  calculateOrderStatusFromLines,
+  calculateMenuProgress,
+  hasMenuLineItemsMixedStatuses,
+  getMenuLineBorderStyle,
+  getOrderLineTypeText,
+  calculateOrderTotalFromLines,
+} from './order-line.utils';
+
+export {
+  centsToEuros,
+  eurosToCents,
+  formatPrice,
+  formatPriceWithoutSymbol,
+} from './price.utils';
+
+export {
+  DateFormat,
+  formatDate,
+} from './date.utils';
+
+export {
+  getTagFieldTypeConfig,
+  getFieldTypeConfig,
+  formatTagValue,
+} from './tag.utils';

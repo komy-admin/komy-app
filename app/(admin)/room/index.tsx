@@ -1,9 +1,9 @@
 import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Button, ForkTable } from '~/components/ui';
 
-import { CreditCard as Edit2, UtensilsCrossed, Trash } from 'lucide-react-native';
+import { CreditCard as Edit2, UtensilsCrossed, Trash, ListFilter } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { useToast } from '~/components/ToastProvider';
 import { ActionItem } from '~/components/ActionMenu';
@@ -53,14 +53,14 @@ export default function RoomListPage() {
     setIsFormPanelVisible(true);
   }, [rooms]);
 
-  const handleDeleteRoom = (id: string) => {
+  const handleDeleteRoom = useCallback((id: string) => {
     const room = rooms.find(room => room.id === id);
     if (!room) return;
     setRoomToDelete(room);
     setIsDeleteModalVisible(true);
-  };
+  }, [rooms]);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (!roomToDelete?.id) return;
 
     setIsDeleting(true);
@@ -76,12 +76,12 @@ export default function RoomListPage() {
       setIsDeleteModalVisible(false);
       setRoomToDelete(null);
     }
-  };
+  }, [roomToDelete, deleteRoom, showToast]);
 
-  const handleCloseDeleteModal = () => {
+  const handleCloseDeleteModal = useCallback(() => {
     setIsDeleteModalVisible(false);
     setRoomToDelete(null);
-  };
+  }, []);
 
   const handleSaveRoom = useCallback(async (roomData: Partial<Room>) => {
     try {
@@ -116,7 +116,7 @@ export default function RoomListPage() {
     });
   }, [selectedRoom, router, setCurrentRoom, handleCloseFormPanel]);
 
-  const navigateToRoomEditionModeFromAction = (roomId: string) => {
+  const navigateToRoomEditionModeFromAction = useCallback((roomId: string) => {
     const room = rooms.find(room => room.id === roomId);
     if (!room) return;
     setCurrentRoom(roomId);
@@ -124,49 +124,56 @@ export default function RoomListPage() {
       pathname: "/(admin)/room/edition-mode",
       params: { roomId }
     });
-  };
+  }, [rooms, setCurrentRoom, router]);
 
-  const getRoomActions = (room: Room): ActionItem[] => {
-    return [
-      {
-        label: 'Modifier',
-        icon: <Edit2 size={16} color="#4F46E5" />,
-        onPress: () => handleEditRoom(room.id ? room.id : '')
-      },
-      {
-        label: 'Mode édition',
-        icon: <Edit2 size={16} color="#4F46E5" />,
-        onPress: () => navigateToRoomEditionModeFromAction(room.id ? room.id : '')
-      },
-      {
-        label: 'Supprimer',
-        icon: <Trash size={16} color="#ef4444" />,
-        type: 'destructive',
-        onPress: () => handleDeleteRoom(room.id ? room.id : '')
-      }
-    ];
-  };
+  const getRoomActions = useCallback((room: Room): ActionItem[] => [
+    {
+      label: 'Modifier',
+      icon: <Edit2 size={16} color="#4F46E5" />,
+      onPress: () => handleEditRoom(room.id ?? '')
+    },
+    {
+      label: 'Mode édition',
+      icon: <Edit2 size={16} color="#4F46E5" />,
+      onPress: () => navigateToRoomEditionModeFromAction(room.id ?? '')
+    },
+    {
+      label: 'Supprimer',
+      icon: <Trash size={16} color="#ef4444" />,
+      type: 'destructive',
+      onPress: () => handleDeleteRoom(room.id ?? '')
+    }
+  ], [handleEditRoom, navigateToRoomEditionModeFromAction, handleDeleteRoom]);
 
-  const roomTableColumns = [
+  const roomTableColumns = useMemo(() => [
     {
-      label: 'Nom',
-      key: 'name',
-      width: '40%',
+      label: '',
+      key: 'circle',
+      width: 64,
+      headerRender: () => (
+        <View style={{
+          width: 34, height: 34, borderRadius: 17,
+          backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB',
+          justifyContent: 'center', alignItems: 'center',
+        }}>
+          <ListFilter size={17} color="#2A2E33" strokeWidth={2.5} />
+        </View>
+      ),
+      render: (room: Room) => (
+        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#64748B', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+            {room.name?.charAt(0)?.toUpperCase() || '?'}
+          </Text>
+        </View>
+      ),
     },
-    {
-      label: 'Largeur',
-      key: 'width',
-      width: '17.5%',
-    },
-    {
-      label: 'Hauteur',
-      key: 'height',
-      width: '17.5%',
-    },
+    { label: 'Nom', key: 'name', width: '36%' },
+    { label: 'Largeur', key: 'width', width: '17%' },
+    { label: 'Hauteur', key: 'height', width: '17%' },
     {
       label: 'Tables',
       key: 'tableCount',
-      width: '25%',
+      width: '23%',
       render: (room: Room) => {
         const roomTableCount = tables.filter(table => table.roomId === room.id).length;
         return (
@@ -177,7 +184,7 @@ export default function RoomListPage() {
         );
       }
     }
-  ];
+  ], [tables]);
 
 
   const handleFiltersChange = useCallback((newFilters: RoomFilterState) => {
@@ -217,7 +224,6 @@ export default function RoomListPage() {
 
       <View style={{ flex: 1 }}>
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Liste des salles</Text>
           <View
             style={{
               width: 200,
@@ -295,19 +301,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingLeft: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#EFEFEF',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2A2E33',
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
   },
   tableCountContainer: {
     flexDirection: 'row',

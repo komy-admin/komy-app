@@ -10,7 +10,7 @@ import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal
 import { ModeSelection, QuickFormContent, FullFormContent } from "~/components/admin/TeamForm";
 import { UserQrModal } from "~/components/admin/UserQrModal";
 import { useToast } from '~/components/ToastProvider';
-import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
+import { CreditCard as Edit2, QrCode, Trash, ListFilter } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
@@ -20,19 +20,69 @@ import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 
+// Couleurs par profil
+const PROFILE_COLORS: Record<string, string> = {
+  [UserProfile.MANAGER]: '#3B82F6',
+  [UserProfile.SERVER]: '#10B981',
+  [UserProfile.CHEF]: '#F59E0B',
+  [UserProfile.BARMAN]: '#8B5CF6',
+  [UserProfile.ADMIN]: '#4F46E5',
+  [UserProfile.SUPERADMIN]: '#EF4444',
+};
+
 // Constantes en dehors du composant pour éviter les re-créations
+const HEADER_FILTER_ICON = () => (
+  <View style={{
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB',
+    justifyContent: 'center', alignItems: 'center',
+  }}>
+    <ListFilter size={17} color="#2A2E33" strokeWidth={2.5} />
+  </View>
+);
+
 const TEAM_TABLE_COLUMNS = [
-  { label: 'Profil', key: 'profil', width: '20%' },
-  { label: 'Prénom', key: 'firstName', width: '20%' },
-  { label: 'Nom', key: 'lastName', width: '20%' },
-  { label: 'Email', key: 'email', width: '20%' },
-  { label: 'Téléphone', key: 'phone', width: '20%' },
+  {
+    label: '',
+    key: 'profil',
+    width: 64,
+    headerRender: HEADER_FILTER_ICON,
+    render: (user: User) => (
+      <View style={{
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: PROFILE_COLORS[user.profil] || '#9CA3AF',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+          {user.firstName?.charAt(0)?.toUpperCase() || '?'}
+        </Text>
+      </View>
+    ),
+  },
+  { label: 'Prénom', key: 'firstName', width: '23%' },
+  { label: 'Nom', key: 'lastName', width: '23%' },
+  { label: 'Email', key: 'email', width: '29%' },
+  { label: 'Téléphone', key: 'phone', width: '18%' },
 ];
 
 // Filtrer les profils affichables (exclure superadmin et admin)
 const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
   profile => !['superadmin', 'admin'].includes(profile)
 );
+
+// États consolidés via unions discriminantes
+type FormPanel =
+  | null
+  | { mode: 'selection' }
+  | { mode: 'quick' }
+  | { mode: 'full'; user: User | null };
+
+type DeleteModal =
+  | null
+  | { user: User; deleting: boolean };
 
 export default function TeamPage() {
   const router = useRouter();
@@ -50,20 +100,11 @@ export default function TeamPage() {
   const [activeTab, setActiveTab] = useState<UserProfile | 'all'>('all');
   const [teamFilters, setTeamFilters] = useState<TeamFilterState>(createEmptyTeamFilters());
 
-  // Form State
-  const [isFormPanelVisible, setIsFormPanelVisible] = useState(false);
-  const [formMode, setFormMode] = useState<'selection' | 'quick' | 'full' | null>(null);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  // États consolidés
+  const [formPanel, setFormPanel] = useState<FormPanel>(null);
+  const [deleteModal, setDeleteModal] = useState<DeleteModal>(null);
+  const [qrUser, setQrUser] = useState<User | null>(null);
   const { renderPanel, clearPanel } = usePanelPortal();
-
-  // Delete Modal State
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // QR Modal State
-  const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [selectedUserForQr, setSelectedUserForQr] = useState<User | null>(null);
 
   const { showToast } = useToast();
 
@@ -78,16 +119,22 @@ export default function TeamPage() {
 
   // Filtrer les utilisateurs avec les filtres appliqués
   const filteredUsers = useMemo(() => {
-    let result = activeTab === 'all' ? users : getUsersByProfile(activeTab);
-
-    // Appliquer les filtres TeamFilters
-    result = filterTeamUsers(result, teamFilters);
-
-    return result.map(user => ({
-      ...user,
-      profil: getUserProfileText(user.profil)
-    }));
+    if (activeTab === 'all') return [];
+    return filterTeamUsers(getUsersByProfile(activeTab), teamFilters);
   }, [users, activeTab, teamFilters, getUsersByProfile]);
+
+  // Sections pour tab "Tous"
+  const teamSections = useMemo(() => {
+    if (activeTab !== 'all') return undefined;
+    const sections: { title: string; data: User[] }[] = [];
+    for (const profile of DISPLAYABLE_PROFILES) {
+      const profileUsers = filterTeamUsers(getUsersByProfile(profile), teamFilters);
+      if (profileUsers.length > 0) {
+        sections.push({ title: getUserProfileText(profile), data: profileUsers });
+      }
+    }
+    return sections;
+  }, [activeTab, users, teamFilters, getUsersByProfile]);
 
   // Gestion des filtres
   const handleFiltersChange = useCallback((filters: TeamFilterState) => {
@@ -99,40 +146,24 @@ export default function TeamPage() {
     setActiveTab('all');
   }, []);
 
-  const handleCreateUser = () => {
-    // Les managers ne peuvent pas créer d'utilisateurs
-    if (isManager) return;
-    setSelectedUser(null);
-    setFormMode('selection'); // Afficher la sélection du mode
-    setIsFormPanelVisible(true);
-  };
-
-  const handleEditUser = (id: string) => {
-    // Les managers ne peuvent pas modifier les utilisateurs
-    if (isManager) return;
-    const user = users.find(user => user.id === id);
-    if (!user) return;
-    setSelectedUser(user);
-    setFormMode('full'); // Édition = toujours mode complet
-    setIsFormPanelVisible(true);
-  };
-
   const handleCloseFormPanel = useCallback(() => {
-    setIsFormPanelVisible(false);
-    setFormMode(null);
-    setSelectedUser(null);
+    setFormPanel(null);
     clearPanel();
   }, [clearPanel]);
 
-  const handleSelectQuickMode = () => {
-    setFormMode('quick');
-  };
+  const handleCreateUser = useCallback(() => {
+    if (isManager) return;
+    setFormPanel({ mode: 'selection' });
+  }, [isManager]);
 
-  const handleSelectFullMode = () => {
-    setFormMode('full');
-  };
+  const handleEditUser = useCallback((id: string) => {
+    if (isManager) return;
+    const found = users.find(u => u.id === id);
+    if (!found) return;
+    setFormPanel({ mode: 'full', user: found });
+  }, [isManager, users]);
 
-  const handleQuickSave = async (profil: UserProfile, displayName: string) => {
+  const handleQuickSave = useCallback(async (profil: UserProfile, displayName: string) => {
     try {
       await createQuickUser(profil, displayName);
       showToast('Utilisateur créé avec succès', 'success');
@@ -142,12 +173,13 @@ export default function TeamPage() {
       const errorMessage = err?.message || 'Erreur lors de la création de l\'utilisateur';
       showToast(errorMessage, 'error');
     }
-  };
+  }, [createQuickUser, showToast, handleCloseFormPanel]);
 
-  const handleSaveUser = async (userData: Partial<User>) => {
+  const handleSaveUser = useCallback(async (userData: Partial<User>) => {
     try {
-      if (selectedUser?.id) {
-        await updateUser(selectedUser.id, userData);
+      const editingUser = formPanel?.mode === 'full' ? formPanel.user : null;
+      if (editingUser?.id) {
+        await updateUser(editingUser.id, userData);
         showToast('Utilisateur modifié avec succès', 'success');
       } else {
         await createUser(userData as User);
@@ -159,87 +191,73 @@ export default function TeamPage() {
       const errorMessage = err?.message || 'Erreur lors de la sauvegarde de l\'utilisateur';
       showToast(errorMessage, 'error');
     }
-  };
+  }, [formPanel, updateUser, createUser, showToast, handleCloseFormPanel]);
 
-  const handleDeleteUser = async (id: string) => {
-    const user = users.find(user => user.id === id);
-    if (!user) return;
-    setUserToDelete(user);
-    setIsDeleteModalVisible(true);
-  };
+  const handleDeleteUser = useCallback((id: string) => {
+    const found = users.find(u => u.id === id);
+    if (!found) return;
+    setDeleteModal({ user: found, deleting: false });
+  }, [users]);
 
-  const confirmDelete = async () => {
-    if (!userToDelete) return;
-
-    setIsDeleting(true);
+  const confirmDelete = useCallback(async () => {
+    if (!deleteModal) return;
+    setDeleteModal(prev => prev ? { ...prev, deleting: true } : null);
     try {
-      await deleteUser(userToDelete.id);
+      await deleteUser(deleteModal.user.id);
       showToast('Utilisateur supprimé avec succès', 'success');
     } catch (err) {
       console.error('Error deleting user:', err);
       showToast('Erreur lors de la suppression de l\'utilisateur', 'error');
     } finally {
-      setIsDeleting(false);
-      setIsDeleteModalVisible(false);
-      setUserToDelete(null);
+      setDeleteModal(null);
     }
-  };
+  }, [deleteModal, deleteUser, showToast]);
 
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalVisible(false);
-    setUserToDelete(null);
-  };
-
-  const handleShowQrCode = (user: User) => {
-    setSelectedUserForQr(user);
-    setQrModalVisible(true);
-  };
+  const handleShowQrCode = useCallback((user: User) => {
+    setQrUser(user);
+  }, []);
 
   // Synchroniser le panel avec le portal global
   useEffect(() => {
-    if (isFormPanelVisible && formMode) {
-      let panelContent;
+    if (!formPanel) {
+      clearPanel();
+      return;
+    }
 
-      if (formMode === 'selection') {
-        // Écran de sélection du mode
-        panelContent = (
-          <ModeSelection
-            onSelectQuick={handleSelectQuickMode}
-            onSelectFull={handleSelectFullMode}
-            onCancel={handleCloseFormPanel}
-          />
-        );
-      } else if (formMode === 'quick') {
-        // Formulaire de création rapide
-        panelContent = (
-          <QuickFormContent
-            onSave={handleQuickSave}
-            onCancel={handleCloseFormPanel}
-            activeTab={activeTab}
-          />
-        );
-      } else {
-        // Formulaire complet (création ou édition)
-        panelContent = (
-          <FullFormContent
-            user={selectedUser}
-            onSave={handleSaveUser}
-            onCancel={handleCloseFormPanel}
-            activeTab={activeTab}
-          />
-        );
-      }
-
-      renderPanel(
-        <SlidePanel visible={true} onClose={handleCloseFormPanel} width={500}>
-          {panelContent}
-        </SlidePanel>
+    let panelContent;
+    if (formPanel.mode === 'selection') {
+      panelContent = (
+        <ModeSelection
+          onSelectQuick={() => setFormPanel({ mode: 'quick' })}
+          onSelectFull={() => setFormPanel({ mode: 'full', user: null })}
+          onCancel={handleCloseFormPanel}
+        />
+      );
+    } else if (formPanel.mode === 'quick') {
+      panelContent = (
+        <QuickFormContent
+          onSave={handleQuickSave}
+          onCancel={handleCloseFormPanel}
+          activeTab={activeTab}
+        />
       );
     } else {
-      clearPanel();
+      panelContent = (
+        <FullFormContent
+          user={formPanel.user}
+          onSave={handleSaveUser}
+          onCancel={handleCloseFormPanel}
+          activeTab={activeTab}
+        />
+      );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFormPanelVisible, formMode, selectedUser, activeTab]);
+
+    renderPanel(
+      <SlidePanel visible={true} onClose={handleCloseFormPanel} width={500}>
+        {panelContent}
+      </SlidePanel>
+    );
+  }, [formPanel, activeTab, handleCloseFormPanel, handleQuickSave, handleSaveUser, renderPanel, clearPanel]);
 
   const getUserActions = useCallback((user: User): ActionItem[] => {
     const actions: ActionItem[] = [];
@@ -271,7 +289,7 @@ export default function TeamPage() {
     }
 
     return actions;
-  }, [canModifyUsers]);
+  }, [canModifyUsers, handleEditUser, handleDeleteUser, handleShowQrCode]);
 
   const { width } = useWindowDimensions();
 
@@ -403,9 +421,9 @@ export default function TeamPage() {
             ) : (
               <ForkTable
                 data={filteredUsers}
+                sections={teamSections}
                 columns={TEAM_TABLE_COLUMNS}
                 onRowPress={canModifyUsers ? handleEditUser : undefined}
-                onRowDelete={canModifyUsers ? handleDeleteUser : undefined}
                 useActionMenu={true}
                 getActions={getUserActions}
                 isLoading={loading}
@@ -421,23 +439,20 @@ export default function TeamPage() {
       {/* Modal de suppression - cachée pour les managers */}
       {canModifyUsers && (
         <DeleteConfirmationModal
-          isVisible={isDeleteModalVisible}
-          onClose={handleCloseDeleteModal}
+          isVisible={deleteModal !== null}
+          onClose={() => setDeleteModal(null)}
           onConfirm={confirmDelete}
-          entityName={userToDelete ? `${userToDelete.firstName} ${userToDelete.lastName}` : ''}
+          entityName={deleteModal ? `${deleteModal.user.firstName} ${deleteModal.user.lastName}` : ''}
           entityType="le profil"
-          isLoading={isDeleting}
+          isLoading={deleteModal?.deleting ?? false}
         />
       )}
 
       {/* QR Code Modal */}
       <UserQrModal
-        user={selectedUserForQr}
-        visible={qrModalVisible}
-        onClose={() => {
-          setQrModalVisible(false);
-          setSelectedUserForQr(null);
-        }}
+        user={qrUser}
+        visible={qrUser !== null}
+        onClose={() => setQrUser(null)}
       />
 
       {/* Panel rendu via usePanelPortal - pas de rendu local */}
