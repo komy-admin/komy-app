@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Printer, Mail, DollarSign, FileText } from 'lucide-react-native';
+import { Printer, Mail, Euro, FileText } from 'lucide-react-native';
 import type { Payment } from '~/types/payment.types';
 
 interface PaymentActionsProps {
@@ -48,7 +48,7 @@ export function PaymentActions({
           disabled={isRefundDisabled}
           android_ripple={{ color: isRefundDisabled ? 'transparent' : '#E5E7EB' }}
         >
-          <DollarSign size={20} color={isRefundDisabled ? '#9CA3AF' : '#374151'} strokeWidth={2} />
+          <Euro size={20} color={isRefundDisabled ? '#9CA3AF' : '#374151'} strokeWidth={2} />
           <Text style={[styles.buttonText, isRefundDisabled && styles.disabledText]}>
             Rembourser
           </Text>

@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useEffect } from 'react';
-import { RefreshCw, ArrowLeft, TrendingUp, CreditCard, DollarSign } from 'lucide-react-native';
+import { RefreshCw, ArrowLeft, TrendingUp, CreditCard, Euro } from 'lucide-react-native';
 import type { PaymentHistoryFilters, OrderWithPayments } from '~/types/payment-history.types';
 import { PaymentPeriodSummary } from '~/components/Payment/PaymentHistoryScreen/PaymentPeriodSummary';
 import { OrderWithPaymentsCard } from '~/components/Payment/PaymentHistoryScreen/OrderWithPaymentsCard';
@@ -86,7 +86,7 @@ export default function PaymentHistoryScreen() {
       },
       {
         id: 'average',
-        icon: DollarSign,
+        icon: Euro,
         label: 'Panier moyen',
         value: new Intl.NumberFormat('fr-FR', {
           style: 'currency',

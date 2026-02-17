@@ -96,6 +96,47 @@ class PaymentApiService extends BaseApiService<Payment> {
   async printTicket(paymentId: string): Promise<void> {
     await this.axiosInstance.post(`${this.endpoint}/${paymentId}/print-ticket`)
   }
+
+  /**
+   * Get journal entries (business-oriented payment view)
+   */
+  async getJournal(params: {
+    startDate?: string
+    endDate?: string
+    paymentMethod?: string
+    status?: string
+    userId?: string
+    searchQuery?: string
+    limit?: number
+    cursor?: string
+  }) {
+    const queryParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString())
+      }
+    })
+
+    const response = await this.axiosInstance.get(
+      `${this.endpoint}/journal?${queryParams.toString()}`
+    )
+    return response.data
+  }
+
+  /**
+   * Refund a payment
+   */
+  async refundPayment(paymentId: string, data: {
+    amount?: number
+    reason: string
+    refundMethod?: 'original' | 'cash' | 'voucher'
+  }) {
+    const response = await this.axiosInstance.post(
+      `${this.endpoint}/${paymentId}/refund`,
+      data
+    )
+    return response.data
+  }
 }
 
 export const paymentApiService = new PaymentApiService()
