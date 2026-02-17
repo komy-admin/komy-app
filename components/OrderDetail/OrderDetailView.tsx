@@ -34,7 +34,7 @@ export const OrderDetailView = React.memo<OrderDetailViewProps>(({
   const [activeTab, setActiveTab] = useState('ALL');
   const [prevOrderId, setPrevOrderId] = useState(order.id);
   const { showToast } = useToast();
-  const { isOrderLinePaid } = usePayments();
+  const { isOrderLinePaid, getOrderLinePaymentFraction } = usePayments();
 
   // Reset synchrone du tab quand on change de commande (pas de flash)
   if (order.id !== prevOrderId) {

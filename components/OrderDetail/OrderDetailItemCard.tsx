@@ -20,7 +20,7 @@ export interface OrderDetailItemCardProps {
   isMultiSelectMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: () => void;
-  isPaid?: boolean;
+  paymentFraction?: number;
 }
 
 /**
@@ -69,7 +69,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   isMultiSelectMode = false,
   isSelected = false,
   onToggleSelection,
-  isPaid = false,
+  paymentFraction = 0,
 }) => {
   // ✅ useMemo : Calculer les valeurs dérivées une seule fois
   const itemName = useMemo(
@@ -134,7 +134,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
               <Text style={styles.itemName} numberOfLines={1}>
                 {itemName}
               </Text>
-              {isPaid && (
+              {paymentFraction === 1 && (
                 <View style={styles.paidBadge}>
                   <Lock size={9} color="white" strokeWidth={3} />
                   <Text style={styles.paidBadgeText}>PAYÉ</Text>

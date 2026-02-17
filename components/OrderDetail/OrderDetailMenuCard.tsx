@@ -12,7 +12,7 @@ export interface OrderDetailMenuCardProps {
   onOpenItemStatusSelector: (orderLineItem: OrderLineItem) => void;
   onOpenMenuStatusSelector: (orderLineItems: OrderLineItem[], currentStatus: Status) => void;
   onOpenDeleteDialog: () => void;
-  isPaid?: boolean;
+  paymentFraction?: number;
 }
 
 /**
@@ -134,7 +134,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   onOpenItemStatusSelector,
   onOpenMenuStatusSelector,
   onOpenDeleteDialog,
-  isPaid = false,
+  paymentFraction = 0,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -281,7 +281,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
             </View>
 
             <View style={styles.priceTimeColumn}>
-              {isPaid && (
+              {paymentFraction === 1 && (
                 <View style={styles.paidBadge}>
                   <Lock size={9} color="white" strokeWidth={3} />
                   <Text style={styles.paidBadgeText}>PAYÉ</Text>
@@ -300,8 +300,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
           </TouchableOpacity>
 
           <View style={styles.actionsColumn}>
-            
-                {isPaid ? (
+                {paymentFraction > 0 ? (
                   <View style={styles.lockedIcon}>
                     <Lock size={18} color="#9CA3AF" strokeWidth={2} />
                   </View>
