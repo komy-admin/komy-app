@@ -1,7 +1,6 @@
-import React from 'react';
 import { Pressable, ScrollView, View, useWindowDimensions, StyleSheet } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
-import { Badge, Text, Button } from "~/components/ui";
+import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useState, useCallback, useMemo, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,7 +23,7 @@ import {
 } from '~/hooks/useRestaurant';
 import { useSelector } from 'react-redux';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
-import { OrderLinesForm, OrderLinesButton } from '~/components/order/OrderLinesForm';
+import { OrderLinesForm } from '~/components/order/OrderLinesForm';
 import { Play } from 'lucide-react-native';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
@@ -132,9 +131,6 @@ export default function ServicePage() {
   });
 
 
-
-
-
   const { showToast } = useToast();
 
   const {
@@ -147,17 +143,13 @@ export default function ServicePage() {
     isLoaded: filtersLoaded,
   } = useOrderFilters(currentRoomOrders.filter(order => order.lines && order.lines.length > 0));
 
-
   useFocusEffect(
     useCallback(() => {
       return () => {
-        // Cleanup : désélectionner lors du blur (navigation sortante)
         setSelectedTable(null);
       };
     }, [setSelectedTable])
   );
-
-
 
   const handleChangeRoom = useCallback((room: any) => {
     setSelectedTable(null);
@@ -176,7 +168,6 @@ export default function ServicePage() {
     // Si la table a une commande, afficher les détails
     if (tableOrder) {
       setShowOrderDetail(true);
-    } else {
     }
   }, [currentRoomOrders, setSelectedTable]);
 
@@ -199,41 +190,25 @@ export default function ServicePage() {
     setShowOrderModal(true); // Ouvrir la modal
   }, [selectedTableId, currentRoomOrders, selectedTable, currentRoom, showToast]);
 
-
-
-
   const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
   const cameFromDetailViewRef = useRef<boolean>(false);
 
-  // ✅ Hook personnalisé pour la logique de fermeture intelligente
-  const useSmartOrderClose = () => {
-    return useCallback(() => {
-      // Réinitialiser les lignes avant de fermer
-      orderLinesManager.reset();
+  const handleSmartCloseOrderModal = useCallback(() => {
+    orderLinesManager.reset();
+    const cameFromDetail = cameFromDetailViewRef.current;
 
-      // Vérifier si on vient de la detail view
-      const cameFromDetail = cameFromDetailViewRef.current;
+    setShowOrderModal(false);
+    setOrderCreatedFromStart(false);
 
-      // Fermer le formulaire
-      setShowOrderModal(false);
-      setOrderCreatedFromStart(false);
+    if (cameFromDetail) {
+      setShowOrderDetail(true);
+      cameFromDetailViewRef.current = false;
+    }
 
-      // Rouvrir la detail view si on vient de là
-      if (cameFromDetail) {
-        setShowOrderDetail(true);
-        cameFromDetailViewRef.current = false; // Réinitialiser
-      }
-
-      // Réinitialiser le ref
-      setTimeout(() => {
-        isSavingOrderRef.current = false;
-      }, 300);
-    }, [
-      orderLinesManager
-    ]);
-  };
-
-  const handleSmartCloseOrderModal = useSmartOrderClose();
+    setTimeout(() => {
+      isSavingOrderRef.current = false;
+    }, 300);
+  }, [orderLinesManager]);
 
   const handleDeleteOrder = useCallback(async () => {
     if (!selectedTableOrder) return;
@@ -449,23 +424,12 @@ export default function ServicePage() {
     }
   }, [itemsToServeData, handleBulkUpdateStatus, showToast]);
 
-  const handleDeleteOrderLine = useCallback(async (orderLineId: string) => {
+  const handleDeleteLine = useCallback(async (orderLineId: string) => {
     try {
       await deleteOrderLine(orderLineId);
-      showToast('Article supprimé avec succès', 'success');
+      showToast('Ligne supprimée avec succès', 'success');
     } catch (error) {
       showToast('Erreur lors de la suppression', 'error');
-      console.error('Erreur suppression:', error);
-    }
-  }, [deleteOrderLine, showToast]);
-
-  const handleDeleteMenuLine = useCallback(async (orderLineId: string) => {
-    try {
-      await deleteOrderLine(orderLineId);
-      showToast('Menu supprimé avec succès', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
-      console.error('Erreur suppression:', error);
     }
   }, [deleteOrderLine, showToast]);
 
@@ -721,8 +685,8 @@ export default function ServicePage() {
                       onUpdateItemStatus={handleUpdateItemStatus}
                       onUpdateMenuItemStatus={handleUpdateMenuItemStatus}
                       onBulkUpdateStatus={handleBulkUpdateStatus}
-                      onDeleteOrderLine={handleDeleteOrderLine}
-                      onDeleteMenuLine={handleDeleteMenuLine}
+                      onDeleteOrderLine={handleDeleteLine}
+                      onDeleteMenuLine={handleDeleteLine}
                     />
                   </View>
                 ) : (
@@ -787,10 +751,7 @@ export default function ServicePage() {
                     key={`${room.name}-reassign-${index}`}
                     room={room}
                     isActive={room.id === reassignRoomId}
-                    onPress={(room) => {
-                      console.log('👆 Room clicked:', room.name);
-                      setReassignRoomId(room.id);
-                    }}
+                    onPress={(room) => setReassignRoomId(room.id)}
                     keyPrefix="reassign"
                   />
                 ))
@@ -879,15 +840,6 @@ export default function ServicePage() {
 }
 
 const styles = StyleSheet.create({
-  actionButtonsContainer: {
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 16,
-    gap: 12,
-  },
   mainContentContainer: {
     flex: 1,
     height: '100%',

@@ -70,6 +70,13 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
   // View mode (card ou list)
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const handleViewModeChange = useCallback((mode: 'card' | 'list') => {
+    setViewMode(mode);
+    setActiveMainTab('MENUS');
+    if (allItemTypes.length > 0) {
+      setActiveItemType(allItemTypes[0].id);
+    }
+  }, [setActiveMainTab, setActiveItemType, allItemTypes]);
 
   // Configuration de menu
   const [isConfiguringMenu, setIsConfiguringMenu] = useState(false);
@@ -605,7 +612,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
                 onItemTypeChange={setActiveItemType}
                 itemTypes={allItemTypes}
                 viewMode={viewMode}
-                onViewModeChange={setViewMode}
+                onViewModeChange={handleViewModeChange}
               />
             </View>
           )}

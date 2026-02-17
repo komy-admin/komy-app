@@ -1,16 +1,24 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Pressable, StyleSheet, LayoutChangeEvent, Text as RNText, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { memo, useCallback, useMemo, useRef } from 'react';
+import { View, Pressable, StyleSheet, SectionList, Text as RNText } from 'react-native';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
+import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
 import { formatPrice, getContrastColor } from '~/lib/utils';
 import { getMenuPrice } from '~/lib/color-utils';
 import { TableFilterButton } from './TableFilterTooltip';
 
-const MENUS_SECTION_KEY = '__MENUS__';
+const ITEM_HEIGHT = 58;
+const SECTION_HEADER_HEIGHT = 38;
+
+interface TableSection {
+  key: string;
+  title: string;
+  data: (Item | Menu)[];
+  type: 'menu' | 'item';
+}
 
 /**
  * Props pour le composant OrderItemsTableView
@@ -70,7 +78,7 @@ const OrderItemRow = memo<OrderItemRowProps>(({
       </View>
 
       <View style={styles.priceCell}>
-        <Text style={styles.priceText}>
+        <Text style={styles.priceText} numberOfLines={1}>
           {formatPrice(item.price)}
         </Text>
       </View>
@@ -133,11 +141,14 @@ const MenuRow = memo<MenuRowProps>(({
   onMenuAdd
 }) => {
   const menuColor = '#6366F1';
+  const handleAdd = useCallback(() => {
+    onMenuAdd(menu);
+  }, [menu, onMenuAdd]);
 
   return (
     <Pressable
       style={styles.row}
-      onPress={() => onMenuAdd(menu)}
+      onPress={handleAdd}
     >
       <View style={styles.letterCell}>
         <View style={[styles.letterCircle, { backgroundColor: menuColor }]}>
@@ -164,14 +175,17 @@ const MenuRow = memo<MenuRowProps>(({
         )}
       </View>
 
-      <View style={styles.priceCell}>
-        <RNText style={styles.priceText}>
-          À partir de {formatPrice(getMenuPrice(menu))}
+      <View style={[styles.priceCell, styles.menuPriceCell]}>
+        <RNText style={styles.menuPriceLabel} numberOfLines={1}>
+          À partir de
+        </RNText>
+        <RNText style={styles.priceText} numberOfLines={1}>
+          {formatPrice(getMenuPrice(menu))}
         </RNText>
       </View>
 
       <View style={styles.tagsCell}>
-        <RNText style={styles.categoriesText}>
+        <RNText style={styles.categoriesText} numberOfLines={1}>
           {menu.categories?.length || 0} catégorie{(menu.categories?.length || 0) > 1 ? 's' : ''}
         </RNText>
       </View>
@@ -188,7 +202,7 @@ const MenuRow = memo<MenuRowProps>(({
 MenuRow.displayName = 'MenuRow';
 
 /**
- * Vue liste unifiée : menus + articles dans un seul scroll
+ * Vue liste unifiée : menus + articles dans un seul scroll (SectionList virtualisée)
  */
 export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
   items,
@@ -201,70 +215,129 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
   activeMainTab,
   onMainTabChange,
 }) => {
-  const scrollViewRef = useRef<ScrollView>(null);
-  const sectionPositions = useRef<Record<string, number>>({});
-  const isProgrammaticScroll = useRef(false);
-  const scrollTriggeredUpdate = useRef(false);
-  const activeItemTypeRef = useRef(activeItemType);
-  const activeMainTabRef = useRef(activeMainTab);
-  activeItemTypeRef.current = activeItemType;
-  activeMainTabRef.current = activeMainTab;
-
-  const handleSectionLayout = useCallback((sectionKey: string, event: LayoutChangeEvent) => {
-    const { y } = event.nativeEvent.layout;
-    sectionPositions.current[sectionKey] = y;
-  }, []);
-
-  // Auto-scroll vers la section active
-  useEffect(() => {
-    if (scrollTriggeredUpdate.current) {
-      scrollTriggeredUpdate.current = false;
-      return;
-    }
-    const targetKey = activeMainTab === 'MENUS' ? MENUS_SECTION_KEY : activeItemType;
-    if (targetKey && sectionPositions.current[targetKey] !== undefined) {
-      isProgrammaticScroll.current = true;
-      scrollViewRef.current?.scrollTo({
-        y: Math.max(0, sectionPositions.current[targetKey] - 12),
-        animated: true,
-      });
-      setTimeout(() => { isProgrammaticScroll.current = false; }, 400);
-    }
-  }, [activeItemType, activeMainTab]);
-
-  // Scroll handler : détecte la section visible
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (isProgrammaticScroll.current) return;
-    const scrollY = event.nativeEvent.contentOffset.y;
-    const entries = Object.entries(sectionPositions.current).sort((a, b) => a[1] - b[1]);
-    if (entries.length === 0) return;
-    let currentSection = entries[0][0];
-    for (const [key, position] of entries) {
-      if (position <= scrollY + 50) {
-        currentSection = key;
-      }
-    }
-    if (!currentSection) return;
-
-    if (currentSection === MENUS_SECTION_KEY) {
-      if (activeMainTabRef.current !== 'MENUS') {
-        scrollTriggeredUpdate.current = true;
-        onMainTabChange('MENUS');
-      }
-    } else {
-      if (activeMainTabRef.current !== 'ITEMS' || currentSection !== activeItemTypeRef.current) {
-        scrollTriggeredUpdate.current = true;
-        if (activeMainTabRef.current !== 'ITEMS') {
-          onMainTabChange('ITEMS');
-        }
-        onActiveItemTypeChange(currentSection);
-      }
-    }
-  }, [onActiveItemTypeChange, onMainTabChange]);
+  const sectionListRef = useRef<SectionList<Item | Menu, TableSection>>(null);
 
   const filteredMenus = useMemo(() => {
     return activeMenus.filter(menu => menu.isActive);
   }, [activeMenus]);
+
+  const sections: TableSection[] = useMemo(() => {
+    const result: TableSection[] = [];
+    if (filteredMenus.length > 0) {
+      result.push({
+        key: MENUS_SECTION_KEY,
+        title: 'Menus',
+        data: filteredMenus,
+        type: 'menu',
+      });
+    }
+    for (const group of itemsByType) {
+      if (group.items.length > 0) {
+        result.push({
+          key: group.itemType.id,
+          title: group.itemType.name,
+          data: group.items,
+          type: 'item',
+        });
+      }
+    }
+    return result;
+  }, [filteredMenus, itemsByType]);
+
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
+
+  // Scroll sync bidirectionnel via hook partagé
+  const getSections = useCallback((): ScrollSyncSection[] => {
+    let offset = 0;
+    return sectionsRef.current.map(section => {
+      const sectionOffset = offset;
+      offset += SECTION_HEADER_HEIGHT + section.data.length * ITEM_HEIGHT;
+      return { key: section.key, offset: sectionOffset };
+    });
+  }, []);
+
+  const scrollToSection = useCallback((sectionKey: string) => {
+    const sectionIndex = sectionsRef.current.findIndex(s => s.key === sectionKey);
+    if (sectionIndex === -1) return;
+    sectionListRef.current?.scrollToLocation({
+      sectionIndex,
+      itemIndex: 0,
+      viewOffset: SECTION_HEADER_HEIGHT,
+      animated: true,
+    });
+  }, []);
+
+  const { handleScroll } = useScrollSync({
+    activeItemType,
+    activeMainTab,
+    onActiveItemTypeChange,
+    onMainTabChange,
+    getSections,
+    scrollToSection,
+  });
+
+  // RN SectionList flat index = per section: 1 (header) + data.length + 1 (footer)
+  const getItemLayout = useCallback((_data: unknown, index: number) => {
+    const currentSections = sectionsRef.current;
+    let flatIndex = 0;
+    let pixelOffset = 0;
+
+    for (let sectionIdx = 0; sectionIdx < currentSections.length; sectionIdx++) {
+      const sectionData = currentSections[sectionIdx].data;
+
+      // Section header
+      if (flatIndex === index) {
+        return { length: SECTION_HEADER_HEIGHT, offset: pixelOffset, index };
+      }
+      flatIndex++;
+      pixelOffset += SECTION_HEADER_HEIGHT;
+
+      // Section items
+      if (index < flatIndex + sectionData.length) {
+        const itemIdx = index - flatIndex;
+        return {
+          length: ITEM_HEIGHT,
+          offset: pixelOffset + itemIdx * ITEM_HEIGHT,
+          index,
+        };
+      }
+      flatIndex += sectionData.length;
+      pixelOffset += sectionData.length * ITEM_HEIGHT;
+
+      // Section footer (RN internal, length 0 but occupies a flat index slot)
+      if (flatIndex === index) {
+        return { length: 0, offset: pixelOffset, index };
+      }
+      flatIndex++;
+    }
+    // Fallback
+    return { length: ITEM_HEIGHT, offset: 0, index };
+  }, []);
+
+  const renderItem = useCallback(({ item, section, index }: { item: Item | Menu; section: TableSection; index: number }) => {
+    const bgStyle = index % 2 === 0 ? styles.evenRow : styles.oddRow;
+    if (section.type === 'menu') {
+      return (
+        <View style={bgStyle}>
+          <MenuRow menu={item as Menu} onMenuAdd={handleMenuAdd} />
+        </View>
+      );
+    }
+    return (
+      <View style={bgStyle}>
+        <OrderItemRow item={item as Item} onOpenCustomization={onOpenCustomization} />
+      </View>
+    );
+  }, [handleMenuAdd, onOpenCustomization]);
+
+  const renderSectionHeader = useCallback(({ section }: { section: TableSection }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionHeaderText}>{section.title}</Text>
+    </View>
+  ), []);
+
+  const keyExtractor = useCallback((item: Item | Menu) => item.id.toString(), []);
 
   if (items.length === 0 && filteredMenus.length === 0) {
     return (
@@ -275,8 +348,6 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
       </View>
     );
   }
-
-  let globalRowIndex = 0;
 
   return (
     <View style={styles.container}>
@@ -300,69 +371,24 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
       </View>
 
       {/* Contenu de la table */}
-      <ScrollView
-        ref={scrollViewRef}
+      <SectionList
+        ref={sectionListRef}
+        sections={sections}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
+        keyExtractor={keyExtractor}
+        getItemLayout={getItemLayout}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-      >
-        <Pressable>
-          {/* Section Menus */}
-          {filteredMenus.length > 0 && (
-            <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderText}>Menus</Text>
-              </View>
-              {filteredMenus.map((menu) => {
-                const rowIndex = globalRowIndex++;
-                return (
-                  <View
-                    key={menu.id}
-                    style={rowIndex % 2 === 0 ? styles.evenRow : styles.oddRow}
-                  >
-                    <MenuRow
-                      menu={menu}
-                      onMenuAdd={handleMenuAdd}
-                    />
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Sections par itemType */}
-          {itemsByType.map((group) => {
-            const sectionRows = group.items.map((item) => {
-              const rowIndex = globalRowIndex++;
-              return (
-                <View
-                  key={item.id}
-                  style={rowIndex % 2 === 0 ? styles.evenRow : styles.oddRow}
-                >
-                  <OrderItemRow
-                    item={item}
-                    onOpenCustomization={onOpenCustomization}
-                  />
-                </View>
-              );
-            });
-
-            return (
-              <View
-                key={group.itemType.id}
-                onLayout={(e) => handleSectionLayout(group.itemType.id, e)}
-              >
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionHeaderText}>{group.itemType.name}</Text>
-                </View>
-                {sectionRows}
-              </View>
-            );
-          })}
-        </Pressable>
-      </ScrollView>
+        stickySectionHeadersEnabled={false}
+        removeClippedSubviews={true}
+        initialNumToRender={30}
+        maxToRenderPerBatch={15}
+        windowSize={7}
+      />
     </View>
   );
 });
@@ -403,7 +429,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
     paddingHorizontal: 16,
     paddingLeft: 24,
-    paddingVertical: 10,
+    height: SECTION_HEADER_HEIGHT,
+    justifyContent: 'center' as const,
   },
   sectionHeaderText: {
     fontSize: 15,
@@ -491,8 +518,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   priceCell: {
-    flex: 1.5,
+    flex: 2,
     padding: 16,
+  },
+  menuPriceCell: {
+    paddingVertical: 8,
+  },
+  menuPriceLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    lineHeight: 14,
   },
   priceText: {
     fontSize: 15,
@@ -500,12 +535,13 @@ const styles = StyleSheet.create({
     color: '#2A2E33',
   },
   tagsCell: {
-    flex: 2.5,
+    flex: 2,
     padding: 16,
+    overflow: 'hidden',
   },
   tagsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     gap: 4,
     alignItems: 'center',
   },

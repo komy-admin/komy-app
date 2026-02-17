@@ -1,16 +1,15 @@
-import { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { View, Pressable, StyleSheet, LayoutChangeEvent, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { memo, useCallback, useMemo, useState, useRef } from 'react';
+import { View, Pressable, StyleSheet, LayoutChangeEvent, Dimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
+import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
 import { getContrastColor, formatPrice } from '~/lib/utils';
 import { getColorWithOpacity, getMenuPrice } from '~/lib/color-utils';
 import { calculateOptimalCardWidth } from '~/lib/card-layout-utils';
-
-const MENUS_SECTION_KEY = '__MENUS__';
 
 /**
  * Props pour le composant OrderItemsCardView
@@ -190,12 +189,6 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
 
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionPositions = useRef<Record<string, number>>({});
-  const isProgrammaticScroll = useRef(false);
-  const scrollTriggeredUpdate = useRef(false);
-  const activeItemTypeRef = useRef(activeItemType);
-  const activeMainTabRef = useRef(activeMainTab);
-  activeItemTypeRef.current = activeItemType;
-  activeMainTabRef.current = activeMainTab;
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
@@ -207,52 +200,30 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
     sectionPositions.current[sectionKey] = y;
   }, []);
 
-  // Auto-scroll vers la section active
-  useEffect(() => {
-    if (scrollTriggeredUpdate.current) {
-      scrollTriggeredUpdate.current = false;
-      return;
-    }
-    const targetKey = activeMainTab === 'MENUS' ? MENUS_SECTION_KEY : activeItemType;
-    if (targetKey && sectionPositions.current[targetKey] !== undefined) {
-      isProgrammaticScroll.current = true;
-      scrollViewRef.current?.scrollTo({
-        y: Math.max(0, sectionPositions.current[targetKey] - 12),
-        animated: true,
-      });
-      setTimeout(() => { isProgrammaticScroll.current = false; }, 400);
-    }
-  }, [activeItemType, activeMainTab]);
+  // Scroll sync bidirectionnel via hook partagé
+  const getSections = useCallback((): ScrollSyncSection[] => {
+    return Object.entries(sectionPositions.current)
+      .map(([key, offset]) => ({ key, offset }))
+      .sort((a, b) => a.offset - b.offset);
+  }, []);
 
-  // Scroll handler : détecte la section visible
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (isProgrammaticScroll.current) return;
-    const scrollY = event.nativeEvent.contentOffset.y;
-    const entries = Object.entries(sectionPositions.current).sort((a, b) => a[1] - b[1]);
-    if (entries.length === 0) return;
-    let currentSection = entries[0][0];
-    for (const [key, position] of entries) {
-      if (position <= scrollY + 50) {
-        currentSection = key;
-      }
-    }
-    if (!currentSection) return;
+  const scrollToSection = useCallback((sectionKey: string) => {
+    const offset = sectionPositions.current[sectionKey];
+    if (offset === undefined) return;
+    scrollViewRef.current?.scrollTo({
+      y: Math.max(0, offset - 12),
+      animated: true,
+    });
+  }, []);
 
-    if (currentSection === MENUS_SECTION_KEY) {
-      if (activeMainTabRef.current !== 'MENUS') {
-        scrollTriggeredUpdate.current = true;
-        onMainTabChange('MENUS');
-      }
-    } else {
-      if (activeMainTabRef.current !== 'ITEMS' || currentSection !== activeItemTypeRef.current) {
-        scrollTriggeredUpdate.current = true;
-        if (activeMainTabRef.current !== 'ITEMS') {
-          onMainTabChange('ITEMS');
-        }
-        onActiveItemTypeChange(currentSection);
-      }
-    }
-  }, [onActiveItemTypeChange, onMainTabChange]);
+  const { handleScroll } = useScrollSync({
+    activeItemType,
+    activeMainTab,
+    onActiveItemTypeChange,
+    onMainTabChange,
+    getSections,
+    scrollToSection,
+  });
 
   const cardWidth = useMemo(() => {
     return calculateOptimalCardWidth({
