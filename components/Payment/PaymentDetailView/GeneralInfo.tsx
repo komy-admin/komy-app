@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import type { Payment } from '~/api/payment.api';
+import type { Payment } from '~/types/payment.types';
 import { InfoRow } from '../shared/InfoRow';
 import { PaymentMethodIcon } from '../shared/PaymentMethodIcon';
 import { PaymentStatusBadge } from '../shared/PaymentStatusBadge';

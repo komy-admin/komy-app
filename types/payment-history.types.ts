@@ -7,7 +7,7 @@ export interface PaymentHistoryFilters {
   startDate: string | null
   endDate: string | null
   serverId: string | null
-  status: 'all' | 'fully_paid' | 'partially_paid' | 'unpaid' | 'refunded'
+  status: 'all' | 'paid' | 'partial' | 'unpaid' | 'overpaid'
   searchQuery: string
 }
 
@@ -25,7 +25,7 @@ export interface OrderWithPayments {
   paidAmount: number
   remainingAmount: number
   refundedAmount?: number
-  paymentStatus: 'fully_paid' | 'partially_paid' | 'unpaid' | 'refunded'
+  paymentStatus: 'unpaid' | 'partial' | 'paid' | 'overpaid'
   paymentsCount: number
   createdAt: string
   user?: {
@@ -38,7 +38,7 @@ export interface PaymentSummary {
   totalAmount: number
   paidAmount: number
   remainingAmount: number
-  status: 'fully_paid' | 'partially_paid' | 'unpaid'
+  status: 'unpaid' | 'partial' | 'paid' | 'overpaid'
 }
 
 export interface PeriodSummary {

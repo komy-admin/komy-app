@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import type { PaymentAllocation } from '~/api/payment.api';
+import type { PaymentAllocation } from '~/types/payment.types';
 import { formatPrice } from '~/lib/utils';
 
 interface AllocationsListProps {
@@ -9,7 +9,9 @@ interface AllocationsListProps {
 
 export function AllocationsList({ allocations, tipAmount }: AllocationsListProps) {
   const subtotal = allocations.reduce((sum, a) => sum + Number(a.allocatedAmount), 0);
-  const vat = Math.round(subtotal * 0.1); // 10% TVA (à adapter selon le vrai calcul)
+  const vatRate = 0.20; // 20% TVA standard en France
+  const totalHT = Math.round(subtotal / (1 + vatRate));
+  const vat = subtotal - totalHT;
   const totalTTC = subtotal;
 
   return (
@@ -21,13 +23,23 @@ export function AllocationsList({ allocations, tipAmount }: AllocationsListProps
           const quantityFraction = Number(allocation.quantityFraction);
           const isSplit = quantityFraction < 1.0;
 
+          // Récupérer le nom de l'item depuis orderLine si disponible
+          const itemName = allocation.orderLine?.item?.name ||
+                          allocation.orderLine?.menu?.name ||
+                          `Item #${index + 1}`;
+
+          // Prix unitaire si disponible
+          const unitPrice = allocation.orderLine?.unitPrice;
+          const quantity = allocation.orderLine?.quantity || 1;
+
           return (
             <View key={allocation.id}>
-              <Text style={styles.itemTitle}>Item #{index + 1}</Text>
+              <Text style={styles.itemTitle}>{itemName}</Text>
               <View style={styles.itemRow}>
                 <Text style={styles.itemQuantity}>
-                  Quantité: {quantityFraction.toFixed(2)}
-                  {isSplit && ' (split)'}
+                  {quantity > 1 && `${quantity}x `}
+                  {unitPrice && formatPrice(unitPrice)}
+                  {isSplit && ` × ${(quantityFraction * 100).toFixed(0)}%`}
                 </Text>
                 <Text style={styles.itemAmount}>
                   = {formatPrice(allocation.allocatedAmount)}
@@ -43,11 +55,11 @@ export function AllocationsList({ allocations, tipAmount }: AllocationsListProps
       {/* Totaux */}
       <View style={styles.totalsSection}>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Sous-total:</Text>
-          <Text style={styles.totalValue}>{formatPrice(subtotal)}</Text>
+          <Text style={styles.totalLabel}>Total HT:</Text>
+          <Text style={styles.totalValue}>{formatPrice(totalHT)}</Text>
         </View>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>TVA (10%):</Text>
+          <Text style={styles.totalLabel}>TVA (20%):</Text>
           <Text style={styles.totalValue}>{formatPrice(vat)}</Text>
         </View>
         <View style={styles.totalDivider} />
@@ -55,6 +67,18 @@ export function AllocationsList({ allocations, tipAmount }: AllocationsListProps
           <Text style={styles.grandTotalLabel}>Total TTC:</Text>
           <Text style={styles.grandTotalValue}>{formatPrice(totalTTC)}</Text>
         </View>
+        {tipAmount && tipAmount > 0 && (
+          <>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Pourboire:</Text>
+              <Text style={styles.totalValue}>{formatPrice(tipAmount)}</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.grandTotalLabel}>Total avec pourboire:</Text>
+              <Text style={styles.grandTotalValue}>{formatPrice(totalTTC + tipAmount)}</Text>
+            </View>
+          </>
+        )}
       </View>
     </View>
   );

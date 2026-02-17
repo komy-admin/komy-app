@@ -1,5 +1,5 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useState } from 'react';
 import { entitiesActions, RootState } from '~/store';
 import { selectAllPayments, selectAllPaymentAllocations } from '~/store/slices/entities.slice';
 import { paymentApiService } from '~/api/payment.api';
@@ -8,16 +8,18 @@ import type { PaymentHistoryFilters, OrderWithPayments } from '~/types/payment-h
 
 /**
  * Hook spécialisé pour la gestion des paiements
- * Suit le pattern Redux comme useOrders, useMenu, etc.
+ * Utilise l'API directement pour éviter les incohérences de cache
  */
 export const usePayments = () => {
   const dispatch = useDispatch();
 
-  // Sélecteurs Redux
-  const payments = useSelector(selectAllPayments);
+  // Sélecteurs Redux (gardés pour compatibilité mais non utilisés principalement)
+  const paymentsFromRedux = useSelector(selectAllPayments);
   const paymentAllocations = useSelector(selectAllPaymentAllocations);
-  const loading = false; // Géré globalement maintenant
-  const error = null; // Géré globalement maintenant
+
+  // Loading et error states locaux
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   /**
    * Charge tous les paiements et les stocke dans Redux
@@ -50,18 +52,48 @@ export const usePayments = () => {
   }, []);
 
   /**
-   * Récupère les paiements d'une commande depuis Redux
+   * Récupère les paiements d'une commande depuis l'API et les stocke dans Redux
    */
-  const getPaymentsByOrder = useCallback((orderId: string): Payment[] => {
-    return payments.filter(p => p.orderId === orderId);
-  }, [payments]);
+  const getPaymentsByOrder = useCallback(async (orderId: string): Promise<Payment[]> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const payments = await paymentApiService.getByOrder(orderId);
+      // Stocker dans Redux pour garder la cohérence
+      dispatch(entitiesActions.setPayments({ payments }));
+      return payments;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des paiements';
+      setError(errorMessage);
+      console.error('Erreur lors du chargement des paiements de la commande:', errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch]);
 
   /**
-   * Récupère un paiement par son ID depuis Redux
+   * Récupère un paiement par son ID depuis l'API
    */
-  const getPaymentById = useCallback((paymentId: string): Payment | undefined => {
-    return payments.find(p => p.id === paymentId);
-  }, [payments]);
+  const getPaymentById = useCallback(async (paymentId: string): Promise<Payment | null> => {
+    try {
+      setLoading(true);
+      setError(null);
+      const payment = await paymentApiService.getById(paymentId);
+      // Mettre à jour Redux avec le paiement frais
+      if (payment) {
+        dispatch(entitiesActions.updatePayment({ payment }));
+      }
+      return payment;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement du paiement';
+      setError(errorMessage);
+      console.error('Erreur lors du chargement du paiement:', errorMessage);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch]);
 
   /**
    * Vérifie si une orderLine a des allocations de paiement (donc ne peut pas être modifiée/supprimée)
@@ -162,8 +194,8 @@ export const usePayments = () => {
   }, []);
 
   return {
-    // Données depuis Redux
-    payments,
+    // Données depuis Redux (pour compatibilité)
+    payments: paymentsFromRedux,
     paymentAllocations,
 
     // État
@@ -176,7 +208,7 @@ export const usePayments = () => {
     updatePayment,
     deletePayment,
 
-    // Utilitaires
+    // Utilitaires (maintenant async depuis l'API)
     getPaymentById,
     getPaymentsByOrder,
     getOrdersWithPayments,

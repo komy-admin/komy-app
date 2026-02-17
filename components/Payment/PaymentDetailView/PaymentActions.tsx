@@ -1,6 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Printer, Mail, DollarSign, FileText } from 'lucide-react-native';
-import type { Payment } from '~/api/payment.api';
+import type { Payment } from '~/types/payment.types';
 
 interface PaymentActionsProps {
   payment: Payment;

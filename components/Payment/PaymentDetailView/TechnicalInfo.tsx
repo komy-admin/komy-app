@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { CheckCircle } from 'lucide-react-native';
-import type { Payment, LedgerEvent } from '~/api/payment.api';
+import type { Payment, LedgerEvent } from '~/types/payment.types';
 import { InfoRow } from '../shared/InfoRow';
 
 interface TechnicalInfoProps {

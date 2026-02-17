@@ -13,7 +13,7 @@ interface OrderWithPaymentsCardProps {
 export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, onPress }) => {
   const getStatusInfo = useMemo(() => {
     switch (order.paymentStatus) {
-      case 'fully_paid':
+      case 'paid':
         return {
           icon: CheckCircle,
           color: '#10B981',
@@ -21,7 +21,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
           borderColor: '#10B98130',
           label: 'Payé',
         };
-      case 'partially_paid':
+      case 'partial':
         return {
           icon: AlertCircle,
           color: '#F59E0B',
@@ -36,6 +36,14 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
           bgColor: '#EF444415',
           borderColor: '#EF444430',
           label: 'Impayé',
+        };
+      case 'overpaid':
+        return {
+          icon: AlertCircle,
+          color: '#8B5CF6',
+          bgColor: '#8B5CF615',
+          borderColor: '#8B5CF630',
+          label: 'Surpayé',
         };
       default:
         return {
@@ -75,7 +83,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
             <View style={[styles.tableTag, { backgroundColor: '#6366F1' }]}>
               <Text style={styles.tableTagText}>{order.table.name}</Text>
             </View>
-            <Text style={styles.orderNumber}>#{order.number || 'N/A'}</Text>
+            <Text style={styles.orderNumber}>#{order.id.substring(0, 8).toUpperCase()}</Text>
           </View>
 
           <View style={[styles.statusBadge, { backgroundColor: getStatusInfo.bgColor }]}>
@@ -91,7 +99,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
           <View style={styles.dateTimeContainer}>
             <Clock size={14} color="#9CA3AF" strokeWidth={2} />
             <Text style={styles.dateTimeText}>
-              {formatDate(order.createdAt, 'DD/MM')} à {formatDate(order.createdAt, DateFormat.TIME)}
+              {formatDate(order.createdAt, DateFormat.SHORT_DATE)} à {formatDate(order.createdAt, DateFormat.TIME)}
             </Text>
           </View>
 

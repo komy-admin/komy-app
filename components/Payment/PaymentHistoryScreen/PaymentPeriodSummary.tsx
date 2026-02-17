@@ -18,10 +18,10 @@ const PERIOD_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tous' },
-  { value: 'fully_paid', label: 'Payé' },
-  { value: 'partially_paid', label: 'Partiel' },
+  { value: 'paid', label: 'Payé' },
+  { value: 'partial', label: 'Partiel' },
   { value: 'unpaid', label: 'Impayé' },
-  { value: 'refunded', label: 'Remboursé' },
+  { value: 'overpaid', label: 'Surpayé' },
 ] as const;
 
 export function PaymentPeriodSummary({

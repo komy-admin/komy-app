@@ -16,6 +16,11 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
 
+  // Champs de paiement
+  totalAmount?: number | null;
+  paidAmount?: number;
+  paymentStatus?: 'unpaid' | 'partial' | 'paid' | 'overpaid';
+
   // Propriétés optionnelles pour compatibilité
   orderNumber?: string;
   orderItems?: OrderLine[]; // Alias temporaire pour migration

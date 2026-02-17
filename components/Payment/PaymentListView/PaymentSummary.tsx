@@ -25,7 +25,7 @@ export function PaymentSummary({ summary }: PaymentSummaryProps) {
             <Text style={styles.paidAmount}>
               {formatPrice(summary.paidAmount)}
             </Text>
-            {summary.status === 'fully_paid' && (
+            {summary.status === 'paid' && (
               <CheckCircle size={16} color="#10B981" strokeWidth={2} />
             )}
           </View>

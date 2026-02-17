@@ -1,21 +1,30 @@
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, X, ChevronRight } from 'lucide-react-native'
 import { PaymentSummary } from '~/components/Payment/PaymentListView/PaymentSummary'
 import { PaymentListCard } from '~/components/Payment/PaymentListView/PaymentListCard'
 import { Button } from '~/components/ui/button'
 import { usePayments } from '~/hooks/usePayments'
+import type { Payment } from '~/types/payment.types'
 
 export default function PaymentListScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>()
   const router = useRouter()
   const { getPaymentsByOrder, loading } = usePayments()
+  const [payments, setPayments] = useState<Payment[]>([])
 
-  // Récupère les paiements depuis Redux
-  const payments = useMemo(() => {
-    if (!orderId) return []
-    return getPaymentsByOrder(orderId as string)
+  useEffect(() => {
+    const loadPayments = async () => {
+      if (!orderId) return
+      try {
+        const data = await getPaymentsByOrder(orderId as string)
+        setPayments(data)
+      } catch (error) {
+        console.error('Erreur lors du chargement des paiements:', error)
+      }
+    }
+    loadPayments()
   }, [orderId, getPaymentsByOrder])
 
   const summary = useMemo(() => {
@@ -24,25 +33,34 @@ export default function PaymentListScreen() {
         totalAmount: 0,
         paidAmount: 0,
         remainingAmount: 0,
-        status: 'unpaid' as const,
+        status: 'unpaid' as 'unpaid' | 'partial' | 'paid' | 'overpaid',
       }
     }
 
-    // Calculer à partir des paiements
-    const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0)
+    // Calculer à partir des paiements et de l'ordre
+    const paidAmount = payments
+      .filter(p => p.status === 'completed')
+      .reduce((sum, p) => sum + p.amount, 0)
 
-    // Pour obtenir le totalAmount, on peut soit:
-    // 1. Le récupérer depuis order (nécessite une requête supplémentaire)
-    // 2. Le calculer depuis les allocations
-    // Pour simplifier, on va utiliser paidAmount comme base
-    const totalAmount = paidAmount // TODO: récupérer depuis order si nécessaire
-    const remainingAmount = 0 // TODO: calculer si on a totalAmount
+    // Récupérer le totalAmount depuis l'ordre (les paiements enrichis contiennent l'ordre)
+    const firstPaymentWithOrder = payments.find(p => p.order)
+    const totalAmount = firstPaymentWithOrder?.order?.totalAmount || paidAmount
+    const remainingAmount = Math.max(0, totalAmount - paidAmount)
+
+    let status: 'unpaid' | 'partial' | 'paid' | 'overpaid' = 'unpaid'
+    if (paidAmount > totalAmount) {
+      status = 'overpaid'
+    } else if (paidAmount === totalAmount && paidAmount > 0) {
+      status = 'paid'
+    } else if (paidAmount > 0 && paidAmount < totalAmount) {
+      status = 'partial'
+    }
 
     return {
       totalAmount,
       paidAmount,
       remainingAmount,
-      status: 'fully_paid' as const,
+      status,
     }
   }, [payments])
 

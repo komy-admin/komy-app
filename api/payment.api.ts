@@ -33,6 +33,13 @@ class PaymentApiService extends BaseApiService<Payment> {
   }
 
   /**
+   * Get all payments for a specific order (alias for compatibility)
+   */
+  async getByOrder(orderId: string): Promise<Payment[]> {
+    return this.getPaymentsByOrder(orderId)
+  }
+
+  /**
    * Get a single payment by ID
    */
   async getById(paymentId: string): Promise<Payment> {

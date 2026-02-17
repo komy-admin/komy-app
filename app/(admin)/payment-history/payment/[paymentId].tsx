@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, X, ChevronRight } from 'lucide-react-native'
 import { GeneralInfo } from '~/components/Payment/PaymentDetailView/GeneralInfo'
 import { AllocationsList } from '~/components/Payment/PaymentDetailView/AllocationsList'
@@ -8,17 +8,27 @@ import { TechnicalInfo } from '~/components/Payment/PaymentDetailView/TechnicalI
 import { PaymentActions } from '~/components/Payment/PaymentDetailView/PaymentActions'
 import { Button } from '~/components/ui/button'
 import { usePayments } from '~/hooks/usePayments'
+import type { Payment } from '~/types/payment.types'
 
 export default function PaymentDetailScreen() {
   const { paymentId } = useLocalSearchParams<{ paymentId: string }>()
   const router = useRouter()
   const { getPaymentById, getAuditLogs, loading } = usePayments()
+  const [payment, setPayment] = useState<Payment | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
 
-  // Récupère le paiement depuis Redux
-  const payment = useMemo(() => {
-    if (!paymentId) return null
-    return getPaymentById(paymentId as string) || null
+  // Charge le paiement depuis l'API
+  useEffect(() => {
+    const loadPayment = async () => {
+      if (!paymentId) return
+      try {
+        const data = await getPaymentById(paymentId as string)
+        setPayment(data)
+      } catch (error) {
+        console.error('Erreur lors du chargement du paiement:', error)
+      }
+    }
+    loadPayment()
   }, [paymentId, getPaymentById])
 
   // Charge les audit logs une seule fois

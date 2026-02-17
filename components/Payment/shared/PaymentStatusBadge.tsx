@@ -6,9 +6,10 @@ interface PaymentStatusBadgeProps {
     | 'pending'
     | 'failed'
     | 'refunded'
-    | 'fully_paid'
-    | 'partially_paid'
-    | 'unpaid';
+    | 'paid'
+    | 'partial'
+    | 'unpaid'
+    | 'overpaid';
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -22,12 +23,14 @@ const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
       return { label: 'ÉCHOUÉ', backgroundColor: '#FEE2E2', color: '#991B1B' };
     case 'refunded':
       return { label: 'REMBOURSÉ', backgroundColor: '#F3F4F6', color: '#374151' };
-    case 'fully_paid':
+    case 'paid':
       return { label: 'ENTIÈREMENT PAYÉ', backgroundColor: '#D1FAE5', color: '#065F46' };
-    case 'partially_paid':
+    case 'partial':
       return { label: 'PARTIELLEMENT PAYÉ', backgroundColor: '#FED7AA', color: '#9A3412' };
     case 'unpaid':
       return { label: 'NON PAYÉ', backgroundColor: '#FEE2E2', color: '#991B1B' };
+    case 'overpaid':
+      return { label: 'SURPAYÉ', backgroundColor: '#E9D5FF', color: '#6B21A8' };
     default:
       return { label: 'INCONNU', backgroundColor: '#F3F4F6', color: '#374151' };
   }
