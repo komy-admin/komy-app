@@ -1,9 +1,6 @@
 import { Status } from '~/types/status.enum';
 import { OrderLine, OrderLineType } from '~/types/order-line.types';
-import { getMostImportantStatus, hasMenuMixedStatuses, getOrderLinesGlobalStatus } from './status.utils';
-
-/** @deprecated Use getOrderLinesGlobalStatus instead */
-export const calculateOrderStatusFromLines = getOrderLinesGlobalStatus;
+import { hasMenuMixedStatuses } from './status.utils';
 
 export const calculateMenuProgress = (menuLine: OrderLine) => {
   if (menuLine.type !== OrderLineType.MENU || !menuLine.items) {

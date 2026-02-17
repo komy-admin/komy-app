@@ -97,7 +97,6 @@ export {
 } from './status.utils';
 
 export {
-  calculateOrderStatusFromLines,
   calculateMenuProgress,
   hasMenuLineItemsMixedStatuses,
   getMenuLineBorderStyle,
