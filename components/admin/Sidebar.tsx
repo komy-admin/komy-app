@@ -2,14 +2,19 @@
 import { Href, Link } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { View, Pressable, Platform } from 'react-native';
-import { Users, Grid3X3Icon, LayoutDashboard, ChefHat, NotebookText, List, GlassWater} from 'lucide-react-native';
+import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater } from 'lucide-react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../ui';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useMemo } from 'react';
 
+const ServiceIcon = ({ size, color, style }: { size: number; color: string; style?: any }) => (
+  <MaterialCommunityIcons name="room-service-outline" size={size} color={color} style={style} />
+);
+
 const NAV_ITEMS = [
-  { href: '/service', icon: Grid3X3Icon, label: 'Service', configKey: null },
+  { href: '/service', icon: ServiceIcon, label: 'Service', configKey: null },
   { href: '/room', icon: LayoutDashboard, label: 'Salles', configKey: null },
   { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null },
   { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const },
