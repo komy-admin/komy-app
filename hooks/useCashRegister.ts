@@ -1,98 +1,5 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
-import { Platform } from 'react-native';
-import { storageService } from '~/lib/storageService';
-
-// Create axios instance for API calls
-const API_URL = Platform.select({
-  android: `${process.env.EXPO_PUBLIC_API_URL}/api`,
-  ios: `${process.env.EXPO_PUBLIC_API_URL}/api`,
-  web: `${process.env.EXPO_PUBLIC_API_URL}/api`,
-});
-
-const api = axios.create({
-  baseURL: API_URL || 'http://localhost:3333/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use(
-  async (config) => {
-    const sessionToken = await storageService.getItem('sessionToken');
-    const authToken = await storageService.getItem('authToken');
-
-    if (sessionToken) {
-      config.headers['Authorization'] = `Bearer ${sessionToken}`;
-    } else if (authToken) {
-      config.headers['Authorization'] = `Bearer ${authToken}`;
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-/**
- * Interface pour une session de caisse
- */
-export interface CashRegisterSession {
-  id: string;
-  accountId: string;
-  userId: string;
-  openedAt: string;
-  closedAt?: string | null;
-  openingBalance: number;
-  expectedCash?: number | null;
-  actualCash?: number | null;
-  discrepancy?: number | null;
-  notes?: string | null;
-  status: 'open' | 'closed';
-  user?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  };
-  stats?: {
-    paymentsCount: number;
-    totalAmount: number;
-    totalCash: number;
-    totalCard: number;
-    totalTicketResto: number;
-    totalCheck: number;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Interface pour le résumé de clôture
- */
-export interface CloseSummary {
-  session: CashRegisterSession;
-  summary: {
-    totalAmount: number;
-    cashAmount: number;
-    cardAmount: number;
-    ticketRestoAmount: number;
-    checkAmount: number;
-    expectedCash: number;
-    actualCash: number;
-    discrepancy: number;
-    paymentsCount: number;
-    refundsCount: number;
-    tvaDetails: Array<{
-      rate: number;
-      base: number;
-      amount: number;
-    }>;
-  };
-  zNumber: string;
-  closedAt: string;
-}
+import { cashRegisterApiService, CashRegisterSession, CloseSummary } from '~/api/cash-register.api';
 
 /**
  * Hook pour gérer la caisse enregistreuse
@@ -116,14 +23,12 @@ export function useCashRegister() {
       setIsLoading(true);
       setError(null);
 
-      const response = await api.get('/cash-register/current');
-      const session = response.data.data;
-
+      const session = await cashRegisterApiService.getCurrent();
       setCurrentSession(session);
       return session;
     } catch (err: any) {
       console.error('Erreur récupération session:', err);
-      setError(err.message || 'Erreur lors de la récupération de la session');
+      setError(err.response?.data?.error || err.message || 'Erreur lors de la récupération de la session');
       setCurrentSession(null);
       return null;
     } finally {
@@ -142,12 +47,7 @@ export function useCashRegister() {
       setIsLoading(true);
       setError(null);
 
-      const response = await api.post('/cash-register/open', {
-        openingBalance,
-        notes,
-      });
-
-      const session = response.data.data;
+      const session = await cashRegisterApiService.open(openingBalance, notes);
       setCurrentSession(session);
       return session;
     } catch (err: any) {
@@ -170,12 +70,7 @@ export function useCashRegister() {
       setIsLoading(true);
       setError(null);
 
-      const response = await api.post('/cash-register/close', {
-        actualCash,
-        notes,
-      });
-
-      const result = response.data.data;
+      const result = await cashRegisterApiService.close(actualCash, notes);
       setCurrentSession(null); // La session est fermée
       return result;
     } catch (err: any) {
@@ -201,14 +96,11 @@ export function useCashRegister() {
       setIsLoading(true);
       setError(null);
 
-      const response = await api.get('/cash-register/history', {
-        params: { page, limit },
-      });
-
-      return response.data;
+      const result = await cashRegisterApiService.getHistory(page, limit);
+      return result;
     } catch (err: any) {
       console.error('Erreur récupération historique:', err);
-      setError(err.message || 'Erreur lors de la récupération de l\'historique');
+      setError(err.response?.data?.error || err.message || 'Erreur lors de la récupération de l\'historique');
       throw err;
     } finally {
       setIsLoading(false);
@@ -223,11 +115,11 @@ export function useCashRegister() {
       setIsLoading(true);
       setError(null);
 
-      const response = await api.get(`/cash-register/${sessionId}/z-report`);
-      return response.data;
+      const result = await cashRegisterApiService.generateZReport(sessionId);
+      return result;
     } catch (err: any) {
       console.error('Erreur génération Z:', err);
-      setError(err.message || 'Erreur lors de la génération du Z');
+      setError(err.response?.data?.error || err.message || 'Erreur lors de la génération du Z');
       throw err;
     } finally {
       setIsLoading(false);
@@ -256,3 +148,6 @@ export function useCashRegister() {
     refreshSession,
   };
 }
+
+// Re-export types for backward compatibility
+export type { CashRegisterSession, CloseSummary } from '~/api/cash-register.api';
