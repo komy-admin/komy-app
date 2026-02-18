@@ -32,22 +32,12 @@ export default function PaymentsLayout() {
           fontSize: 11,
           fontWeight: '500',
         },
-        headerStyle: {
-          backgroundColor: 'white',
-          borderBottomWidth: 1,
-          borderBottomColor: '#E5E7EB',
-        },
-        headerTitleStyle: {
-          fontWeight: '600',
-          fontSize: 18,
-        },
-        headerTintColor: '#111827',
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="journal"
         options={{
-          title: 'Paiements',
           tabBarLabel: 'Paiements',
           tabBarIcon: ({ color, size }) => (
             <ReceiptEuro size={size || 24} color={color} />
@@ -58,7 +48,6 @@ export default function PaymentsLayout() {
       <Tabs.Screen
         name="cash-register"
         options={{
-          title: 'Clôture de caisse',
           tabBarLabel: 'Caisse',
           tabBarIcon: ({ color, size }) => (
             <Calculator size={size || 24} color={color} />
@@ -69,7 +58,6 @@ export default function PaymentsLayout() {
       <Tabs.Screen
         name="exports"
         options={{
-          title: 'Exports & Rapports',
           tabBarLabel: 'Exports',
           tabBarIcon: ({ color, size }) => (
             <Download size={size || 24} color={color} />

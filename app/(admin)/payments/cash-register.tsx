@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  ScrollView,
+  FlatList,
+  RefreshControl,
   Pressable,
   TextInput,
   Alert,
@@ -12,25 +13,19 @@ import {
 } from 'react-native';
 import { Text, Button } from '~/components/ui';
 import { useCashRegister } from '~/hooks/useCashRegister';
+import { usePayments } from '~/hooks/usePayments';
 import { formatPrice } from '~/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import type { Payment } from '~/types/payment.types';
 import {
-  Calculator,
   Lock,
   Unlock,
-  Euro,
-  CreditCard,
   Banknote,
-  Ticket,
-  FileCheck,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  User,
-  Calendar,
-  Hash,
   X,
+  User,
+  Clock,
+  Hash,
 } from 'lucide-react-native';
 
 /**
@@ -51,6 +46,8 @@ export default function CashRegisterScreen() {
     refreshSession,
   } = useCashRegister();
 
+  const { payments, loadAllPayments } = usePayments();
+
   // État local
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -58,11 +55,34 @@ export default function CashRegisterScreen() {
   const [actualCash, setActualCash] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Transactions espèces filtrées
+  const [cashTransactions, setCashTransactions] = useState<Payment[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  /**
+   * Filtrer les transactions espèces de la session en cours
+   */
+  useEffect(() => {
+    if (currentSession && payments.length > 0) {
+      // Filtrer uniquement les paiements espèces de la session en cours
+      const cashPayments = payments.filter(p =>
+        p.paymentMethod === 'cash' &&
+        p.cashRegisterSessionId === currentSession.id &&
+        p.status === 'completed'
+      ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      setCashTransactions(cashPayments);
+    } else {
+      setCashTransactions([]);
+    }
+  }, [currentSession, payments]);
+
   /**
    * Rafraîchir au montage
    */
   useEffect(() => {
     refreshSession();
+    loadAllPayments();
   }, []);
 
   /**
@@ -310,47 +330,199 @@ export default function CashRegisterScreen() {
   };
 
   /**
-   * Carte de statistique
+   * Header avec résumé et actions
    */
-  const StatCard = ({
-    icon,
-    label,
-    value,
-    trend,
-  }: {
-    icon: React.ReactNode;
-    label: string;
-    value: string | number;
-    trend?: number;
-  }) => (
-    <View className="bg-white rounded-lg p-4 flex-1 min-w-[150px]">
-      <View className="flex-row items-center gap-2 mb-2">
-        {icon}
-        <Text className="text-xs text-gray-600">{label}</Text>
-      </View>
-      <Text className="text-lg font-bold text-gray-900">{value}</Text>
-      {trend !== undefined && (
-        <View className="flex-row items-center gap-1 mt-1">
-          {trend > 0 ? (
-            <TrendingUp size={16} color="#10B981" />
-          ) : trend < 0 ? (
-            <TrendingDown size={16} color="#EF4444" />
-          ) : null}
-          <Text
-            className={`text-xs font-medium ${
-              trend > 0
-                ? 'text-green-600'
-                : trend < 0
-                ? 'text-red-600'
-                : 'text-gray-500'
-            }`}
-          >
-            {trend > 0 ? '+' : ''}{trend}%
-          </Text>
+  const renderHeader = () => {
+    if (!currentSession) {
+      // Header pour caisse fermée
+      return (
+        <View className="bg-white shadow-sm">
+          <View className="px-4 py-4 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-3">
+              <View className="w-3 h-3 bg-gray-400 rounded-full" />
+              <Text className="text-lg font-semibold text-gray-900">
+                Caisse fermée
+              </Text>
+            </View>
+            <Button
+              onPress={() => setShowOpenModal(true)}
+              className="bg-green-600 px-4 py-2"
+              size="sm"
+            >
+              <View className="flex-row items-center gap-2">
+                <Unlock size={16} color="white" />
+                <Text className="text-white font-medium">Ouvrir</Text>
+              </View>
+            </Button>
+          </View>
         </View>
-      )}
-    </View>
-  );
+      );
+    }
+
+    const expectedCash = currentSession.openingBalance + (currentSession.stats?.totalCash || 0);
+
+    // Header pour caisse ouverte
+    return (
+      <View className="bg-white shadow-sm">
+        {/* Ligne 1 : État et actions */}
+        <View className="px-4 py-3 flex-row items-center justify-between border-b border-gray-200">
+          <View className="flex-row items-center gap-3">
+            <View className="w-3 h-3 bg-green-500 rounded-full" />
+            <Text className="text-lg font-semibold text-gray-900">
+              Caisse ouverte
+            </Text>
+            <View className="flex-row items-center gap-1 ml-2">
+              <Clock size={14} color="#6B7280" />
+              <Text className="text-xs text-gray-600">
+                depuis {format(new Date(currentSession.openedAt), 'HH:mm', { locale: fr })}
+              </Text>
+            </View>
+            {currentSession.user && (
+              <View className="flex-row items-center gap-1 ml-2">
+                <User size={14} color="#6B7280" />
+                <Text className="text-xs text-gray-600">
+                  {currentSession.user.firstName}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Button
+            onPress={() => setShowCloseModal(true)}
+            className="bg-red-600 px-4 py-2"
+            size="sm"
+          >
+            <View className="flex-row items-center gap-2">
+              <Lock size={16} color="white" />
+              <Text className="text-white font-medium">Fermer</Text>
+            </View>
+          </Button>
+        </View>
+
+        {/* Ligne 2 : Montant attendu */}
+        <View className="px-4 py-4">
+          <View className="bg-blue-50 rounded-xl p-4">
+            <View className="flex-row items-center justify-between">
+              <View>
+                <View className="flex-row items-center gap-2 mb-1">
+                  <Banknote size={20} color="#2563EB" />
+                  <Text className="text-sm font-semibold text-blue-900">
+                    Espèces en caisse
+                  </Text>
+                </View>
+                <Text className="text-3xl font-bold text-blue-600">
+                  {formatPrice(expectedCash)}
+                </Text>
+                <View className="flex-row items-center gap-4 mt-2">
+                  <Text className="text-xs text-blue-700">
+                    Fond: {formatPrice(currentSession.openingBalance)}
+                  </Text>
+                  {currentSession.stats?.totalCash && currentSession.stats.totalCash > 0 && (
+                    <Text className="text-xs text-blue-700">
+                      + Encaissé: {formatPrice(currentSession.stats.totalCash)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Indicateur de transactions */}
+              {currentSession.stats && (
+                <View className="items-end">
+                  <View className="flex-row items-center gap-1 mb-1">
+                    <Hash size={14} color="#6B7280" />
+                    <Text className="text-sm font-medium text-gray-700">
+                      {currentSession.stats.paymentsCount}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-500">transactions</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  /**
+   * Render d'une transaction espèces
+   */
+  const renderCashTransaction = ({ item }: { item: Payment }) => {
+    const isRefund = item.status === 'refunded';
+    const amount = item.amount;
+
+    return (
+      <View className="px-4 py-2">
+        <View className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <View className="flex-row justify-between items-center">
+            <View className="flex-1">
+              <View className="flex-row items-center gap-2 mb-1">
+                <Text className="text-sm font-semibold text-gray-900">
+                  Commande #{item.orderId.substring(0, 8).toUpperCase()}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  {format(new Date(item.createdAt), 'HH:mm', { locale: fr })}
+                </Text>
+                {isRefund && (
+                  <View className="px-2 py-0.5 bg-red-100 rounded">
+                    <Text className="text-xs font-medium text-red-700">
+                      Remboursé
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {item.user && (
+                <View className="flex-row items-center gap-1">
+                  <User size={12} color="#9CA3AF" />
+                  <Text className="text-xs text-gray-500">
+                    {item.user.firstName} {item.user.lastName}
+                  </Text>
+                </View>
+              )}
+              {item.notes && (
+                <Text className="text-xs text-gray-600 mt-1">
+                  {item.notes}
+                </Text>
+              )}
+            </View>
+            <View className="flex-row items-center gap-2">
+              <Banknote size={18} color={isRefund ? "#EF4444" : "#10B981"} />
+              <Text className={`text-lg font-bold ${isRefund ? 'text-red-600' : 'text-gray-900'}`}>
+                {isRefund && '-'}{formatPrice(Math.abs(amount))}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  /**
+   * Message quand pas de transactions
+   */
+  const renderEmpty = () => {
+    return (
+      <View className="flex-1 items-center justify-center p-8">
+        <Banknote size={48} color="#D1D5DB" />
+        <Text className="text-gray-500 text-center mt-4">
+          {currentSession
+            ? "Aucune transaction espèces aujourd'hui"
+            : "Ouvrez la caisse pour commencer"}
+        </Text>
+      </View>
+    );
+  };
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refreshSession(),
+        loadAllPayments()
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshSession, loadAllPayments]);
 
   if (isLoading && !currentSession) {
     return (
@@ -361,178 +533,26 @@ export default function CashRegisterScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50">
       {renderOpenModal()}
       {renderCloseModal()}
 
-      {/* État de la caisse */}
-      <View className="bg-white border-b border-gray-200 px-4 py-4">
-        {currentSession ? (
-          <View>
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center gap-2">
-                <View className="w-3 h-3 bg-green-500 rounded-full" />
-                <Text className="text-lg font-semibold text-gray-900">
-                  Caisse ouverte
-                </Text>
-              </View>
-              <Button
-                onPress={() => setShowCloseModal(true)}
-                className="bg-red-600 px-4 py-2"
-                size="sm"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Lock size={16} color="white" />
-                  <Text className="text-white font-medium text-sm">Fermer</Text>
-                </View>
-              </Button>
-            </View>
-
-            <View className="flex-row gap-4 text-sm text-gray-600">
-              <View className="flex-row items-center gap-1">
-                <Calendar size={14} color="#6B7280" />
-                <Text className="text-xs">
-                  {format(new Date(currentSession.openedAt), 'dd/MM à HH:mm', { locale: fr })}
-                </Text>
-              </View>
-              <View className="flex-row items-center gap-1">
-                <User size={14} color="#6B7280" />
-                <Text className="text-xs">
-                  {currentSession.user?.firstName} {currentSession.user?.lastName}
-                </Text>
-              </View>
-              <View className="flex-row items-center gap-1">
-                <Euro size={14} color="#6B7280" />
-                <Text className="text-xs">
-                  Fond: {formatPrice(currentSession.openingBalance)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View>
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center gap-2">
-                <View className="w-3 h-3 bg-gray-400 rounded-full" />
-                <Text className="text-lg font-semibold text-gray-900">
-                  Caisse fermée
-                </Text>
-              </View>
-              <Button
-                onPress={() => setShowOpenModal(true)}
-                className="bg-green-600 px-4 py-2"
-                size="sm"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Unlock size={16} color="white" />
-                  <Text className="text-white font-medium text-sm">Ouvrir</Text>
-                </View>
-              </Button>
-            </View>
-            <Text className="text-sm text-gray-500">
-              Aucune session de caisse active
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {currentSession && currentSession.stats && (
-        <>
-          {/* Statistiques générales */}
-          <View className="p-4">
-            <Text className="text-lg font-semibold mb-3">Vue d'ensemble</Text>
-            <View className="flex-row flex-wrap gap-3">
-              <StatCard
-                icon={<Hash size={20} color="#3B82F6" />}
-                label="Transactions"
-                value={currentSession.stats.paymentsCount}
-                trend={12}
-              />
-              <StatCard
-                icon={<Euro size={20} color="#10B981" />}
-                label="Total encaissé"
-                value={formatPrice(currentSession.stats.totalAmount)}
-                trend={8}
-              />
-            </View>
-          </View>
-
-          {/* Répartition par méthode */}
-          <View className="p-4">
-            <Text className="text-lg font-semibold mb-3">Par méthode de paiement</Text>
-            <View className="flex-row flex-wrap gap-3">
-              <StatCard
-                icon={<Banknote size={20} color="#10B981" />}
-                label="Espèces"
-                value={formatPrice(currentSession.stats.totalCash)}
-              />
-              <StatCard
-                icon={<CreditCard size={20} color="#3B82F6" />}
-                label="Carte bancaire"
-                value={formatPrice(currentSession.stats.totalCard)}
-              />
-              <StatCard
-                icon={<Ticket size={20} color="#F59E0B" />}
-                label="Tickets resto"
-                value={formatPrice(currentSession.stats.totalTicketResto)}
-              />
-              <StatCard
-                icon={<FileCheck size={20} color="#8B5CF6" />}
-                label="Chèques"
-                value={formatPrice(currentSession.stats.totalCheck)}
-              />
-            </View>
-          </View>
-
-          {/* Calcul espèces attendues */}
-          <View className="mx-4 mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <View className="flex-row items-start gap-2 mb-3">
-              <AlertCircle size={20} color="#2563EB" />
-              <View className="flex-1">
-                <Text className="font-semibold text-blue-900 mb-1">
-                  Espèces attendues en caisse
-                </Text>
-                <Text className="text-sm text-blue-700 mb-3">
-                  Fond de caisse + encaissements espèces
-                </Text>
-              </View>
-            </View>
-
-            <View className="bg-white rounded-lg p-3">
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-sm text-gray-600">Fond de caisse</Text>
-                <Text className="font-medium">{formatPrice(currentSession.openingBalance)}</Text>
-              </View>
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-sm text-gray-600">+ Espèces encaissées</Text>
-                <Text className="font-medium text-green-600">
-                  {formatPrice(currentSession.stats.totalCash)}
-                </Text>
-              </View>
-              <View className="border-t border-gray-200 pt-2 mt-2">
-                <View className="flex-row justify-between">
-                  <Text className="font-semibold text-gray-900">Total attendu</Text>
-                  <Text className="font-bold text-lg text-blue-600">
-                    {formatPrice(currentSession.openingBalance + currentSession.stats.totalCash)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </>
-      )}
-
-      {/* Message si caisse fermée */}
-      {!currentSession && (
-        <View className="flex-1 items-center justify-center p-8">
-          <Calculator size={48} color="#D1D5DB" />
-          <Text className="text-gray-500 text-center mt-4 mb-6">
-            La caisse est actuellement fermée.
-            {'\n'}
-            Ouvrez une session pour commencer à encaisser.
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+      <FlatList
+        data={cashTransactions}
+        keyExtractor={(item) => item.id || Math.random().toString()}
+        renderItem={renderCashTransaction}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        stickyHeaderIndices={[0]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#3B82F6']}
+          />
+        }
+        contentContainerStyle={{ flexGrow: 1 }}
+      />
+    </View>
   );
 }

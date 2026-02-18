@@ -15,6 +15,7 @@ export interface Payment {
   notes?: string
   refundedAt?: string
   refundReason?: string
+  cashRegisterSessionId?: string | null
   createdAt: string
   updatedAt?: string
   user?: {

@@ -15,6 +15,10 @@ export interface CashRegisterSession {
   discrepancy?: number | null;
   notes?: string | null;
   status: 'open' | 'closed';
+  zNumber?: string | null;
+  zSequence?: number | null;
+  zReportUrl?: string | null;
+  vatBreakdown?: Record<string, number> | null;
   user?: {
     id: string;
     firstName: string;
