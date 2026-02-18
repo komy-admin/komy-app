@@ -25,6 +25,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
   const [name, setName] = useState(itemType?.name || '');
   const [type, setType] = useState<'kitchen' | 'bar'>(itemType?.type === 'bar' ? 'bar' : 'kitchen');
   const [icon, setIcon] = useState<string>(itemType?.icon || ''); // Vide par défaut en création
+  const [vatRate, setVatRate] = useState<number>(itemType?.vatRate || 20); // TVA par défaut à 20%
   const [isSelectingIcon, setIsSelectingIcon] = useState(false); // Navigation vers vue sélection icône
 
   // États d'erreur et de traitement
@@ -303,7 +304,82 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           </View>
         </View>
 
-        {/* Groupe de service */}
+        {/* Taux de TVA */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Taux de TVA</Text>
+          <Text style={styles.formHelpText}>
+            Sélectionnez le taux de TVA par défaut pour ce type d'article
+          </Text>
+          <View style={styles.radioGroup}>
+            <TouchableOpacity
+              style={[
+                styles.radioOption,
+                vatRate === 20 && styles.radioOptionActive,
+                vatRate === 20 && { borderColor: '#3B82F6', backgroundColor: '#EFF6FF' }
+              ]}
+              onPress={() => setVatRate(20)}
+              activeOpacity={1}
+            >
+              <View style={styles.radio}>
+                {vatRate === 20 && <View style={[styles.radioInner, { backgroundColor: '#3B82F6' }]} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.radioLabel, vatRate === 20 && styles.radioLabelActive]}>
+                  20% - Taux normal
+                </Text>
+                <Text style={styles.radioSubLabel}>
+                  Boissons alcoolisées, services
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.radioOption,
+                vatRate === 10 && styles.radioOptionActive,
+                vatRate === 10 && { borderColor: '#10B981', backgroundColor: '#F0FDF4' }
+              ]}
+              onPress={() => setVatRate(10)}
+              activeOpacity={1}
+            >
+              <View style={styles.radio}>
+                {vatRate === 10 && <View style={[styles.radioInner, { backgroundColor: '#10B981' }]} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.radioLabel, vatRate === 10 && styles.radioLabelActive]}>
+                  10% - Restauration
+                </Text>
+                <Text style={styles.radioSubLabel}>
+                  Repas consommés sur place
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.radioOption,
+                vatRate === 5.5 && styles.radioOptionActive,
+                vatRate === 5.5 && { borderColor: '#F59E0B', backgroundColor: '#FEF3C7' }
+              ]}
+              onPress={() => setVatRate(5.5)}
+              activeOpacity={1}
+            >
+              <View style={styles.radio}>
+                {vatRate === 5.5 && <View style={[styles.radioInner, { backgroundColor: '#F59E0B' }]} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.radioLabel, vatRate === 5.5 && styles.radioLabelActive]}>
+                  5.5% - Produits alimentaires
+                </Text>
+                <Text style={styles.radioSubLabel}>
+                  Boissons sans alcool, produits à emporter
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Ordre de priorité */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Groupe de service</Text>
           <Text style={styles.formHelpText}>
@@ -573,6 +649,16 @@ const styles = StyleSheet.create({
   },
   levelList: {
     gap: 6,
+  },
+  radioSubLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  priorityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   levelRow: {
     flexDirection: 'row',

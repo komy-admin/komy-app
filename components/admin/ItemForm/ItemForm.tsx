@@ -31,13 +31,15 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
 }, ref) => {
   const [formData, setFormData] = useState({
     name: item?.name || '',
-    // 💰 Convertir centimes -> euros pour l'affichage dans le formulaire
+    // Convertir centimes -> euros pour l'affichage dans le formulaire
     price: item?.price ? centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price) : null,
     itemTypeId: item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : ''),
     color: item?.color || '',
     isActive: item?.isActive ?? true,
     hasNote: item?.hasNote ?? false,
-    selectedTags: item?.tags?.map(t => t.id) || []
+    selectedTags: item?.tags?.map(t => t.id) || [],
+    vatRate: item?.vatRate || null, // null signifie "utiliser la TVA du type"
+    useItemTypeVat: item?.vatRate === null || item?.vatRate === undefined // true si on utilise la TVA du type
   });
 
   const [selectedItemTypeId, setSelectedItemTypeId] = useState<string>(
@@ -72,13 +74,15 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     if (item) {
       setFormData({
         name: item.name,
-        // 💰 Convertir centimes -> euros pour l'affichage
+        // Convertir centimes -> euros pour l'affichage
         price: centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price),
         itemTypeId: item.itemType?.id || '',
         color: item.color || '',
         isActive: item.isActive ?? true,
         hasNote: item.hasNote ?? false,
-        selectedTags: item.tags?.map(t => t.id) || []
+        selectedTags: item.tags?.map(t => t.id) || [],
+        vatRate: item.vatRate || null,
+        useItemTypeVat: item.vatRate === null || item.vatRate === undefined
       });
       setSelectedItemTypeId(item.itemType?.id || '');
     } else {
@@ -89,7 +93,9 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         color: '',
         isActive: true,
         hasNote: false,
-        selectedTags: []
+        selectedTags: [],
+        vatRate: null,
+        useItemTypeVat: true
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
     }
@@ -134,7 +140,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
       let itemData: Item | null = null;
 
       if (isValid) {
-        // 💰 Convertir euros -> centimes pour l'envoi API
+        // Convertir euros -> centimes pour l'envoi API
         const priceInCents = eurosToCents(formData.price!);
         const selectedTags = tags.filter(t => formData.selectedTags.includes(t.id));
 
@@ -147,6 +153,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           itemType: selectedItemType!,
           isActive: formData.isActive,
           hasNote: formData.hasNote,
+          vatRate: formData.useItemTypeVat ? null : formData.vatRate, // null si on utilise la TVA du type
           tags: selectedTags
         };
       }
@@ -167,6 +174,8 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         isActive: true,
         hasNote: false,
         selectedTags: []
+        vatRate: null,
+        useItemTypeVat: true
       });
       setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
     },
@@ -344,12 +353,107 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           </View>
         </View>
 
+        {/* Section TVA */}
+        <View style={styles.section}>
+          <SectionHeader
+            icon={FileText}
+            title="2. TVA"
+            subtitle="Configurez le taux de TVA pour cet article"
+          />
+
+          <View style={styles.row}>
+            <View style={styles.field}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280', marginBottom: 8 }]}>
+                Taux de TVA
+              </Text>
+
+              {/* Switch pour utiliser la TVA du type */}
+              <View style={styles.vatToggleContainer}>
+                <Text style={styles.vatToggleLabel}>
+                  Utiliser la TVA du type ({itemTypes.find(t => t.id === selectedItemTypeId)?.vatRate || 20}%)
+                </Text>
+                <Switch
+                  value={formData.useItemTypeVat}
+                  onValueChange={(value) => setFormData(prev => ({
+                    ...prev,
+                    useItemTypeVat: value,
+                    vatRate: value ? null : (itemTypes.find(t => t.id === selectedItemTypeId)?.vatRate || 20)
+                  }))}
+                  trackColor={{ false: '#E5E7EB', true: '#10B981' }}
+                  thumbColor={formData.useItemTypeVat ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+
+              {/* Sélection manuelle de la TVA si le switch est désactivé */}
+              {!formData.useItemTypeVat && (
+                <View style={styles.vatRateSelection}>
+                  <View style={styles.vatRateButtons}>
+                    <Pressable
+                      style={[
+                        styles.vatRateButton,
+                        formData.vatRate === 20 && styles.vatRateButtonActive20
+                      ]}
+                      onPress={() => setFormData(prev => ({ ...prev, vatRate: 20 }))}
+                    >
+                      <Text style={[
+                        styles.vatRateButtonText,
+                        formData.vatRate === 20 && styles.vatRateButtonTextActive
+                      ]}>
+                        20%
+                      </Text>
+                      <Text style={styles.vatRateButtonLabel}>
+                        Taux normal
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[
+                        styles.vatRateButton,
+                        formData.vatRate === 10 && styles.vatRateButtonActive10
+                      ]}
+                      onPress={() => setFormData(prev => ({ ...prev, vatRate: 10 }))}
+                    >
+                      <Text style={[
+                        styles.vatRateButtonText,
+                        formData.vatRate === 10 && styles.vatRateButtonTextActive
+                      ]}>
+                        10%
+                      </Text>
+                      <Text style={styles.vatRateButtonLabel}>
+                        Restauration
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[
+                        styles.vatRateButton,
+                        formData.vatRate === 5.5 && styles.vatRateButtonActive55
+                      ]}
+                      onPress={() => setFormData(prev => ({ ...prev, vatRate: 5.5 }))}
+                    >
+                      <Text style={[
+                        styles.vatRateButtonText,
+                        formData.vatRate === 5.5 && styles.vatRateButtonTextActive
+                      ]}>
+                        5.5%
+                      </Text>
+                      <Text style={styles.vatRateButtonLabel}>
+                        Alimentaire
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
         {/* Section Tags */}
         {tags.length > 0 && (
           <View style={styles.section}>
             <SectionHeader
               icon={Tags}
-              title="2. Tags"
+              title="3. Tags"
               subtitle="Sélectionnez les tags applicables à cet article"
             />
 
@@ -746,5 +850,81 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
     letterSpacing: 0.3,
+  },
+
+  // Styles pour la section TVA
+  vatToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+
+  vatToggleLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    flex: 1,
+  },
+
+  vatRateSelection: {
+    marginTop: 8,
+  },
+
+  vatRateButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  vatRateButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  vatRateButtonActive20: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+
+  vatRateButtonActive10: {
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+  },
+
+  vatRateButtonActive55: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FEF3C7',
+  },
+
+  vatRateButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+
+  vatRateButtonTextActive: {
+    color: '#1F2937',
+  },
+
+  vatRateButtonLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });
