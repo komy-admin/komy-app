@@ -2,7 +2,7 @@ import { Pressable, ScrollView, View, useWindowDimensions, StyleSheet } from "re
 import { SidePanel } from "~/components/SidePanel";
 import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
 import OrderList from "~/components/Service/OrderList";
@@ -192,6 +192,15 @@ export default function ServicePage() {
 
   const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
   const cameFromDetailViewRef = useRef<boolean>(false);
+
+  // Reset quand l'ordre disparaît (ex: backend supprime l'ordre vide après suppression du dernier article)
+  // useEffect requis car setSelectedTable dispatche vers Redux (state externe, pas local)
+  useEffect(() => {
+    if (showOrderDetail && !selectedTableOrder && !isSavingOrderRef.current) {
+      setShowOrderDetail(false);
+      setSelectedTable(null);
+    }
+  }, [showOrderDetail, selectedTableOrder, setSelectedTable]);
 
   const handleSmartCloseOrderModal = useCallback(() => {
     orderLinesManager.reset();
