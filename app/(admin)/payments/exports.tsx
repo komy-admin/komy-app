@@ -13,7 +13,7 @@ import {
   FilePlus,
   Calendar,
   TrendingUp,
-  Receipt,
+  ReceiptEuro,
   Euro,
   Filter,
   ChevronDown,
@@ -225,7 +225,7 @@ export default function ExportsScreen() {
         <Text className="text-lg font-semibold mb-3">Exports disponibles</Text>
 
         <ExportCard
-          icon={<Receipt size={20} color="#2563EB" />}
+          icon={<ReceiptEuro size={20} color="#2563EB" />}
           title="Journal des encaissements"
           description="Liste chronologique de tous les paiements avec détails complets"
           type="journal"

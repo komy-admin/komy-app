@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import {
-  Receipt,
+  ReceiptEuro,
   Calculator,
   Download
 } from 'lucide-react-native';
@@ -50,7 +50,7 @@ export default function PaymentsLayout() {
           title: 'Paiements',
           tabBarLabel: 'Paiements',
           tabBarIcon: ({ color, size }) => (
-            <Receipt size={size || 24} color={color} />
+            <ReceiptEuro size={size || 24} color={color} />
           ),
         }}
       />

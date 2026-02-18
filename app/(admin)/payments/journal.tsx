@@ -17,7 +17,7 @@ import {
   RotateCcw,
   User,
   MapPin,
-  Receipt,
+  ReceiptEuro,
   Euro,
   List,
   Layers,
@@ -575,7 +575,7 @@ export default function PaymentJournalScreen() {
 
     return (
       <View className="px-4 py-2">
-        <View className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <View className="bg-white rounded-xl shadow overflow-hidden">
           <Pressable
             className="p-4 active:bg-gray-50"
             onPress={() => {
@@ -686,7 +686,7 @@ export default function PaymentJournalScreen() {
    * Header avec filtres et résumé
    */
   const renderHeader = () => (
-    <View className="bg-white shadow-lg">
+    <View className="bg-white shadow">
       {/* Ligne 1: Résumé compact + Toggle de vue */}
       <View className="px-4 py-3 flex-row items-center justify-between border-b border-gray-200">
         {/* Résumé à gauche */}
@@ -853,7 +853,7 @@ export default function PaymentJournalScreen() {
 
     return (
       <View className="flex-1 items-center justify-center p-8">
-        <Receipt size={48} color="#D1D5DB" />
+        <ReceiptEuro size={48} color="#D1D5DB" />
         <Text className="text-gray-500 text-center mt-4">
           Aucun encaissement trouvé pour cette période
         </Text>
