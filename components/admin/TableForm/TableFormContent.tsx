@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, StyleSheet, Text as RNText, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
-import { X, Check } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
 import { TextInput, NumberInput } from '~/components/ui';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
@@ -57,7 +57,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
     switch (fieldName) {
       case 'name':
         if (!formData.name.trim()) return 'Le nom de la table est obligatoire';
-        if (formData.name.trim().length > 50) return 'Le nom ne peut pas dépasser 50 caractères';
+        if (formData.name.trim().length > 3) return 'Le nom ne peut pas dépasser 3 caractères';
         if (!/^[a-zA-Z0-9\s\-_À-ÿ]+$/.test(formData.name)) {
           return 'Seuls les lettres, chiffres, espaces, tirets et underscores sont autorisés';
         }
@@ -137,8 +137,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <RNText style={styles.title}>Modifier la table</RNText>
-          <RNText style={styles.subtitle}>{table.name}</RNText>
+          <RNText style={styles.title}>Table - {table.name}</RNText>
         </View>
         <TouchableOpacity
           onPress={onCancel}
@@ -164,30 +163,32 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
               value={formData.name}
               onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
               onBlur={() => markFieldAsTouched('name')}
-              placeholder="Ex: A01, Terrasse 1..."
+              maxLength={3}
+              placeholder="Ex: A01, T1..."
               placeholderTextColor="#94A3B8"
               style={[
                 styles.formInput,
                 getFieldError('name') && styles.formInputError
               ]}
             />
-            {getFieldError('name') && (
+            {getFieldError('name') ? (
               <View style={styles.errorContainer}>
                 <RNText style={styles.errorText}>{getFieldError('name')}</RNText>
-                <RNText style={styles.exampleText}>Exemple : Table 1, A01, Terrasse 5</RNText>
               </View>
+            ) : (
+              <RNText style={styles.formHelpText}>3 caractères maximum</RNText>
             )}
           </View>
 
           <View style={styles.formGroup}>
-            <RNText style={styles.formLabel}>Nombre de couverts *</RNText>
+            <RNText style={styles.formLabel}>Nombre max de couverts *</RNText>
             <NumberInput
               value={parseInt(formData.seats)}
               onChangeText={(value) => {
                 setFormData(prev => ({ ...prev, seats: value?.toString() || '1' }));
                 markFieldAsTouched('seats');
               }}
-              placeholder="Nombre de couverts"
+              placeholder="Nombre max de couverts"
               decimalPlaces={0}
               min={1}
               max={20}
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
@@ -264,12 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 18,
   },
   closeButton: {
     padding: 4,
@@ -311,11 +306,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#EF4444',
     fontWeight: '600',
-  },
-  exampleText: {
-    fontSize: 11,
-    color: '#64748B',
-    fontStyle: 'italic',
   },
   footer: {
     flexDirection: 'row',

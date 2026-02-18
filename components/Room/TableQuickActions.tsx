@@ -128,7 +128,7 @@ export const TableQuickActions = React.memo<TableQuickActionsProps>(({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: Platform.select({ web: 30, default: 10 }),
+    bottom: Platform.select({ web: 30, default: 30 }),
     right: Platform.select({ web: 30, default: 25 }),
     width: BUTTON_SIZE,
     height: EXPANDED_HEIGHT,

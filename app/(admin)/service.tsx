@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, View, useWindowDimensions, StyleSheet } from "react-native";
+import { ScrollView, View, useWindowDimensions, StyleSheet } from "react-native";
 import { SidePanel } from "~/components/SidePanel";
 import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
@@ -24,15 +24,14 @@ import {
 import { useSelector } from 'react-redux';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
 import { OrderLinesForm } from '~/components/order/OrderLinesForm';
-import { Play } from 'lucide-react-native';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
+import { useOrderStatusActions } from '~/hooks/order/useOrderStatusActions';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { OrderDetailView, OrderDetailHeader } from '~/components/OrderDetail';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { CustomModal } from '@/components/CustomModal';
-import { OrderLineType } from '~/types/order-line.types';
 import PaymentView from '~/components/Service/PaymentView';
 import { ForkModal } from '~/components/ui';
 import { Status } from '~/types/status.enum';
@@ -42,16 +41,10 @@ export default function ServicePage() {
   const [orderCreatedFromStart, setOrderCreatedFromStart] = useState<boolean>(false);
   const [orderModalTitle, setOrderModalTitle] = useState<string>('');
   const [showOrderDetail, setShowOrderDetail] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showTerminateDialog, setShowTerminateDialog] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
   const [isReassigning, setIsReassigning] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showClaimConfirmModal, setShowClaimConfirmModal] = useState(false);
-  const [showServeConfirmModal, setShowServeConfirmModal] = useState(false);
-  const [itemsToClaimData, setItemsToClaimData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; itemTypeNames: string[]; count: number; itemNames: string[] } | null>(null);
-  const [itemsToServeData, setItemsToServeData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; count: number; itemNames: string[] } | null>(null);
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useSelector(selectAppInitialized);
   const appLoading = useSelector(selectIsAppInitializing);
@@ -66,43 +59,53 @@ export default function ServicePage() {
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
   const { deleteOrderLine } = useOrderLines();
+  const { showToast } = useToast();
+
+  const handleOrderCleanup = useCallback(() => {
+    setSelectedTable(null);
+    setShowOrderDetail(false);
+  }, [setSelectedTable]);
+
+  const {
+    hasDraftItems,
+    hasReadyItems,
+    handleUpdateItemStatus,
+    handleUpdateMenuItemStatus,
+    handleBulkUpdateStatus,
+    handleClaim,
+    confirmClaim,
+    showClaimConfirmModal,
+    setShowClaimConfirmModal,
+    itemsToClaimData,
+    setItemsToClaimData,
+    handleServe,
+    confirmServe,
+    showServeConfirmModal,
+    setShowServeConfirmModal,
+    itemsToServeData,
+    setItemsToServeData,
+    handleDeleteLine,
+    deleteCurrentOrder,
+    handleDelete,
+    handleConfirmDelete,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    handleTerminate,
+    handleConfirmTerminate,
+    showTerminateDialog,
+    setShowTerminateDialog,
+  } = useOrderStatusActions({
+    selectedTableOrder,
+    allItemTypes,
+    updateOrderStatus,
+    deleteOrder,
+    deleteOrderLine,
+    showToast,
+    onCleanup: handleOrderCleanup,
+  });
 
   // Stabiliser la référence des initialLines pour éviter les re-renders inutiles
   const initialLines = useMemo(() => selectedTableOrder?.lines || [], [selectedTableOrder?.id, selectedTableOrder?.lines]);
-
-  // Calculer si il y a des items en DRAFT
-  const hasDraftItems = useMemo(() => {
-    if (!selectedTableOrder?.lines) return false;
-
-    // Vérifier items individuels
-    const hasDraftIndividualItems = selectedTableOrder.lines.some(
-      (line) => line.type === OrderLineType.ITEM && line.status === Status.DRAFT
-    );
-    if (hasDraftIndividualItems) return true;
-
-    // Vérifier items dans les menus
-    return selectedTableOrder.lines.some(
-      (line) => line.type === OrderLineType.MENU &&
-        line.items?.some((menuItem) => menuItem.status === Status.DRAFT)
-    );
-  }, [selectedTableOrder?.lines]);
-
-  // Calculer si il y a des items en READY
-  const hasReadyItems = useMemo(() => {
-    if (!selectedTableOrder?.lines) return false;
-
-    // Vérifier items individuels
-    const hasReadyIndividualItems = selectedTableOrder.lines.some(
-      (line) => line.type === OrderLineType.ITEM && line.status === Status.READY
-    );
-    if (hasReadyIndividualItems) return true;
-
-    // Vérifier items dans les menus
-    return selectedTableOrder.lines.some(
-      (line) => line.type === OrderLineType.MENU &&
-        line.items?.some((menuItem) => menuItem.status === Status.READY)
-    );
-  }, [selectedTableOrder?.lines]);
 
   // ✅ Hook pour gérer les OrderLines (remplace toute la logique manuelle)
   const orderLinesManager = useOrderLinesManager({
@@ -130,9 +133,6 @@ export default function ServicePage() {
     },
   });
 
-
-  const { showToast } = useToast();
-
   const {
     searchQuery,
     filters,
@@ -156,20 +156,8 @@ export default function ServicePage() {
     setCurrentRoom(room.id);
   }, [setSelectedTable, setCurrentRoom]);
 
-  const handleTablePress = useCallback((table: Table | null) => {
-    if (!table) return;
-
-    // 🔧 CORRECTION: Trouver la commande AVANT de changer la table sélectionnée
-    const tableOrder = currentRoomOrders.find(order => order.tableId === table.id);
-
-    // Sélectionner la table
-    setSelectedTable(table.id);
-
-    // Si la table a une commande, afficher les détails
-    if (tableOrder) {
-      setShowOrderDetail(true);
-    }
-  }, [currentRoomOrders, setSelectedTable]);
+  const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
+  const cameFromDetailViewRef = useRef<boolean>(false);
 
   const handleCreateOrder = useCallback(() => {
     if (!selectedTableId) {
@@ -190,8 +178,22 @@ export default function ServicePage() {
     setShowOrderModal(true); // Ouvrir la modal
   }, [selectedTableId, currentRoomOrders, selectedTable, currentRoom, showToast]);
 
-  const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
-  const cameFromDetailViewRef = useRef<boolean>(false);
+  const handleTablePress = useCallback((table: Table | null) => {
+    if (!table) return;
+
+    const tableOrder = currentRoomOrders.find(order => order.tableId === table.id);
+
+    if (tableOrder) {
+      setSelectedTable(table.id);
+      setShowOrderDetail(true);
+    } else if (selectedTableId === table.id) {
+      // 2e tap sur table vide déjà sélectionnée → démarrer commande
+      handleCreateOrder();
+    } else {
+      // 1er tap → sélectionner
+      setSelectedTable(table.id);
+    }
+  }, [currentRoomOrders, setSelectedTable, selectedTableId, handleCreateOrder]);
 
   // Reset quand l'ordre disparaît (ex: backend supprime l'ordre vide après suppression du dernier article)
   // useEffect requis car setSelectedTable dispatche vers Redux (state externe, pas local)
@@ -219,19 +221,6 @@ export default function ServicePage() {
     }, 300);
   }, [orderLinesManager]);
 
-  const handleDeleteOrder = useCallback(async () => {
-    if (!selectedTableOrder) return;
-
-    try {
-      await deleteOrder(selectedTableOrder.id);
-      setSelectedTable(null);
-      setShowOrderDetail(false);
-      showToast('Commande supprimée avec succès.', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la suppression de la commande.', 'error');
-    }
-  }, [selectedTableOrder, deleteOrder, setSelectedTable, showToast]);
-
   // Handlers pour OrderDetailView
   const handleEditOrder = useCallback(() => {
     cameFromDetailViewRef.current = true; // Marquer qu'on vient de la detail view
@@ -240,207 +229,6 @@ export default function ServicePage() {
     setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTableOrder?.table?.name || selectedTable?.name || 'Table'}`);
     setShowOrderModal(true);
   }, [selectedTableOrder, selectedTable, currentRoom]);
-
-  const handleUpdateItemStatus = useCallback(async (orderLine: any, newStatus: Status) => {
-    if (!selectedTableOrder) return;
-
-    try {
-      await updateOrderStatus(selectedTableOrder.id, {
-        status: newStatus,
-        orderLineIds: [orderLine.id],
-      });
-      showToast('Statut mis à jour avec succès', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la mise à jour du statut', 'error');
-      console.error('Erreur updateItemStatus:', error);
-    }
-  }, [selectedTableOrder, updateOrderStatus, showToast]);
-
-  const handleUpdateMenuItemStatus = useCallback(async (orderLineItem: any, newStatus: Status) => {
-    if (!selectedTableOrder) return;
-
-    try {
-      await updateOrderStatus(selectedTableOrder.id, {
-        status: newStatus,
-        orderLineItemIds: [orderLineItem.id],
-      });
-      showToast('Statut mis à jour avec succès', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la mise à jour du statut', 'error');
-      console.error('Erreur updateMenuItemStatus:', error);
-    }
-  }, [selectedTableOrder, updateOrderStatus, showToast]);
-
-  const handleBulkUpdateStatus = useCallback(async (orderLineIds: string[], orderLineItemIds: string[], newStatus: Status) => {
-    if (!selectedTableOrder) return;
-
-    try {
-      await updateOrderStatus(selectedTableOrder.id, {
-        status: newStatus,
-        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
-        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
-      });
-      showToast(`${orderLineIds.length + orderLineItemIds.length} article(s) mis à jour`, 'success');
-    } catch (error) {
-      showToast('Erreur lors de la mise à jour', 'error');
-      console.error('Erreur bulk update:', error);
-    }
-  }, [selectedTableOrder, updateOrderStatus, showToast]);
-
-  const handleClaim = useCallback(() => {
-    if (!selectedTableOrder) return;
-
-    // Créer un Map pour accès rapide au priorityOrder
-    const itemTypePriorityMap = new Map(
-      allItemTypes.map(it => [it.id, it.priorityOrder])
-    );
-
-    // Trouver tous les items en DRAFT (items individuels + items dans les menus)
-    const draftItems: { orderLineId?: string; orderLineItemId?: string; itemTypeId: string; priority: number; itemName: string }[] = [];
-
-    // Items individuels
-    selectedTableOrder.lines?.forEach((line) => {
-      if (line.type === OrderLineType.ITEM && line.status === Status.DRAFT) {
-        const itemTypeId = line.item?.itemType?.id || '';
-        const priority = itemTypePriorityMap.get(itemTypeId) ?? Number.MAX_SAFE_INTEGER;
-        draftItems.push({
-          orderLineId: line.id,
-          itemTypeId,
-          priority,
-          itemName: line.item?.name || 'Article inconnu'
-        });
-      }
-    });
-
-    // Items dans les menus
-    selectedTableOrder.lines?.forEach((line) => {
-      if (line.type === OrderLineType.MENU && line.items) {
-        line.items.forEach((menuItem) => {
-          if (menuItem.status === Status.DRAFT) {
-            const itemTypeId = menuItem.item?.itemType?.id || '';
-            const priority = itemTypePriorityMap.get(itemTypeId) ?? Number.MAX_SAFE_INTEGER;
-            draftItems.push({
-              orderLineItemId: menuItem.id,
-              itemTypeId,
-              priority,
-              itemName: menuItem.item?.name || 'Article inconnu'
-            });
-          }
-        });
-      }
-    });
-
-    if (draftItems.length === 0) {
-      showToast('Aucun article en brouillon', 'warning');
-      return;
-    }
-
-    // Trouver la priorité minimale parmi les items en DRAFT
-    const minPriority = Math.min(...draftItems.map(item => item.priority));
-
-    // Filtrer seulement les items avec cette priorité minimale
-    const itemsToClaim = draftItems.filter(item => item.priority === minPriority);
-
-    const orderLineIds = itemsToClaim.filter(item => item.orderLineId).map(item => item.orderLineId!);
-    const orderLineItemIds = itemsToClaim.filter(item => item.orderLineItemId).map(item => item.orderLineItemId!);
-    const itemTypeNames = allItemTypes
-      .filter(it => it.priorityOrder === minPriority)
-      .map(it => it.name)
-      .sort();
-    const itemNames = itemsToClaim.map(item => item.itemName);
-
-    // Stocker les données et afficher la modal de confirmation
-    setItemsToClaimData({
-      orderLineIds,
-      orderLineItemIds,
-      itemTypeNames,
-      count: itemsToClaim.length,
-      itemNames
-    });
-    setShowClaimConfirmModal(true);
-  }, [selectedTableOrder, allItemTypes, showToast]);
-
-  const confirmClaim = useCallback(async () => {
-    if (!itemsToClaimData) return;
-
-    try {
-      await handleBulkUpdateStatus(itemsToClaimData.orderLineIds, itemsToClaimData.orderLineItemIds, Status.PENDING);
-      showToast(`${itemsToClaimData.itemTypeNames.join(' + ')} réclamé${itemsToClaimData.count > 1 ? 's' : ''} (${itemsToClaimData.count})`, 'success');
-      setShowClaimConfirmModal(false);
-      setItemsToClaimData(null);
-    } catch (error) {
-      showToast('Erreur lors de la réclamation', 'error');
-      console.error('Erreur claim:', error);
-    }
-  }, [itemsToClaimData, handleBulkUpdateStatus, showToast]);
-
-  const handleServe = useCallback(() => {
-    if (!selectedTableOrder) return;
-
-    // Trouver tous les items en READY (items individuels + items dans les menus)
-    const orderLineIds: string[] = [];
-    const orderLineItemIds: string[] = [];
-    const itemNames: string[] = [];
-
-    // Items individuels
-    selectedTableOrder.lines?.forEach((line) => {
-      if (line.type === OrderLineType.ITEM && line.status === Status.READY) {
-        orderLineIds.push(line.id);
-        itemNames.push(line.item?.name || 'Article inconnu');
-      }
-    });
-
-    // Items dans les menus
-    selectedTableOrder.lines?.forEach((line) => {
-      if (line.type === OrderLineType.MENU && line.items) {
-        line.items.forEach((menuItem) => {
-          if (menuItem.status === Status.READY) {
-            orderLineItemIds.push(menuItem.id);
-            itemNames.push(menuItem.item?.name || 'Article inconnu');
-          }
-        });
-      }
-    });
-
-    const totalItems = orderLineIds.length + orderLineItemIds.length;
-
-    if (totalItems === 0) {
-      showToast('Aucun article prêt', 'warning');
-      return;
-    }
-
-    // Stocker les données et afficher la modal de confirmation
-    setItemsToServeData({
-      orderLineIds,
-      orderLineItemIds,
-      count: totalItems,
-      itemNames
-    });
-    setShowServeConfirmModal(true);
-  }, [selectedTableOrder, showToast]);
-
-  const confirmServe = useCallback(async () => {
-    if (!itemsToServeData) return;
-
-    try {
-      await handleBulkUpdateStatus(itemsToServeData.orderLineIds, itemsToServeData.orderLineItemIds, Status.SERVED);
-      showToast(`Article${itemsToServeData.count > 1 ? 's' : ''} servi${itemsToServeData.count > 1 ? 's' : ''} (${itemsToServeData.count})`, 'success');
-      setShowServeConfirmModal(false);
-      setItemsToServeData(null);
-    } catch (error) {
-      showToast('Erreur lors du service', 'error');
-      console.error('Erreur serve:', error);
-    }
-  }, [itemsToServeData, handleBulkUpdateStatus, showToast]);
-
-  const handleDeleteLine = useCallback(async (orderLineId: string) => {
-    try {
-      await deleteOrderLine(orderLineId);
-      showToast('Ligne supprimée avec succès', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
-    }
-  }, [deleteOrderLine, showToast]);
 
   const handleReassignTable = useCallback(() => {
     setReassignRoomId(currentRoom?.id || null);
@@ -493,61 +281,6 @@ export default function ServicePage() {
       showToast('Erreur lors du traitement du paiement', 'error');
     }
   }, [showToast]);
-
-  const handleTerminate = useCallback(() => {
-    setShowTerminateDialog(true);
-  }, []);
-
-  const handleConfirmTerminate = useCallback(async () => {
-    if (!selectedTableOrder) return;
-
-    try {
-      const orderLineIds: string[] = [];
-      const orderLineItemIds: string[] = [];
-
-      selectedTableOrder.lines?.forEach((line) => {
-        if (line.type === OrderLineType.ITEM) {
-          orderLineIds.push(line.id);
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          line.items.forEach((item) => {
-            orderLineItemIds.push(item.id);
-          });
-        }
-      });
-
-      await updateOrderStatus(selectedTableOrder.id, {
-        status: Status.TERMINATED,
-        orderLineIds: orderLineIds.length > 0 ? orderLineIds : undefined,
-        orderLineItemIds: orderLineItemIds.length > 0 ? orderLineItemIds : undefined,
-      });
-
-      showToast('Commande terminée avec succès', 'success');
-      setShowTerminateDialog(false);
-      setShowOrderDetail(false);
-      setSelectedTable(null);
-    } catch (error) {
-      showToast('Erreur lors de la terminaison de la commande', 'error');
-      console.error('Erreur terminate:', error);
-    }
-  }, [selectedTableOrder, updateOrderStatus, showToast, setSelectedTable]);
-
-  const handleDelete = useCallback(() => {
-    setShowDeleteDialog(true);
-  }, []);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (!selectedTableOrder) return;
-
-    try {
-      await deleteOrder(selectedTableOrder.id);
-      showToast('Commande supprimée avec succès', 'success');
-      setShowDeleteDialog(false);
-      setShowOrderDetail(false);
-      setSelectedTable(null);
-    } catch (error) {
-      showToast('Erreur lors de la suppression de la commande', 'error');
-    }
-  }, [selectedTableOrder, deleteOrder, showToast, setSelectedTable]);
 
   const handleCloseOrderDetail = useCallback(() => {
     setShowOrderDetail(false);
@@ -639,7 +372,7 @@ export default function ServicePage() {
                       setSelectedTable(order.tableId);
                       setShowOrderDetail(true);
                     }}
-                    onOrderDelete={handleDeleteOrder}
+                    onOrderDelete={deleteCurrentOrder}
                     selectedOrderId={selectedTableOrder?.id}
                   />
                 </>
@@ -717,16 +450,6 @@ export default function ServicePage() {
                         onTableUpdate={() => { }}
                       />
                     </View>
-
-                    {/* Bouton Start flottant - visible quand une table vide est sélectionnée */}
-                    {selectedTable && !selectedTableOrder && (
-                      <Pressable
-                        onPress={handleCreateOrder}
-                        style={styles.startButton}
-                      >
-                        <Play size={28} color="white" fill="white" />
-                      </Pressable>
-                    )}
                   </>
                 )}
               </View>
@@ -890,22 +613,5 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  startButton: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    backgroundColor: '#1A1A1A',
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 1000,
   },
 });

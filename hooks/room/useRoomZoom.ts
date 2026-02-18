@@ -17,10 +17,12 @@ import { Gesture } from 'react-native-gesture-handler';
 
 interface UseRoomZoomProps {
   initialZoom: number;
+  disablePan?: boolean;
 }
 
 export const useRoomZoom = ({
-  initialZoom
+  initialZoom,
+  disablePan = false,
 }: UseRoomZoomProps) => {
   // Shared values pour les transformations
   const translateX = useSharedValue(0);
@@ -41,8 +43,8 @@ export const useRoomZoom = ({
   // Geste de pan (déplacement) - Actif dans tous les modes
   // 🎯 En mode édition: drag table a priorité, pan room uniquement sur background
   // La hiérarchie des GestureDetector gère automatiquement la priorité
-  const panGesture = useMemo(() =>
-    Gesture.Pan()
+  const panGesture = useMemo(() => {
+    const gesture = Gesture.Pan()
       .onStart(() => {
         'worklet';
         savedTranslateX.value = translateX.value;
@@ -52,8 +54,10 @@ export const useRoomZoom = ({
         'worklet';
         translateX.value = savedTranslateX.value + event.translationX;
         translateY.value = savedTranslateY.value + event.translationY;
-      }),
-  [savedTranslateX, savedTranslateY, translateX, translateY]);
+      });
+    if (disablePan) gesture.enabled(false);
+    return gesture;
+  }, [savedTranslateX, savedTranslateY, translateX, translateY, disablePan]);
 
   // Geste de pinch (zoom)
   const pinchGesture = useMemo(() =>

@@ -30,7 +30,7 @@ import {
   GestureDetector,
   Gesture,
 } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { Plus, Play } from 'lucide-react-native';
 
 interface RoomTableServiceProps {
   table: Table;
@@ -64,21 +64,15 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   // 🖐️ GESTES SIMPLES (2 au lieu de 7)
   const tapGesture = useMemo(() =>
     Gesture.Tap()
-      .onEnd(() => {
-        'worklet';
-        runOnJS(handlePress)();
-      })
-      .runOnJS(false),
+      .runOnJS(true)
+      .onEnd(handlePress),
     [handlePress]);
 
   const longPressGesture = useMemo(() =>
     Gesture.LongPress()
       .minDuration(500)
-      .onEnd(() => {
-        'worklet';
-        runOnJS(handleLongPress)();
-      })
-      .runOnJS(false),
+      .runOnJS(true)
+      .onEnd(handleLongPress),
     [handleLongPress]);
 
   // Geste composé : longPress prioritaire sur tap
@@ -93,7 +87,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     // Bordure noire si sélectionnée
     if (isSelected) {
       return {
-        backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
+        backgroundColor: status ? getStatusColor(status) : '#FAFAFA',
         borderWidth: 3,
         borderColor: '#2A2E33',
         borderStyle: 'solid' as const,
@@ -101,13 +95,13 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     }
     // Style normal basé sur le statut
     return {
-      backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
+      backgroundColor: status ? getStatusColor(status) : '#FAFAFA',
       ...(status
         ? getStatusBorderStyle(status, table)
-        : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const }
+        : { borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'solid' as const }
       ),
     };
-  }, [status, table, isSelected]);
+  }, [status, table, isSelected, editionMode]);
 
   // Style du conteneur avec curseur pointer (web)
   const containerStyle = useMemo(() => ({
@@ -117,13 +111,12 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     width: table.width * CELL_SIZE,
     height: table.height * CELL_SIZE,
     zIndex: isSelected ? 10000 : 1000,
-    ...(!editionMode && !hasOrder && !isSelected && { opacity: 0.35 }),
     ...(Platform.OS === 'web' && {
       userSelect: 'none' as any,
       WebkitUserSelect: 'none' as any,
       cursor: 'pointer' as any,
     }),
-  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected, hasOrder]);
+  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected]);
 
   return (
     <View style={containerStyle}>
@@ -134,7 +127,20 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
 
           <View style={styles.innerContainer}>
             <View style={[styles.table, tableStyle]}>
-              <Text style={styles.tableText}>{table.name}</Text>
+              {hasOrder || editionMode ? (
+                <Text style={styles.tableText}>{table.name}</Text>
+              ) : (
+                <View style={styles.emptyTableContent}>
+                  <View style={[styles.emptyTableIcon, !isSelected && styles.emptyTableIconUnselected]}>
+                    {isSelected ? (
+                      <Play size={14} color="white" fill="white" />
+                    ) : (
+                      <Plus size={14} color="#9CA3AF" />
+                    )}
+                  </View>
+                  <Text style={styles.emptyTableText} numberOfLines={1}>{table.name}</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -191,6 +197,27 @@ const styles = StyleSheet.create({
   tableText: {
     color: '#2A2E33',
     fontWeight: 'bold',
+  },
+  emptyTableContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+  emptyTableIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#2A2E33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyTableIconUnselected: {
+    backgroundColor: '#FFFFFF',
+  },
+  emptyTableText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 });
 

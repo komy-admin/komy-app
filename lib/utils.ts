@@ -80,12 +80,10 @@ export const getTableShortId = (tableName: string): string => {
 
 export {
   getMostImportantStatus,
-  hasDraftWithOtherStatus,
   hasMenuMixedStatuses,
   getOrderLinesGlobalStatus,
   getOrderGlobalStatus,
   getTableStatus,
-  shouldTableHaveDottedBorder,
   getNextStatus,
   getPreviousStatus,
   getStatusText,

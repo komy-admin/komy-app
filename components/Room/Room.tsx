@@ -7,7 +7,6 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
-  runOnJS,
 } from 'react-native-reanimated';
 import { Table } from '~/types/table.types';
 import { RoomGrid } from '~/components/Room/RoomGrid';
@@ -62,7 +61,8 @@ const Room: React.FC<RoomProps> = ({
     panGesture,
     pinchGesture
   } = useRoomZoom({
-    initialZoom: dimensions?.initialZoom || 1
+    initialZoom: dimensions?.initialZoom || 1,
+    disablePan: editionMode,
   });
 
   // 🎯 HOOK: Validation des positions de tables
@@ -98,10 +98,8 @@ const Room: React.FC<RoomProps> = ({
 
   const tapGesture = useMemo(() =>
     Gesture.Tap()
-      .onEnd(() => {
-        'worklet';
-        runOnJS(handleBackgroundPress)();
-      }),
+      .runOnJS(true)
+      .onEnd(handleBackgroundPress),
   [handleBackgroundPress]);
 
   const composedGesture = useMemo(() =>

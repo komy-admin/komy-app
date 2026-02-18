@@ -27,11 +27,6 @@ export const getMostImportantStatus = (statuses: Status[]): Status => {
   }, statuses[0]);
 };
 
-export const hasDraftWithOtherStatus = (statuses: Status[]): boolean => {
-  const uniqueStatuses = [...new Set(statuses)];
-  return uniqueStatuses.includes(Status.DRAFT) && uniqueStatuses.length > 1;
-};
-
 export const hasMenuMixedStatuses = (statuses: Status[]): boolean => {
   const uniqueStatuses = [...new Set(statuses)];
   return uniqueStatuses.length > 1;
@@ -60,26 +55,6 @@ export const getOrderGlobalStatus = (order: Order): Status => {
 export const getTableStatus = (table: Table): Status | undefined => {
   if (!table.orders || table.orders.length === 0) return undefined;
   return getOrderGlobalStatus(table.orders[0]);
-};
-
-export const shouldTableHaveDottedBorder = (table: Table & { orders?: (Order & { lines?: OrderLine[] })[] }): boolean => {
-  const statuses: Status[] = [];
-
-  table.orders?.forEach(order => {
-    if (order.lines) {
-      order.lines.forEach(line => {
-        if (line.type === OrderLineType.ITEM && line.status) {
-          statuses.push(line.status);
-        } else if (line.type === OrderLineType.MENU && line.items) {
-          line.items.forEach(menuItem => {
-            statuses.push(menuItem.status);
-          });
-        }
-      });
-    }
-  });
-
-  return hasDraftWithOtherStatus(statuses);
 };
 
 // ========================================
@@ -168,21 +143,7 @@ export const getStatusTagColor = (status: Status) => {
 // Styles de bordure
 // ========================================
 
-export const getStatusBorderStyle = (status: Status, table?: Table & { orders?: (Order & { lines?: OrderLine[] })[] }) => {
-  const hasActualOrderLines = table?.orders?.some(order =>
-    order.lines && order.lines.length > 0
-  ) ?? false;
-
-  const hasDraftMixed = table ? shouldTableHaveDottedBorder(table) : false;
-
-  if ((status === Status.DRAFT && hasActualOrderLines) || hasDraftMixed) {
-    return {
-      borderStyle: 'dashed' as const,
-      borderColor: '#2A2E33',
-      borderWidth: 3,
-    };
-  }
-
+export const getStatusBorderStyle = (_status: Status, _table?: Table & { orders?: (Order & { lines?: OrderLine[] })[] }) => {
   return {
     borderStyle: 'solid' as const,
     borderColor: '#AAAAAA',
