@@ -173,7 +173,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         color: '',
         isActive: true,
         hasNote: false,
-        selectedTags: []
+        selectedTags: [],
         vatRate: null,
         useItemTypeVat: true
       });

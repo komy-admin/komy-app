@@ -5,6 +5,7 @@ import { OrderDetailMenuCard } from './OrderDetailMenuCard';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { ItemType } from '~/types/item-type.types';
 import { FilteredItem } from '~/hooks/useOrderDetailFiltering';
+import { usePayments } from '@/hooks/usePayments';
 
 interface OrderDetailListItemProps {
   item: FilteredItem;
@@ -34,6 +35,8 @@ export const OrderDetailListItem = memo<OrderDetailListItemProps>((props) => {
     onOpenDeleteMenuDialog,
     onShowToast,
   } = props;
+
+  const { getOrderLinePaymentFraction } = usePayments();
 
   // ✅ Handlers mémoïsés pour éviter les re-renders des enfants
   const handleDeleteMenuDialog = useCallback(() => {
@@ -110,6 +113,7 @@ export const OrderDetailListItem = memo<OrderDetailListItemProps>((props) => {
         itemTypeName={orderLine.item?.itemType?.name}
         onOpenStatusSelector={handleItemStatusSelector}
         onOpenDeleteDialog={handleDeleteItemDialog}
+        paymentFraction={getOrderLinePaymentFraction(orderLine.id, orderLine.totalPrice)}
       />
     </Pressable>
   );

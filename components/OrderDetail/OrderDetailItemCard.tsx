@@ -15,11 +15,6 @@ export interface OrderDetailItemCardProps {
   itemTypeName?: string;
   onOpenStatusSelector: () => void;
   onOpenDeleteDialog: () => void;
-  onStatusChange: (newStatus: Status) => void;
-  onDelete: () => void;
-  isMultiSelectMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelection?: () => void;
   paymentFraction?: number;
 }
 
@@ -64,11 +59,6 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   itemTypeName,
   onOpenStatusSelector,
   onOpenDeleteDialog,
-  onStatusChange,
-  onDelete,
-  isMultiSelectMode = false,
-  isSelected = false,
-  onToggleSelection,
   paymentFraction = 0,
 }) => {
   // ✅ useMemo : Calculer les valeurs dérivées une seule fois
@@ -187,7 +177,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
             </View>
           </View>
           <View style={styles.actionsColumn}>
-            {isPaid ? (
+            {paymentFraction === 1 ? (
               <View style={styles.lockedIcon}>
                 <Lock size={18} color="#9CA3AF" strokeWidth={2} />
               </View>

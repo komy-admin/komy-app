@@ -4,9 +4,9 @@
  * Fonctions memoizables pour éviter les recalculs coûteux O(n*m)
  */
 
-import { Order } from '~/types/order.types';
-import { OrderLine, OrderLineType } from '~/types/order-line.types';
-import { Status } from '~/types/status.enum';
+import { Order } from "~/types/order.types";
+import { OrderLine, OrderLineType } from "~/types/order-line.types";
+import { Status } from "~/types/status.enum";
 
 /**
  * Vérifie si une ligne de commande est terminée
@@ -18,7 +18,7 @@ const isOrderLineTerminated = (line: OrderLine): boolean => {
   }
 
   if (line.type === OrderLineType.MENU && line.items) {
-    return line.items.every(item => item.status === Status.TERMINATED);
+    return line.items.every((item) => item.status === Status.TERMINATED);
   }
 
   return false;
@@ -34,7 +34,7 @@ export const isOrderTerminated = (order: Order): boolean => {
     return false;
   }
 
-  return order.lines.every(isOrderLineTerminated);
+  return order.lines.every(isOrderLineTerminated) || order.isClosed;
 };
 
 /**
@@ -51,7 +51,9 @@ export const isOrderActive = (order: Order): boolean => {
  * Crée un index des commandes actives par tableId
  * @returns Map<tableId, Order[]> pour lookup O(1)
  */
-export const createActiveOrdersByTableIndex = (orders: Order[]): Map<string, Order[]> => {
+export const createActiveOrdersByTableIndex = (
+  orders: Order[],
+): Map<string, Order[]> => {
   const index = new Map<string, Order[]>();
 
   for (const order of orders) {
@@ -79,7 +81,7 @@ export const filterOrdersByRoom = (
   orders: Order[],
   roomId: string,
   tablesMap: Record<string, { roomId: string }>,
-  includeTerminated: boolean = false
+  includeTerminated: boolean = false,
 ): Order[] => {
   const result: Order[] = [];
 
