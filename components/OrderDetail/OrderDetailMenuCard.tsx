@@ -52,9 +52,10 @@ interface MenuCategoryItemProps {
   item: OrderLineItem;
   isLastItem: boolean;
   onItemStatusClick: (item: OrderLineItem) => void;
+  isLocked: boolean;
 }
 
-const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItemStatusClick }) => {
+const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItemStatusClick, isLocked }) => {
   // ✅ useCallback : Handler pour éviter re-création à chaque render
   const handlePress = useCallback(() => {
     onItemStatusClick(item);
@@ -112,13 +113,19 @@ const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItem
           <Text style={styles.itemRowTimeText}>{formattedTime}</Text>
         </View>
 
-        <IconButton
-          iconName="settings"
-          size={40}
-          variant="primary"
-          isTransparent={true}
-          onPress={handlePress}
-        />
+        {isLocked ? (
+          <View style={styles.lockedIcon}>
+            <Lock size={14} color="#9CA3AF" strokeWidth={2} />
+          </View>
+        ) : (
+          <IconButton
+            iconName="settings"
+            size={40}
+            variant="primary"
+            isTransparent={true}
+            onPress={handlePress}
+          />
+        )}
       </View>
       {/* Ligne de séparation sauf pour le dernier item */}
       {!isLastItem && <View style={styles.itemSeparator} />}
@@ -257,9 +264,19 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
             style={styles.expandableArea}
           >
             <View style={styles.leftColumn}>
-              <Text style={styles.menuName} numberOfLines={1}>
-                {menuInfo?.name || 'Menu'}
-              </Text>
+              <View style={styles.menuNameRow}>
+                <Text style={styles.menuName} numberOfLines={1}>
+                  {menuInfo?.name || 'Menu'}
+                </Text>
+                {paymentFraction > 0 && (
+                  <View style={[styles.paidBadge, paymentFraction < 1 && styles.partiallyPaidBadge]}>
+                    <Lock size={9} color="white" strokeWidth={3} />
+                    <Text style={styles.paidBadgeText}>
+                      {paymentFraction === 1 ? 'PAYÉ' : `PAYÉ ${Math.round(paymentFraction * 100)}%`}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
               <View style={styles.footerInfo}>
                 {hasMixed ? (
@@ -281,12 +298,6 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
             </View>
 
             <View style={styles.priceTimeColumn}>
-              {paymentFraction === 1 && (
-                <View style={styles.paidBadge}>
-                  <Lock size={9} color="white" strokeWidth={3} />
-                  <Text style={styles.paidBadgeText}>PAYÉ</Text>
-                </View>
-              )}
               <Text style={styles.priceText}>
                 {formattedPrice}€
               </Text>
@@ -354,6 +365,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
                     item={item}
                     isLastItem={itemIndex === categoryItems.length - 1}
                     onItemStatusClick={handleItemStatusClick}
+                    isLocked={paymentFraction > 0}
                   />
                 ))}
               </View>
@@ -590,6 +602,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
+  partiallyPaidBadge: {
+    backgroundColor: '#F59E0B',
+  },
   paidBadgeText: {
     fontSize: 9,
     fontWeight: '700',
@@ -597,8 +612,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   lockedIcon: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },

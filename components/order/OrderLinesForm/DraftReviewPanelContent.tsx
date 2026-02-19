@@ -4,88 +4,10 @@ import { Trash2, ShoppingBag, ArrowLeftToLine, Lock } from 'lucide-react-native'
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { ItemType } from '~/types/item-type.types';
 import { Status } from '~/types/status.enum';
-import { formatPrice } from '~/lib/utils';
+import { formatPrice, getStatusText } from '~/lib/utils';
+import { usePayments } from '~/hooks/usePayments';
+import { getOrderLineStatus, getStatusColor } from '@/lib/status.utils';
 
-// ========================================
-// LOCK HELPERS
-// ========================================
-
-/**
- * Dériver le statut effectif d'une ligne MENU à partir de ses OrderLineItems.
- * Pour les ITEM, on utilise directement line.status.
- */
-const getEffectiveStatus = (line: OrderLine): string | undefined => {
-  if (line.type === OrderLineType.MENU && line.items && line.items.length > 0) {
-    const statuses = line.items.map(item => item.status);
-    if (statuses.every(s => s === Status.DRAFT)) return Status.DRAFT;
-    if (statuses.some(s => s === Status.INPROGRESS)) return Status.INPROGRESS;
-    if (statuses.some(s => s === Status.PENDING)) return Status.PENDING;
-    if (statuses.every(s => s === Status.READY)) return Status.READY;
-    if (statuses.every(s => s === Status.SERVED)) return Status.SERVED;
-    if (statuses.every(s => s === Status.TERMINATED)) return Status.TERMINATED;
-    if (statuses.some(s => s === Status.ERROR)) return Status.ERROR;
-    return Status.PENDING;
-  }
-  return line.status;
-};
-
-/** A line is locked if it's a saved server line with a non-draft status */
-const isLineLocked = (line: OrderLine): boolean => {
-  if (line.id.startsWith('draft-')) return false;
-  const effectiveStatus = getEffectiveStatus(line);
-  return effectiveStatus !== Status.DRAFT;
-};
-
-const getStatusLabel = (status: string): string => {
-  switch (status) {
-    case Status.DRAFT: return 'Brouillon';
-    case Status.PENDING: return 'En attente';
-    case Status.INPROGRESS: return 'En préparation';
-    case Status.READY: return 'Prêt';
-    case Status.SERVED: return 'Servi';
-    case Status.TERMINATED: return 'Terminé';
-    case Status.ERROR: return 'Erreur';
-    default: return status;
-  }
-};
-
-const getStatusColor = (status: string): string => {
-  switch (status) {
-    case Status.DRAFT: return '#9CA3AF';
-    case Status.PENDING: return '#F59E0B';
-    case Status.INPROGRESS: return '#FB923C';
-    case Status.READY: return '#3B82F6';
-    case Status.SERVED: return '#10B981';
-    case Status.TERMINATED: return '#6B7280';
-    case Status.ERROR: return '#EF4444';
-    default: return '#6B7280';
-  }
-};
-
-// ========================================
-// HELPERS
-// ========================================
-
-const formatTagValue = (tag: any): string => {
-  if (tag.value === null || tag.value === undefined) return '';
-  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
-  if (Array.isArray(tag.value)) return tag.value.join(', ');
-  return String(tag.value);
-};
-
-// Fingerprint: identical item + tags + note + status = same line
-// Items with different statuses are never merged together
-const getLineFingerprint = (line: OrderLine): string => {
-  const itemId = line.item?.id || '';
-  const note = line.note || '';
-  const status = getEffectiveStatus(line) || 'draft';
-  const tags = (line.tags || [])
-    .filter(t => t && t.tagSnapshot)
-    .sort((a, b) => a.tagId.localeCompare(b.tagId))
-    .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
-    .join('|');
-  return `${status}__${itemId}__${tags}__${note}`;
-};
 
 // A grouped row: identical lines merged with quantity
 interface GroupedLine {
@@ -133,6 +55,8 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   hideFooter = false,
   itemTypes,
 }) => {
+  const { isOrderLinePaid, getOrderLinePaymentFraction } = usePayments();
+
   // Track which row is pending delete (by originalIndex)
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
 
@@ -150,6 +74,30 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   const handleCancelDelete = useCallback(() => {
     setPendingDeleteIndex(null);
   }, []);
+
+
+  // Fingerprint: identical item + tags + note + status + paymentFraction = same line
+  const getLineFingerprint = (line: OrderLine): string => {
+    const itemId = line.item?.id || '';
+    const note = line.note || '';
+    const status = getOrderLineStatus(line);
+    const paymentFraction = getOrderLinePaymentFraction(line.id, line.totalPrice) > 0;
+    const tags = (line.tags || [])
+      .filter(t => t && t.tagSnapshot)
+      .sort((a, b) => a.tagId.localeCompare(b.tagId))
+      .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
+      .join('|');
+    return `${status}__${itemId}__${tags}__${note}__${paymentFraction}`;
+  };
+
+  const isLineLocked = (line: OrderLine, hasAllocations: boolean): boolean => {
+    // Si la ligne a des allocations de paiement, elle est toujours verrouillée
+    if (hasAllocations) return true;
+    // Sinon, vérifier le statut comme avant
+    if (line.id.startsWith('draft-')) return false;
+    const effectiveStatus = getOrderLineStatus(line);
+    return effectiveStatus !== Status.DRAFT;
+  };
 
   // Expose cancel to parent via ref
   useEffect(() => {
@@ -265,22 +213,26 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                 </View>
 
                 <View style={styles.sectionBlock}>
-                  {section.groupedLines.map((group) => (
-                    <ReceiptItemRow
-                      key={group.originalIndices.join('-')}
-                      line={group.line}
-                      quantity={group.quantity}
-                      totalPrice={group.totalPrice}
-                      originalIndex={group.originalIndices[0]}
-                      isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
-                      hasPendingDelete={pendingDeleteIndex !== null}
-                      isLocked={isLineLocked(group.line)}
-                      onEdit={onEdit}
-                      onDeleteRequest={handleDeleteRequest}
-                      onConfirmDelete={handleConfirmDelete}
-                      onCancelDelete={handleCancelDelete}
-                    />
-                  ))}
+                  {section.groupedLines.map((group) => {
+                    const hasAllocations = isOrderLinePaid(group.line.id);
+                    return (
+                      <ReceiptItemRow
+                        key={group.originalIndices.join('-')}
+                        line={group.line}
+                        quantity={group.quantity}
+                        totalPrice={group.totalPrice}
+                        originalIndex={group.originalIndices[0]}
+                        isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
+                        hasPendingDelete={pendingDeleteIndex !== null}
+                        isLocked={isLineLocked(group.line, hasAllocations)}
+                        hasAllocations={hasAllocations}
+                        onEdit={onEdit}
+                        onDeleteRequest={handleDeleteRequest}
+                        onConfirmDelete={handleConfirmDelete}
+                        onCancelDelete={handleCancelDelete}
+                      />
+                    );
+                  })}
                 </View>
               </View>
             ))}
@@ -295,20 +247,24 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                 </View>
 
                 <View style={styles.sectionBlock}>
-                  {menuLines.map(({ line, originalIndex }) => (
-                    <ReceiptMenuRow
-                      key={line.id || `temp-${originalIndex}`}
-                      line={line}
-                      originalIndex={originalIndex}
-                      isPendingDelete={pendingDeleteIndex === originalIndex}
-                      hasPendingDelete={pendingDeleteIndex !== null}
-                      isLocked={false}
-                      onEditMenu={onEditMenu}
-                      onDeleteRequest={handleDeleteRequest}
-                      onConfirmDelete={handleConfirmDelete}
-                      onCancelDelete={handleCancelDelete}
-                    />
-                  ))}
+                  {menuLines.map(({ line, originalIndex }) => {
+                    const hasAllocations = isOrderLinePaid(line.id);
+                    return (
+                      <ReceiptMenuRow
+                        key={line.id || `temp-${originalIndex}`}
+                        line={line}
+                        originalIndex={originalIndex}
+                        isPendingDelete={pendingDeleteIndex === originalIndex}
+                        hasPendingDelete={pendingDeleteIndex !== null}
+                        isLocked={hasAllocations}
+                        hasAllocations={hasAllocations}
+                        onEditMenu={onEditMenu}
+                        onDeleteRequest={handleDeleteRequest}
+                        onConfirmDelete={handleConfirmDelete}
+                        onCancelDelete={handleCancelDelete}
+                      />
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -365,6 +321,14 @@ const DeleteConfirmOverlay: React.FC<{
   );
 };
 
+
+const formatTagValue = (tag: any): string => {
+  if (tag.value === null || tag.value === undefined) return '';
+  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
+  if (Array.isArray(tag.value)) return tag.value.join(', ');
+  return String(tag.value);
+};
+
 // ========================================
 // RECEIPT ITEM ROW
 // ========================================
@@ -377,6 +341,7 @@ interface ReceiptItemRowProps {
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
   isLocked: boolean;
+  hasAllocations: boolean;
   onEdit: (index: number) => void;
   onDeleteRequest: (index: number) => void;
   onConfirmDelete: () => void;
@@ -391,6 +356,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   isPendingDelete,
   hasPendingDelete,
   isLocked,
+  hasAllocations,
   onEdit,
   onDeleteRequest,
   onConfirmDelete,
@@ -421,10 +387,10 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(totalPrice)}</RNText>
           {isLocked ? (
             <View style={styles.lockIconWrap}>
-              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(line.status || '')}18` }]}>
-                <Lock size={11} color={getStatusColor(line.status || '')} strokeWidth={2.5} />
-                <RNText style={[styles.statusBadgeText, { color: getStatusColor(line.status || '') }]}>
-                  {getStatusLabel(line.status || '')}
+              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#EF444418' : `${getStatusColor(line.status)}18` }]}>
+                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusColor(line.status)} strokeWidth={2.5} />
+                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusColor(line.status) }]}>
+                  {hasAllocations ? 'Payé' : getStatusText(line.status!)}
                 </RNText>
               </View>
             </View>
@@ -476,6 +442,7 @@ interface ReceiptMenuRowProps {
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
   isLocked: boolean;
+  hasAllocations: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
   onDeleteRequest: (index: number) => void;
   onConfirmDelete: () => void;
@@ -488,6 +455,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   isPendingDelete,
   hasPendingDelete,
   isLocked,
+  hasAllocations,
   onEditMenu,
   onDeleteRequest,
   onConfirmDelete,
@@ -523,10 +491,10 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
           {isLocked ? (
             <View style={styles.lockIconWrap}>
-              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(getEffectiveStatus(line) || '')}18` }]}>
-                <Lock size={11} color={getStatusColor(getEffectiveStatus(line) || '')} strokeWidth={2.5} />
-                <RNText style={[styles.statusBadgeText, { color: getStatusColor(getEffectiveStatus(line) || '') }]}>
-                  {getStatusLabel(getEffectiveStatus(line) || '')}
+              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#EF444418' : `${getStatusColor(getOrderLineStatus(line) || '')}18` }]}>
+                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusColor(getOrderLineStatus(line) || '')} strokeWidth={2.5} />
+                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusColor(getOrderLineStatus(line) || '') }]}>
+                  {hasAllocations ? 'Payé' : getStatusText(getOrderLineStatus(line) || '')}
                 </RNText>
               </View>
             </View>

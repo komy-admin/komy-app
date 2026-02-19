@@ -1,7 +1,7 @@
-import { Table } from '@/types/table.types';
-import { Status } from '~/types/status.enum';
-import { OrderLine, OrderLineType } from '~/types/order-line.types';
-import { Order } from '~/types/order.types';
+import { Table } from "@/types/table.types";
+import { Status } from "~/types/status.enum";
+import { OrderLine, OrderLineType } from "~/types/order-line.types";
+import { Order } from "~/types/order.types";
 
 // ========================================
 // Calcul de statut
@@ -32,17 +32,24 @@ export const hasMenuMixedStatuses = (statuses: Status[]): boolean => {
   return uniqueStatuses.length > 1;
 };
 
+export const getOrderLineStatus = (line: OrderLine): Status => {
+  if (line.type === OrderLineType.ITEM) {
+    return line.status || Status.PENDING;
+  } else if (line.type === OrderLineType.MENU && line.items) {
+    const itemStatuses = line.items.map(
+      (item) => item.status || Status.PENDING,
+    );
+    return getMostImportantStatus(itemStatuses);
+  }
+  return Status.PENDING;
+};
+
 export const getOrderLinesGlobalStatus = (orderLines: OrderLine[]): Status => {
   const allStatuses: Status[] = [];
 
-  orderLines.forEach(line => {
-    if (line.type === OrderLineType.ITEM) {
-      allStatuses.push(line.status || Status.PENDING);
-    } else if (line.type === OrderLineType.MENU && line.items) {
-      line.items.forEach(menuItem => {
-        allStatuses.push(menuItem.status || Status.PENDING);
-      });
-    }
+  orderLines.forEach((line) => {
+    const lineStatus = getOrderLineStatus(line);
+    allStatuses.push(lineStatus);
   });
 
   return getMostImportantStatus(allStatuses);
@@ -78,52 +85,52 @@ export const getNextStatus = (currentStatus: Status): Status | null => {
 
 export const getStatusText = (status: Status) => {
   const texts = {
-    [Status.READY]: 'Prêt',
-    [Status.PENDING]: 'En attente',
-    [Status.INPROGRESS]: 'En préparation',
-    [Status.ERROR]: 'Erreur',
-    [Status.SERVED]: 'Servi',
-    [Status.TERMINATED]: 'Terminé',
-    [Status.DRAFT]: 'Brouillon',
+    [Status.READY]: "Prêt",
+    [Status.PENDING]: "En attente",
+    [Status.INPROGRESS]: "En préparation",
+    [Status.ERROR]: "Erreur",
+    [Status.SERVED]: "Servi",
+    [Status.TERMINATED]: "Terminé",
+    [Status.DRAFT]: "Brouillon",
   };
   return texts[status];
 };
 
 export const getStatusColor = (status: Status) => {
   const colors = {
-    [Status.READY]: '#D7E3FC',
-    [Status.PENDING]: '#F9F1C8',
-    [Status.INPROGRESS]: '#FFD1AD',
-    [Status.SERVED]: '#B7E1CC',
-    [Status.ERROR]: '#F7BFB5',
-    [Status.TERMINATED]: '#EBEBEB',
-    [Status.DRAFT]: '#EBEBEB',
+    [Status.READY]: "#D7E3FC",
+    [Status.PENDING]: "#F9F1C8",
+    [Status.INPROGRESS]: "#FFD1AD",
+    [Status.SERVED]: "#B7E1CC",
+    [Status.ERROR]: "#F7BFB5",
+    [Status.TERMINATED]: "#EBEBEB",
+    [Status.DRAFT]: "#EBEBEB",
   };
   return colors[status] || colors[Status.ERROR];
 };
 
 export const getStatusBackgroundColor = (status: Status): string => {
   const colors = {
-    [Status.READY]: '#F5F8FE',
-    [Status.PENDING]: '#FEFAF1',
-    [Status.INPROGRESS]: '#FFF5EE',
-    [Status.SERVED]: '#F0FAF5',
-    [Status.ERROR]: '#FEF5F4',
-    [Status.TERMINATED]: '#FAFAFA',
-    [Status.DRAFT]: '#FAFAFA',
+    [Status.READY]: "#F5F8FE",
+    [Status.PENDING]: "#FEFAF1",
+    [Status.INPROGRESS]: "#FFF5EE",
+    [Status.SERVED]: "#F0FAF5",
+    [Status.ERROR]: "#FEF5F4",
+    [Status.TERMINATED]: "#FAFAFA",
+    [Status.DRAFT]: "#FAFAFA",
   };
   return colors[status] || colors[Status.ERROR];
 };
 
 export const getStatusTagColor = (status: Status) => {
   const colors = {
-    [Status.READY]: '#D7E3FC',
-    [Status.PENDING]: '#F9F1C8',
-    [Status.INPROGRESS]: '#FFD1AD',
-    [Status.SERVED]: '#B7E1CC',
-    [Status.ERROR]: '#F7BFB5',
-    [Status.TERMINATED]: '#EBEBEB',
-    [Status.DRAFT]: '#D1D5DB',
+    [Status.READY]: "#D7E3FC",
+    [Status.PENDING]: "#F9F1C8",
+    [Status.INPROGRESS]: "#FFD1AD",
+    [Status.SERVED]: "#B7E1CC",
+    [Status.ERROR]: "#F7BFB5",
+    [Status.TERMINATED]: "#EBEBEB",
+    [Status.DRAFT]: "#D1D5DB",
   };
   return colors[status] || colors[Status.ERROR];
 };
@@ -133,7 +140,7 @@ export const getStatusTagColor = (status: Status) => {
 // ========================================
 
 export const getBorderStyle = (_statuses: Status[], baseColor: string) => ({
-  borderStyle: 'solid' as const,
+  borderStyle: "solid" as const,
   borderColor: baseColor,
   borderWidth: 2,
 });
@@ -147,10 +154,12 @@ export const getBorderStyle = (_statuses: Status[], baseColor: string) => ({
  */
 export const getPriorityItemTypeDetailsForStatus = (
   orderLines: OrderLine[],
-  targetStatus: Status
+  targetStatus: Status,
 ): { id: string; name: string; icon: string } => {
-  const findMinPriority = (filterByStatus?: Status): { id: string; name: string; icon: string } => {
-    let result = { id: '', name: '', icon: '' };
+  const findMinPriority = (
+    filterByStatus?: Status,
+  ): { id: string; name: string; icon: string } => {
+    let result = { id: "", name: "", icon: "" };
     let minPriority = Number.MAX_SAFE_INTEGER;
 
     for (const line of orderLines) {
@@ -162,7 +171,11 @@ export const getPriorityItemTypeDetailsForStatus = (
           const priority = itemType.priorityOrder ?? 0;
           if (priority < minPriority) {
             minPriority = priority;
-            result = { id: itemType.id || '', name: itemType.name, icon: itemType.icon || '' };
+            result = {
+              id: itemType.id || "",
+              name: itemType.name,
+              icon: itemType.icon || "",
+            };
           }
         }
       } else if (line.type === OrderLineType.MENU && line.items) {
@@ -173,7 +186,11 @@ export const getPriorityItemTypeDetailsForStatus = (
             const priority = itemType.priorityOrder ?? 0;
             if (priority < minPriority) {
               minPriority = priority;
-              result = { id: itemType.id || '', name: itemType.name, icon: itemType.icon || '' };
+              result = {
+                id: itemType.id || "",
+                name: itemType.name,
+                icon: itemType.icon || "",
+              };
             }
           }
         }

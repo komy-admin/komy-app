@@ -124,10 +124,12 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
               <Text style={styles.itemName} numberOfLines={1}>
                 {itemName}
               </Text>
-              {paymentFraction === 1 && (
-                <View style={styles.paidBadge}>
+              {paymentFraction > 0 && (
+                <View style={[styles.paidBadge, paymentFraction < 1 && styles.partiallyPaidBadge]}>
                   <Lock size={9} color="white" strokeWidth={3} />
-                  <Text style={styles.paidBadgeText}>PAYÉ</Text>
+                  <Text style={styles.paidBadgeText}>
+                    {paymentFraction === 1 ? 'PAYÉ' : `PAYÉ ${Math.round(paymentFraction * 100)}%`}
+                  </Text>
                 </View>
               )}
             </View>
@@ -177,7 +179,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
             </View>
           </View>
           <View style={styles.actionsColumn}>
-            {paymentFraction === 1 ? (
+            {paymentFraction > 0 ? (
               <View style={styles.lockedIcon}>
                 <Lock size={18} color="#9CA3AF" strokeWidth={2} />
               </View>
@@ -350,6 +352,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+  },
+  partiallyPaidBadge: {
+    backgroundColor: '#F59E0B',
   },
   paidBadgeText: {
     fontSize: 9,

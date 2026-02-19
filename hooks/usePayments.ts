@@ -162,7 +162,6 @@ export const usePayments = () => {
    */
   const getOrderLinePaymentFraction = useCallback(
     (orderLineId: string, totalPrice: number): number => {
-      console.log("Calcul du ratio de paiement pour orderLineId:", orderLineId);
       // Si pas de prix total, retourner 0
       if (!totalPrice || totalPrice <= 0) return 0;
 
@@ -184,15 +183,6 @@ export const usePayments = () => {
       const paidAmount = validAllocations.reduce(
         (sum, a) => sum + a.allocatedAmount,
         0,
-      );
-
-      console.log(
-        "PAID AMOUNT:",
-        paidAmount,
-        "TOTAL PRICE:",
-        totalPrice,
-        "FRACTION:",
-        paidAmount / totalPrice,
       );
       // Calculer le ratio (plafonné à 1 pour éviter les surpaiements)
       return Math.min(1, paidAmount / totalPrice);

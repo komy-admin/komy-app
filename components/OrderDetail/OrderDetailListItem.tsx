@@ -69,6 +69,8 @@ export const OrderDetailListItem = memo<OrderDetailListItemProps>((props) => {
   // Render MENU
   if (item.type === 'menu') {
     const menuLine = item.data as OrderLine;
+    const paymentFraction = getOrderLinePaymentFraction(menuLine.id, menuLine.totalPrice);
+
     return (
       <Pressable>
         <OrderDetailMenuCard
@@ -77,6 +79,7 @@ export const OrderDetailListItem = memo<OrderDetailListItemProps>((props) => {
           onOpenItemStatusSelector={onOpenMenuItemStatusSelector}
           onOpenMenuStatusSelector={onOpenMenuStatusSelector}
           onOpenDeleteDialog={handleDeleteMenuDialog}
+          paymentFraction={paymentFraction}
         />
       </Pressable>
     );

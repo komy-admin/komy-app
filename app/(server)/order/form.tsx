@@ -37,8 +37,10 @@ export default function OrderFormPage() {
       showToast('Commande sauvegardée avec succès', 'success');
       router.back();
     },
-    onError: () => {
-      showToast('Erreur lors de la sauvegarde', 'error');
+    onError: (error: any) => {
+      // The detailed error message is already shown by useOrderLinesManager
+      // We just log for debugging
+      console.error('Order save error:', error);
     },
   });
 
