@@ -1,38 +1,14 @@
 /**
- * 🏗️ ROOM EDITION MODE - Point d'entrée principal pour l'édition des rooms
+ * 🏗️ ROOM EDITION MODE - Édition des rooms et tables
  *
- * ARCHITECTURE:
- * ├── RoomComponent (~/components/Room/Room.tsx)
- * │   └── Composant principal de visualisation et interaction avec la grille
- * │       ├── useRoomDimensions → Calcul dimensions et zoom optimal
- * │       ├── useRoomZoom → Gestion pan, pinch, wheel zoom
- * │       └── useRoomValidation → Validation O(1) positions et collisions
- * │
- * ├── RoomTable (~/components/Room/RoomTable.tsx)
- * │   └── Table individuelle draggable/resizable avec React.memo (95%+ re-renders évités)
- * │
- * ├── TableEditorSidebar (~/components/Room/TableEditorSidebar.tsx)
- * │   └── Sidebar responsive (25% width) pour éditer nom/couverts d'une table
- * │
- * ├── RoomCard (~/components/Room/RoomCard.tsx)
- * │   └── Card flottante affichant infos room + bouton "Ajouter table"
- * │
- * └── DeleteConfirmationModal (~/components/ui/DeleteConfirmationModal.tsx)
- *     └── Modale de confirmation avant suppression table
+ * COMPOSANTS:
+ * ├── RoomComponent → Grille interactive (zoom, pan, tables drag & drop)
+ * ├── RoomFormContent → Panel settings room (nom, taille)
+ * ├── TableFormContent → Panel édition table (nom, couverts)
+ * ├── TableQuickActions → Boutons flottants (éditer, supprimer)
+ * └── DeleteConfirmationModal → Confirmation suppression
  *
- * HOOKS REDUX:
- * ├── useRooms() → Gestion state rooms (currentRoom, setCurrentRoom, loading)
- * ├── useTables() → Gestion state tables filtrées par room (currentRoomTables, selectedTable)
- * └── useTableEditor() → CRUD optimisé (createTableFast, updateTableFast, deleteTableFast)
- *
- * UTILS:
- * ├── generateTableName() → Génère nom auto "Table 1", "Table 2"...
- * └── findAvailablePosition() → Trouve espace libre dans grille pour nouvelle table
- *
- * FLUX DRAG & DROP:
- * User drag table → RoomTable.onUpdate() → handleTableUpdate()
- * → useTableEditor.updateTableFast() → PATCH /api/table/:id → Redux update
- * → WebSocket broadcast → Re-render optimisé (React.memo)
+ * HOOKS: useRooms, useTables, useTableEditor, usePanelPortal
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -53,7 +29,8 @@ import { useTableEditor } from '~/hooks/useTableEditor';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { generateTableName, findAvailablePosition } from '~/lib/room-utils';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
-import { ArrowLeftToLine } from 'lucide-react-native';
+import { RoomFormContent } from '~/components/admin/RoomForm';
+import { ArrowLeftToLine, SlidersHorizontal } from 'lucide-react-native';
 
 // Constantes
 const SLIDE_PANEL_WIDTH = 400;
@@ -63,7 +40,7 @@ export default function RoomEditionMode() {
   const { showToast } = useToast();
 
   // Utilisation des hooks Redux
-  const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading } = useRooms();
+  const { rooms, currentRoom, setCurrentRoom, updateRoom, loading: roomsLoading } = useRooms();
   const { currentRoomTables, enrichedTables, selectedTable, setSelectedTable } = useTables();
 
   // Hook spécialisé pour l'édition haute performance
@@ -79,6 +56,7 @@ export default function RoomEditionMode() {
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isEditPanelVisible, setIsEditPanelVisible] = useState(false);
+  const [isRoomSettingsVisible, setIsRoomSettingsVisible] = useState(false);
 
   // Définir la première room comme currentRoom si aucune n'est sélectionnée
   useEffect(() => {
@@ -220,9 +198,39 @@ export default function RoomEditionMode() {
     router.back();
   }, [router]);
 
+  const handleOpenRoomSettings = useCallback(() => {
+    setIsRoomSettingsVisible(true);
+  }, []);
+
+  const handleCloseRoomSettings = useCallback(() => {
+    setIsRoomSettingsVisible(false);
+  }, []);
+
+  const handleSaveRoomSettings = useCallback(async (roomData: Partial<Room>) => {
+    if (!currentRoom?.id) return;
+    try {
+      await updateRoom(currentRoom.id, roomData);
+      setIsRoomSettingsVisible(false);
+      showToast('Salle mise à jour', 'success');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la mise à jour';
+      showToast(errorMessage, 'error');
+    }
+  }, [currentRoom?.id, updateRoom, showToast]);
+
   // Sync panel with global portal
   useEffect(() => {
-    if (isEditPanelVisible && selectedTable) {
+    if (isRoomSettingsVisible && currentRoom) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseRoomSettings} width={SLIDE_PANEL_WIDTH}>
+          <RoomFormContent
+            room={currentRoom}
+            onSave={handleSaveRoomSettings}
+            onCancel={handleCloseRoomSettings}
+          />
+        </SlidePanel>
+      );
+    } else if (isEditPanelVisible && selectedTable) {
       renderPanel(
         <SlidePanel visible={true} onClose={handleCloseEditPanel} width={SLIDE_PANEL_WIDTH}>
           <TableFormContent
@@ -235,7 +243,7 @@ export default function RoomEditionMode() {
     } else {
       clearPanel();
     }
-  }, [isEditPanelVisible, selectedTable, renderPanel, clearPanel, handleCloseEditPanel, handleSaveTable]);
+  }, [isRoomSettingsVisible, currentRoom, isEditPanelVisible, selectedTable, renderPanel, clearPanel, handleCloseRoomSettings, handleSaveRoomSettings, handleCloseEditPanel, handleSaveTable]);
 
   return (
     <View style={styles.container}>
@@ -276,8 +284,8 @@ export default function RoomEditionMode() {
           ))}
         </ScrollView>
 
-        {/* Bouton Ajouter une table */}
-        <View style={styles.addButtonContainer}>
+        {/* Boutons d'action */}
+        <View style={styles.actionButtonsContainer}>
           <Pressable
             onPress={handleAddTable}
             disabled={!currentRoom || isCreatingTable || isCreateOperationInProgress()}
@@ -292,6 +300,21 @@ export default function RoomEditionMode() {
                 <Text style={styles.addButtonText}>
                   AJOUTER UNE TABLE
                 </Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable
+            onPress={handleOpenRoomSettings}
+            disabled={!currentRoom}
+            style={styles.settingsButton}
+            android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
+          >
+            {({ pressed }) => (
+              <View style={[
+                styles.settingsButtonInner,
+                pressed && Platform.OS === 'ios' && { opacity: 0.8 }
+              ]}>
+                <SlidersHorizontal size={20} color="#FBFBFB" />
               </View>
             )}
           </Pressable>
@@ -358,12 +381,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2A2E33',
-    marginRight: 20,
-  },
   badgeContainer: {
     marginLeft: 10,
     flex: 1,
@@ -376,14 +393,14 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
-  addButtonContainer: {
-    width: 200,
+  actionButtonsContainer: {
+    flexDirection: 'row',
     flexShrink: 0,
   },
   addButton: {
     backgroundColor: '#2A2E33',
     height: 60,
-    width: '100%',
+    width: 200,
     borderLeftWidth: 1,
     borderLeftColor: '#EFEFEF',
   },
@@ -398,5 +415,18 @@ const styles = StyleSheet.create({
     color: '#FBFBFB',
     fontWeight: '500',
     textTransform: 'uppercase',
+  },
+  settingsButton: {
+    backgroundColor: '#475569',
+    height: 60,
+    width: 60,
+    borderLeftWidth: 1,
+    borderLeftColor: '#EFEFEF',
+  },
+  settingsButtonInner: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

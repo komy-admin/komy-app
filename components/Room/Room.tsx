@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import {
   GestureHandlerRootView,
   GestureDetector,
@@ -62,7 +62,8 @@ const Room: React.FC<RoomProps> = ({
     pinchGesture
   } = useRoomZoom({
     initialZoom: dimensions?.initialZoom || 1,
-    disablePan: editionMode,
+    editionMode,
+    hasSelectedTable: !!editingTableId,
   });
 
   // 🎯 HOOK: Validation des positions de tables
@@ -83,11 +84,10 @@ const Room: React.FC<RoomProps> = ({
   }, [tables]);
 
   const handleBackgroundPress = useCallback(() => {
-    // 🎯 En mode édition : ne pas désélectionner au tap background
-    // La désélection se fait uniquement via :
-    // 1. Bouton fermer (X) du sidebar
-    // 2. Sélection d'une autre table
-    if (!editionMode) {
+    // Mode service : toujours désélectionner au tap fond
+    // Mode édition web : désélectionner pour libérer le pan
+    // Mode édition native : pas de désélection (X button ou autre table)
+    if (!editionMode || Platform.OS === 'web') {
       onTablePress(null);
     }
   }, [editionMode, onTablePress]);
@@ -126,6 +126,15 @@ const Room: React.FC<RoomProps> = ({
     };
   }, []);
 
+  const roomAreaStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    left: EXTRA_LINES * CELL_SIZE,
+    top: EXTRA_LINES * CELL_SIZE,
+    width: width * CELL_SIZE,
+    height: height * CELL_SIZE,
+    ...(!editionMode && { borderWidth: 2, borderColor: '#2A2E33' }),
+  }), [EXTRA_LINES, CELL_SIZE, width, height, editionMode]);
+
   if (isLoading || !dimensions || !isGridReady) {
     return (
       <View style={[styles.container, styles.loading]}>
@@ -145,14 +154,7 @@ const Room: React.FC<RoomProps> = ({
           {/* Vue interne: SEULEMENT scale → visuel zoomé, gestures non affectées */}
           <Animated.View style={scaleStyle}>
             <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
-              <View style={{
-                position: 'absolute',
-                left: EXTRA_LINES * CELL_SIZE,
-                top: EXTRA_LINES * CELL_SIZE,
-                width: width * CELL_SIZE,
-                height: height * CELL_SIZE,
-                ...(!editionMode && { borderWidth: 2, borderColor: '#2A2E33' }),
-              }}>
+              <View style={roomAreaStyle}>
                 {editionMode && (
                   <RoomGrid
                     width={width * CELL_SIZE}
@@ -185,12 +187,12 @@ const Room: React.FC<RoomProps> = ({
                         roomWidth={width}
                         roomHeight={height}
                         status={tableStatuses[table.id]}
-                        isEditing={isEditing}
-                        editionMode={editionMode}
+                        isEditing
+                        editionMode
                         positionValid={isPositionValid(table)}
                         CELL_SIZE={CELL_SIZE}
                         currentZoomScale={scale}
-                        isSelected={isEditing}
+                        isSelected
                         onPress={() => onTablePress(table)}
                         onLongPress={onTableLongPress}
                         onUpdate={onTableUpdate}

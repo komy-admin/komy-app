@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
-import Svg, { Rect } from 'react-native-svg';
+import Svg, { Rect, Defs, ClipPath } from 'react-native-svg';
 import { X, Check } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
@@ -18,8 +18,10 @@ const ROOM_SIZES = [
   { label: 'Paysage', width: 20, height: 15 },
 ] as const;
 
-const CONTAINER_SIZE = 130;
-const MAX_DIM = 28;
+const CONTAINER_SIZE = 70;
+const MAX_DIM = 22;
+const MIN_ROOM_DIM = 15;
+const MAX_ROOM_DIM = 50;
 
 const T = 1.8;    // taille table carrée
 const G = 1.56;   // gap uniforme (marges + inter-tables)
@@ -47,7 +49,8 @@ const FIXED_TABLES: { gx: number; gy: number; gw: number; gh: number }[] = [
 /** Aperçu SVG : room proportionnelle, mêmes tables partout */
 const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }> = React.memo(
   ({ roomW, roomH, selected }) => {
-    const scale = (CONTAINER_SIZE - 20) / MAX_DIM;
+    const maxDim = Math.max(roomW, roomH, MAX_DIM);
+    const scale = (CONTAINER_SIZE - 10) / maxDim;
     const svgW = roomW * scale;
     const svgH = roomH * scale;
     const offsetX = (CONTAINER_SIZE - svgW) / 2;
@@ -59,6 +62,11 @@ const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }>
 
     return (
       <Svg width={CONTAINER_SIZE} height={CONTAINER_SIZE}>
+        <Defs>
+          <ClipPath id="roomClip">
+            <Rect x={offsetX} y={offsetY} width={svgW} height={svgH} rx={3} ry={3} />
+          </ClipPath>
+        </Defs>
         <Rect x={0} y={0} width={CONTAINER_SIZE} height={CONTAINER_SIZE} fill="transparent" />
         <Rect
           x={offsetX} y={offsetY} width={svgW} height={svgH}
@@ -74,6 +82,7 @@ const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }>
             height={t.gh * scale}
             rx={2} ry={2}
             fill={tableFill} stroke={tableStroke} strokeWidth={0.6}
+            clipPath="url(#roomClip)"
           />
         ))}
       </Svg>
@@ -124,7 +133,27 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
   const isFormValid = (): boolean => {
     if (!formData.name.trim() || formData.name.trim().length < 2) return false;
     if (!formData.width || !formData.height) return false;
-    return ROOM_SIZES.some(s => s.width === formData.width && s.height === formData.height);
+    if (formData.width < MIN_ROOM_DIM || formData.width > MAX_ROOM_DIM) return false;
+    if (formData.height < MIN_ROOM_DIM || formData.height > MAX_ROOM_DIM) return false;
+    return true;
+  };
+
+  const isCustomSize = !ROOM_SIZES.some(s => s.width === formData.width && s.height === formData.height);
+
+  const handleManualChange = (field: 'width' | 'height', text: string) => {
+    const num = parseInt(text, 10);
+    if (text === '') {
+      setFormData(prev => ({ ...prev, [field]: 0 }));
+    } else if (!isNaN(num)) {
+      setFormData(prev => ({ ...prev, [field]: Math.min(num, MAX_ROOM_DIM) }));
+    }
+  };
+
+  const handleManualBlur = (field: 'width' | 'height') => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field] < MIN_ROOM_DIM ? MIN_ROOM_DIM : prev[field],
+    }));
   };
 
   const handleSave = () => {
@@ -165,7 +194,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Room Name */}
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Nom de la salle *</Text>
+            <Text style={styles.formLabel}>Nom de la salle</Text>
             {(() => {
               const nameError = getFieldError('name');
               return (
@@ -190,9 +219,9 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
             })()}
           </View>
 
-          {/* Room Size Selection */}
+          {/* Room Size - Presets */}
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Taille de la salle *</Text>
+            <Text style={styles.formLabel}>Templates</Text>
             <View style={styles.sizesGrid}>
               {ROOM_SIZES.map((size) => {
                 const selected = isSelectedSize(size);
@@ -203,16 +232,66 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                     onPress={() => handleSelectSize(size)}
                   >
                     <RoomPreview roomW={size.width} roomH={size.height} selected={selected} />
-                    <Text style={[styles.sizeDescription, selected && styles.sizeDescriptionSelected]}>
-                      {size.label}
-                    </Text>
-                    <Text style={[styles.sizeDimensions, selected && styles.sizeDimensionsSelected]}>
-                      {size.width} x {size.height}
-                    </Text>
+                    <View style={styles.sizeInfo}>
+                      <Text style={[styles.sizeDescription, selected && styles.sizeDescriptionSelected]}>
+                        {size.label}
+                      </Text>
+                      <Text style={[styles.sizeDimensions, selected && styles.sizeDimensionsSelected]}>
+                        {size.width}x{size.height}
+                      </Text>
+                    </View>
                   </Pressable>
                 );
               })}
             </View>
+          </View>
+
+          {/* Room Size - Manual */}
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>
+              Dimensions {isCustomSize ? '(personnalisé)' : ''}
+            </Text>
+            <View style={styles.dimensionsRow}>
+              <View style={styles.dimensionField}>
+                <Text style={styles.dimensionLabel}>Largeur</Text>
+                <TextInput
+                  value={formData.width ? String(formData.width) : ''}
+                  onChangeText={(text) => handleManualChange('width', text)}
+                  onBlur={() => handleManualBlur('width')}
+                  keyboardType="number-pad"
+                  placeholder={String(MIN_ROOM_DIM)}
+                  placeholderTextColor="#A0A0A0"
+                  style={styles.dimensionInput}
+                  selectTextOnFocus
+                />
+              </View>
+              <Text style={styles.dimensionSeparator}>x</Text>
+              <View style={styles.dimensionField}>
+                <Text style={styles.dimensionLabel}>Hauteur</Text>
+                <TextInput
+                  value={formData.height ? String(formData.height) : ''}
+                  onChangeText={(text) => handleManualChange('height', text)}
+                  onBlur={() => handleManualBlur('height')}
+                  keyboardType="number-pad"
+                  placeholder={String(MIN_ROOM_DIM)}
+                  placeholderTextColor="#A0A0A0"
+                  style={styles.dimensionInput}
+                  selectTextOnFocus
+                />
+              </View>
+            </View>
+            <Text style={styles.dimensionHint}>
+              Min {MIN_ROOM_DIM} — Max {MAX_ROOM_DIM}
+            </Text>
+            {isCustomSize && formData.width >= MIN_ROOM_DIM && formData.height >= MIN_ROOM_DIM && (
+              <View style={styles.customPreview}>
+                <RoomPreview roomW={formData.width} roomH={formData.height} selected={true} />
+                <View style={styles.customPreviewInfo}>
+                  <Text style={styles.customPreviewLabel}>Aperçu personnalisé</Text>
+                  <Text style={styles.customPreviewDim}>{formData.width} x {formData.height}</Text>
+                </View>
+              </View>
+            )}
           </View>
         </Pressable>
       </KeyboardAwareScrollViewWrapper>
@@ -304,45 +383,112 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // Size selector
+  // Size presets
   sizesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   sizeCard: {
-    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingTop: 14,
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-    alignItems: 'center',
+    borderRadius: 10,
+    padding: 8,
     backgroundColor: '#FAFAFA',
+    gap: 8,
+    width: '48%',
   },
   sizeCardSelected: {
     borderColor: '#2A2E33',
     borderWidth: 2,
     backgroundColor: '#FAFAFE',
   },
+  sizeInfo: {
+    justifyContent: 'center',
+  },
   sizeDescription: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
-    marginTop: 10,
   },
   sizeDescriptionSelected: {
     color: '#2A2E33',
   },
   sizeDimensions: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#94A3B8',
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 1,
   },
   sizeDimensionsSelected: {
     color: '#64748B',
+  },
+
+  // Manual dimensions
+  dimensionsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  dimensionField: {
+    flex: 1,
+  },
+  dimensionLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  dimensionInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    color: '#2A2E33',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    minHeight: 44,
+  },
+  dimensionSeparator: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#94A3B8',
+    paddingBottom: 12,
+  },
+  dimensionHint: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 6,
+  },
+  customPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 10,
+    borderWidth: 1.5,
+    borderColor: '#6366F1',
+    borderRadius: 10,
+    backgroundColor: '#FAFAFE',
+    gap: 10,
+  },
+  customPreviewInfo: {
+    justifyContent: 'center',
+  },
+  customPreviewLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  customPreviewDim: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 1,
   },
 
   panelFooter: {
