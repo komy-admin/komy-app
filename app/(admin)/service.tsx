@@ -91,6 +91,7 @@ export default function ServicePage() {
   } = useOrderStatusActions({
     selectedTableOrder,
     allItemTypes,
+    updateOrder,
     updateOrderStatus,
     deleteOrder,
     deleteOrderLine,
