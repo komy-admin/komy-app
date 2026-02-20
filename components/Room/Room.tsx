@@ -155,6 +155,7 @@ const Room: React.FC<RoomProps> = ({
                 top: EXTRA_LINES * CELL_SIZE,
                 width: width * CELL_SIZE,
                 height: height * CELL_SIZE,
+                ...(!editionMode && { borderWidth: 2, borderColor: '#2A2E33' }),
               }}>
                 {editionMode && (
                   <RoomGrid
