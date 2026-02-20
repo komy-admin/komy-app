@@ -28,7 +28,6 @@ import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal
 import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { CustomModal } from '@/components/CustomModal';
 import PaymentView from '~/components/Service/PaymentView';
-import { Status } from '~/types/status.enum';
 
 const NOOP = () => {};
 
@@ -40,17 +39,7 @@ export default function ServicePage() {
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
   const [isReassigning, setIsReassigning] = useState(false);
-  // const [showClaimConfirmModal, setShowClaimConfirmModal] = useState(false);
-  // const [showServeConfirmModal, setShowServeConfirmModal] = useState(false);
-  // const [itemsToClaimData, setItemsToClaimData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; itemTypeNames: string[]; count: number; itemNames: string[] } | null>(null);
-  // const [itemsToServeData, setItemsToServeData] = useState<{ orderLineIds: string[]; orderLineItemIds: string[]; count: number; itemNames: string[] } | null>(null);
   const [showPaymentView, setShowPaymentView] = useState(false);
-  // const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
-  // const [menuConfigActions, setMenuConfigActions] = useState<{
-  //   onCancel: () => void;
-  //   onConfirm: () => void;
-  //   isValid?: boolean;
-  // } | null>(null);
 
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useAppSelector(selectAppInitialized);
@@ -276,47 +265,6 @@ export default function ServicePage() {
     setShowPaymentView(false);
   }, []);
 
-  const handleTerminate = useCallback(() => {
-    setShowTerminateDialog(true);
-  }, []);
-
-  const handleConfirmTerminate = useCallback(async () => {
-    if (!selectedTableOrder) return;
-
-    try {
-      // Utiliser le nouveau champ isClosed au lieu de modifier les statuts des lignes
-      await updateOrder(selectedTableOrder.id, {
-        isClosed: true
-      });
-
-      showToast('Commande terminée avec succès', 'success');
-      setShowTerminateDialog(false);
-      setShowOrderDetail(false);
-      setSelectedTable(null);
-    } catch (error) {
-      showToast('Erreur lors de la terminaison de la commande', 'error');
-      console.error('Erreur terminate:', error);
-    }
-  }, [selectedTableOrder, updateOrder, showToast, setSelectedTable]);
-
-  const handleDelete = useCallback(() => {
-    setShowDeleteDialog(true);
-  }, []);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (!selectedTableOrder) return;
-
-    try {
-      await deleteOrder(selectedTableOrder.id);
-      showToast('Commande supprimée avec succès', 'success');
-      setShowDeleteDialog(false);
-      setShowOrderDetail(false);
-      setSelectedTable(null);
-    } catch (error) {
-      showToast('Erreur lors de la suppression de la commande', 'error');
-    }
-  }, [selectedTableOrder, deleteOrder, showToast, setSelectedTable]);
-
   const handleCloseOrderDetail = useCallback(() => {
     setShowOrderDetail(false);
     setSelectedTable(null);
@@ -329,7 +277,6 @@ export default function ServicePage() {
 
   // Callbacks stabilisés pour les modals
   const handleCloseReassignModal = useCallback(() => setShowReassignModal(false), []);
-  const handleClosePaymentModal = useCallback(() => setShowPaymentModal(false), []);
   const handleCloseDeleteDialog = useCallback(() => setShowDeleteDialog(false), [setShowDeleteDialog]);
   const handleCloseTerminateDialog = useCallback(() => setShowTerminateDialog(false), [setShowTerminateDialog]);
   const handleCloseClaimModal = useCallback(() => {
