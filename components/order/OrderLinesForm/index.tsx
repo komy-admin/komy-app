@@ -411,11 +411,19 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   const isMenuConfigurationValid = useMemo(() => {
     if (!menuBeingConfigured?.categories) return false;
 
-    return menuBeingConfigured.categories.every((category: MenuCategory) => {
+    // Toutes les catégories obligatoires doivent avoir au moins 1 sélection
+    const requiredSatisfied = menuBeingConfigured.categories.every((category: MenuCategory) => {
       if (!category.isRequired) return true;
       const selections = tempMenuSelections[category.id];
       return selections && selections.length >= 1;
     });
+
+    // Au moins 1 article sélectionné au total (évite un menu vide si tout est optionnel)
+    const totalSelections = Object.values(tempMenuSelections).reduce(
+      (sum, selections) => sum + (selections?.length || 0), 0
+    );
+
+    return requiredSatisfied && totalSelections >= 1;
   }, [menuBeingConfigured, tempMenuSelections]);
 
   // ====================================================================
