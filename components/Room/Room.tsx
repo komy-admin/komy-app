@@ -66,18 +66,14 @@ const Room: React.FC<RoomProps> = ({
   });
 
   // 🎯 HOOK: Validation des positions de tables
-  const { isPositionValid } = useRoomValidation({
+  const { isPositionValid, isInBounds } = useRoomValidation({
     tables,
     editingTableId,
     roomWidth: width,
     roomHeight: height
   });
 
-  // 🚀 OPTIMISATION: Suppression du state visibleTables
-  // Avec la KEY prop sur Room, le composant remount proprement à chaque changement de room
-  // Plus besoin d'un state intermédiaire qui cause un double rendu
-
-  // 🚀 OPTIMISATION CRITIQUE: Memoïser les statuts des tables
+  // 🚀 OPTIMISATION: Memoïser les statuts des tables
   // Évite de recalculer getTableStatus() pour CHAQUE table à CHAQUE render
   const tableStatuses = useMemo(() => {
     return tables.reduce((acc, table) => {
@@ -174,9 +170,12 @@ const Room: React.FC<RoomProps> = ({
                     Gain mode service: ~94% réduction SharedValues */}
                 {tables.map(table => {
                   const isEditing = editingTableId === table.id;
+                  const tableInBounds = isInBounds(table);
 
-                  // 🔧 SEULE la table sélectionnée en mode édition utilise RoomTable complet
-                  // Toutes les autres (même en editionMode) utilisent le composant léger
+                  // Mode service : masquer les tables hors-limites
+                  if (!editionMode && !tableInBounds) return null;
+
+                  // Table sélectionnée en mode édition → RoomTable complet (drag, resize)
                   if (editionMode && isEditing) {
                     return (
                       <RoomTable
@@ -199,7 +198,7 @@ const Room: React.FC<RoomProps> = ({
                     );
                   }
 
-                  // 🎯 Composant léger pour toutes les autres tables
+                  // Composant léger pour toutes les autres tables
                   return (
                     <RoomTableService
                       key={table.id}
@@ -208,6 +207,7 @@ const Room: React.FC<RoomProps> = ({
                       CELL_SIZE={CELL_SIZE}
                       isSelected={isEditing}
                       editionMode={editionMode}
+                      outOfBounds={!tableInBounds}
                       onPress={onTablePress}
                       onLongPress={onTableLongPress}
                     />

@@ -43,6 +43,7 @@ interface RoomTableServiceProps {
   CELL_SIZE: number;
   isSelected: boolean;
   editionMode?: boolean;
+  outOfBounds?: boolean;
   onPress: (table: Table) => void;
   onLongPress: (table: Table) => void;
 }
@@ -53,6 +54,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   CELL_SIZE,
   isSelected,
   editionMode,
+  outOfBounds = false,
   onPress,
   onLongPress,
 }) => {
@@ -109,6 +111,14 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
 
   // Style pour tables sans commande ou en mode édition
   const tableStyle = useMemo(() => {
+    if (outOfBounds) {
+      return {
+        backgroundColor: '#FEE2E2',
+        borderWidth: 2,
+        borderColor: '#EF4444',
+        borderStyle: 'dashed' as const,
+      };
+    }
     if (isSelected) {
       return {
         backgroundColor: status ? getStatusColor(status) : '#F5F4FA',
@@ -123,7 +133,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
       borderColor: '#2A2E33',
       borderStyle: 'solid' as const,
     };
-  }, [status, isSelected]);
+  }, [status, isSelected, outOfBounds]);
 
   // Style du conteneur avec curseur pointer (web)
   const containerStyle = useMemo(() => ({
@@ -133,12 +143,13 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     width: table.width * CELL_SIZE,
     height: table.height * CELL_SIZE,
     zIndex: isSelected ? 10000 : 1000,
+    opacity: outOfBounds ? 0.6 : 1,
     ...(Platform.OS === 'web' && {
       userSelect: 'none' as any,
       WebkitUserSelect: 'none' as any,
       cursor: 'pointer' as any,
     }),
-  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected]);
+  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected, outOfBounds]);
 
   return (
     <View style={containerStyle}>
@@ -196,6 +207,7 @@ const RoomTableServiceMemoized = React.memo(RoomTableService, (prevProps, nextPr
     prevProps.status === nextProps.status &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.editionMode === nextProps.editionMode &&
+    prevProps.outOfBounds === nextProps.outOfBounds &&
     prevProps.CELL_SIZE === nextProps.CELL_SIZE
   );
 });
