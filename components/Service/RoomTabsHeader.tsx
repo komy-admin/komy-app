@@ -5,16 +5,15 @@ import { RoomBadgeItem } from './RoomBadgeItem';
 interface RoomTabsHeaderProps {
   rooms: any[];
   currentRoomId: string | undefined;
+  enrichedTables: any[];
   onRoomChange: (room: any) => void;
   onEditModePress: () => void;
 }
 
-/**
- * Header mémoïsé affichant les tabs de rooms avec bouton édition
- */
 export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
   rooms,
   currentRoomId,
+  enrichedTables,
   onRoomChange,
   onEditModePress
 }) => {
@@ -24,15 +23,14 @@ export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        className="flex-row p-2 flex-1"
       >
-        {rooms.map((room, index) => (
+        {rooms.map((room) => (
           <RoomBadgeItem
-            key={`${room.name}-badge-${index}`}
+            key={room.id}
             room={room}
             isActive={room.id === currentRoomId}
+            enrichedTables={enrichedTables}
             onPress={onRoomChange}
-            keyPrefix="badge"
           />
         ))}
       </ScrollView>
@@ -56,29 +54,23 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'space-between',
     backgroundColor: '#FBFBFB',
-    height: 50,
+    height: 60,
     zIndex: 10,
-    elevation: 5,
-    ...Platform.select({
-      android: {
-        shadowColor: 'transparent',
-      },
-    }),
   },
   scrollContent: {
     alignItems: 'center',
     height: '100%',
+    paddingHorizontal: 8,
   },
   editButton: {
     backgroundColor: '#2A2E33',
-    borderRadius: 0,
-    height: 50,
+    height: 60,
     width: 200,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
     }),
   },
   editButtonText: {

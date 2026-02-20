@@ -40,7 +40,7 @@ import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from "react-n
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
-import { Badge } from "~/components/ui";
+import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
 import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
 import { TableQuickActions } from '~/components/Room/TableQuickActions';
@@ -64,7 +64,7 @@ export default function RoomEditionMode() {
 
   // Utilisation des hooks Redux
   const { rooms, currentRoom, setCurrentRoom, loading: roomsLoading } = useRooms();
-  const { currentRoomTables, selectedTable, setSelectedTable } = useTables();
+  const { currentRoomTables, enrichedTables, selectedTable, setSelectedTable } = useTables();
 
   // Hook spécialisé pour l'édition haute performance
   const { createTableFast, updateTableFast, deleteTableFast, isCreateOperationInProgress } = useTableEditor();
@@ -257,7 +257,7 @@ export default function RoomEditionMode() {
           onPress={handleGoBack}
           style={styles.backButton}
         >
-          <ArrowLeftToLine size={20} color="#2A2E33" />
+          <ArrowLeftToLine size={20} color="#FBFBFB" />
         </Pressable>
         <ScrollView
           horizontal
@@ -266,18 +266,13 @@ export default function RoomEditionMode() {
           contentContainerStyle={styles.badgeContent}
         >
           {rooms.map((room) => (
-            <Pressable
+            <RoomBadgeItem
               key={room.id}
-              onPress={() => handleChangeRoom(room)}>
-              <Badge
-                variant="outline"
-                className='mx-1'
-                active={room.id === currentRoom?.id}
-                size='lg'
-              >
-                <Text>{room.name}</Text>
-              </Badge>
-            </Pressable>
+              room={room}
+              isActive={room.id === currentRoom?.id}
+              enrichedTables={enrichedTables}
+              onPress={handleChangeRoom}
+            />
           ))}
         </ScrollView>
 
@@ -349,7 +344,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#FBFBFB',
-    height: 50,
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -358,11 +353,10 @@ const styles = StyleSheet.create({
   backButton: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-    borderRightWidth: 1,
-    borderRightColor: '#EFEFEF',
+    backgroundColor: '#475569',
     height: '100%',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 16,
@@ -388,7 +382,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#2A2E33',
-    height: 50,
+    height: 60,
     width: '100%',
     borderLeftWidth: 1,
     borderLeftColor: '#EFEFEF',

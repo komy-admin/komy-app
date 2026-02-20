@@ -18,7 +18,7 @@ import { ItemGroup } from '~/types/kitchen.types';
 
 export default function BarmanKitchenPage() {
   const { barViewMode } = useAccountConfig();
-  const { orders, loading, error, updateOrderStatus } = useOrders();
+  const { orders, updateOrderStatus } = useOrders();
   const kitchenItems = useSelector(selectAllKitchenItems);
   const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
   const { showToast } = useToast();
@@ -79,16 +79,6 @@ export default function BarmanKitchenPage() {
     }
   };
 
-  if (loading || error) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>
-          {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -121,17 +111,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FBFBFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FBFBFB',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#2A2E33',
-    fontWeight: '500',
   },
   header: {
     backgroundColor: '#FFFFFF',

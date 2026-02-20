@@ -253,16 +253,9 @@ export const useOrderStatusActions = ({
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!selectedTableOrder) return;
-    try {
-      await deleteOrder(selectedTableOrder.id);
-      showToast('Commande supprimée avec succès', 'success');
-      setShowDeleteDialog(false);
-      onCleanup();
-    } catch (error) {
-      showToast('Erreur lors de la suppression de la commande', 'error');
-    }
-  }, [selectedTableOrder, deleteOrder, showToast, onCleanup]);
+    await deleteCurrentOrder();
+    setShowDeleteDialog(false);
+  }, [deleteCurrentOrder]);
 
   // --- Terminate flow ---
 
@@ -329,7 +322,6 @@ export const useOrderStatusActions = ({
 
     // Delete
     handleDeleteLine,
-    deleteCurrentOrder,
     handleDelete,
     handleConfirmDelete,
     showDeleteDialog,

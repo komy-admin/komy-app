@@ -20,8 +20,8 @@
  * Réduction de ~94% de la charge en mode service
  */
 import React, { useMemo, useCallback } from "react";
-import { Platform, StyleSheet, View } from "react-native";
-import { getStatusColor, getStatusBorderStyle } from "~/lib/utils";
+import { Platform, StyleSheet, View, Text as RNText } from "react-native";
+import { getStatusColor, getPriorityItemTypeDetailsForStatus } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
@@ -31,6 +31,11 @@ import {
   Gesture,
 } from 'react-native-gesture-handler';
 import { Plus, Play } from 'lucide-react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useAppSelector } from "~/store/hooks";
+import { selectItemTypesRecord } from "~/store/selectors";
+
+const ICON_SIZE = 16;
 
 interface RoomTableServiceProps {
   table: Table;
@@ -82,26 +87,43 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
 
   const hasOrder = !!status;
 
-  // Style de la table basé sur le statut + bordure de sélection
+  const orderTimeStr = useMemo(() => {
+    const order = table.orders?.[0];
+    if (!order?.createdAt) return '';
+    const d = new Date(order.createdAt);
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  }, [table.orders?.[0]?.createdAt]);
+
+  // Icône de l'itemType prioritaire (résolu via Redux store)
+  const itemTypesRecord = useAppSelector(selectItemTypesRecord);
+  const priorityIcon = useMemo(() => {
+    const lines = table.orders?.[0]?.lines;
+    if (!lines || !status) return '';
+    const details = getPriorityItemTypeDetailsForStatus(lines, status);
+    // L'icône du snapshot est souvent vide, on résout via le store
+    if (details.icon) return details.icon;
+    if (details.id && itemTypesRecord[details.id]) return itemTypesRecord[details.id].icon || '';
+    return '';
+  }, [table.orders?.[0]?.id, table.orders?.[0]?.updatedAt, status, itemTypesRecord]);
+
+
+  // Style pour tables sans commande ou en mode édition
   const tableStyle = useMemo(() => {
-    // Bordure noire si sélectionnée
     if (isSelected) {
       return {
-        backgroundColor: status ? getStatusColor(status) : '#FAFAFA',
+        backgroundColor: status ? getStatusColor(status) : '#F5F4FA',
         borderWidth: 3,
         borderColor: '#2A2E33',
         borderStyle: 'solid' as const,
       };
     }
-    // Style normal basé sur le statut
     return {
-      backgroundColor: status ? getStatusColor(status) : '#FAFAFA',
-      ...(status
-        ? getStatusBorderStyle(status, table)
-        : { borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'solid' as const }
-      ),
+      backgroundColor: status ? getStatusColor(status) : '#F5F4FA',
+      borderWidth: status ? 2 : 0,
+      borderColor: '#2A2E33',
+      borderStyle: 'solid' as const,
     };
-  }, [status, table, isSelected, editionMode]);
+  }, [status, isSelected]);
 
   // Style du conteneur avec curseur pointer (web)
   const containerStyle = useMemo(() => ({
@@ -121,27 +143,34 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   return (
     <View style={containerStyle}>
       <GestureDetector gesture={composedGesture}>
-        <View style={{ width: '100%', height: '100%' }}>
+        <View style={styles.fullSize}>
           <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
           <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
 
           <View style={styles.innerContainer}>
-            <View style={[styles.table, tableStyle]}>
-              {hasOrder || editionMode ? (
+            {editionMode ? (
+              <View style={[styles.table, tableStyle]}>
                 <Text style={styles.tableText}>{table.name}</Text>
-              ) : (
+              </View>
+            ) : (
+              <View style={[styles.table, tableStyle]}>
                 <View style={styles.emptyTableContent}>
-                  <View style={[styles.emptyTableIcon, !isSelected && styles.emptyTableIconUnselected]}>
-                    {isSelected ? (
-                      <Play size={14} color="white" fill="white" />
+                  <View style={[styles.emptyTableIcon, hasOrder && styles.orderTableIcon, isSelected && !hasOrder && styles.emptyTableIconSelected]}>
+                    {hasOrder && priorityIcon ? (
+                      <MaterialCommunityIcons name={priorityIcon as any} size={ICON_SIZE} color="#FFFFFF" />
+                    ) : isSelected ? (
+                      <Play size={ICON_SIZE - 2} color="#FFFFFF" fill="#FFFFFF" />
                     ) : (
-                      <Plus size={14} color="#9CA3AF" />
+                      <Plus size={ICON_SIZE} color="#6366F1" />
                     )}
                   </View>
-                  <Text style={styles.emptyTableText} numberOfLines={1}>{table.name}</Text>
+                  <RNText style={styles.emptyTableText} numberOfLines={1}>
+                    {table.name}
+                    {orderTimeStr ? <RNText style={styles.timeText}> - {orderTimeStr}</RNText> : null}
+                  </RNText>
                 </View>
-              )}
-            </View>
+              </View>
+            )}
           </View>
 
           <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
@@ -162,6 +191,8 @@ const RoomTableServiceMemoized = React.memo(RoomTableService, (prevProps, nextPr
     prevProps.table.height === nextProps.table.height &&
     prevProps.table.name === nextProps.table.name &&
     prevProps.table.seats === nextProps.table.seats &&
+    prevProps.table.orders?.[0]?.id === nextProps.table.orders?.[0]?.id &&
+    prevProps.table.orders?.[0]?.updatedAt === nextProps.table.orders?.[0]?.updatedAt &&
     prevProps.status === nextProps.status &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.editionMode === nextProps.editionMode &&
@@ -172,6 +203,10 @@ const RoomTableServiceMemoized = React.memo(RoomTableService, (prevProps, nextPr
 RoomTableServiceMemoized.displayName = 'RoomTableService';
 
 const styles = StyleSheet.create({
+  fullSize: {
+    width: '100%',
+    height: '100%',
+  },
   innerContainer: {
     width: '100%',
     height: '100%',
@@ -184,40 +219,45 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 5,
+    borderRadius: 8,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
     elevation: 3,
   },
   tableText: {
     color: '#2A2E33',
     fontWeight: 'bold',
   },
+  // --- Contenu des tables ---
   emptyTableContent: {
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
   emptyTableIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2A2E33',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyTableIconUnselected: {
-    backgroundColor: '#FFFFFF',
+  emptyTableIconSelected: {
+    backgroundColor: '#2A2E33',
+  },
+  orderTableIcon: {
+    backgroundColor: '#6366F1',
   },
   emptyTableText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#2A2E33',
+  },
+  timeText: {
+    fontWeight: '400',
+    color: '#2A2E33',
   },
 });
 

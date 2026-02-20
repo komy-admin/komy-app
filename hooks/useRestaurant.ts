@@ -84,7 +84,6 @@ export const useRestaurant = () => {
     deleteTable: tablesHook.deleteTable,
     
     // === ACTIONS CRUD COMMANDES ===
-    loadOrdersForRoom: ordersHook.loadOrdersForRoom,
     loadAllOrders: ordersHook.loadAllOrders,
     createOrder: ordersHook.createOrder,
     deleteOrder: ordersHook.deleteOrder,

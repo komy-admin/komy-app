@@ -1,14 +1,13 @@
-import { useSelector, useDispatch } from 'react-redux';
 import { useCallback, useMemo } from 'react';
-import { RootState, entitiesActions } from '~/store';
+import { entitiesActions } from '~/store';
 import { selectCurrentRoomId, selectSelectedTableId } from '~/store/slices/session.slice';
-import { selectOrders } from '~/store/selectors';
+import { selectOrders, selectTablesRecord } from '~/store/selectors';
 import { orderApiService, UpdateOrderStatusPayload } from '~/api/order.api';
-import { useOrderLines } from '~/hooks/useOrderLines';
 import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
 import { BulkUpdatePayload } from '~/utils/order-line-tracker';
 import { filterOrdersByRoom, isOrderActive } from '~/utils/orderUtils';
+import { useAppSelector, useAppDispatch } from '~/store/hooks';
 
 /**
  * Hook spécialisé pour la gestion des commandes
@@ -18,16 +17,13 @@ import { filterOrdersByRoom, isOrderActive } from '~/utils/orderUtils';
  * - Complexité réduite grâce à filterOrdersByRoom optimisé
  */
 export const useOrders = () => {
-  const dispatch = useDispatch();
-  const {
-    deleteOrderLines
-  } = useOrderLines();
+  const dispatch = useAppDispatch();
 
   // Sélecteurs
-  const orders = useSelector(selectOrders);
-  const tables = useSelector((state: RootState) => state.entities.tables);
-  const currentRoomId = useSelector(selectCurrentRoomId);
-  const selectedTableId = useSelector(selectSelectedTableId);
+  const orders = useAppSelector(selectOrders);
+  const tables = useAppSelector(selectTablesRecord);
+  const currentRoomId = useAppSelector(selectCurrentRoomId);
+  const selectedTableId = useAppSelector(selectSelectedTableId);
 
   // 🚀 Commandes de la salle courante (excluant les commandes terminées)
   // Utilise filterOrdersByRoom optimisé au lieu du filter inline
@@ -45,44 +41,6 @@ export const useOrders = () => {
     ) || null;
   }, [orders, selectedTableId]);
   
-  const loading = false; // Géré globalement maintenant
-  const error = null; // Géré globalement maintenant
-
-  // Actions asynchrones pour charger les données
-  const loadOrdersForRoom = useCallback(async () => {
-    try {
-      // Pour l'instant, on charge toutes les orders et on filtre côté client
-      // TODO: Implémenter le filtre côté serveur quand l'API le supportera
-      const { data: orders } = await orderApiService.getAll();
-      
-      // Corriger les orders qui n'ont pas de status
-      const ordersWithStatus = orders.map(order => {
-        if (!order.status && order.lines && order.lines.length > 0) {
-          // Prendre le status de priorité des lines
-          const hasReady = order.lines.some(line => line.status === Status.READY);
-          const hasInProgress = order.lines.some(line => line.status === Status.INPROGRESS);
-          const hasPending = order.lines.some(line => line.status === Status.PENDING);
-          
-          let status = Status.PENDING;
-          if (hasReady) status = Status.READY;
-          else if (hasInProgress) status = Status.INPROGRESS;
-          else if (hasPending) status = Status.PENDING;
-          
-          return { ...order, status };
-        }
-        return order;
-      });
-      
-      dispatch(entitiesActions.setOrders({ orders: ordersWithStatus }));
-      
-      return ordersWithStatus;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des commandes';
-      console.error('Erreur lors du chargement des commandes de la salle:', errorMessage);
-      throw error;
-    }
-  }, [dispatch]);
-
   const loadAllOrders = useCallback(async () => {
     try {
       const { data: orders } = await orderApiService.getAll();
@@ -195,12 +153,7 @@ export const useOrders = () => {
     currentRoomOrders,
     selectedTableOrder,
 
-    // État
-    loading,
-    error,
-
     // Actions CRUD
-    loadOrdersForRoom,
     loadAllOrders,
     createOrder,
     updateOrder,

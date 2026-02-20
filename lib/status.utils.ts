@@ -72,17 +72,6 @@ export const getNextStatus = (currentStatus: Status): Status | null => {
   return statusProgression[currentStatus] || null;
 };
 
-export const getPreviousStatus = (currentStatus: Status): Status | null => {
-  const statusRegression: Partial<Record<Status, Status>> = {
-    [Status.PENDING]: Status.DRAFT,
-    [Status.INPROGRESS]: Status.PENDING,
-    [Status.READY]: Status.INPROGRESS,
-    [Status.SERVED]: Status.READY,
-    [Status.TERMINATED]: Status.SERVED,
-  };
-  return statusRegression[currentStatus] || null;
-};
-
 // ========================================
 // Texte & couleurs de statut
 // ========================================
@@ -143,16 +132,57 @@ export const getStatusTagColor = (status: Status) => {
 // Styles de bordure
 // ========================================
 
-export const getStatusBorderStyle = (_status: Status, _table?: Table & { orders?: (Order & { lines?: OrderLine[] })[] }) => {
-  return {
-    borderStyle: 'solid' as const,
-    borderColor: '#AAAAAA',
-    borderWidth: 2,
-  };
-};
-
 export const getBorderStyle = (_statuses: Status[], baseColor: string) => ({
   borderStyle: 'solid' as const,
   borderColor: baseColor,
   borderWidth: 2,
 });
+
+// ========================================
+// Item type prioritaire par statut
+// ========================================
+
+/**
+ * Retourne le nom ET l'icône de l'itemType prioritaire.
+ */
+export const getPriorityItemTypeDetailsForStatus = (
+  orderLines: OrderLine[],
+  targetStatus: Status
+): { id: string; name: string; icon: string } => {
+  const findMinPriority = (filterByStatus?: Status): { id: string; name: string; icon: string } => {
+    let result = { id: '', name: '', icon: '' };
+    let minPriority = Number.MAX_SAFE_INTEGER;
+
+    for (const line of orderLines) {
+      if (line.type === OrderLineType.ITEM) {
+        const lineStatus = line.status ?? Status.PENDING;
+        if (!filterByStatus || lineStatus === filterByStatus) {
+          const itemType = line.item?.itemType;
+          if (!itemType?.name) continue;
+          const priority = itemType.priorityOrder ?? 0;
+          if (priority < minPriority) {
+            minPriority = priority;
+            result = { id: itemType.id || '', name: itemType.name, icon: itemType.icon || '' };
+          }
+        }
+      } else if (line.type === OrderLineType.MENU && line.items) {
+        for (const menuItem of line.items) {
+          if (!filterByStatus || menuItem.status === filterByStatus) {
+            const itemType = menuItem.item?.itemType;
+            if (!itemType?.name) continue;
+            const priority = itemType.priorityOrder ?? 0;
+            if (priority < minPriority) {
+              minPriority = priority;
+              result = { id: itemType.id || '', name: itemType.name, icon: itemType.icon || '' };
+            }
+          }
+        }
+      }
+    }
+
+    return result;
+  };
+
+  const byStatus = findMinPriority(targetStatus);
+  return byStatus.name ? byStatus : findMinPriority();
+};

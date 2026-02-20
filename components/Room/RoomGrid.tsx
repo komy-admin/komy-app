@@ -125,17 +125,15 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
           />
         ))}
 
-        {/* Bordure de la room */}
+        {/* Bordure de la salle - rendue en dernier pour couvrir les lignes */}
         <Rect
           x={EXTRA_LINES * CELL_SIZE}
           y={EXTRA_LINES * CELL_SIZE}
           width={width}
           height={height}
+          fill="none"
           stroke="#2A2E33"
           strokeWidth={2}
-          fill="transparent"
-          rx={4}
-          ry={4}
         />
       </G>
     </Svg>

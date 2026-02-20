@@ -1,7 +1,7 @@
 import { BaseApiService } from "./base.api";
 import { Order } from "~/types/order.types";
 import { Status } from "~/types/status.enum";
-import { OrderLine, OrderLineType } from "~/types/order-line.types";
+import { OrderLineType, CreateOrderLineRequest } from "~/types/order-line.types";
 
 // Types pour la nouvelle route PATCH /order/:id/status
 export interface UpdateOrderStatusPayload {
@@ -26,8 +26,27 @@ export interface BulkUpdateOrderPayload {
   }>;
 }
 
+export interface CreateOrderPayload {
+  tableId: string;
+  lines: CreateOrderLineRequest[];
+  status?: Status;
+}
+
 export class OrderApiService extends BaseApiService<Order> {
   protected endpoint = '/order';
+
+  /**
+   * Créer une commande avec ses lignes
+   */
+  async createWithLines(data: CreateOrderPayload): Promise<Order> {
+    try {
+      const response = await this.axiosInstance.post<Order>(this.endpoint, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error in createWithLines for ${this.endpoint}:`, error);
+      throw error;
+    }
+  }
 
   /**
    * Mise à jour spécialisée des statuts d'OrderLines et OrderLineItems

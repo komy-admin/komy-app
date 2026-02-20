@@ -1,3 +1,4 @@
+import React, { useMemo } from "react";
 import { View, ViewStyle } from "react-native";
 import { Table } from "~/types/table.types";
 
@@ -7,113 +8,83 @@ interface RoomChairsProps {
   CELL_SIZE: number;
 }
 
-export const RoomChairs = ({ position, table, CELL_SIZE }: RoomChairsProps) => {
+const GAP = 10;
 
-  const getChairsForSide = (position: 'top' | 'right' | 'bottom' | 'left'): number => {
+const RoomChairsComponent = ({ position, table, CELL_SIZE }: RoomChairsProps) => {
+  const isSide = position === 'left' || position === 'right';
+
+  const chairCount = useMemo(() => {
     if (!table.seats) return 0;
-  
-    const horizontalSpace = Math.floor(table.width * CELL_SIZE / (30 + 10));
-    const verticalSpace = Math.floor(table.height * CELL_SIZE / (30 + 10));
-  
+
+    const horizontalSpace = Math.floor(table.width * CELL_SIZE / (30 + GAP));
+    const verticalSpace = Math.floor(table.height * CELL_SIZE / (30 + GAP));
+
     let totalChairs = table.seats;
-    const distribution = {
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0
-    };
-  
+    const distribution = { top: 0, bottom: 0, left: 0, right: 0 };
+
     if (totalChairs > 0) { distribution.top = 1; totalChairs--; }
     if (totalChairs > 0) { distribution.bottom = 1; totalChairs--; }
     if (totalChairs > 0) { distribution.left = 1; totalChairs--; }
     if (totalChairs > 0) { distribution.right = 1; totalChairs--; }
-  
+
     while (totalChairs > 0) {
-      const topSpace = horizontalSpace - distribution.top;
-      const bottomSpace = horizontalSpace - distribution.bottom;
-      const leftSpace = verticalSpace - distribution.left;
-      const rightSpace = verticalSpace - distribution.right;
-  
       const availableSides = [
-        { side: 'top', space: topSpace > 0 ? topSpace : 0 },
-        { side: 'bottom', space: bottomSpace > 0 ? bottomSpace : 0 },
-        { side: 'left', space: leftSpace > 0 ? leftSpace : 0 },
-        { side: 'right', space: rightSpace > 0 ? rightSpace : 0 }
-      ].filter(side => side.space > 0);
-  
+        { side: 'top' as const, space: horizontalSpace - distribution.top },
+        { side: 'bottom' as const, space: horizontalSpace - distribution.bottom },
+        { side: 'left' as const, space: verticalSpace - distribution.left },
+        { side: 'right' as const, space: verticalSpace - distribution.right },
+      ].filter(s => s.space > 0);
+
       if (availableSides.length === 0) break;
-  
       availableSides.sort((a, b) => b.space - a.space);
-      distribution[availableSides[0].side as keyof typeof distribution]++;
+      distribution[availableSides[0].side]++;
       totalChairs--;
     }
-  
-    return distribution[position];
-  };
 
-  const chairCount = getChairsForSide(position);
+    return distribution[position];
+  }, [table.seats, table.width, table.height, CELL_SIZE, position]);
+
   if (chairCount === 0) return null;
 
-  const chairs = [];
-  const GAP = 10;
-  const isSide = position === 'left' || position === 'right';
-  
-  const baseContainerStyle: ViewStyle = {
+  const containerStyle: ViewStyle = {
     position: 'absolute',
-    width: '100%',
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
     zIndex: -1,
-  };
-
-  const positionStyle: ViewStyle = position === 'top' ? {
-    top: 0
-  } : position === 'bottom' ? {
-    bottom: 0
-  } : position === 'left' ? {
-    left: 0,
-    width: 28,
-    height: '100%'
-  } : {
-    right: 0,
-    width: 28,
-    height: '100%'
-  };
-
-  const containerStyle = {
-    ...baseContainerStyle,
-    ...positionStyle,
-    flexDirection: isSide ? 'column' : 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: isSide ? 'column' : 'row',
+    ...(isSide
+      ? { [position]: 0, width: 28, height: '100%' }
+      : { [position]: 0, width: '100%', height: 28 }
+    ),
   };
-
-  for (let i = 0; i < chairCount; i++) {
-    chairs.push(
-      <View
-        key={i}
-        style={{
-          width: isSide ? 20 : 30,
-          height: isSide ? 30 : 20,
-          backgroundColor: '#D9D9D9',
-          borderRadius: 50,
-          marginLeft: !isSide && i > 0 ? GAP : 0,
-          marginTop: isSide && i > 0 ? GAP : 0,
-        }}
-      />
-    );
-  }
 
   return (
     <View style={containerStyle}>
-      <View style={{
-        flexDirection: isSide ? 'column' : 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}>
-        {chairs}
+      <View style={{ flexDirection: isSide ? 'column' : 'row', justifyContent: 'center', alignItems: 'center' }}>
+        {Array.from({ length: chairCount }, (_, i) => (
+          <View
+            key={`${position}-${i}`}
+            style={{
+              width: isSide ? 20 : 30,
+              height: isSide ? 30 : 20,
+              backgroundColor: '#D9D9D9',
+              borderRadius: 50,
+              marginLeft: !isSide && i > 0 ? GAP : 0,
+              marginTop: isSide && i > 0 ? GAP : 0,
+            }}
+          />
+        ))}
       </View>
     </View>
   );
 };
+
+export const RoomChairs = React.memo(RoomChairsComponent, (prev, next) => (
+  prev.position === next.position &&
+  prev.table.seats === next.table.seats &&
+  prev.table.width === next.table.width &&
+  prev.table.height === next.table.height &&
+  prev.CELL_SIZE === next.CELL_SIZE
+));
+
+RoomChairs.displayName = 'RoomChairs';

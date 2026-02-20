@@ -28,7 +28,7 @@ export default function KitchenPage() {
   }, [kitchenEnabled, router]);
 
   // Utilisation des hooks Redux
-  const { orders, loading, error, updateOrderStatus } = useOrders();
+  const { orders, updateOrderStatus } = useOrders();
   const kitchenItems = useSelector(selectAllKitchenItems);
   // Récupérer les commandes en retard depuis le store
   const overdueOrderItemIds = useSelector((state: RootState) => state.session.overdueOrderItemIds);
@@ -81,15 +81,7 @@ export default function KitchenPage() {
   };
 
 
-  if (loading || error) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>
-          {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
-        </Text>
-      </View>
-    );
-  }
+
 
   return (
     <View style={styles.container}>

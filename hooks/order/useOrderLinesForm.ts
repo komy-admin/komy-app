@@ -56,7 +56,7 @@ export const useOrderLinesForm = ({
   const { activeMenus } = useMenus();
   
   // Tous les items actifs (sans filtrage par type)
-  const activeItems = items.filter(item => item.isActive);
+  const activeItems = useMemo(() => items.filter(item => item.isActive), [items]);
 
   // Items groupés par itemType, triés par priorityOrder
   const itemsByType = useMemo<ItemsByTypeGroup[]>(() => {

@@ -1,5 +1,5 @@
-import { Table } from '~/types/table.types';
 import { Room } from '~/types/room.types';
+import { Table } from '~/types/table.types';
 
 /**
  * Génère un nom aléatoire pour une table
@@ -63,53 +63,4 @@ export function findAvailablePosition(
   }
 
   return null;
-}
-
-/**
- * Vérifie si une table est entièrement dans les limites de la salle
- */
-export function isTableWithinRoom(table: Table, roomWidth: number, roomHeight: number): boolean {
-  return (
-    table.xStart >= 0 &&
-    table.yStart >= 0 &&
-    table.xStart + table.width <= roomWidth &&
-    table.yStart + table.height <= roomHeight
-  );
-}
-
-/**
- * Vérifie si deux tables entrent en collision
- */
-export function hasTableCollision(table: Table, otherTable: Table): boolean {
-  if (table.id === otherTable.id) return false;
-
-  const hasHorizontalOverlap = (
-    table.xStart < otherTable.xStart + otherTable.width &&
-    table.xStart + table.width > otherTable.xStart
-  );
-
-  const hasVerticalOverlap = (
-    table.yStart < otherTable.yStart + otherTable.height &&
-    table.yStart + table.height > otherTable.yStart
-  );
-
-  return hasHorizontalOverlap && hasVerticalOverlap;
-}
-
-/**
- * Vérifie si une position de table est valide (dans les limites et sans collision)
- */
-export function isTablePositionValid(
-  table: Table,
-  allTables: Table[],
-  roomWidth: number,
-  roomHeight: number
-): boolean {
-  // Vérifier les limites de la salle
-  if (!isTableWithinRoom(table, roomWidth, roomHeight)) {
-    return false;
-  }
-
-  // Vérifier les collisions avec les autres tables
-  return !allTables.some(otherTable => hasTableCollision(table, otherTable));
 }

@@ -156,13 +156,15 @@ const Room: React.FC<RoomProps> = ({
                 width: width * CELL_SIZE,
                 height: height * CELL_SIZE,
               }}>
-                <RoomGrid
-                  width={width * CELL_SIZE}
-                  height={height * CELL_SIZE}
-                  GRID_COLS={width}
-                  GRID_ROWS={height}
-                  CELL_SIZE={CELL_SIZE}
-                />
+                {editionMode && (
+                  <RoomGrid
+                    width={width * CELL_SIZE}
+                    height={height * CELL_SIZE}
+                    GRID_COLS={width}
+                    GRID_ROWS={height}
+                    CELL_SIZE={CELL_SIZE}
+                  />
+                )}
                 {/* 🚀 OPTIMISATION v2.1: Composant adapté selon le contexte
                     - Table sélectionnée en mode édition → RoomTable complet (drag, resize)
                     - Toutes les autres tables → RoomTableService léger
@@ -223,10 +225,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EEEDF5',
   },
   grid: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EEEDF5',
   },
   loading: {
     justifyContent: 'center',
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF', // Nécessaire pour capturer les gestes sur toute la surface
+    backgroundColor: '#EEEDF5', // Nécessaire pour capturer les gestes sur toute la surface
   }
 });
 

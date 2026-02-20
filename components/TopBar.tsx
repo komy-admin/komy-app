@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react'
-import { View, Image, Text, Pressable, TouchableWithoutFeedback, Platform } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { View, Image, Text, Pressable, Platform, StyleSheet } from 'react-native'
 import { FileText, Calendar, LogOut } from 'lucide-react-native'
 import { Href, Link, useRouter } from 'expo-router'
-import { useSelector } from 'react-redux';
-import { RootState } from '~/store';
+import { useAppSelector } from '~/store/hooks';
 import { sessionService } from '~/services/SessionService';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
+
+const capitalize = (str: string) =>
+  str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
 interface TopBarProps {
   showAdditions?: boolean;
@@ -13,7 +15,7 @@ interface TopBarProps {
 }
 
 export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBarProps) {
-  const { user } = useSelector((state: RootState) => state.session);
+  const user = useAppSelector((state) => state.session.user);
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -23,249 +25,156 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
   const isManager = user?.profil === 'manager'
   const shouldEnableConfigClick = enableConfigClick && !isManager
 
-  // Fonction pour formater la date
-  const updateDate = () => {
-    const today = new Date()
-    const day = String(today.getDate()).padStart(2, '0')
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const year = today.getFullYear()
-    setCurrentDate(`${day}/${month}/${year}`)
-  }
-
   useEffect(() => {
+    const updateDate = () => {
+      const today = new Date()
+      const day = String(today.getDate()).padStart(2, '0')
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const year = today.getFullYear()
+      setCurrentDate(`${day}/${month}/${year}`)
+    }
+
     updateDate()
     const now = new Date()
     const timeUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0).getTime() - now.getTime()
 
+    let interval: ReturnType<typeof setInterval> | null = null
+
     const timeout = setTimeout(() => {
       updateDate()
-      const interval = setInterval(updateDate, 24 * 60 * 60 * 1000)
-      return () => clearInterval(interval)
+      interval = setInterval(updateDate, 24 * 60 * 60 * 1000)
     }, timeUntilMidnight)
 
-    return () => clearTimeout(timeout)
+    return () => {
+      clearTimeout(timeout)
+      if (interval) clearInterval(interval)
+    }
   }, [])
 
-  const getImageSource = () => {
+  const imageSource = useMemo(() => {
     if (user?.profileImage) {
       return { uri: user.profileImage };
     }
     return require('../assets/images/userprofiledefault.jpg');
-  };
+  }, [user?.profileImage]);
 
-  const handleLogout = async () => {
+  const displayName = useMemo(() =>
+    `${capitalize(user?.firstName ?? '')} ${capitalize(user?.lastName ?? '')}`,
+    [user?.firstName, user?.lastName]
+  );
+
+  const displayProfil = useMemo(() =>
+    capitalize(user?.profil ?? ''),
+    [user?.profil]
+  );
+
+  const handleLogout = useCallback(async () => {
     try {
       setShowProfileMenu(false);
-      // Use SessionService to properly clear authToken and sessionToken
       await sessionService.logout();
-      // Navigate to login page
       router.replace('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails, navigate to login
       router.replace('/login');
     }
-  };
+  }, [router]);
 
-  const toggleProfileMenu = () => {
-    setShowProfileMenu(!showProfileMenu);
-  };
+  const closeMenu = useCallback(() => setShowProfileMenu(false), []);
+  const toggleProfileMenu = useCallback(() => setShowProfileMenu(prev => !prev), []);
 
-  const configUser = '/configs'
+  const handleLayout = useCallback((event: { nativeEvent: { layout: { height: number } } }) => {
+    setTopBarHeight(event.nativeEvent.layout.height);
+  }, [setTopBarHeight]);
+
+  const containerZStyle = useMemo(() => ({
+    ...styles.container,
+    zIndex: showProfileMenu ? 1001 : 25,
+    ...Platform.select({
+      android: {
+        elevation: showProfileMenu ? 1001 : 25,
+        shadowColor: 'transparent',
+      },
+    }),
+  }), [showProfileMenu]);
+
+  const profileMenuBgStyle = useMemo(() => ([
+    styles.profileRow,
+    showProfileMenu && styles.profileRowActive,
+  ]), [showProfileMenu]);
+
+  // Contenu profil partagé (admin link & manager pressable)
+  const profileContent = (
+    <>
+      <Image
+        source={imageSource}
+        style={styles.avatar}
+        resizeMode="cover"
+      />
+      <View>
+        <Text style={styles.userName}>{displayName}</Text>
+        <Text style={styles.userProfil}>{displayProfil}</Text>
+      </View>
+    </>
+  );
 
   return (
     <>
       {/* Overlay invisible pour fermer le menu */}
       {showProfileMenu && (
-        <TouchableWithoutFeedback onPress={() => setShowProfileMenu(false)}>
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 999,
-          }} />
-        </TouchableWithoutFeedback>
+        <Pressable onPress={closeMenu} style={styles.overlay} />
       )}
 
-      <View
-        onLayout={(event) => {
-          // Mesurer la hauteur réelle de la TopBar et la communiquer au PanelPortal
-          const { height } = event.nativeEvent.layout;
-          setTopBarHeight(height);
-        }}
-        style={{
-          width: '100%',
-          height: 90,
-          backgroundColor: '#EAEAEB',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingRight: 20,
-          zIndex: showProfileMenu ? 1001 : 25,
-          ...Platform.select({
-            android: {
-              elevation: showProfileMenu ? 1001 : 25,
-              shadowColor: 'transparent',
-            },
-          }),
-        }}
-      >
+      <View onLayout={handleLayout} style={containerZStyle}>
         <View>
           <Image
             source={require('../assets/images/logo_komy_png/logo_name_v1.png')}
-            style={{ width: 100, height: 100, resizeMode: 'contain' }}
+            style={styles.logo}
           />
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={styles.rightSection}>
+          <View style={styles.badgesRow}>
             {showAdditions && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor: "#F3F3F3", borderWidth: 1 }}>
+              <View style={styles.badge}>
                 <FileText size={24} color="#2A2E33" strokeWidth={1} />
-                <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '300' }}>Additions</Text>
+                <Text style={styles.badgeText}>Additions</Text>
               </View>
             )}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, borderColor: "#F3F3F3", borderWidth: 1 }}>
+            <View style={styles.badge}>
               <Calendar size={24} color="#2A2E33" strokeWidth={1} />
-              <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '300' }}>{currentDate}</Text>
+              <Text style={styles.badgeText}>{currentDate}</Text>
             </View>
           </View>
 
-          <View style={{ position: 'relative' }}>
+          <View style={styles.profileContainer}>
             {shouldEnableConfigClick ? (
-              <Link href={`/(admin)${configUser}` as Href} key={configUser} asChild>
-                <Pressable onPress={() => setShowProfileMenu(false)}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                    }}
-                  >
-                    <Image
-                      source={getImageSource()}
-                      style={{
-                        width: 45,
-                        height: 45,
-                        borderRadius: 30,
-                        borderColor: '#54575B',
-                      }}
-                      resizeMode="cover"
-                    />
-                    <View>
-                      <Text
-                        style={{
-                          color: '#2A2E33',
-                          fontSize: 15,
-                          fontWeight: '300'
-                        }}
-                      >
-                        {`${(user?.firstName ?? '').charAt(0).toUpperCase() + (user?.firstName ?? '').slice(1)} ${(user?.lastName ?? '').charAt(0).toUpperCase() + (user?.lastName ?? '').slice(1)}`}
-                      </Text>
-                      <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                        {(user?.profil ?? '').charAt(0).toUpperCase() + (user?.profil ?? '').slice(1)}
-                      </Text>
-                    </View>
+              <Link href={'/(admin)/configs' as Href} asChild>
+                <Pressable onPress={closeMenu}>
+                  <View style={styles.profileRow}>
+                    {profileContent}
                   </View>
                 </Pressable>
               </Link>
             ) : (
               <Pressable onPress={toggleProfileMenu}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 10,
-                    backgroundColor: showProfileMenu ? 'rgba(0,0,0,0.05)' : 'transparent',
-                    padding: 8,
-                    borderRadius: 8,
-                  }}
-                >
-                  <Image
-                    source={getImageSource()}
-                    style={{
-                      width: 45,
-                      height: 45,
-                      borderRadius: 30,
-                      borderColor: '#54575B',
-                    }}
-                    resizeMode="cover"
-                  />
-                  <View>
-                    <Text
-                      style={{
-                        color: '#2A2E33',
-                        fontSize: 15,
-                        fontWeight: '300'
-                      }}
-                    >
-                      {`${(user?.firstName ?? '').charAt(0).toUpperCase() + (user?.firstName ?? '').slice(1)} ${(user?.lastName ?? '').charAt(0).toUpperCase() + (user?.lastName ?? '').slice(1)}`}
-                    </Text>
-                    <Text style={{ color: '#64666A', fontSize: 14, fontWeight: '200' }}>
-                      {(user?.profil ?? '').charAt(0).toUpperCase() + (user?.profil ?? '').slice(1)}
-                    </Text>
-                  </View>
+                <View style={profileMenuBgStyle}>
+                  {profileContent}
                 </View>
               </Pressable>
             )}
 
             {/* Menu dropdown */}
             {showProfileMenu && !shouldEnableConfigClick && (
-              <View style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: -20,
-                backgroundColor: '#FFFFFF',
-                borderRadius: 12,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 8,
-                borderWidth: 1,
-                borderColor: 'rgba(0,0,0,0.08)',
-                minWidth: 180,
-                zIndex: 1000,
-              }}>
-                {/* Petite flèche vers le haut */}
-                <View style={{
-                  position: 'absolute',
-                  top: -6,
-                  right: 20,
-                  width: 12,
-                  height: 12,
-                  backgroundColor: '#FFFFFF',
-                  borderLeftWidth: 1,
-                  borderTopWidth: 1,
-                  borderColor: 'rgba(0,0,0,0.08)',
-                  transform: [{ rotate: '45deg' }],
-                }} />
-
-                <View style={{ padding: 8 }}>
+              <View style={styles.dropdown}>
+                <View style={styles.dropdownArrow} />
+                <View style={styles.dropdownContent}>
                   <Pressable
                     onPress={handleLogout}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderRadius: 8,
-                      backgroundColor: 'transparent',
-                    }}
+                    style={styles.logoutButton}
                     android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
                   >
                     <LogOut size={18} color="#EF4444" strokeWidth={2} />
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: '500',
-                      color: '#EF4444',
-                    }}>
-                      Se déconnecter
-                    </Text>
+                    <Text style={styles.logoutText}>Se déconnecter</Text>
                   </Pressable>
                 </View>
               </View>
@@ -276,3 +185,130 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
     </>
   )
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
+  container: {
+    width: '100%',
+    height: 90,
+    backgroundColor: '#DDDCE4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 20,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderColor: '#F3F3F3',
+    borderWidth: 1,
+  },
+  badgeText: {
+    color: '#2A2E33',
+    fontSize: 14,
+    fontWeight: '300',
+  },
+  profileContainer: {
+    position: 'relative',
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 8,
+    borderRadius: 8,
+  },
+  profileRowActive: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  avatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 30,
+    borderColor: '#54575B',
+  },
+  userName: {
+    color: '#2A2E33',
+    fontSize: 15,
+    fontWeight: '300',
+  },
+  userProfil: {
+    color: '#64666A',
+    fontSize: 14,
+    fontWeight: '200',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: -20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    minWidth: 180,
+    zIndex: 1000,
+  },
+  dropdownArrow: {
+    position: 'absolute',
+    top: -6,
+    right: 20,
+    width: 12,
+    height: 12,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    transform: [{ rotate: '45deg' }],
+  },
+  dropdownContent: {
+    padding: 8,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#EF4444',
+  },
+});

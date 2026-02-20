@@ -55,13 +55,6 @@ export const getUserProfileText = (teamType: UserProfile) => {
   return texts[teamType] || 'Type inconnu';
 };
 
-export const getEnumValue = <T extends { [key: string]: string }>(
-  enumObj: T,
-  enumKey: keyof T
-): string => {
-  return enumObj[enumKey];
-};
-
 export const getTableShortId = (tableName: string): string => {
   if (!tableName) return '';
 
@@ -85,22 +78,13 @@ export {
   getOrderGlobalStatus,
   getTableStatus,
   getNextStatus,
-  getPreviousStatus,
   getStatusText,
   getStatusColor,
   getStatusBackgroundColor,
   getStatusTagColor,
-  getStatusBorderStyle,
   getBorderStyle,
+  getPriorityItemTypeDetailsForStatus,
 } from './status.utils';
-
-export {
-  calculateMenuProgress,
-  hasMenuLineItemsMixedStatuses,
-  getMenuLineBorderStyle,
-  getOrderLineTypeText,
-  calculateOrderTotalFromLines,
-} from './order-line.utils';
 
 export {
   centsToEuros,

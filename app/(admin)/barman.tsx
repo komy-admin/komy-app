@@ -27,7 +27,7 @@ export default function BarmanPage() {
     }
   }, [barEnabled, router]);
 
-  const { orders, loading, error, updateOrderStatus } = useOrders();
+  const { orders, updateOrderStatus } = useOrders();
 
   const kitchenItems = useSelector(selectAllKitchenItems);
   // Récupérer les commandes en retard depuis le store
@@ -78,15 +78,7 @@ export default function BarmanPage() {
     }
   };
 
-  if (loading || error) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>
-          {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
-        </Text>
-      </View>
-    );
-  }
+
 
   return (
     <View style={styles.container}>

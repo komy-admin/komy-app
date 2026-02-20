@@ -10,7 +10,7 @@
  * - Performances identiques iOS/Android/Web
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { Gesture } from 'react-native-gesture-handler';
@@ -105,25 +105,11 @@ export const useRoomZoom = ({
     };
   }, [scale, savedScale]);
 
-  // Réinitialiser les transformations
-  const resetTransform = useCallback(() => {
-    translateX.value = 0;
-    translateY.value = 0;
-    savedTranslateX.value = 0;
-    savedTranslateY.value = 0;
-  }, [translateX, translateY, savedTranslateX, savedTranslateY]);
-
   return {
-    // Shared values
     translateX,
     translateY,
     scale,
-
-    // Gestures
     panGesture,
     pinchGesture,
-
-    // Fonctions
-    resetTransform
   };
 };

@@ -45,7 +45,7 @@
  */
 import React, { useMemo, useCallback } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { getStatusColor, getStatusBorderStyle } from "~/lib/utils";
+import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
@@ -61,6 +61,8 @@ import Animated, {
   withSpring,
   SharedValue,
 } from 'react-native-reanimated';
+
+const MIN_CELLS = 2;
 
 interface TableViewProps {
   table: Table;
@@ -95,8 +97,6 @@ const RoomTable: React.FC<TableViewProps> = ({
   onLongPress,
   onUpdate
 }) => {
-  const MIN_CELLS = 2;
-
   /**
    * 🎯 SYSTÈME DE SHARED VALUES (React Native Reanimated)
    *
@@ -155,10 +155,7 @@ const RoomTable: React.FC<TableViewProps> = ({
   const cachedMaxX = useSharedValue(0);
   const cachedMaxY = useSharedValue(0);
 
-  // 🔍 ZOOM SCALE (pour compenser le zoom de la Room sur grandes grilles)
-  // ⚡ v2.4: Utilisation directe de currentZoomScale (SharedValue), pas de sync nécessaire
-  // Sur grille 30x30, zoom ~0.5-0.6 → sans compensation, table ne suit pas le doigt
-  const zoomScale = currentZoomScale;
+  // 🔍 ZOOM SCALE : currentZoomScale (SharedValue) utilisé directement dans les gestures
 
   // Vérifier si une position est valide (dans les limites et sans collision)
   const isValidPosition = useCallback((x: number, y: number, w: number, h: number) => {
@@ -205,25 +202,7 @@ const RoomTable: React.FC<TableViewProps> = ({
       currentHeight.value === targetHeight
     );
 
-    if (alreadySynced) {
-      console.log('⏭️ SYNC SKIPPED (already synced)', table.name);
-      return;
-    }
-
-    console.log('🔄 SYNC SHARED VALUES', table.name, {
-      from: {
-        currentX: Math.round(currentX.value / CELL_SIZE),
-        currentY: Math.round(currentY.value / CELL_SIZE),
-        currentWidth: Math.round(currentWidth.value / CELL_SIZE),
-        currentHeight: Math.round(currentHeight.value / CELL_SIZE)
-      },
-      to: {
-        xStart: table.xStart,
-        yStart: table.yStart,
-        width: table.width,
-        height: table.height
-      }
-    });
+    if (alreadySynced) return;
 
     // 📥 Synchroniser les valeurs actuelles
     currentX.value = targetX;
@@ -408,36 +387,6 @@ const RoomTable: React.FC<TableViewProps> = ({
     // 3️⃣ Vérification des collisions
     const hasCollision = checkCollision(finalGridX, finalGridY, constrainedWidth, constrainedHeight);
 
-    console.log('🔧 RESIZE DEBUG', {
-      tableId: table.id,
-      tableName: table.name,
-      attempt: {
-        gridWidth,
-        gridHeight,
-        finalGridX,
-        finalGridY,
-        constrainedWidth,
-        constrainedHeight
-      },
-      currentState: {
-        tableWidth: table.width,
-        tableHeight: table.height,
-        tableX: table.xStart,
-        tableY: table.yStart
-      },
-      sharedValues: {
-        currentWidth: Math.round(currentWidth.value / CELL_SIZE),
-        currentHeight: Math.round(currentHeight.value / CELL_SIZE),
-        currentX: Math.round(currentX.value / CELL_SIZE),
-        currentY: Math.round(currentY.value / CELL_SIZE)
-      },
-      validation: {
-        hasCollision,
-        withinBounds,
-        willSucceed: !hasCollision && withinBounds
-      }
-    });
-
     // 4️⃣ Valider et appliquer OU rollback
     if (!hasCollision && withinBounds) {
       // ✅ Tout est valide - reconvertir en pixels pour cohérence
@@ -474,20 +423,8 @@ const RoomTable: React.FC<TableViewProps> = ({
       }
 
       onUpdate(table.id, updates);
-      console.log('✅ RESIZE SUCCESS', table.name);
     } else {
-      // ❌ Collision ou hors limites
-      console.log('❌ RESIZE FAILED', table.name, {
-        reason: !withinBounds ? 'OUT_OF_BOUNDS' : 'COLLISION',
-        resetting: {
-          widthTo: table.width,
-          heightTo: table.height,
-          xTo: table.xStart,
-          yTo: table.yStart
-        }
-      });
-
-      // 🔄 RESET COMPLET vers les valeurs du BACKEND (source de vérité)
+      // ❌ Collision ou hors limites → RESET COMPLET vers les valeurs du BACKEND (source de vérité)
       // ⚠️ IMPORTANT : Ne PAS utiliser currentWidth/currentHeight qui peuvent être désynchronisés
       // Toujours utiliser table.width/height qui viennent du backend
       const backendWidth = table.width * CELL_SIZE;
@@ -540,7 +477,7 @@ const RoomTable: React.FC<TableViewProps> = ({
       .onUpdate((event) => {
         'worklet';
         // 🔍 Compenser le zoom pour que le resize suive le curseur
-        const compensatedTranslationX = event.translationX / zoomScale.value;
+        const compensatedTranslationX = event.translationX / currentZoomScale.value;
         const rawWidth = startWidth.value + compensatedTranslationX;
         // Snap to grid pendant le resize
         const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
@@ -590,7 +527,7 @@ const RoomTable: React.FC<TableViewProps> = ({
       .onUpdate((event) => {
         'worklet';
         // 🔍 Compenser le zoom pour que le resize suive le curseur
-        const compensatedTranslationX = event.translationX / zoomScale.value;
+        const compensatedTranslationX = event.translationX / currentZoomScale.value;
         // 📏 Calculer la nouvelle largeur (tirer vers gauche = réduire translationX)
         const rawWidth = startWidth.value - compensatedTranslationX;
         const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
@@ -627,7 +564,7 @@ const RoomTable: React.FC<TableViewProps> = ({
       .onUpdate((event) => {
         'worklet';
         // 🔍 Compenser le zoom pour que le resize suive le curseur
-        const compensatedTranslationY = event.translationY / zoomScale.value;
+        const compensatedTranslationY = event.translationY / currentZoomScale.value;
         const rawHeight = startHeight.value + compensatedTranslationY;
         const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
         height.value = snappedHeight;
@@ -651,7 +588,7 @@ const RoomTable: React.FC<TableViewProps> = ({
       .onUpdate((event) => {
         'worklet';
         // 🔍 Compenser le zoom pour que le resize suive le curseur
-        const compensatedTranslationY = event.translationY / zoomScale.value;
+        const compensatedTranslationY = event.translationY / currentZoomScale.value;
         const rawHeight = startHeight.value - compensatedTranslationY;
         const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
         const deltaHeight = snappedHeight - startHeight.value; // Utiliser startHeight comme référence
@@ -724,8 +661,8 @@ const RoomTable: React.FC<TableViewProps> = ({
         'worklet';
         // 👆 Mouvement direct SANS snap (suit exactement le doigt)
         // 🔍 Diviser par zoomScale pour compenser le zoom sur grandes grilles
-        const compensatedTranslationX = event.translationX / zoomScale.value;
-        const compensatedTranslationY = event.translationY / zoomScale.value;
+        const compensatedTranslationX = event.translationX / currentZoomScale.value;
+        const compensatedTranslationY = event.translationY / currentZoomScale.value;
 
         translateX.value = compensatedTranslationX;
         translateY.value = compensatedTranslationY;
@@ -807,14 +744,14 @@ const RoomTable: React.FC<TableViewProps> = ({
     };
   });
 
-  // Reset des animations quand la table change
+  // Reset des animations quand on quitte l'édition
   React.useEffect(() => {
     if (!isEditing) {
       translateX.value = withSpring(0);
       translateY.value = withSpring(0);
       scale.value = withSpring(1);
     }
-  }, [isEditing, table.xStart, table.yStart]);
+  }, [isEditing]);
 
   // Validation de position
   React.useEffect(() => {
@@ -830,9 +767,9 @@ const RoomTable: React.FC<TableViewProps> = ({
     backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
     ...(isEditing
       ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' as const }
-      : (status ? getStatusBorderStyle(status, table) : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const })
+      : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const }
     ),
-  }), [status, isEditing, table, editionMode]);
+  }), [status, isEditing]);
 
   // 🎨 Style pour le conteneur avec curseur et texte non sélectionnable (web)
   const containerStyle = useMemo(() => ({

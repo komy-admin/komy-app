@@ -1,19 +1,14 @@
 import { ScrollView, View, useWindowDimensions, StyleSheet } from "react-native";
-import { SidePanel } from "~/components/SidePanel";
 import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
 import { Table } from "~/types/table.types";
-import OrderList from "~/components/Service/OrderList";
-import { SearchBar } from "~/components/Service/SearchBar";
-import { useOrderFilters } from "~/hooks/useOrderFilters";
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { RoomTabsHeader } from '~/components/Service/RoomTabsHeader';
 import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
-import { ClaimConfirmModal } from '~/components/Service/ClaimConfirmModal';
-import { ServeConfirmModal } from '~/components/Service/ServeConfirmModal';
+import { ActionConfirmModal } from '~/components/Service/ActionConfirmModal';
 import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
 import {
   useRestaurant,
@@ -21,7 +16,7 @@ import {
   useTables,
   useOrders
 } from '~/hooks/useRestaurant';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '~/store/hooks';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
 import { OrderLinesForm } from '~/components/order/OrderLinesForm';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
@@ -34,25 +29,25 @@ import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { CustomModal } from '@/components/CustomModal';
 import PaymentView from '~/components/Service/PaymentView';
 import { ForkModal } from '~/components/ui';
-import { Status } from '~/types/status.enum';
+
+const NOOP = () => {};
 
 export default function ServicePage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [orderCreatedFromStart, setOrderCreatedFromStart] = useState<boolean>(false);
-  const [orderModalTitle, setOrderModalTitle] = useState<string>('');
+  const [orderCreatedFromStart, setOrderCreatedFromStart] = useState(false);
+  const [orderModalTitle, setOrderModalTitle] = useState('');
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
   const [isReassigning, setIsReassigning] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
-  const appInitialized = useSelector(selectAppInitialized);
-  const appLoading = useSelector(selectIsAppInitializing);
+  const appInitialized = useAppSelector(selectAppInitialized);
+  const appLoading = useAppSelector(selectIsAppInitializing);
   const { enrichedTables, currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
     currentRoomOrders,
     selectedTableOrder,
-    loading,
     deleteOrder,
     updateOrder,
     updateOrderStatus
@@ -85,7 +80,6 @@ export default function ServicePage() {
     itemsToServeData,
     setItemsToServeData,
     handleDeleteLine,
-    deleteCurrentOrder,
     handleDelete,
     handleConfirmDelete,
     showDeleteDialog,
@@ -107,7 +101,10 @@ export default function ServicePage() {
   // Stabiliser la référence des initialLines pour éviter les re-renders inutiles
   const initialLines = useMemo(() => selectedTableOrder?.lines || [], [selectedTableOrder?.id, selectedTableOrder?.lines]);
 
-  // ✅ Hook pour gérer les OrderLines (remplace toute la logique manuelle)
+  const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
+  const cameFromDetailViewRef = useRef<boolean>(false);
+
+  // Hook pour gérer les OrderLines (remplace toute la logique manuelle)
   const orderLinesManager = useOrderLinesManager({
     initialLines,
     mode: orderCreatedFromStart ? 'create' : 'edit',
@@ -120,7 +117,7 @@ export default function ServicePage() {
 
       // Toujours afficher les détails après sauvegarde
       setShowOrderDetail(true);
-      cameFromDetailViewRef.current = false; // Réinitialiser car on ouvre déjà la detail view
+      cameFromDetailViewRef.current = false;
 
       setTimeout(() => {
         isSavingOrderRef.current = false;
@@ -132,16 +129,6 @@ export default function ServicePage() {
       isSavingOrderRef.current = false;
     },
   });
-
-  const {
-    searchQuery,
-    filters,
-    filteredOrders,
-    handleSearchChange,
-    handleFiltersChange,
-    handleClearFilters,
-    isLoaded: filtersLoaded,
-  } = useOrderFilters(currentRoomOrders.filter(order => order.lines && order.lines.length > 0));
 
   useFocusEffect(
     useCallback(() => {
@@ -156,9 +143,6 @@ export default function ServicePage() {
     setCurrentRoom(room.id);
   }, [setSelectedTable, setCurrentRoom]);
 
-  const isSavingOrderRef = useRef<boolean | { savedOrder: any }>(false);
-  const cameFromDetailViewRef = useRef<boolean>(false);
-
   const handleCreateOrder = useCallback(() => {
     if (!selectedTableId) {
       showToast('Veuillez sélectionner une table avant de créer une commande.', 'warning');
@@ -170,12 +154,10 @@ export default function ServicePage() {
       return;
     }
 
-    // NOUVEAU FLUX : Ouvrir directement le formulaire SANS créer de commande
-    // La commande sera créée à la fin quand le serveur validera avec les OrderLines
-    cameFromDetailViewRef.current = false; // On ne vient pas de la detail view
-    setOrderCreatedFromStart(true); // Marquer qu'on vient du bouton "Start"
+    cameFromDetailViewRef.current = false;
+    setOrderCreatedFromStart(true);
     setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTable?.name || 'Table'}`);
-    setShowOrderModal(true); // Ouvrir la modal
+    setShowOrderModal(true);
   }, [selectedTableId, currentRoomOrders, selectedTable, currentRoom, showToast]);
 
   const handleTablePress = useCallback((table: Table | null) => {
@@ -196,7 +178,6 @@ export default function ServicePage() {
   }, [currentRoomOrders, setSelectedTable, selectedTableId, handleCreateOrder]);
 
   // Reset quand l'ordre disparaît (ex: backend supprime l'ordre vide après suppression du dernier article)
-  // useEffect requis car setSelectedTable dispatche vers Redux (state externe, pas local)
   useEffect(() => {
     if (showOrderDetail && !selectedTableOrder && !isSavingOrderRef.current) {
       setShowOrderDetail(false);
@@ -221,9 +202,8 @@ export default function ServicePage() {
     }, 300);
   }, [orderLinesManager]);
 
-  // Handlers pour OrderDetailView
   const handleEditOrder = useCallback(() => {
-    cameFromDetailViewRef.current = true; // Marquer qu'on vient de la detail view
+    cameFromDetailViewRef.current = true;
     setShowOrderDetail(false);
     setOrderCreatedFromStart(false);
     setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTableOrder?.table?.name || selectedTable?.name || 'Table'}`);
@@ -235,7 +215,6 @@ export default function ServicePage() {
     setShowReassignModal(true);
   }, [currentRoom]);
 
-  // Tables et room pour la modal de réassignation
   const reassignRoom = useMemo(() => {
     if (!reassignRoomId) return null;
     return rooms.find(room => room.id === reassignRoomId) || null;
@@ -244,14 +223,15 @@ export default function ServicePage() {
   const reassignRoomTables = useMemo(() => {
     if (!reassignRoomId) return [];
     return enrichedTables.filter(table => {
-      // Filtrer seulement les tables de la room sélectionnée
       if (table.roomId !== reassignRoomId) return false;
-
-      // Exclure TOUTES les tables qui ont déjà une commande (on ne peut pas assigner à une table occupée)
       const hasOrder = table.orders && table.orders.length > 0;
       return !hasOrder;
     });
   }, [reassignRoomId, enrichedTables]);
+
+  const handleReassignRoomChange = useCallback((room: any) => {
+    setReassignRoomId(room.id);
+  }, []);
 
   const handleTableReassign = useCallback(async (table: Table | null) => {
     if (!table || !selectedTableOrder || isReassigning) return;
@@ -292,100 +272,71 @@ export default function ServicePage() {
     router.push('/(admin)/room/edition-mode');
   }, [currentRoom]);
 
-  const handleDeselectTable = useCallback(() => {
-    setSelectedTable(null);
-  }, [setSelectedTable]);
+  // Callbacks stabilisés pour les modals
+  const handleCloseReassignModal = useCallback(() => setShowReassignModal(false), []);
+  const handleClosePaymentModal = useCallback(() => setShowPaymentModal(false), []);
+  const handleCloseDeleteDialog = useCallback(() => setShowDeleteDialog(false), [setShowDeleteDialog]);
+  const handleCloseTerminateDialog = useCallback(() => setShowTerminateDialog(false), [setShowTerminateDialog]);
+  const handleCloseClaimModal = useCallback(() => {
+    setShowClaimConfirmModal(false);
+    setItemsToClaimData(null);
+  }, [setShowClaimConfirmModal, setItemsToClaimData]);
+  const handleCloseServeModal = useCallback(() => {
+    setShowServeConfirmModal(false);
+    setItemsToServeData(null);
+  }, [setShowServeConfirmModal, setItemsToServeData]);
 
   const windowDimensions = useWindowDimensions();
 
   // Mesure du conteneur de la room pour le zoom auto-fill
   const { dimensions: roomContainerDimensions, onLayout: handleRoomContainerLayout } = useContainerLayout();
 
-  // ✅ useMemo : Dimensions de la modal de réassignation
   const reassignModalDimensions = useMemo(() => ({
     width: Math.min(windowDimensions.width * 0.55, 600),
     height: Math.min(windowDimensions.height * 0.7, 600),
   }), [windowDimensions.width, windowDimensions.height]);
 
-  // ✅ useMemo : Dimensions du container Room dans la modal de réassignation
   const reassignRoomContainerDimensions = useMemo(() => ({
     width: Math.min(windowDimensions.width * 0.65, 660),
     height: Math.min(windowDimensions.height * 0.55, 500),
   }), [windowDimensions.width, windowDimensions.height]);
 
-  // Fonction pour rediriger vers room_list avec création automatique
   const handleCreateFirstRoom = useCallback(() => {
     router.push('/(admin)/room');
   }, []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.flex1}>
       {/* OrderLinesForm en pleine page - remplace tout le layout */}
       {showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
-        <View style={{ flex: 1, flexDirection: 'column' }}>
-          {/* OrderLinesForm */}
-          <View style={{ flex: 1 }}>
-            <OrderLinesForm
-              title={orderModalTitle}
-              lines={orderLinesManager.orderLines}
-              items={allItems.filter(item => item.isActive)}
-              itemTypes={allItemTypes}
-              onAddItem={orderLinesManager.addItem}
-              onUpdateItem={orderLinesManager.updateItem}
-              onAddMenu={orderLinesManager.addMenu}
-              onUpdateMenu={orderLinesManager.updateMenu}
-              onDeleteLine={orderLinesManager.deleteLine}
-              onClearAll={orderLinesManager.clearAllLines}
-              onSave={orderLinesManager.save}
-              onCancel={handleSmartCloseOrderModal}
-              hasChanges={orderLinesManager.hasChanges}
-              isProcessing={orderLinesManager.isProcessing}
-            />
-          </View>
-
+        <View style={styles.flex1}>
+          <OrderLinesForm
+            title={orderModalTitle}
+            lines={orderLinesManager.orderLines}
+            items={allItems.filter(item => item.isActive)}
+            itemTypes={allItemTypes}
+            onAddItem={orderLinesManager.addItem}
+            onUpdateItem={orderLinesManager.updateItem}
+            onAddMenu={orderLinesManager.addMenu}
+            onUpdateMenu={orderLinesManager.updateMenu}
+            onDeleteLine={orderLinesManager.deleteLine}
+            onClearAll={orderLinesManager.clearAllLines}
+            onSave={orderLinesManager.save}
+            onCancel={handleSmartCloseOrderModal}
+            hasChanges={orderLinesManager.hasChanges}
+            isProcessing={orderLinesManager.isProcessing}
+          />
         </View>
       ) : (
-        // Layout normal service avec SidePanel + Room
-        <View style={{ flexDirection: 'row', flex: 1 }}>
-          <SidePanel
-            hideCloseButton={true}
-            hideHeader={true}
-            width={windowDimensions.width / 4}
-            title="Service"
-            onBack={handleDeselectTable}
-          >
-            <View style={{ padding: 16, flex: 1, backgroundColor: '#F9FAFB' }}>
-              {loading || !filtersLoaded ? (
-                <Text>Chargement...</Text>
-              ) : (
-                <>
-                  <SearchBar
-                    searchQuery={searchQuery}
-                    onSearchChange={handleSearchChange}
-                    filters={filters}
-                    onFiltersChange={handleFiltersChange}
-                    onClearFilters={handleClearFilters}
-                  />
-                  <OrderList
-                    orders={filteredOrders}
-                    onOrderPress={(order) => {
-                      setSelectedTable(order.tableId);
-                      setShowOrderDetail(true);
-                    }}
-                    onOrderDelete={deleteCurrentOrder}
-                    selectedOrderId={selectedTableOrder?.id}
-                  />
-                </>
-              )}
-            </View>
-          </SidePanel>
-
+        // Layout normal service — Room plein écran
+        <View style={styles.flex1}>
           <View style={styles.mainContentContainer}>
-            {/* Header avec tabs des rooms - seulement si il y a des rooms et pas en mode detail/edit */}
+            {/* Header avec tabs des rooms */}
             {rooms.length > 0 && !showOrderDetail && !showOrderModal && (
               <RoomTabsHeader
                 rooms={rooms}
                 currentRoomId={currentRoom?.id}
+                enrichedTables={enrichedTables}
                 onRoomChange={handleChangeRoom}
                 onEditModePress={navigateToRoomEdit}
               />
@@ -394,17 +345,13 @@ export default function ServicePage() {
             {appInitialized && !appLoading && rooms.length === 0 ? (
               <EmptyRoomsState onCreateFirstRoom={handleCreateFirstRoom} />
             ) : appLoading || !appInitialized ? (
-              // État de chargement
               <View style={styles.loadingContainer}>
                 <Text>Chargement des salles...</Text>
               </View>
             ) : (
-              // Layout normal avec room existante
               <View style={styles.normalLayoutContainer}>
                 {showOrderDetail && selectedTableOrder ? (
-                  // Afficher les détails de la commande
-                  <View style={{ flex: 1, flexDirection: 'column' }}>
-                    {/* Header avec bouton retour, Réclamer et Actions */}
+                  <View style={styles.columnLayout}>
                     <OrderDetailHeader
                       title={`Commande - ${selectedTableOrder.table?.name || 'Table'}`}
                       onBack={handleCloseOrderDetail}
@@ -420,7 +367,6 @@ export default function ServicePage() {
                       orderStatus={selectedTableOrder.status}
                     />
 
-                    {/* OrderDetailView */}
                     <OrderDetailView
                       order={selectedTableOrder}
                       itemTypes={allItemTypes}
@@ -432,25 +378,22 @@ export default function ServicePage() {
                     />
                   </View>
                 ) : (
-                  // Afficher la room normalement
-                  <>
-                    <View style={{ flex: 1 }} onLayout={handleRoomContainerLayout}>
-                      <RoomComponent
-                        key={currentRoom?.id || 'no-room'}
-                        tables={currentRoomTables}
-                        editingTableId={selectedTableId ?? undefined}
-                        editionMode={false}
-                        isLoading={loading}
-                        width={currentRoom?.width}
-                        height={currentRoom?.height}
-                        containerDimensions={roomContainerDimensions}
-                        fillContainer
-                        onTablePress={handleTablePress}
-                        onTableLongPress={handleTablePress}
-                        onTableUpdate={() => { }}
-                      />
-                    </View>
-                  </>
+                  <View style={styles.flex1} onLayout={handleRoomContainerLayout}>
+                    <RoomComponent
+                      key={currentRoom?.id || 'no-room'}
+                      tables={currentRoomTables}
+                      editingTableId={selectedTableId ?? undefined}
+                      editionMode={false}
+                      isLoading={false}
+                      width={currentRoom?.width}
+                      height={currentRoom?.height}
+                      containerDimensions={roomContainerDimensions}
+                      fillContainer
+                      onTablePress={handleTablePress}
+                      onTableLongPress={handleTablePress}
+                      onTableUpdate={NOOP}
+                    />
+                  </View>
                 )}
               </View>
             )}
@@ -458,16 +401,15 @@ export default function ServicePage() {
         </View>
       )}
 
-      {/* Modals pour OrderDetailView */}
+      {/* Modals */}
       <CustomModal
         isVisible={showReassignModal}
-        onClose={() => setShowReassignModal(false)}
+        onClose={handleCloseReassignModal}
         width={reassignModalDimensions.width}
         height={reassignModalDimensions.height}
         title={isReassigning ? 'Assignation en cours...' : 'Sélectionner une table'}
       >
         <View style={styles.reassignModalContainer}>
-          {/* Tabs des rooms - hauteur fixe en haut avec zIndex élevé */}
           <View style={styles.reassignTabsContainer}>
             <ScrollView
               horizontal
@@ -476,33 +418,32 @@ export default function ServicePage() {
               nestedScrollEnabled={true}
             >
               {rooms.length === 0 ? (
-                <Text style={{ color: '#999' }}>Aucune room disponible</Text>
+                <Text style={styles.emptyText}>Aucune room disponible</Text>
               ) : (
-                rooms.map((room, index) => (
+                rooms.map((room) => (
                   <RoomBadgeItem
-                    key={`${room.name}-reassign-${index}`}
+                    key={room.id}
                     room={room}
                     isActive={room.id === reassignRoomId}
-                    onPress={(room) => setReassignRoomId(room.id)}
-                    keyPrefix="reassign"
+                    enrichedTables={enrichedTables}
+                    onPress={handleReassignRoomChange}
                   />
                 ))
               )}
             </ScrollView>
           </View>
 
-          {/* Room - prend le reste de l'espace disponible */}
           <View style={styles.reassignRoomContainer}>
             <RoomComponent
               tables={reassignRoomTables}
               editionMode={false}
-              isLoading={loading || isReassigning}
+              isLoading={isReassigning}
               width={reassignRoom?.width}
               height={reassignRoom?.height}
               containerDimensions={reassignRoomContainerDimensions}
               onTablePress={handleTableReassign}
               onTableLongPress={handleTableReassign}
-              onTableUpdate={() => {}}
+              onTableUpdate={NOOP}
             />
           </View>
         </View>
@@ -510,14 +451,14 @@ export default function ServicePage() {
 
       <ForkModal
         visible={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
+        onClose={handleClosePaymentModal}
         maxWidth={1200}
         title="Régler l'addition"
       >
         {selectedTableOrder && (
           <PaymentView
             order={selectedTableOrder}
-            onClose={() => setShowPaymentModal(false)}
+            onClose={handleClosePaymentModal}
             onPaymentComplete={handlePaymentComplete}
           />
         )}
@@ -526,7 +467,7 @@ export default function ServicePage() {
       {selectedTableOrder && showDeleteDialog && (
         <DeleteConfirmationModal
           isVisible={showDeleteDialog}
-          onClose={() => setShowDeleteDialog(false)}
+          onClose={handleCloseDeleteDialog}
           onConfirm={handleConfirmDelete}
           entityName={`de la table ${selectedTableOrder.table?.name || selectedTableOrder.table?.id || 'N/A'}`}
           entityType="la commande"
@@ -536,7 +477,7 @@ export default function ServicePage() {
       {selectedTableOrder && showTerminateDialog && (
         <ConfirmationModal
           isVisible={showTerminateDialog}
-          onClose={() => setShowTerminateDialog(false)}
+          onClose={handleCloseTerminateDialog}
           onConfirm={handleConfirmTerminate}
           title="Terminer la commande"
           message={`Voulez-vous vraiment terminer la commande de la table ${selectedTableOrder.table?.name || 'N/A'} ?`}
@@ -547,31 +488,34 @@ export default function ServicePage() {
       )}
 
       {/* Modal de confirmation pour Réclamer */}
-      <ClaimConfirmModal
+      <ActionConfirmModal
         isVisible={showClaimConfirmModal}
         itemsData={itemsToClaimData}
-        onClose={() => {
-          setShowClaimConfirmModal(false);
-          setItemsToClaimData(null);
-        }}
+        onClose={handleCloseClaimModal}
         onConfirm={confirmClaim}
+        variant="claim"
       />
 
       {/* Modal de confirmation pour Servir */}
-      <ServeConfirmModal
+      <ActionConfirmModal
         isVisible={showServeConfirmModal}
         itemsData={itemsToServeData}
-        onClose={() => {
-          setShowServeConfirmModal(false);
-          setItemsToServeData(null);
-        }}
+        onClose={handleCloseServeModal}
         onConfirm={confirmServe}
+        variant="serve"
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flex1: {
+    flex: 1,
+  },
+  columnLayout: {
+    flex: 1,
+    flexDirection: 'column',
+  },
   mainContentContainer: {
     flex: 1,
     height: '100%',
@@ -613,5 +557,8 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  emptyText: {
+    color: '#999',
   },
 });

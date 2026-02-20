@@ -3,35 +3,52 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Platform, useWindowDimen
 import { CustomModal } from '@/components/CustomModal';
 import { ItemNameRow } from './ItemNameRow';
 
-interface ClaimConfirmModalProps {
+interface ActionConfirmModalProps {
   isVisible: boolean;
   itemsData: {
     orderLineIds: string[];
     orderLineItemIds: string[];
-    itemTypeNames: string[];
+    itemTypeNames?: string[];
     count: number;
     itemNames: string[];
   } | null;
   onClose: () => void;
   onConfirm: () => void;
+  variant: 'claim' | 'serve';
 }
 
-/**
- * Modal mémoïsée pour confirmer la réclamation d'articles
- */
-export const ClaimConfirmModal = memo<ClaimConfirmModalProps>(({
+const VARIANT_CONFIG = {
+  claim: {
+    title: 'Confirmation - Réclamer',
+    confirmText: 'Confirmer la réclamation',
+    confirmColor: '#FB923C',
+  },
+  serve: {
+    title: 'Confirmation - Servir',
+    confirmText: 'Confirmer le service',
+    confirmColor: '#10B981',
+  },
+} as const;
+
+export const ActionConfirmModal = memo<ActionConfirmModalProps>(({
   isVisible,
   itemsData,
   onClose,
-  onConfirm
+  onConfirm,
+  variant,
 }) => {
   const windowDimensions = useWindowDimensions();
+  const config = VARIANT_CONFIG[variant];
 
-  // ✅ useMemo : Dimensions de la modal
   const modalDimensions = useMemo(() => ({
     width: Math.min(windowDimensions.width * 0.45, 500),
     height: Math.min(windowDimensions.height * 0.6, 450),
   }), [windowDimensions.width, windowDimensions.height]);
+
+  const confirmButtonStyle = useMemo(() => ([
+    styles.confirmButton,
+    { backgroundColor: config.confirmColor },
+  ]), [config.confirmColor]);
 
   if (!itemsData) return null;
 
@@ -41,21 +58,27 @@ export const ClaimConfirmModal = memo<ClaimConfirmModalProps>(({
       onClose={onClose}
       width={modalDimensions.width}
       height={modalDimensions.height}
-      title="Confirmation - Réclamer"
+      title={config.title}
     >
       <View style={styles.container}>
         {/* Description */}
-        <View style={styles.descriptionRow}>
+        {variant === 'claim' && itemsData.itemTypeNames ? (
+          <View style={styles.descriptionRow}>
+            <Text style={styles.descriptionText}>
+              Vous êtes sur le point de réclamer {itemsData.count} article{itemsData.count > 1 ? 's' : ''} de type{' '}
+            </Text>
+            <Text style={styles.itemTypeName}>
+              {itemsData.itemTypeNames.map(n => `"${n}"`).join(' + ')}
+            </Text>
+            <Text style={styles.descriptionText}>
+              {' '}:
+            </Text>
+          </View>
+        ) : (
           <Text style={styles.descriptionText}>
-            Vous êtes sur le point de réclamer {itemsData.count} article{itemsData.count > 1 ? 's' : ''} de type{' '}
+            Vous êtes sur le point de servir {itemsData.count} article{itemsData.count > 1 ? 's' : ''} :
           </Text>
-          <Text style={styles.itemTypeName}>
-            {itemsData.itemTypeNames.map(n => `"${n}"`).join(' + ')}
-          </Text>
-          <Text style={styles.descriptionText}>
-            {' '}:
-          </Text>
-        </View>
+        )}
 
         {/* Liste des items */}
         <ScrollView style={styles.itemsList}>
@@ -66,18 +89,12 @@ export const ClaimConfirmModal = memo<ClaimConfirmModalProps>(({
 
         {/* Boutons d'action */}
         <View style={styles.actionsRow}>
-          <Pressable
-            onPress={onClose}
-            style={styles.cancelButton}
-          >
+          <Pressable onPress={onClose} style={styles.cancelButton}>
             <Text style={styles.cancelText}>Annuler</Text>
           </Pressable>
 
-          <Pressable
-            onPress={onConfirm}
-            style={styles.confirmButton}
-          >
-            <Text style={styles.confirmText}>Confirmer la réclamation</Text>
+          <Pressable onPress={onConfirm} style={confirmButtonStyle}>
+            <Text style={styles.confirmText}>{config.confirmText}</Text>
           </Pressable>
         </View>
       </View>
@@ -85,7 +102,7 @@ export const ClaimConfirmModal = memo<ClaimConfirmModalProps>(({
   );
 });
 
-ClaimConfirmModal.displayName = 'ClaimConfirmModal';
+ActionConfirmModal.displayName = 'ActionConfirmModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -101,6 +118,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#374151',
+    marginBottom: 12,
   },
   itemTypeName: {
     fontSize: 16,
@@ -121,7 +139,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
-    ...(Platform.OS === 'web' && { cursor: 'pointer' })
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
   },
   cancelText: {
     fontSize: 15,
@@ -132,9 +152,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 8,
-    backgroundColor: '#FB923C',
     alignItems: 'center',
-    ...(Platform.OS === 'web' && { cursor: 'pointer' })
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
   },
   confirmText: {
     fontSize: 15,
