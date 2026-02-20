@@ -157,20 +157,12 @@ function AuthenticationGate() {
       return;
     }
 
-    // Allow PIN verification route when authToken exists but no sessionToken
+    // PIN verification: authToken required, AppInitializer handles redirect after init
     if (fullPath === '/(auth)/pin-verification') {
-      if (authToken && !sessionToken) {
-        return; // Allow access to PIN verification
-      } else if (sessionToken && userProfile && userProfile.profil) {
-        // If already authenticated, redirect to home
-        const targetRoute = getHomeRoute(userProfile.profil);
-        router.replace(targetRoute as any);
-        return;
-      } else {
-        // No authToken, redirect to login
+      if (!authToken) {
         router.replace(LOGIN_ROUTE);
-        return;
       }
+      return;
     }
 
     // If no authToken at all, redirect to login

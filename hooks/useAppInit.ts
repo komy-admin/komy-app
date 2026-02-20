@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { sessionActions, selectAppInitialized, selectIsAppInitializing, selectInitializationProgress, selectIsFinalizingStage, selectProgressPercentage } from '~/store/slices/session.slice';
+import { sessionActions, selectAppInitialized, selectIsAppInitializing, selectInitializationProgress, selectProgressPercentage } from '~/store/slices/session.slice';
 import { useRooms } from './useRooms';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
@@ -50,7 +50,6 @@ export const useAppInit = () => {
   const appInitialized = useSelector(selectAppInitialized);
   const isAppInitializing = useSelector(selectIsAppInitializing);
   const progressFromRedux = useSelector(selectInitializationProgress);
-  const isFinalizingStage = useSelector(selectIsFinalizingStage);
   const progressPercentage = useSelector(selectProgressPercentage);
 
   // Check if user is properly authenticated
@@ -101,7 +100,9 @@ export const useAppInit = () => {
           reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
           teamEnabled: accountConfig.teamEnabled,
           kitchenEnabled: accountConfig.kitchenEnabled,
-          barEnabled: accountConfig.barEnabled
+          barEnabled: accountConfig.barEnabled,
+          kitchenViewMode: accountConfig.kitchenViewMode,
+          barViewMode: accountConfig.barViewMode
         }));
         updateProgress('accountConfig', true);
       } catch (error) {
@@ -173,8 +174,6 @@ export const useAppInit = () => {
       const remainingTime = MIN_LOADING_TIME - elapsedTime;
 
       if (remainingTime > 0) {
-        dispatch(sessionActions.setFinalizingStage(true));
-
         const progressInterval = 50;
         const totalSteps = Math.floor(remainingTime / progressInterval);
         let currentStep = 0;
@@ -191,6 +190,9 @@ export const useAppInit = () => {
 
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
+
+      // Forcer 100% avant la transition
+      dispatch(sessionActions.setFinalizationProgress(100));
 
       // Marquer comme terminé dans Redux
       dispatch(sessionActions.setAppInitialized(true));
@@ -228,7 +230,6 @@ export const useAppInit = () => {
     // Données de progression pour l'UI
     progress,
     progressPercentage,
-    isFinalizingStage,
 
     // Actions
     initializeApp,
