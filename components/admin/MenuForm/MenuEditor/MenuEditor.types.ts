@@ -21,6 +21,7 @@ export interface MenuFormData {
   description: string;
   basePrice: string;
   isActive: boolean;
+  vatRate: string; // Taux de TVA sous forme de string pour le formulaire (ex: "0.1")
   categories: MenuCategoryFormData[];
 }
 

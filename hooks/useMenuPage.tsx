@@ -190,6 +190,7 @@ export function useMenuPage() {
           description: menuData.description || '',
           basePrice: Number(menuData.basePrice),
           isActive: Boolean(menuData.isActive),
+          vatRate: Number(menuData.vatRate) || 10, // Include VAT rate, default to 10%
         },
         categories: mapCategories(menuData.categories, Boolean(menuData.id)),
       };

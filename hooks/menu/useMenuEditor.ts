@@ -63,15 +63,16 @@ export const useMenuEditor = ({
   const [formData, setFormData] = useState<MenuFormData>({
     name: menu?.name || '',
     description: menu?.description || '',
-    // 💰 Convertir centimes -> euros pour l'affichage
+    // Convertir centimes -> euros pour l'affichage
     basePrice: menu?.basePrice ? centsToEuros(menu.basePrice).toString() : '',
     isActive: menu?.isActive ?? true,
+    vatRate: menu?.vatRate?.toString() || '10', // Default to 10% VAT
     categories: menu?.categories?.map(cat => ({
       id: cat.id,
       itemTypeId: cat.itemTypeId,
       isRequired: cat.isRequired,
       maxSelections: cat.maxSelections?.toString() || '1',
-      // 💰 Convertir centimes -> euros pour l'affichage
+      // Convertir centimes -> euros pour l'affichage
       priceModifier: cat.priceModifier ? centsToEuros(cat.priceModifier).toString() : '0',
     })) || []
   });
@@ -512,9 +513,10 @@ export const useMenuEditor = ({
       id: menu?.id,
       name: formData.name,
       description: formData.description,
-      // 💰 Convertir euros -> centimes pour l'envoi API
+      // Convertir euros -> centimes pour l'envoi API
       basePrice: eurosToCents(parseFloat(formData.basePrice)),
       isActive: formData.isActive,
+      vatRate: parseFloat(formData.vatRate) || 10, // Include VAT rate
       categories: formData.categories.map((cat, index) => ({
         id: cat.id,
         menuId: menu?.id,
@@ -539,6 +541,7 @@ export const useMenuEditor = ({
       description: '',
       basePrice: '',
       isActive: true,
+      vatRate: '10', // Default to 10% VAT
       categories: []
     });
     setLocalCategoryItems({});

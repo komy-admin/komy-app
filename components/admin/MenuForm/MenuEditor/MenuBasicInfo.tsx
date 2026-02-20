@@ -3,6 +3,7 @@ import { View, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { FileText } from 'lucide-react-native';
 import { Text } from '~/components/ui';
 import { NumberInput } from '~/components/ui/number-input';
+import { VatRateSelector } from '~/components/ui/vat-rate-selector';
 import { SectionHeader } from '~/components/admin/SectionHeader';
 import { MenuFormData } from '~/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 
@@ -104,6 +105,21 @@ export const MenuBasicInfo = memo<MenuBasicInfoProps>(({
               </Text>
             </View>
           </Pressable>
+        </View>
+      </View>
+
+      <View style={[styles.row, { marginBottom: 16 }]}>
+        <View style={[styles.field, { flex: 1 }]}>
+          <Text style={[styles.label, { fontSize: 13, color: '#6B7280', marginBottom: 8 }]}>Taux de TVA *</Text>
+          <VatRateSelector
+            value={formData.vatRate ? parseFloat(formData.vatRate) : 10}
+            onChange={(value) => onUpdateField('vatRate', value ? value.toString() : '10')}
+            disabled={false}
+            error={!!errors.vatRate}
+          />
+          {errors.vatRate && (
+            <Text style={styles.errorText}>{errors.vatRate}</Text>
+          )}
         </View>
       </View>
 

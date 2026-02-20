@@ -1,6 +1,7 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { View, StyleSheet, Platform, Pressable, Switch } from 'react-native';
+import { View, StyleSheet, Platform, Pressable } from 'react-native';
 import { Text, Button, TextInput, NumberInput, SelectButton, TagSelector } from '~/components/ui';
+import { VatRateSelector } from '~/components/ui/vat-rate-selector';
 import { ColorPicker } from '~/components/ui/color-picker';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
@@ -16,8 +17,6 @@ interface MenuFormProps {
   item: Item | null;
   itemTypes: ItemType[];
   tags: Tag[];
-  onSave?: (item: Item) => void;
-  onCancel?: () => void;
   activeTab: string;
 }
 
@@ -25,10 +24,20 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
   item,
   itemTypes,
   tags,
-  onSave,
-  onCancel,
   activeTab
 }, ref) => {
+  const getInitialVatRate = () => {
+    if (item?.vatRate !== null && item?.vatRate !== undefined) {
+      return typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : item.vatRate;
+    }
+    const typeId = item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : '');
+    const itemType = itemTypes.find(t => t.id === typeId);
+    const vatRate = itemType?.vatRate
+      ? (typeof itemType.vatRate === 'string' ? parseFloat(itemType.vatRate) : itemType.vatRate)
+      : 20;
+    return vatRate;
+  };
+
   const [formData, setFormData] = useState({
     name: item?.name || '',
     // Convertir centimes -> euros pour l'affichage dans le formulaire
@@ -38,8 +47,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     isActive: item?.isActive ?? true,
     hasNote: item?.hasNote ?? false,
     selectedTags: item?.tags?.map(t => t.id) || [],
-    vatRate: item?.vatRate || null, // null signifie "utiliser la TVA du type"
-    useItemTypeVat: item?.vatRate === null || item?.vatRate === undefined // true si on utilise la TVA du type
+    vatRate: getInitialVatRate()
   });
 
   const [selectedItemTypeId, setSelectedItemTypeId] = useState<string>(
@@ -51,7 +59,17 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
   // Optimisation: callback stable
   const handleCategorySelect = React.useCallback((itemTypeId: string) => {
     setSelectedItemTypeId(itemTypeId);
-  }, []);
+    // Mettre à jour automatiquement la TVA avec celle de l'itemType
+    const selectedType = itemTypes.find(t => t.id === itemTypeId);
+    // Convertir la string en nombre (ex: "20.00" -> 20)
+    const newVatRate = selectedType?.vatRate
+      ? (typeof selectedType.vatRate === 'string' ? parseFloat(selectedType.vatRate) : selectedType.vatRate)
+      : 20;
+    setFormData(prev => ({
+      ...prev,
+      vatRate: newVatRate
+    }));
+  }, [itemTypes]);
 
   // Optimisation: règles de validation mémorisées
   const validationRules = React.useMemo<ValidationRules>(() => ({
@@ -72,6 +90,16 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
 
   useEffect(() => {
     if (item) {
+      // Pour un item existant, utiliser sa vatRate ou celle de son type
+      let vatRate: number;
+      if (item.vatRate !== null && item.vatRate !== undefined) {
+        vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : item.vatRate;
+      } else if (item.itemType?.vatRate) {
+        vatRate = typeof item.itemType.vatRate === 'string' ? parseFloat(item.itemType.vatRate) : item.itemType.vatRate;
+      } else {
+        vatRate = 20;
+      }
+
       setFormData({
         name: item.name,
         // Convertir centimes -> euros pour l'affichage
@@ -81,25 +109,30 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
         isActive: item.isActive ?? true,
         hasNote: item.hasNote ?? false,
         selectedTags: item.tags?.map(t => t.id) || [],
-        vatRate: item.vatRate || null,
-        useItemTypeVat: item.vatRate === null || item.vatRate === undefined
+        vatRate: vatRate
       });
       setSelectedItemTypeId(item.itemType?.id || '');
     } else {
+      // Pour un nouvel item, utiliser la TVA du type sélectionné
+      const typeId = activeTab !== 'ALL' ? activeTab : '';
+      const itemType = itemTypes.find(t => t.id === typeId);
+      const vatRate = itemType?.vatRate
+        ? (typeof itemType.vatRate === 'string' ? parseFloat(itemType.vatRate) : itemType.vatRate)
+        : 20;
+
       setFormData({
         name: '',
         price: null,
-        itemTypeId: activeTab !== 'ALL' ? activeTab : '',
+        itemTypeId: typeId,
         color: '',
         isActive: true,
         hasNote: false,
         selectedTags: [],
-        vatRate: null,
-        useItemTypeVat: true
+        vatRate: vatRate
       });
-      setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
+      setSelectedItemTypeId(typeId);
     }
-  }, [item, activeTab]);
+  }, [item, activeTab, itemTypes]);
 
   const handleTagToggle = React.useCallback((tagId: string) => {
     setFormData(prev => ({
@@ -153,7 +186,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           itemType: selectedItemType!,
           isActive: formData.isActive,
           hasNote: formData.hasNote,
-          vatRate: formData.useItemTypeVat ? null : formData.vatRate, // null si on utilise la TVA du type
+          vatRate: formData.vatRate,
           tags: selectedTags
         };
       }
@@ -166,18 +199,21 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     },
 
     resetForm: () => {
+      const typeId = activeTab !== 'ALL' ? activeTab : '';
+      const itemType = itemTypes.find(t => t.id === typeId);
+      const vatRate = itemType?.vatRate || 20;
+
       setFormData({
         name: '',
         price: null,
-        itemTypeId: activeTab !== 'ALL' ? activeTab : '',
+        itemTypeId: typeId,
         color: '',
         isActive: true,
         hasNote: false,
         selectedTags: [],
-        vatRate: null,
-        useItemTypeVat: true
+        vatRate: vatRate
       });
-      setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
+      setSelectedItemTypeId(typeId);
     },
 
     validateForm: () => {
@@ -362,88 +398,19 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           />
 
           <View style={styles.row}>
-            <View style={styles.field}>
+            <View style={[styles.field, { flex: 1 }]}>
               <Text style={[styles.label, { fontSize: 13, color: '#6B7280', marginBottom: 8 }]}>
                 Taux de TVA
               </Text>
-
-              {/* Switch pour utiliser la TVA du type */}
-              <View style={styles.vatToggleContainer}>
-                <Text style={styles.vatToggleLabel}>
-                  Utiliser la TVA du type ({itemTypes.find(t => t.id === selectedItemTypeId)?.vatRate || 20}%)
-                </Text>
-                <Switch
-                  value={formData.useItemTypeVat}
-                  onValueChange={(value) => setFormData(prev => ({
-                    ...prev,
-                    useItemTypeVat: value,
-                    vatRate: value ? null : (itemTypes.find(t => t.id === selectedItemTypeId)?.vatRate || 20)
-                  }))}
-                  trackColor={{ false: '#E5E7EB', true: '#10B981' }}
-                  thumbColor={formData.useItemTypeVat ? '#FFFFFF' : '#F3F4F6'}
-                />
-              </View>
-
-              {/* Sélection manuelle de la TVA si le switch est désactivé */}
-              {!formData.useItemTypeVat && (
-                <View style={styles.vatRateSelection}>
-                  <View style={styles.vatRateButtons}>
-                    <Pressable
-                      style={[
-                        styles.vatRateButton,
-                        formData.vatRate === 20 && styles.vatRateButtonActive20
-                      ]}
-                      onPress={() => setFormData(prev => ({ ...prev, vatRate: 20 }))}
-                    >
-                      <Text style={[
-                        styles.vatRateButtonText,
-                        formData.vatRate === 20 && styles.vatRateButtonTextActive
-                      ]}>
-                        20%
-                      </Text>
-                      <Text style={styles.vatRateButtonLabel}>
-                        Taux normal
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={[
-                        styles.vatRateButton,
-                        formData.vatRate === 10 && styles.vatRateButtonActive10
-                      ]}
-                      onPress={() => setFormData(prev => ({ ...prev, vatRate: 10 }))}
-                    >
-                      <Text style={[
-                        styles.vatRateButtonText,
-                        formData.vatRate === 10 && styles.vatRateButtonTextActive
-                      ]}>
-                        10%
-                      </Text>
-                      <Text style={styles.vatRateButtonLabel}>
-                        Restauration
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={[
-                        styles.vatRateButton,
-                        formData.vatRate === 5.5 && styles.vatRateButtonActive55
-                      ]}
-                      onPress={() => setFormData(prev => ({ ...prev, vatRate: 5.5 }))}
-                    >
-                      <Text style={[
-                        styles.vatRateButtonText,
-                        formData.vatRate === 5.5 && styles.vatRateButtonTextActive
-                      ]}>
-                        5.5%
-                      </Text>
-                      <Text style={styles.vatRateButtonLabel}>
-                        Alimentaire
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              )}
+              <VatRateSelector
+                value={formData.vatRate}
+                onChange={(value) => setFormData(prev => ({
+                  ...prev,
+                  vatRate: value || 20
+                }))}
+                showInheritOption={false}
+                disabled={false}
+              />
             </View>
           </View>
         </View>
@@ -850,81 +817,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
     letterSpacing: 0.3,
-  },
-
-  // Styles pour la section TVA
-  vatToggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 16,
-  },
-
-  vatToggleLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    flex: 1,
-  },
-
-  vatRateSelection: {
-    marginTop: 8,
-  },
-
-  vatRateButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  vatRateButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-
-  vatRateButtonActive20: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
-  },
-
-  vatRateButtonActive10: {
-    borderColor: '#10B981',
-    backgroundColor: '#F0FDF4',
-  },
-
-  vatRateButtonActive55: {
-    borderColor: '#F59E0B',
-    backgroundColor: '#FEF3C7',
-  },
-
-  vatRateButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-
-  vatRateButtonTextActive: {
-    color: '#1F2937',
-  },
-
-  vatRateButtonLabel: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    textAlign: 'center',
   },
 });
