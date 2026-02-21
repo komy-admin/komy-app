@@ -1,12 +1,12 @@
-import { Item } from './item.types';
-import { Menu } from './menu.types';
-import { Status } from './status.enum';
-import { ItemType } from './item-type.types';
+import { Item } from "./item.types";
+import { Menu } from "./menu.types";
+import { Status } from "./status.enum";
+import { ItemType } from "./item-type.types";
 
 // Type énuméré pour le type d'OrderLine
 export enum OrderLineType {
-  ITEM = 'ITEM',
-  MENU = 'MENU',
+  ITEM = "ITEM",
+  MENU = "MENU",
 }
 
 // Snapshot d'un item au moment de la commande (prix figé)
@@ -49,7 +49,7 @@ export type OrderLine = {
   note?: string; // Note sur la ligne
 
   // Status : seulement pour les ITEM (pour les MENU, le status est sur chaque OrderLineItem)
-  status?: Status;
+  status: Status;
 
   // Références aux données (mutuellement exclusives selon le type)
   item: OrderLineItemSnapshot | null; // Données item (si type = ITEM)
@@ -74,7 +74,7 @@ export type TagSnapshot = {
   id: string;
   name: string;
   label: string;
-  fieldType: 'select' | 'multi-select' | 'number' | 'text' | 'toggle';
+  fieldType: "select" | "multi-select" | "number" | "text" | "toggle";
   isRequired: boolean;
   snapshotAt: string;
 };
@@ -101,10 +101,15 @@ export type CreateOrderLineMenuRequest = {
   type: OrderLineType.MENU;
   menuId: string;
   note?: string;
-  selectedItems: Record<string, Array<{ itemId: string; tags?: Record<string, any>; note?: string }>>; // categoryId -> [{ itemId, tags?, note? }]
+  selectedItems: Record<
+    string,
+    Array<{ itemId: string; tags?: Record<string, any>; note?: string }>
+  >; // categoryId -> [{ itemId, tags?, note? }]
 };
 
-export type CreateOrderLineRequest = CreateOrderLineItemRequest | CreateOrderLineMenuRequest;
+export type CreateOrderLineRequest =
+  | CreateOrderLineItemRequest
+  | CreateOrderLineMenuRequest;
 
 // Types pour les requêtes de modification
 export type UpdateOrderLineRequest = {
@@ -141,17 +146,17 @@ export type DraftMenuItemWithMeta = DraftOrderLineItem & {
 
 // Types pour le tracking des opérations CRUD
 export interface OrderLineOperation {
-  type: 'create' | 'update' | 'delete';
+  type: "create" | "update" | "delete";
   lineId: string;
-  originalData?: OrderLine;  // Pour les updates, garder l'original
-  currentData?: OrderLine;   // Pour create/update
+  originalData?: OrderLine; // Pour les updates, garder l'original
+  currentData?: OrderLine; // Pour create/update
   changes?: Partial<OrderLine>; // Quels champs ont changé
 }
 
 export interface OrderLineState {
-  original: OrderLine | null;  // null = nouvelle ligne
+  original: OrderLine | null; // null = nouvelle ligne
   current: OrderLine;
-  status: 'unchanged' | 'modified' | 'created' | 'deleted';
+  status: "unchanged" | "modified" | "created" | "deleted";
   changes?: Partial<OrderLine>; // Quels champs ont changé
 }
 
@@ -176,14 +181,20 @@ export type DraftOrderLine = {
 };
 
 // Helper type guards
-export const isOrderLineItem = (orderLine: OrderLine): orderLine is OrderLine & { type: OrderLineType.ITEM } => {
+export const isOrderLineItem = (
+  orderLine: OrderLine,
+): orderLine is OrderLine & { type: OrderLineType.ITEM } => {
   return orderLine.type === OrderLineType.ITEM;
 };
 
-export const isOrderLineMenu = (orderLine: OrderLine): orderLine is OrderLine & { type: OrderLineType.MENU } => {
+export const isOrderLineMenu = (
+  orderLine: OrderLine,
+): orderLine is OrderLine & { type: OrderLineType.MENU } => {
   return orderLine.type === OrderLineType.MENU;
 };
 
-export const isDraftOrderLine = (line: OrderLine | DraftOrderLine): line is DraftOrderLine => {
-  return !line.id || line.id.startsWith('draft-');
+export const isDraftOrderLine = (
+  line: OrderLine | DraftOrderLine,
+): line is DraftOrderLine => {
+  return !line.id || line.id.startsWith("draft-");
 };

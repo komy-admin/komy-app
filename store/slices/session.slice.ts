@@ -60,9 +60,8 @@ export interface SessionState {
   authInitialized: boolean;
   appInitialized: boolean;
   isAppInitializing: boolean; // Flag pour l'état de chargement
-  initializationProgress: Record<string, boolean>; // Progression de l'initialisation
-  isFinalizingStage: boolean; // Phase de finalisation
-  finalizationProgress: number; // Progression de finalisation (0-100)
+  initializationProgress: Record<string, boolean>;
+  progressPercentage: number; // 0-100, ne recule jamais
 
   // Account Config
   accountConfig: {
@@ -138,8 +137,7 @@ const initialState: SessionState = {
   appInitialized: false,
   isAppInitializing: false,
   initializationProgress: {},
-  isFinalizingStage: false,
-  finalizationProgress: 0,
+  progressPercentage: 0,
 
   // Account Config
   accountConfig: null,
@@ -361,24 +359,22 @@ const sessionSlice = createSlice({
 
     setAppInitializing: (state, action: PayloadAction<boolean>) => {
       state.isAppInitializing = action.payload;
-      // Reset progression quand on commence/arrête
       if (action.payload) {
         state.initializationProgress = {};
-        state.isFinalizingStage = false;
-        state.finalizationProgress = 0;
+        state.progressPercentage = 0;
       }
     },
 
     setInitializationProgress: (state, action: PayloadAction<{ key: string; value: boolean }>) => {
       state.initializationProgress[action.payload.key] = action.payload.value;
-    },
-
-    setFinalizingStage: (state, action: PayloadAction<boolean>) => {
-      state.isFinalizingStage = action.payload;
+      const completed = Object.values(state.initializationProgress).filter(Boolean).length;
+      const next = Math.round((completed / 10) * 90);
+      state.progressPercentage = Math.max(state.progressPercentage, next);
     },
 
     setFinalizationProgress: (state, action: PayloadAction<number>) => {
-      state.finalizationProgress = action.payload;
+      const next = Math.min(90 + Math.round(action.payload * 0.1), 100);
+      state.progressPercentage = Math.max(state.progressPercentage, next);
     },
 
     // === ERROR HANDLING ===
@@ -464,24 +460,7 @@ export const selectAuthInitialized = (state: RootState) => state.session.authIni
 export const selectAppInitialized = (state: RootState) => state.session.appInitialized;
 export const selectIsAppInitializing = (state: RootState) => state.session.isAppInitializing;
 export const selectInitializationProgress = (state: RootState) => state.session.initializationProgress;
-export const selectIsFinalizingStage = (state: RootState) => state.session.isFinalizingStage;
-export const selectFinalizationProgress = (state: RootState) => state.session.finalizationProgress;
-
-// Sélecteur mémorisé pour le pourcentage de progression total
-export const selectProgressPercentage = createSelector(
-  [selectInitializationProgress, selectIsFinalizingStage, selectFinalizationProgress],
-  (progress, isFinalizingStage, finalizationProgress) => {
-    const totalSteps = 8; // nombre d'étapes définies
-    const completed = Object.values(progress).filter(Boolean).length;
-    const baseProgress = Math.round((completed / totalSteps) * 90);
-
-    if (isFinalizingStage) {
-      return Math.min(90 + Math.round(finalizationProgress * 0.1), 100);
-    }
-
-    return baseProgress;
-  }
-);
+export const selectProgressPercentage = (state: RootState) => state.session.progressPercentage;
 // PIN selectors
 export const selectRequiresPin = (state: RootState) => state.session.requiresPin;
 export const selectRequiresPinSetup = (state: RootState) => state.session.requiresPinSetup;

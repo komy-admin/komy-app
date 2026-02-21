@@ -28,7 +28,6 @@ import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal
 import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
 import { CustomModal } from '@/components/CustomModal';
 import PaymentView from '~/components/Service/PaymentView';
-import { ForkModal } from '~/components/ui';
 
 const NOOP = () => {};
 
@@ -40,7 +39,8 @@ export default function ServicePage() {
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
   const [isReassigning, setIsReassigning] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPaymentView, setShowPaymentView] = useState(false);
+
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const appInitialized = useAppSelector(selectAppInitialized);
   const appLoading = useAppSelector(selectIsAppInitializing);
@@ -91,6 +91,7 @@ export default function ServicePage() {
   } = useOrderStatusActions({
     selectedTableOrder,
     allItemTypes,
+    updateOrder,
     updateOrderStatus,
     deleteOrder,
     deleteOrderLine,
@@ -250,17 +251,20 @@ export default function ServicePage() {
   }, [selectedTableOrder, updateOrder, setSelectedTable, showToast, isReassigning]);
 
   const handlePayment = useCallback(() => {
-    setShowPaymentModal(true);
+    setShowPaymentView(true);
   }, []);
 
-  const handlePaymentComplete = useCallback(async (_paymentData: any) => {
+  const handlePaymentComplete = useCallback(async () => {
     try {
-      setShowPaymentModal(false);
       showToast('Paiement traité avec succès', 'success');
     } catch (error) {
       showToast('Erreur lors du traitement du paiement', 'error');
     }
   }, [showToast]);
+
+  const handleBackFromPayment = useCallback(() => {
+    setShowPaymentView(false);
+  }, []);
 
   const handleCloseOrderDetail = useCallback(() => {
     setShowOrderDetail(false);
@@ -274,7 +278,6 @@ export default function ServicePage() {
 
   // Callbacks stabilisés pour les modals
   const handleCloseReassignModal = useCallback(() => setShowReassignModal(false), []);
-  const handleClosePaymentModal = useCallback(() => setShowPaymentModal(false), []);
   const handleCloseDeleteDialog = useCallback(() => setShowDeleteDialog(false), [setShowDeleteDialog]);
   const handleCloseTerminateDialog = useCallback(() => setShowTerminateDialog(false), [setShowTerminateDialog]);
   const handleCloseClaimModal = useCallback(() => {
@@ -306,26 +309,38 @@ export default function ServicePage() {
   }, []);
 
   return (
-    <View style={styles.flex1}>
-      {/* OrderLinesForm en pleine page - remplace tout le layout */}
-      {showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
-        <View style={styles.flex1}>
-          <OrderLinesForm
-            title={orderModalTitle}
-            lines={orderLinesManager.orderLines}
-            items={allItems.filter(item => item.isActive)}
-            itemTypes={allItemTypes}
-            onAddItem={orderLinesManager.addItem}
-            onUpdateItem={orderLinesManager.updateItem}
-            onAddMenu={orderLinesManager.addMenu}
-            onUpdateMenu={orderLinesManager.updateMenu}
-            onDeleteLine={orderLinesManager.deleteLine}
-            onClearAll={orderLinesManager.clearAllLines}
-            onSave={orderLinesManager.save}
-            onCancel={handleSmartCloseOrderModal}
-            hasChanges={orderLinesManager.hasChanges}
-            isProcessing={orderLinesManager.isProcessing}
-          />
+    <View style={{ flex: 1 }}>
+      {/* PaymentView en pleine page */}
+      {showPaymentView && selectedTableOrder ? (
+        <PaymentView
+          order={selectedTableOrder}
+          tableName={selectedTable?.name || 'Table'}
+          onBack={handleBackFromPayment}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      ) : /* OrderLinesForm en pleine page - remplace tout le layout */
+      showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
+        <View style={{ flex: 1, flexDirection: 'column' }}>
+          {/* OrderLinesForm */}
+          <View style={{ flex: 1 }}>
+            <OrderLinesForm
+              title={orderModalTitle}
+              lines={orderLinesManager.orderLines}
+              items={allItems.filter(item => item.isActive)}
+              itemTypes={allItemTypes}
+              onAddItem={orderLinesManager.addItem}
+              onUpdateItem={orderLinesManager.updateItem}
+              onAddMenu={orderLinesManager.addMenu}
+              onUpdateMenu={orderLinesManager.updateMenu}
+              onDeleteLine={orderLinesManager.deleteLine}
+              onClearAll={orderLinesManager.clearAllLines}
+              onSave={orderLinesManager.save}
+              onCancel={handleSmartCloseOrderModal}
+              hasChanges={orderLinesManager.hasChanges}
+              isProcessing={orderLinesManager.isProcessing}
+            />
+          </View>
+
         </View>
       ) : (
         // Layout normal service — Room plein écran
@@ -387,6 +402,7 @@ export default function ServicePage() {
                       isLoading={false}
                       width={currentRoom?.width}
                       height={currentRoom?.height}
+                      roomColor={currentRoom?.color}
                       containerDimensions={roomContainerDimensions}
                       fillContainer
                       onTablePress={handleTablePress}
@@ -440,6 +456,7 @@ export default function ServicePage() {
               isLoading={isReassigning}
               width={reassignRoom?.width}
               height={reassignRoom?.height}
+              roomColor={reassignRoom?.color}
               containerDimensions={reassignRoomContainerDimensions}
               onTablePress={handleTableReassign}
               onTableLongPress={handleTableReassign}
@@ -448,21 +465,6 @@ export default function ServicePage() {
           </View>
         </View>
       </CustomModal>
-
-      <ForkModal
-        visible={showPaymentModal}
-        onClose={handleClosePaymentModal}
-        maxWidth={1200}
-        title="Régler l'addition"
-      >
-        {selectedTableOrder && (
-          <PaymentView
-            order={selectedTableOrder}
-            onClose={handleClosePaymentModal}
-            onPaymentComplete={handlePaymentComplete}
-          />
-        )}
-      </ForkModal>
 
       {selectedTableOrder && showDeleteDialog && (
         <DeleteConfirmationModal

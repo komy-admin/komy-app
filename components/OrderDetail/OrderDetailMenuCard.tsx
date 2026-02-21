@@ -1,6 +1,6 @@
 import { memo, useState, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronDown, ChevronUp, Clock } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Clock, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { getMostImportantStatus, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
@@ -12,6 +12,7 @@ export interface OrderDetailMenuCardProps {
   onOpenItemStatusSelector: (orderLineItem: OrderLineItem) => void;
   onOpenMenuStatusSelector: (orderLineItems: OrderLineItem[], currentStatus: Status) => void;
   onOpenDeleteDialog: () => void;
+  paymentFraction?: number;
 }
 
 /**
@@ -51,9 +52,10 @@ interface MenuCategoryItemProps {
   item: OrderLineItem;
   isLastItem: boolean;
   onItemStatusClick: (item: OrderLineItem) => void;
+  isLocked: boolean;
 }
 
-const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItemStatusClick }) => {
+const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItemStatusClick, isLocked }) => {
   // ✅ useCallback : Handler pour éviter re-création à chaque render
   const handlePress = useCallback(() => {
     onItemStatusClick(item);
@@ -111,13 +113,19 @@ const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItem
           <Text style={styles.itemRowTimeText}>{formattedTime}</Text>
         </View>
 
-        <IconButton
-          iconName="settings"
-          size={40}
-          variant="primary"
-          isTransparent={true}
-          onPress={handlePress}
-        />
+        {isLocked ? (
+          <View style={styles.lockedIcon}>
+            <Lock size={14} color="#9CA3AF" strokeWidth={2} />
+          </View>
+        ) : (
+          <IconButton
+            iconName="settings"
+            size={40}
+            variant="primary"
+            isTransparent={true}
+            onPress={handlePress}
+          />
+        )}
       </View>
       {/* Ligne de séparation sauf pour le dernier item */}
       {!isLastItem && <View style={styles.itemSeparator} />}
@@ -133,6 +141,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   onOpenItemStatusSelector,
   onOpenMenuStatusSelector,
   onOpenDeleteDialog,
+  paymentFraction = 0,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -255,9 +264,19 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
             style={styles.expandableArea}
           >
             <View style={styles.leftColumn}>
-              <Text style={styles.menuName} numberOfLines={1}>
-                {menuInfo?.name || 'Menu'}
-              </Text>
+              <View style={styles.menuNameRow}>
+                <Text style={styles.menuName} numberOfLines={1}>
+                  {menuInfo?.name || 'Menu'}
+                </Text>
+                {paymentFraction > 0 && (
+                  <View style={[styles.paidBadge, paymentFraction < 1 && styles.partiallyPaidBadge]}>
+                    <Lock size={9} color="white" strokeWidth={3} />
+                    <Text style={styles.paidBadgeText}>
+                      {paymentFraction === 1 ? 'PAYÉ' : `PAYÉ ${Math.round(paymentFraction * 100)}%`}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
               <View style={styles.footerInfo}>
                 {hasMixed ? (
@@ -292,20 +311,28 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
           </TouchableOpacity>
 
           <View style={styles.actionsColumn}>
-            <IconButton
-              iconName="settings"
-              size={50}
-              variant="primary"
-              isTransparent={true}
-              onPress={handleMenuStatusClick}
-            />
-            <IconButton
-              iconName="trash"
-              size={50}
-              variant="danger"
-              isTransparent={true}
-              onPress={onOpenDeleteDialog}
-            />
+                {paymentFraction > 0 ? (
+                  <View style={styles.lockedIcon}>
+                    <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+                  </View>
+                ) : (
+                  <>
+                  <IconButton
+                    iconName="settings"
+                    size={50}
+                    variant="primary"
+                    isTransparent={true}
+                    onPress={handleMenuStatusClick}
+                  />
+                  <IconButton
+                    iconName="trash"
+                    size={50}
+                    variant="danger"
+                    isTransparent={true}
+                    onPress={onOpenDeleteDialog}
+                  />
+                  </>
+                )}
             <TouchableOpacity
               onPress={toggleExpanded}
               activeOpacity={0.7}
@@ -338,6 +365,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
                     item={item}
                     isLastItem={itemIndex === categoryItems.length - 1}
                     onItemStatusClick={handleItemStatusClick}
+                    isLocked={paymentFraction > 0}
                   />
                 ))}
               </View>
@@ -385,6 +413,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 8,
     minWidth: 0,
+  },
+  menuNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
   menuName: {
     fontSize: 16,
@@ -558,5 +592,29 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#E5E7EB',
     marginHorizontal: -12, // Pour aller jusqu'aux bords
+  },
+  paidBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  partiallyPaidBadge: {
+    backgroundColor: '#F59E0B',
+  },
+  paidBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.5,
+  },
+  lockedIcon: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

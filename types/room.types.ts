@@ -6,6 +6,7 @@ export type Room = {
   number?: number;
   width: number;
   height: number;
+  color?: string | null;
   tables: Table[];
   account: string;
   createdAt: string;

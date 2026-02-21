@@ -38,7 +38,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
   useAlertMonitor();
 
   // Hook simplifié uniquement pour charger les données
-  const { progress, progressPercentage, isFinalizingStage } = useAppInit();
+  const { progress, progressPercentage } = useAppInit();
 
 
   // Redirection après initialisation complète
@@ -78,7 +78,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
             <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
           </View>
           <Text style={styles.progressText}>
-            {isFinalizingStage ? 'Finalisation...' : getCurrentStepLabel(progress)} ({Math.round(progressPercentage)}%)
+            {progressPercentage >= 90 ? 'Finalisation...' : getCurrentStepLabel(progress)} ({Math.round(progressPercentage)}%)
           </Text>
         </View>
 
@@ -102,8 +102,10 @@ function getCurrentStepLabel(progress: InitializationProgress): string {
     { key: 'itemTypes', label: 'Chargement des types d\'articles...' },
     { key: 'items', label: 'Chargement des articles...' },
     { key: 'menus', label: 'Chargement des menus...' },
+    { key: 'tags', label: 'Chargement des tags...' },
     { key: 'users', label: 'Chargement des utilisateurs...' },
-    { key: 'orders', label: 'Chargement des commandes...' }
+    { key: 'orders', label: 'Chargement des commandes...' },
+    { key: 'payments', label: 'Chargement des paiements...' }
   ];
 
   // Trouver la première étape non complétée

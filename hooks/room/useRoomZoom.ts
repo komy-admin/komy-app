@@ -1,13 +1,13 @@
 /**
- * useRoomZoom - Hook personnalisé pour la gestion du zoom de la Room
+ * useRoomZoom - Hook pour la gestion du zoom et pan de la Room
  *
- * Extrait toute la logique de zoom (pan, pinch, wheel) de Room.tsx
- * pour améliorer la maintenabilité et réduire la complexité
+ * Pan:
+ * - Service / non-édition : 1 doigt/clic libre (RNGH Pan)
+ * - Édition native : 1 doigt avec activeOffset 15px (priorité aux tables)
+ * - Édition web : pan activé seulement quand aucune table sélectionnée
+ *   → tap fond désélectionne → pan redevient libre
  *
- * ⚡ OPTIMISATION v2.4:
- * - Suppression du state React currentZoom (causait saccades sur web)
- * - Utilisation directe de scale.value partout (100% UI thread, 0 re-render)
- * - Performances identiques iOS/Android/Web
+ * Zoom : pinch (tactile) + molette (web)
  */
 
 import { useEffect, useMemo } from 'react';
@@ -15,16 +15,21 @@ import { Platform } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { Gesture } from 'react-native-gesture-handler';
 
+const IS_WEB = Platform.OS === 'web';
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 1.5;
+
 interface UseRoomZoomProps {
   initialZoom: number;
-  disablePan?: boolean;
+  editionMode?: boolean;
+  hasSelectedTable?: boolean;
 }
 
 export const useRoomZoom = ({
   initialZoom,
-  disablePan = false,
+  editionMode = false,
+  hasSelectedTable = false,
 }: UseRoomZoomProps) => {
-  // Shared values pour les transformations
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(initialZoom);
@@ -32,7 +37,6 @@ export const useRoomZoom = ({
   const savedTranslateY = useSharedValue(0);
   const savedScale = useSharedValue(initialZoom);
 
-  // Mettre à jour le zoom quand initialZoom change
   useEffect(() => {
     if (initialZoom !== scale.value) {
       scale.value = initialZoom;
@@ -40,9 +44,11 @@ export const useRoomZoom = ({
     }
   }, [initialZoom, scale, savedScale]);
 
-  // Geste de pan (déplacement) - Actif dans tous les modes
-  // 🎯 En mode édition: drag table a priorité, pan room uniquement sur background
-  // La hiérarchie des GestureDetector gère automatiquement la priorité
+  // Pan RNGH
+  // - Non-édition : pan libre
+  // - Édition native : activeOffset 15px (laisse priorité aux tables)
+  // - Édition web sans sélection : pan libre
+  // - Édition web avec sélection : pan désactivé (priorité resize/drag table)
   const panGesture = useMemo(() => {
     const gesture = Gesture.Pan()
       .onStart(() => {
@@ -55,11 +61,18 @@ export const useRoomZoom = ({
         translateX.value = savedTranslateX.value + event.translationX;
         translateY.value = savedTranslateY.value + event.translationY;
       });
-    if (disablePan) gesture.enabled(false);
+    if (editionMode) {
+      if (IS_WEB) {
+        gesture.enabled(!hasSelectedTable);
+      } else {
+        gesture.activeOffsetX([-15, 15]);
+        gesture.activeOffsetY([-15, 15]);
+      }
+    }
     return gesture;
-  }, [savedTranslateX, savedTranslateY, translateX, translateY, disablePan]);
+  }, [savedTranslateX, savedTranslateY, translateX, translateY, editionMode, hasSelectedTable]);
 
-  // Geste de pinch (zoom)
+  // Pinch zoom
   const pinchGesture = useMemo(() =>
     Gesture.Pinch()
       .onStart(() => {
@@ -69,22 +82,18 @@ export const useRoomZoom = ({
       .onUpdate((event) => {
         'worklet';
         const newScale = savedScale.value * event.scale;
-        scale.value = Math.min(Math.max(newScale, 0.2), 1.5);
+        scale.value = Math.min(Math.max(newScale, MIN_SCALE), MAX_SCALE);
       }),
   [scale, savedScale]);
 
-  // Support de la molette souris sur web (100% UI thread, 0 re-render)
+  // Web : molette pour zoom
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    if (!IS_WEB || typeof document === 'undefined') return;
 
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-
-      const zoomSensitivity = 0.001;
-      const delta = -event.deltaY * zoomSensitivity;
-      const newScale = Math.min(Math.max(scale.value + delta, 0.2), 1.5);
-
-      // ⚡ Mettre à jour SEULEMENT scale.value (UI thread, pas de re-render)
+      const delta = -event.deltaY * 0.001;
+      const newScale = Math.min(Math.max(scale.value + delta, MIN_SCALE), MAX_SCALE);
       scale.value = newScale;
       savedScale.value = newScale;
     };

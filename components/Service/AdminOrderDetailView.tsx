@@ -1,5 +1,5 @@
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { ChevronDown, ChevronUp, Wine, UtensilsCrossed, Soup, Dessert, Trash2, Settings, Menu } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Wine, UtensilsCrossed, Soup, Dessert, Trash2, Settings, Menu, Lock } from 'lucide-react-native';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ItemType } from '~/types/item-type.types';
@@ -12,9 +12,18 @@ import StatusSelector from './StatusSelector';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useOrders } from '~/hooks/useOrders';
 import { useMenus } from '~/hooks/useMenus';
+import { usePayments } from '~/hooks/usePayments';
 import { entitiesActions } from '~/store';
 import { useDispatch } from 'react-redux';
 import { useToast } from '~/components/ToastProvider';
+
+// Helper function pour interpréter le ratio de paiement
+const parsePaymentStatus = (fraction: number) => ({
+  isFullyPaid: fraction === 1,
+  isPartiallyPaid: fraction > 0 && fraction < 1,
+  isUnpaid: fraction === 0,
+  fraction: fraction
+});
 
 interface AdminOrderLinesGroupProps {
   itemType: ItemType;
@@ -53,7 +62,8 @@ const AdminOrderLineItem = ({
   onUpdateStatus,
   isGroupMenuOpen = false,
   isFirstInCategory = false,
-  isMenuItem = false
+  isMenuItem = false,
+  paymentFraction = 0
 }: {
   orderLine?: OrderLine,
   orderLineItem?: OrderLineItem,
@@ -61,11 +71,20 @@ const AdminOrderLineItem = ({
   onUpdateStatus?: (status: Status) => void,
   isGroupMenuOpen?: boolean,
   isFirstInCategory?: boolean,
-  isMenuItem?: boolean
+  isMenuItem?: boolean,
+  paymentFraction?: number
 }) => {
   const [showStatusSelector, setShowStatusSelector] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // DEBUG: Log des props reçues
+  console.log('AdminOrderLineItem props:', {
+    hasOrderLine: !!orderLine,
+    hasOrderLineItem: !!orderLineItem,
+    paymentFraction,
+    orderLineId: orderLine?.id || orderLineItem?.id
+  });
 
   const handleDeleteItem = () => {
     setIsDeleting(true);
@@ -103,6 +122,9 @@ const AdminOrderLineItem = ({
   const itemStatus = orderLine?.status || orderLineItem?.status || Status.PENDING;
   const updatedAt = new Date().toISOString(); // OrderLine n'a pas de updatedAt, utiliser date actuelle
 
+  // Analyser le statut de paiement
+  const paymentStatus = parsePaymentStatus(paymentFraction);
+
   // Calculer la hauteur dynamique basée sur le contenu
   const itemHeight = itemNote ? 75 : 56; // Plus haut si il y a un commentaire
 
@@ -125,7 +147,31 @@ const AdminOrderLineItem = ({
         <View style={{ flex: 1, justifyContent: 'center' }}>
           {/* Nom, tag statut et heure sur la même ligne */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: itemNote ? 4 : 0 }}>
-            <Text style={{ fontSize: 16, flex: 1, marginRight: 8 }}>{itemName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+              <Text style={{ fontSize: 16, marginRight: 6 }}>{itemName}</Text>
+              {/* Badge "PAYÉ" si l'item est entièrement payé (100%) */}
+              {paymentStatus.isFullyPaid && (
+                <View style={{
+                  backgroundColor: '#10B981',
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 3,
+                }}>
+                  <Lock size={10} color="white" strokeWidth={3} />
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '700',
+                    color: 'white',
+                    letterSpacing: 0.5,
+                  }}>
+                    PAYÉ
+                  </Text>
+                </View>
+              )}
+            </View>
             {/* Tag du statut */}
             <View style={{
               backgroundColor: getStatusTagColor(itemStatus),
@@ -158,34 +204,48 @@ const AdminOrderLineItem = ({
 
       {/* Boutons d'action toujours visibles - s'étirent pour coller aux bords */}
       <View style={{ flexDirection: 'row', alignSelf: 'stretch' }}>
-        {/* Bouton modification statut */}
-        {onUpdateStatus && (
-          <Pressable
-            onPress={handleStatusClick}
-            style={{
-              backgroundColor: '#3B82F6',
-              width: 60,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Settings size={18} color="white" strokeWidth={2} />
-          </Pressable>
-        )}
+        {paymentFraction > 0 ? (
+          /* Si partiellement ou totalement payé, afficher un cadenas */
+          <View style={{
+            backgroundColor: '#9CA3AF',
+            width: 60,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Lock size={18} color="white" strokeWidth={2} />
+          </View>
+        ) : (
+          <>
+            {/* Bouton modification statut - seulement si non payé */}
+            {onUpdateStatus && (
+              <Pressable
+                onPress={handleStatusClick}
+                style={{
+                  backgroundColor: '#3B82F6',
+                  width: 60,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Settings size={18} color="white" strokeWidth={2} />
+              </Pressable>
+            )}
 
-        {/* Bouton suppression - masqué pour les items de menu */}
-        {!isMenuItem && onDelete && (
-          <Pressable
-            onPress={handleDeleteClick}
-            style={{
-              backgroundColor: '#EF4444',
-              width: 60,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Trash2 size={18} color="white" strokeWidth={2} />
-          </Pressable>
+            {/* Bouton suppression - masqué pour les items de menu et si payé */}
+            {!isMenuItem && onDelete && (
+              <Pressable
+                onPress={handleDeleteClick}
+                style={{
+                  backgroundColor: '#EF4444',
+                  width: 60,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Trash2 size={18} color="white" strokeWidth={2} />
+              </Pressable>
+            )}
+          </>
         )}
       </View>
 
@@ -230,7 +290,8 @@ const AdminMenuOrderGroup = ({
   onUpdateOrderLinesStatus,
   groupId,
   isMenuOpen,
-  onMenuOpenChange
+  onMenuOpenChange,
+  getOrderLinePaymentFraction
 }: {
   menuOrderGroup: any,
   menuInfo: any, // Info du menu depuis order.menus
@@ -242,11 +303,15 @@ const AdminMenuOrderGroup = ({
   onUpdateOrderLinesStatus?: (orderLines: any[], status: Status) => void,
   groupId: string,
   isMenuOpen: boolean,
-  onMenuOpenChange: (groupId: string | null) => void
+  onMenuOpenChange: (groupId: string | null) => void,
+  getOrderLinePaymentFraction: (orderLineId: string, totalPrice: number) => number
 }) => {
   const statuses = orderItems.map((orderLineItem: any) => orderLineItem.status);
   const itemStatus = getMostImportantStatus(statuses); // Utilisation de la fonction générique
   const hasMixed = hasMenuMixedStatuses(statuses);
+
+  // DEBUG: Vérifier que la fonction est bien reçue
+  console.log('AdminMenuOrderGroup - getOrderLinePaymentFraction exists:', typeof getOrderLinePaymentFraction);
 
   const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
   const [showGroupStatusSelector, setShowGroupStatusSelector] = useState(false);
@@ -446,17 +511,30 @@ const AdminMenuOrderGroup = ({
                   </View>
 
                   {/* Items de la catégorie */}
-                  {(categoryItems as any[]).map((orderLineItem: any, index: number) => (
-                    <AdminOrderLineItem
-                      key={orderLineItem.id}
-                      orderLineItem={orderLineItem}
-                      onDelete={() => onDeleteOrderLines([orderLineItem.id])}
-                      onUpdateStatus={onUpdateOrderLinesStatus ? (newStatus) => onUpdateOrderLinesStatus([orderLineItem], newStatus) : undefined}
-                      isGroupMenuOpen={isMenuOpen}
-                      isFirstInCategory={index === 0}
-                      isMenuItem={true}
-                    />
-                  ))}
+                  {(categoryItems as any[]).map((orderLineItem: any, index: number) => {
+                    // DEBUG: Log avant l'appel
+                    const price = orderLineItem.item?.price || 0;
+                    console.log('Calling getOrderLinePaymentFraction for menu item:', {
+                      orderLineItemId: orderLineItem.id,
+                      price,
+                      hasItem: !!orderLineItem.item
+                    });
+                    const fraction = getOrderLinePaymentFraction(orderLineItem.id, price);
+                    console.log('Result fraction:', fraction);
+
+                    return (
+                      <AdminOrderLineItem
+                        key={orderLineItem.id}
+                        orderLineItem={orderLineItem}
+                        onDelete={() => onDeleteOrderLines([orderLineItem.id])}
+                        onUpdateStatus={onUpdateOrderLinesStatus ? (newStatus) => onUpdateOrderLinesStatus([orderLineItem], newStatus) : undefined}
+                        isGroupMenuOpen={isMenuOpen}
+                        isFirstInCategory={index === 0}
+                        isMenuItem={true}
+                        paymentFraction={fraction}
+                      />
+                    );
+                  })}
                 </View>
               ));
             })()}
@@ -503,7 +581,8 @@ const AdminOrderItemsGroup = ({
   onDeleteGroup,
   groupId,
   isMenuOpen,
-  onMenuOpenChange
+  onMenuOpenChange,
+  getOrderLinePaymentFraction
 }: {
   itemType: ItemType;
   status: Status;
@@ -516,6 +595,7 @@ const AdminOrderItemsGroup = ({
   groupId: string;
   isMenuOpen: boolean;
   onMenuOpenChange: (groupId: string | null) => void;
+  getOrderLinePaymentFraction: (orderLineId: string, totalPrice: number) => number;
 }) => {
   const itemStatus = getMostImportantStatus(orderItems.map((orderLine: OrderLine) => orderLine.status || Status.PENDING));
   const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
@@ -672,18 +752,29 @@ const AdminOrderItemsGroup = ({
           <View style={{
             backgroundColor: '#FAFBFC',
           }}>
-            {orderItems.map((orderLine: any, index: number) => (
-              <View key={orderLine.id} style={{
-                backgroundColor: index % 2 === 0 ? 'white' : '#F8F9FA'
-              }}>
-                <AdminOrderLineItem
-                  orderLine={orderLine}
-                  onDelete={() => onDeleteOrderLines([orderLine.id])}
-                  onUpdateStatus={onUpdateOrderLinesStatus ? (newStatus) => onUpdateOrderLinesStatus([orderLine], newStatus) : undefined}
-                  isGroupMenuOpen={false}
-                />
-              </View>
-            ))}
+            {orderItems.map((orderLine: any, index: number) => {
+              // DEBUG: Log avant l'appel
+              console.log('Calling getOrderLinePaymentFraction for individual item:', {
+                orderLineId: orderLine.id,
+                totalPrice: orderLine.totalPrice
+              });
+              const fraction = getOrderLinePaymentFraction(orderLine.id, orderLine.totalPrice);
+              console.log('Result fraction for individual item:', fraction);
+
+              return (
+                <View key={orderLine.id} style={{
+                  backgroundColor: index % 2 === 0 ? 'white' : '#F8F9FA'
+                }}>
+                  <AdminOrderLineItem
+                    orderLine={orderLine}
+                    onDelete={() => onDeleteOrderLines([orderLine.id])}
+                    onUpdateStatus={onUpdateOrderLinesStatus ? (newStatus) => onUpdateOrderLinesStatus([orderLine], newStatus) : undefined}
+                    isGroupMenuOpen={false}
+                    paymentFraction={fraction}
+                  />
+                </View>
+              );
+            })}
           </View>
         )}
       </View>
@@ -725,6 +816,8 @@ interface AdminOrderDetailViewProps {
 }
 
 export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLines, onUpdateOrderLinesStatus }: AdminOrderDetailViewProps) {
+  console.log('🔴🔴🔴 AdminOrderDetailView RENDERED - order:', order?.id);
+
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string | null>(null);
 
@@ -733,6 +826,15 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
   const { showToast } = useToast();
   const { activeMenus, loadAllMenus } = useMenus();
   const { updateOrderStatus } = useOrders();
+  const { getOrderLinePaymentFraction, payments, paymentAllocations } = usePayments();
+
+  // DEBUG: Vérifier l'état des paiements
+  console.log('AdminOrderDetailView - Payment state:', {
+    nbPayments: payments.length,
+    nbAllocations: paymentAllocations.length,
+    functionExists: typeof getOrderLinePaymentFraction,
+    orderId: order?.id
+  });
 
   // Si les menus ne sont pas chargés, les charger
   useEffect(() => {
@@ -908,6 +1010,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                       groupId={`menu-${menuLine.id}`}
                       isMenuOpen={openGroupMenuId === `menu-${menuLine.id}`}
                       onMenuOpenChange={setOpenGroupMenuId}
+                      getOrderLinePaymentFraction={getOrderLinePaymentFraction}
                     />
                   ))}
                 </>
@@ -952,6 +1055,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                   groupId={group.id}
                   isMenuOpen={openGroupMenuId === group.id}
                   onMenuOpenChange={setOpenGroupMenuId}
+                  getOrderLinePaymentFraction={getOrderLinePaymentFraction}
                 />
               ))}
             </>

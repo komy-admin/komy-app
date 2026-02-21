@@ -1,12 +1,25 @@
 /**
  * useRoomValidation - Hook pour la validation des positions de tables
  *
- * Memoïse les résultats dans un Map pour des lookups O(1).
- * Seule la table en édition est réellement validée (les autres sont toujours valides).
+ * Memoïse les résultats dans des Maps pour des lookups O(1).
+ * - boundsMap : vérifie si chaque table est dans les limites de la room
+ * - validityMap : vérifie bounds + collisions pour la table en édition
  */
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Table } from '~/types/table.types';
+
+/** Vérifie si une table est entièrement dans les limites de la room */
+export const isTableInBounds = (
+  table: Pick<Table, 'xStart' | 'yStart' | 'width' | 'height'>,
+  roomWidth: number,
+  roomHeight: number
+): boolean => (
+  table.xStart >= 0 &&
+  table.yStart >= 0 &&
+  table.xStart + table.width <= roomWidth &&
+  table.yStart + table.height <= roomHeight
+);
 
 interface UseRoomValidationProps {
   tables: Table[];
@@ -22,44 +35,49 @@ export const useRoomValidation = ({
   roomHeight
 }: UseRoomValidationProps) => {
 
+  // Map des tables dans/hors limites (toutes les tables)
+  const boundsMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    tables.forEach(table => {
+      map.set(table.id, isTableInBounds(table, roomWidth, roomHeight));
+    });
+    return map;
+  }, [tables, roomWidth, roomHeight]);
+
+  // Map de validité complète (bounds + collisions) pour la table en édition
   const validityMap = useMemo(() => {
     const map = new Map<string, boolean>();
 
     tables.forEach(table => {
-      // Seule la table en édition peut être invalide
-      if (table.id !== editingTableId) {
-        map.set(table.id, true);
-        return;
+      const inBounds = boundsMap.get(table.id) ?? true;
+
+      // Pour la table en édition : vérifier bounds + collisions
+      if (table.id === editingTableId) {
+        const hasCollision = tables.some(other => {
+          if (other.id === table.id) return false;
+          return (
+            table.xStart < other.xStart + other.width &&
+            table.xStart + table.width > other.xStart &&
+            table.yStart < other.yStart + other.height &&
+            table.yStart + table.height > other.yStart
+          );
+        });
+        map.set(table.id, inBounds && !hasCollision);
+      } else {
+        map.set(table.id, inBounds);
       }
-
-      // Vérifier les limites de la room
-      const withinBounds = (
-        table.xStart >= 0 &&
-        table.yStart >= 0 &&
-        table.xStart + table.width <= roomWidth &&
-        table.yStart + table.height <= roomHeight
-      );
-
-      // Vérifier les collisions AABB avec les autres tables
-      const hasCollision = tables.some(other => {
-        if (other.id === table.id) return false;
-        return (
-          table.xStart < other.xStart + other.width &&
-          table.xStart + table.width > other.xStart &&
-          table.yStart < other.yStart + other.height &&
-          table.yStart + table.height > other.yStart
-        );
-      });
-
-      map.set(table.id, withinBounds && !hasCollision);
     });
 
     return map;
-  }, [tables, editingTableId, roomWidth, roomHeight]);
+  }, [tables, editingTableId, boundsMap]);
 
-  const isPositionValid = (table: Table): boolean => {
+  const isPositionValid = useCallback((table: Table): boolean => {
     return validityMap.get(table.id) ?? true;
-  };
+  }, [validityMap]);
 
-  return { isPositionValid };
+  const isInBounds = useCallback((table: Table): boolean => {
+    return boundsMap.get(table.id) ?? true;
+  }, [boundsMap]);
+
+  return { isPositionValid, isInBounds };
 };

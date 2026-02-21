@@ -43,15 +43,6 @@ export default function CookKitchenPage() {
 
   const handleStatusChange = async (itemGroup: ItemGroup, newStatus: Status) => {
     try {
-      console.log('🔄 [DEBUG] Cook handleStatusChange (new):', {
-        groupId: itemGroup.id,
-        orderId: itemGroup.orderId,
-        currentStatus: itemGroup.status,
-        newStatus,
-        itemsCount: itemGroup.items.length
-      });
-
-      // Séparer OrderLines (articles individuels) et OrderLineItems (items de menu)
       const orderLineIds: string[] = [];
       const orderLineItemIds: string[] = [];
 
@@ -62,13 +53,6 @@ export default function CookKitchenPage() {
           orderLineItemIds.push(item.id);
         }
       });
-
-      console.log('🔄 [DEBUG] Items to update:', {
-        orderLineIds: orderLineIds.length,
-        orderLineItemIds: orderLineItemIds.length
-      });
-
-      // 🆕 Utiliser la nouvelle API PATCH qui gère tout en une seule requête
       if (orderLineIds.length > 0 || orderLineItemIds.length > 0) {
         await updateOrderStatus(itemGroup.orderId, {
           status: newStatus,
@@ -97,13 +81,6 @@ export default function CookKitchenPage() {
   // 🆕 Fonction pour mettre à jour un item individuel
   const handleIndividualItemStatusChange = async (item: any, newStatus: Status) => {
     try {
-      console.log('🔄 [DEBUG] Cook handleIndividualItemStatusChange:', {
-        itemId: item.id,
-        itemType: item.type,
-        itemName: item.itemName,
-        newStatus
-      });
-
       // Déterminer le bon array selon le type d'item
       let orderLineIds: string[] = [];
       let orderLineItemIds: string[] = [];

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import {
   GestureHandlerRootView,
   GestureDetector,
@@ -13,6 +13,7 @@ import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
 import { RoomTableService } from '~/components/Room/RoomTableService';
 import { getTableStatus } from '~/lib/utils';
+import { getRoomLightBackground } from '~/lib/room-utils';
 import { useRoomDimensions } from '~/hooks/room/useRoomDimensions';
 import { useRoomZoom } from '~/hooks/room/useRoomZoom';
 import { useRoomValidation } from '~/hooks/room/useRoomValidation';
@@ -29,6 +30,7 @@ interface RoomProps {
   onTablePress: (table: Table | null) => void;
   containerDimensions?: { width: number; height: number };
   fillContainer?: boolean;
+  roomColor?: string | null;
 }
 
 const Room: React.FC<RoomProps> = ({
@@ -42,8 +44,13 @@ const Room: React.FC<RoomProps> = ({
   onTableLongPress,
   onTablePress,
   containerDimensions,
-  fillContainer
+  fillContainer,
+  roomColor,
 }) => {
+  // Couleurs dérivées de la room (calculées une seule fois pour toutes les tables)
+  const resolvedColor = roomColor || '#6366F1';
+  const roomBg = useMemo(() => getRoomLightBackground(resolvedColor), [resolvedColor]);
+  const tableBg = useMemo(() => getRoomLightBackground(resolvedColor, 0.04), [resolvedColor]);
   // 🎯 HOOK: Gestion des dimensions et du zoom optimal
   const { dimensions, isGridReady, CELL_SIZE, EXTRA_LINES } = useRoomDimensions({
     roomWidth: width,
@@ -62,22 +69,19 @@ const Room: React.FC<RoomProps> = ({
     pinchGesture
   } = useRoomZoom({
     initialZoom: dimensions?.initialZoom || 1,
-    disablePan: editionMode,
+    editionMode,
+    hasSelectedTable: !!editingTableId,
   });
 
   // 🎯 HOOK: Validation des positions de tables
-  const { isPositionValid } = useRoomValidation({
+  const { isPositionValid, isInBounds } = useRoomValidation({
     tables,
     editingTableId,
     roomWidth: width,
     roomHeight: height
   });
 
-  // 🚀 OPTIMISATION: Suppression du state visibleTables
-  // Avec la KEY prop sur Room, le composant remount proprement à chaque changement de room
-  // Plus besoin d'un state intermédiaire qui cause un double rendu
-
-  // 🚀 OPTIMISATION CRITIQUE: Memoïser les statuts des tables
+  // 🚀 OPTIMISATION: Memoïser les statuts des tables
   // Évite de recalculer getTableStatus() pour CHAQUE table à CHAQUE render
   const tableStatuses = useMemo(() => {
     return tables.reduce((acc, table) => {
@@ -87,11 +91,10 @@ const Room: React.FC<RoomProps> = ({
   }, [tables]);
 
   const handleBackgroundPress = useCallback(() => {
-    // 🎯 En mode édition : ne pas désélectionner au tap background
-    // La désélection se fait uniquement via :
-    // 1. Bouton fermer (X) du sidebar
-    // 2. Sélection d'une autre table
-    if (!editionMode) {
+    // Mode service : toujours désélectionner au tap fond
+    // Mode édition web : désélectionner pour libérer le pan
+    // Mode édition native : pas de désélection (X button ou autre table)
+    if (!editionMode || Platform.OS === 'web') {
       onTablePress(null);
     }
   }, [editionMode, onTablePress]);
@@ -130,6 +133,15 @@ const Room: React.FC<RoomProps> = ({
     };
   }, []);
 
+  const roomAreaStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    left: EXTRA_LINES * CELL_SIZE,
+    top: EXTRA_LINES * CELL_SIZE,
+    width: width * CELL_SIZE,
+    height: height * CELL_SIZE,
+    ...(!editionMode && { borderWidth: 2, borderColor: '#2A2E33' }),
+  }), [EXTRA_LINES, CELL_SIZE, width, height, editionMode]);
+
   if (isLoading || !dimensions || !isGridReady) {
     return (
       <View style={[styles.container, styles.loading]}>
@@ -141,21 +153,15 @@ const Room: React.FC<RoomProps> = ({
   return (
     <GestureHandlerRootView
       nativeID="room-zoom-container"
-      style={styles.container}
+      style={[styles.container, { backgroundColor: roomBg }]}
     >
       <GestureDetector gesture={composedGesture}>
         {/* Vue externe: SEULEMENT translate → zone gestures 100% même sur grandes rooms */}
-        <Animated.View style={[styles.animatedContainer, translateStyle]}>
+        <Animated.View style={[styles.animatedContainer, { backgroundColor: roomBg }, translateStyle]}>
           {/* Vue interne: SEULEMENT scale → visuel zoomé, gestures non affectées */}
           <Animated.View style={scaleStyle}>
-            <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
-              <View style={{
-                position: 'absolute',
-                left: EXTRA_LINES * CELL_SIZE,
-                top: EXTRA_LINES * CELL_SIZE,
-                width: width * CELL_SIZE,
-                height: height * CELL_SIZE,
-              }}>
+            <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight, backgroundColor: roomBg }]}>
+              <View style={roomAreaStyle}>
                 {editionMode && (
                   <RoomGrid
                     width={width * CELL_SIZE}
@@ -173,9 +179,12 @@ const Room: React.FC<RoomProps> = ({
                     Gain mode service: ~94% réduction SharedValues */}
                 {tables.map(table => {
                   const isEditing = editingTableId === table.id;
+                  const tableInBounds = isInBounds(table);
 
-                  // 🔧 SEULE la table sélectionnée en mode édition utilise RoomTable complet
-                  // Toutes les autres (même en editionMode) utilisent le composant léger
+                  // Mode service : masquer les tables hors-limites
+                  if (!editionMode && !tableInBounds) return null;
+
+                  // Table sélectionnée en mode édition → RoomTable complet (drag, resize)
                   if (editionMode && isEditing) {
                     return (
                       <RoomTable
@@ -185,12 +194,12 @@ const Room: React.FC<RoomProps> = ({
                         roomWidth={width}
                         roomHeight={height}
                         status={tableStatuses[table.id]}
-                        isEditing={isEditing}
-                        editionMode={editionMode}
+                        isEditing
+                        editionMode
                         positionValid={isPositionValid(table)}
                         CELL_SIZE={CELL_SIZE}
                         currentZoomScale={scale}
-                        isSelected={isEditing}
+                        isSelected
                         onPress={() => onTablePress(table)}
                         onLongPress={onTableLongPress}
                         onUpdate={onTableUpdate}
@@ -198,7 +207,7 @@ const Room: React.FC<RoomProps> = ({
                     );
                   }
 
-                  // 🎯 Composant léger pour toutes les autres tables
+                  // Composant léger pour toutes les autres tables
                   return (
                     <RoomTableService
                       key={table.id}
@@ -207,6 +216,9 @@ const Room: React.FC<RoomProps> = ({
                       CELL_SIZE={CELL_SIZE}
                       isSelected={isEditing}
                       editionMode={editionMode}
+                      outOfBounds={!tableInBounds}
+                      roomColor={roomColor}
+                      tableBg={tableBg}
                       onPress={onTablePress}
                       onLongPress={onTableLongPress}
                     />
@@ -225,10 +237,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     overflow: 'hidden',
-    backgroundColor: '#EEEDF5',
   },
   grid: {
-    backgroundColor: '#EEEDF5',
   },
   loading: {
     justifyContent: 'center',
@@ -243,7 +253,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEEDF5', // Nécessaire pour capturer les gestes sur toute la surface
+    // backgroundColor dynamique appliqué inline via roomBg
   }
 });
 

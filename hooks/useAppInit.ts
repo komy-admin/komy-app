@@ -1,12 +1,13 @@
 import { useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { sessionActions, selectAppInitialized, selectIsAppInitializing, selectInitializationProgress, selectIsFinalizingStage, selectProgressPercentage } from '~/store/slices/session.slice';
+import { sessionActions, selectAppInitialized, selectIsAppInitializing, selectInitializationProgress, selectProgressPercentage } from '~/store/slices/session.slice';
 import { useRooms } from './useRooms';
 import { useOrders } from './useOrders';
 import { useMenu } from './useMenu';
 import { useMenus } from './useMenus';
 import { useUsers } from './useUsers';
+import { usePayments } from './usePayments';
 import { accountConfigApiService } from '~/api/account-config.api';
 import { tagApiService } from '~/api/tag.api';
 import { entitiesActions } from '~/store/slices/entities.slice';
@@ -18,6 +19,7 @@ export interface InitializationProgress {
   items: boolean;
   menus: boolean;
   orders: boolean;
+  payments: boolean;
   users: boolean;
   accountConfig: boolean;
   tags: boolean;
@@ -32,6 +34,7 @@ const INITIAL_PROGRESS: InitializationProgress = {
   items: false,
   menus: false,
   orders: false,
+  payments: false,
   users: false,
   accountConfig: false,
   tags: false,
@@ -47,7 +50,6 @@ export const useAppInit = () => {
   const appInitialized = useSelector(selectAppInitialized);
   const isAppInitializing = useSelector(selectIsAppInitializing);
   const progressFromRedux = useSelector(selectInitializationProgress);
-  const isFinalizingStage = useSelector(selectIsFinalizingStage);
   const progressPercentage = useSelector(selectProgressPercentage);
 
   // Check if user is properly authenticated
@@ -62,6 +64,7 @@ export const useAppInit = () => {
   const { loadItemTypes, loadItems } = useMenu();
   const { loadAllMenus } = useMenus();
   const { loadUsers } = useUsers();
+  const { loadAllPayments } = usePayments();
 
   // Plus d'état local, tout est dans Redux maintenant
 
@@ -97,7 +100,9 @@ export const useAppInit = () => {
           reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
           teamEnabled: accountConfig.teamEnabled,
           kitchenEnabled: accountConfig.kitchenEnabled,
-          barEnabled: accountConfig.barEnabled
+          barEnabled: accountConfig.barEnabled,
+          kitchenViewMode: accountConfig.kitchenViewMode,
+          barViewMode: accountConfig.barViewMode
         }));
         updateProgress('accountConfig', true);
       } catch (error) {
@@ -144,7 +149,7 @@ export const useAppInit = () => {
 
       await Promise.all(promises);
 
-      // Étape 3: Menu et commandes
+      // Étape 3: Menu, commandes et paiements
       await Promise.all([
         loadItems().then(result => {
           updateProgress('items', true);
@@ -157,6 +162,10 @@ export const useAppInit = () => {
         loadAllOrders().then(result => {
           updateProgress('orders', true);
           return result;
+        }),
+        loadAllPayments().then(result => {
+          updateProgress('payments', true);
+          return result;
         })
       ]);
 
@@ -165,8 +174,6 @@ export const useAppInit = () => {
       const remainingTime = MIN_LOADING_TIME - elapsedTime;
 
       if (remainingTime > 0) {
-        dispatch(sessionActions.setFinalizingStage(true));
-
         const progressInterval = 50;
         const totalSteps = Math.floor(remainingTime / progressInterval);
         let currentStep = 0;
@@ -184,6 +191,9 @@ export const useAppInit = () => {
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
 
+      // Forcer 100% avant la transition
+      dispatch(sessionActions.setFinalizationProgress(100));
+
       // Marquer comme terminé dans Redux
       dispatch(sessionActions.setAppInitialized(true));
       dispatch(sessionActions.setAppInitializing(false));
@@ -200,7 +210,7 @@ export const useAppInit = () => {
 
       throw error;
     }
-  }, [canInitialize, appInitialized, isAppInitializing, dispatch, user?.profil, loadRooms, loadItemTypes, loadUsers, loadItems, loadAllMenus, loadAllOrders]);
+  }, [canInitialize, appInitialized, isAppInitializing, dispatch, user?.profil, loadRooms, loadItemTypes, loadUsers, loadItems, loadAllMenus, loadAllOrders, loadAllPayments]);
 
   // Démarrage automatique de l'initialisation
   useEffect(() => {
@@ -220,7 +230,6 @@ export const useAppInit = () => {
     // Données de progression pour l'UI
     progress,
     progressPercentage,
-    isFinalizingStage,
 
     // Actions
     initializeApp,

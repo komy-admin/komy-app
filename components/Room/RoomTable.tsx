@@ -47,6 +47,7 @@ import React, { useMemo, useCallback } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
+import { isTableInBounds } from "~/hooks/room/useRoomValidation";
 import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
 import { RoomChairs } from "./RoomChairs";
@@ -291,11 +292,9 @@ const RoomTable: React.FC<TableViewProps> = ({
     const tableHeight = Math.round(currentHeight.value / CELL_SIZE);
 
     // 2️⃣ Vérifier les limites de la room
-    const withinBounds = (
-      gridX >= 0 &&
-      gridY >= 0 &&
-      gridX + tableWidth <= roomWidth &&
-      gridY + tableHeight <= roomHeight
+    const withinBounds = isTableInBounds(
+      { xStart: gridX, yStart: gridY, width: tableWidth, height: tableHeight },
+      roomWidth, roomHeight
     );
 
     // 3️⃣ Vérifier les collisions
@@ -377,11 +376,9 @@ const RoomTable: React.FC<TableViewProps> = ({
     const constrainedHeight = Math.max(MIN_CELLS, gridHeight);
 
     // 2️⃣ Vérification des limites de la room
-    const withinBounds = (
-      finalGridX >= 0 &&
-      finalGridY >= 0 &&
-      finalGridX + constrainedWidth <= roomWidth &&
-      finalGridY + constrainedHeight <= roomHeight
+    const withinBounds = isTableInBounds(
+      { xStart: finalGridX, yStart: finalGridY, width: constrainedWidth, height: constrainedHeight },
+      roomWidth, roomHeight
     );
 
     // 3️⃣ Vérification des collisions

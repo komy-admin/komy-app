@@ -1,6 +1,7 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { View, StyleSheet, Platform, Pressable, Switch } from 'react-native';
+import { View, StyleSheet, Platform, Pressable } from 'react-native';
 import { Text, Button, TextInput, NumberInput, SelectButton, TagSelector } from '~/components/ui';
+import { VatRateSelector } from '~/components/ui/vat-rate-selector';
 import { ColorPicker } from '~/components/ui/color-picker';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
@@ -16,8 +17,6 @@ interface MenuFormProps {
   item: Item | null;
   itemTypes: ItemType[];
   tags: Tag[];
-  onSave?: (item: Item) => void;
-  onCancel?: () => void;
   activeTab: string;
 }
 
@@ -25,19 +24,30 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
   item,
   itemTypes,
   tags,
-  onSave,
-  onCancel,
   activeTab
 }, ref) => {
+  const getInitialVatRate = () => {
+    if (item?.vatRate !== null && item?.vatRate !== undefined) {
+      return typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : item.vatRate;
+    }
+    const typeId = item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : '');
+    const itemType = itemTypes.find(t => t.id === typeId);
+    const vatRate = itemType?.vatRate
+      ? (typeof itemType.vatRate === 'string' ? parseFloat(itemType.vatRate) : itemType.vatRate)
+      : 20;
+    return vatRate;
+  };
+
   const [formData, setFormData] = useState({
     name: item?.name || '',
-    // 💰 Convertir centimes -> euros pour l'affichage dans le formulaire
+    // Convertir centimes -> euros pour l'affichage dans le formulaire
     price: item?.price ? centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price) : null,
     itemTypeId: item?.itemType?.id || (activeTab !== 'ALL' ? activeTab : ''),
     color: item?.color || '',
     isActive: item?.isActive ?? true,
     hasNote: item?.hasNote ?? false,
-    selectedTags: item?.tags?.map(t => t.id) || []
+    selectedTags: item?.tags?.map(t => t.id) || [],
+    vatRate: getInitialVatRate()
   });
 
   const [selectedItemTypeId, setSelectedItemTypeId] = useState<string>(
@@ -49,7 +59,17 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
   // Optimisation: callback stable
   const handleCategorySelect = React.useCallback((itemTypeId: string) => {
     setSelectedItemTypeId(itemTypeId);
-  }, []);
+    // Mettre à jour automatiquement la TVA avec celle de l'itemType
+    const selectedType = itemTypes.find(t => t.id === itemTypeId);
+    // Convertir la string en nombre (ex: "20.00" -> 20)
+    const newVatRate = selectedType?.vatRate
+      ? (typeof selectedType.vatRate === 'string' ? parseFloat(selectedType.vatRate) : selectedType.vatRate)
+      : 20;
+    setFormData(prev => ({
+      ...prev,
+      vatRate: newVatRate
+    }));
+  }, [itemTypes]);
 
   // Optimisation: règles de validation mémorisées
   const validationRules = React.useMemo<ValidationRules>(() => ({
@@ -70,30 +90,49 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
 
   useEffect(() => {
     if (item) {
+      // Pour un item existant, utiliser sa vatRate ou celle de son type
+      let vatRate: number;
+      if (item.vatRate !== null && item.vatRate !== undefined) {
+        vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : item.vatRate;
+      } else if (item.itemType?.vatRate) {
+        vatRate = typeof item.itemType.vatRate === 'string' ? parseFloat(item.itemType.vatRate) : item.itemType.vatRate;
+      } else {
+        vatRate = 20;
+      }
+
       setFormData({
         name: item.name,
-        // 💰 Convertir centimes -> euros pour l'affichage
+        // Convertir centimes -> euros pour l'affichage
         price: centsToEuros(typeof item.price === 'string' ? parseFloat(item.price) : item.price),
         itemTypeId: item.itemType?.id || '',
         color: item.color || '',
         isActive: item.isActive ?? true,
         hasNote: item.hasNote ?? false,
-        selectedTags: item.tags?.map(t => t.id) || []
+        selectedTags: item.tags?.map(t => t.id) || [],
+        vatRate: vatRate
       });
       setSelectedItemTypeId(item.itemType?.id || '');
     } else {
+      // Pour un nouvel item, utiliser la TVA du type sélectionné
+      const typeId = activeTab !== 'ALL' ? activeTab : '';
+      const itemType = itemTypes.find(t => t.id === typeId);
+      const vatRate = itemType?.vatRate
+        ? (typeof itemType.vatRate === 'string' ? parseFloat(itemType.vatRate) : itemType.vatRate)
+        : 20;
+
       setFormData({
         name: '',
         price: null,
-        itemTypeId: activeTab !== 'ALL' ? activeTab : '',
+        itemTypeId: typeId,
         color: '',
         isActive: true,
         hasNote: false,
-        selectedTags: []
+        selectedTags: [],
+        vatRate: vatRate
       });
-      setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
+      setSelectedItemTypeId(typeId);
     }
-  }, [item, activeTab]);
+  }, [item, activeTab, itemTypes]);
 
   const handleTagToggle = React.useCallback((tagId: string) => {
     setFormData(prev => ({
@@ -134,7 +173,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
       let itemData: Item | null = null;
 
       if (isValid) {
-        // 💰 Convertir euros -> centimes pour l'envoi API
+        // Convertir euros -> centimes pour l'envoi API
         const priceInCents = eurosToCents(formData.price!);
         const selectedTags = tags.filter(t => formData.selectedTags.includes(t.id));
 
@@ -147,6 +186,7 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           itemType: selectedItemType!,
           isActive: formData.isActive,
           hasNote: formData.hasNote,
+          vatRate: formData.vatRate,
           tags: selectedTags
         };
       }
@@ -159,16 +199,21 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
     },
 
     resetForm: () => {
+      const typeId = activeTab !== 'ALL' ? activeTab : '';
+      const itemType = itemTypes.find(t => t.id === typeId);
+      const vatRate = itemType?.vatRate || 20;
+
       setFormData({
         name: '',
         price: null,
-        itemTypeId: activeTab !== 'ALL' ? activeTab : '',
+        itemTypeId: typeId,
         color: '',
         isActive: true,
         hasNote: false,
-        selectedTags: []
+        selectedTags: [],
+        vatRate: vatRate
       });
-      setSelectedItemTypeId(activeTab !== 'ALL' ? activeTab : '');
+      setSelectedItemTypeId(typeId);
     },
 
     validateForm: () => {
@@ -344,12 +389,38 @@ export const ItemForm = forwardRef<AdminFormRef<Item>, MenuFormProps>(({
           </View>
         </View>
 
+        {/* Section TVA */}
+        <View style={styles.section}>
+          <SectionHeader
+            icon={FileText}
+            title="2. TVA"
+            subtitle="Configurez le taux de TVA pour cet article"
+          />
+
+          <View style={styles.row}>
+            <View style={[styles.field, { flex: 1 }]}>
+              <Text style={[styles.label, { fontSize: 13, color: '#6B7280', marginBottom: 8 }]}>
+                Taux de TVA
+              </Text>
+              <VatRateSelector
+                value={formData.vatRate}
+                onChange={(value) => setFormData(prev => ({
+                  ...prev,
+                  vatRate: value || 20
+                }))}
+                showInheritOption={false}
+                disabled={false}
+              />
+            </View>
+          </View>
+        </View>
+
         {/* Section Tags */}
         {tags.length > 0 && (
           <View style={styles.section}>
             <SectionHeader
               icon={Tags}
-              title="2. Tags"
+              title="3. Tags"
               subtitle="Sélectionnez les tags applicables à cet article"
             />
 

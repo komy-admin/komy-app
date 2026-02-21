@@ -94,6 +94,20 @@ export const WEBSOCKET_EVENT_MAP = {
     updated: 'updateTag',
     deleted: 'deleteTag',
   },
+
+  // Payments
+  payment: {
+    created: 'createPayment',
+    updated: 'updatePayment',
+    deleted: 'deletePayment',
+  },
+
+  // Payment Allocations
+  paymentallocation: {
+    created: 'createPaymentAllocation',
+    updated: 'updatePaymentAllocation',
+    deleted: 'deletePaymentAllocation',
+  },
 } as const;
 
 // Types pour les événements WebSocket
@@ -172,14 +186,15 @@ export const formatEventPayload = (model: string, action: string, data: any): an
   
   // Format standard pour create/update
   // Cas spécial pour orderLine (camelCase)
-  const key = model === 'orderline' ? 'orderLine' : 
+  const key = model === 'orderline' ? 'orderLine' :
               model === 'orderlineitem' ? 'orderLineItem' :
               model === 'menucategory' ? 'menuCategory' :
               model === 'menucategoryitem' ? 'menuCategoryItem' :
               model === 'itemtype' ? 'itemType' :
               model === 'accountconfig' ? 'accountConfig' :
+              model === 'paymentallocation' ? 'paymentAllocation' :
               model;
-              
+
   return { [key]: data };
 };
 

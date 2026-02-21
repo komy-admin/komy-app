@@ -1,88 +1,126 @@
-import React, { useState, useMemo } from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import { useState, useMemo, useEffect } from 'react';
+import { View, ScrollView, Pressable, Alert, TextInput, Modal } from 'react-native';
 import { Button, Text } from '~/components/ui';
-import { X, CheckSquare, Square, Plus, Minus, DivideIcon, Equal } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  Check,
+  CreditCard,
+  Banknote,
+  Ticket,
+  FileCheck,
+  X,
+  Percent
+} from 'lucide-react-native';
 import { Order } from '~/types/order.types';
 import { OrderLine } from '~/types/order-line.types';
+import { formatPrice } from '~/lib/utils';
+import { usePayments } from '~/hooks/usePayments';
 
 interface PaymentViewProps {
   order: Order;
-  onClose: () => void;
-  onPaymentComplete: (paymentData: PaymentData) => void;
+  tableName: string;
+  onBack: () => void;
+  onPaymentComplete: () => void;
 }
 
-interface PaymentData {
-  orderId: string;
-  selectedItems: string[];
-  totalAmount: number;
-  calculatorTotal: number;
-}
+type PaymentMethod = 'cash' | 'card' | 'check' | 'ticket_resto';
 
-export default function PaymentView({ order, onClose, onPaymentComplete }: PaymentViewProps) {
+export default function PaymentView({ order, tableName, onBack, onPaymentComplete }: PaymentViewProps) {
+  const { createPayment, getPaymentsByOrder, getAllocationsByOrderLine, payments: allPayments } = usePayments();
+
+  // États principaux
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [paidItems, setPaidItems] = useState<Set<string>>(new Set());
+  const [itemFractions, setItemFractions] = useState<Map<string, number>>(new Map()); // Fraction personnalisée par item
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showCustomDialog, setShowCustomDialog] = useState<string | null>(null); // ID de l'item pour le dialog custom
 
-  // État de la calculatrice
-  const [display, setDisplay] = useState('0');
-  const [previousValue, setPreviousValue] = useState<number | null>(null);
-  const [operation, setOperation] = useState<string | null>(null);
-  const [waitingForNext, setWaitingForNext] = useState(false);
-  const [calculationHistory, setCalculationHistory] = useState<string[]>([]);
+  // Récupérer les paiements depuis l'API
+  const [payments, setPayments] = useState<any[]>([]);
 
-  // Grouper les OrderLines par type
-  const groupedItems = useMemo(() => {
-    const groups: { [key: string]: OrderLine[] } = {};
+  useEffect(() => {
+    const loadPayments = async () => {
+      const data = await getPaymentsByOrder(order.id);
+      setPayments(data);
+    };
+    loadPayments();
+  }, [order.id, getPaymentsByOrder]);
 
-    (order.lines || []).forEach(line => {
-      let typeName = 'Articles';
-      if (line.type === 'MENU') {
-        typeName = 'Menus';
-      }
-      if (!groups[typeName]) {
-        groups[typeName] = [];
-      }
-      groups[typeName].push(line);
+  // Calculer le statut de paiement d'une ligne (complètement payée, partiellement, ou non payée)
+  const getLinePaymentStatus = (lineId: string, linePrice: number): { isPaid: boolean; isPartiallyPaid: boolean; paidFraction: number } => {
+    const allocations = getAllocationsByOrderLine(lineId);
+
+    // Filtrer uniquement les allocations des paiements complétés
+    const validAllocations = allocations.filter(allocation => {
+      const payment = allPayments.find(p => p.id === allocation.paymentId);
+      return payment && payment.status === 'completed';
     });
 
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [order.lines]);
+    if (validAllocations.length === 0 || !linePrice || linePrice <= 0) {
+      return { isPaid: false, isPartiallyPaid: false, paidFraction: 0 };
+    }
 
-  // Calculer le total des OrderLines sélectionnées
-  const selectedTotal = useMemo(() => {
-    return Array.from(selectedItems).reduce((total, lineId) => {
-      const line = (order.lines || []).find(ol => ol.id === lineId);
-      return total + (line?.totalPrice || 0);
-    }, 0);
-  }, [selectedItems, order.lines]);
+    // Utiliser allocatedAmount au lieu de quantityFraction pour un calcul plus précis
+    const totalPaidAmount = validAllocations.reduce((sum, alloc) => sum + (alloc.allocatedAmount || 0), 0);
+    const paidFraction = Math.min(1, totalPaidAmount / linePrice);
 
-  // Affichage des calculs ligne par ligne
-  const calculationLines = useMemo(() => {
-    if (selectedItems.size === 0) return [];
+    // Considérer comme complètement payé si la fraction est >= 0.999 (pour gérer les arrondis)
+    const isPaid = paidFraction >= 0.999;
+    const isPartiallyPaid = paidFraction > 0 && paidFraction < 0.999;
 
-    const lines: { operator: string; value: string; price: number }[] = [];
+    return { isPaid, isPartiallyPaid, paidFraction };
+  };
 
-    Array.from(selectedItems).forEach((lineId, index) => {
-      const line = (order.lines || []).find(ol => ol.id === lineId);
-      if (line) {
-        const name = line.type === 'MENU' ? (line.menu?.name || 'Menu') : (line.item?.name || 'Article');
-        lines.push({
-          operator: index === 0 ? '' : '+',
-          value: name,
-          price: line.totalPrice
-        });
-      }
-    });
+  // Calculer les montants depuis les paiements Redux
+  const orderTotals = useMemo(() => {
+    const totalAmount = order.lines?.reduce((sum, line) => sum + line.totalPrice, 0) || 0;
+    const completedPayments = payments.filter(p => p.status === 'completed');
+    const paidAmount = completedPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    return lines;
-  }, [selectedItems, order.lines]);
+    return {
+      totalAmount,
+      paidAmount,
+      remainingAmount: totalAmount - paidAmount
+    };
+  }, [order.lines, payments]);
 
+  // Items disponibles (non complètement payés)
+  const availableItems = useMemo(() => {
+    return order.lines?.filter(line => {
+      const status = getLinePaymentStatus(line.id, line.totalPrice);
+      return !status.isPaid; // Inclure les items non payés ET partiellement payés
+    }) || [];
+  }, [order.lines, getAllocationsByOrderLine, allPayments]);
+
+  // Calculer le montant total sélectionné (en tenant compte des fractions personnalisées et paiements partiels)
+  const selectedAmount = useMemo(() => {
+    if (selectedItems.size === 0) return 0;
+    return availableItems
+      .filter(line => selectedItems.has(line.id))
+      .reduce((sum, line) => {
+        const status = getLinePaymentStatus(line.id, line.totalPrice);
+        const remainingFraction = Math.max(0, 1.0 - status.paidFraction); // S'assurer que c'est jamais négatif
+        // Pour les articles partiellement payés, utiliser le reste par défaut au lieu de 100%
+        const defaultFraction = remainingFraction < 1.0 ? remainingFraction : 1.0;
+        const selectedFraction = itemFractions.get(line.id) ?? defaultFraction;
+        const actualFraction = Math.min(selectedFraction, remainingFraction);
+        // Le montant à payer pour cette ligne selon la fraction choisie
+        const lineAmount = Math.round(line.totalPrice * actualFraction);
+        return sum + (isNaN(lineAmount) ? 0 : lineAmount);
+      }, 0);
+  }, [selectedItems, availableItems, itemFractions, getAllocationsByOrderLine, allPayments]);
+
+
+  // Toggle sélection d'un item
   const handleItemToggle = (itemId: string) => {
-    if (paidItems.has(itemId)) return;
-
     setSelectedItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(itemId)) {
         newSet.delete(itemId);
+        // Enlever aussi la fraction personnalisée si elle existe
+        const newFractions = new Map(itemFractions);
+        newFractions.delete(itemId);
+        setItemFractions(newFractions);
       } else {
         newSet.add(itemId);
       }
@@ -90,388 +128,592 @@ export default function PaymentView({ order, onClose, onPaymentComplete }: Payme
     });
   };
 
-  // Vérifier si toutes les OrderLines disponibles sont sélectionnées
-  const availableItems = useMemo(() => {
-    return (order.lines || []).filter(line => !paidItems.has(line.id));
-  }, [order.lines, paidItems]);
-
-  const allAvailableSelected = useMemo(() => {
-    return availableItems.length > 0 && availableItems.every(line => selectedItems.has(line.id));
-  }, [availableItems, selectedItems]);
-
-  const handleToggleSelectAll = () => {
-    if (allAvailableSelected) {
-      // Tout désélectionner
+  // Sélectionner/désélectionner tout
+  const handleSelectAll = () => {
+    if (selectedItems.size === availableItems.length) {
+      // Tout est sélectionné, on désélectionne tout
       setSelectedItems(new Set());
+      setItemFractions(new Map());
+      setPaymentMethod(null);
     } else {
-      // Tout sélectionner
-      const availableItemIds = availableItems.map(item => item.id);
-      setSelectedItems(new Set(availableItemIds));
+      // Sélectionner tout
+      const allIds = new Set(availableItems.map(item => item.id));
+      setSelectedItems(allIds);
     }
   };
 
-  // Fonctions de la calculatrice
-  const inputNumber = (num: string) => {
-    if (waitingForNext) {
-      setDisplay(num);
-      setWaitingForNext(false);
+  // Gérer le changement de fraction pour un item
+  const handleFractionChange = (itemId: string, fraction: number) => {
+    const newFractions = new Map(itemFractions);
+    if (fraction === 1.0) {
+      // Si 100%, on peut supprimer de la map (valeur par défaut)
+      newFractions.delete(itemId);
     } else {
-      setDisplay(display === '0' ? num : display + num);
+      newFractions.set(itemId, fraction);
+    }
+    setItemFractions(newFractions);
+  };
+
+  // Créer les allocations en utilisant les fractions individuelles
+  const buildAllocations = (): Array<{
+    orderLineId: string;
+    quantityFraction: number;
+    allocatedAmount: number;
+  }> => {
+    return Array.from(selectedItems).map(lineId => {
+      const line = availableItems.find(l => l.id === lineId);
+      if (!line) {
+        throw new Error(`OrderLine ${lineId} not found`);
+      }
+
+      // Vérifier si la ligne est partiellement payée
+      const status = getLinePaymentStatus(lineId, line.totalPrice);
+      const remainingFraction = Math.max(0, 1.0 - status.paidFraction); // S'assurer que c'est jamais négatif
+
+      // Pour les articles partiellement payés, utiliser le reste par défaut au lieu de 100%
+      const defaultFraction = remainingFraction < 1.0 ? remainingFraction : 1.0;
+      const selectedFraction = itemFractions.get(lineId) ?? defaultFraction;
+      const actualFraction = Math.min(selectedFraction, remainingFraction);
+
+      // Calculer le montant alloué et s'assurer qu'il est valide
+      const allocatedAmount = Math.round(line.totalPrice * actualFraction);
+
+      return {
+        orderLineId: lineId,
+        quantityFraction: actualFraction,
+        allocatedAmount: isNaN(allocatedAmount) ? 0 : allocatedAmount
+      };
+    });
+  };
+
+  // Traiter le paiement
+  const handlePayment = async () => {
+    if (selectedAmount === 0) {
+      Alert.alert('Erreur', 'Veuillez sélectionner au moins un article');
+      return;
+    }
+
+    if (!paymentMethod) {
+      Alert.alert('Erreur', 'Veuillez sélectionner une méthode de paiement');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await createPayment({
+        orderId: order.id,
+        amount: selectedAmount,
+        paymentMethod,
+        allocations: buildAllocations()
+      });
+
+      setIsProcessing(false);
+      onPaymentComplete();
+      onBack();
+    } catch (error) {
+      console.error('Erreur lors de la création du paiement:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue lors du paiement');
+      setIsProcessing(false);
     }
   };
 
-  const inputDecimal = () => {
-    if (waitingForNext) {
-      setDisplay('0.');
-      setWaitingForNext(false);
-    } else if (display.indexOf('.') === -1) {
-      setDisplay(display + '.');
-    }
-  };
+  // Render d'un item de la liste
+  const renderOrderLine = (line: OrderLine) => {
+    const paymentStatus = getLinePaymentStatus(line.id, line.totalPrice);
+    const { isPaid, isPartiallyPaid, paidFraction } = paymentStatus;
+    const isSelected = selectedItems.has(line.id);
+    const isSelectable = !isPaid; // On peut sélectionner si pas complètement payé
 
-  const clear = () => {
-    setDisplay('0');
-    setPreviousValue(null);
-    setOperation(null);
-    setWaitingForNext(false);
-    setCalculationHistory([]);
-  };
+    const itemName = line.type === 'MENU'
+      ? line.menu?.name || 'Menu'
+      : line.item?.name || 'Article';
 
-  const performOperation = (nextOperation: string) => {
-    const inputValue = parseFloat(display);
-
-    if (previousValue === null) {
-      setPreviousValue(inputValue);
-    } else if (operation) {
-      const currentValue = previousValue || 0;
-      const newValue = calculate(currentValue, inputValue, operation);
-
-      setDisplay(String(newValue));
-      setPreviousValue(newValue);
-
-      // Ajouter à l'historique
-      setCalculationHistory(prev => [
-        ...prev,
-        `${currentValue} ${operation} ${inputValue} = ${newValue}`
-      ]);
-    }
-
-    setWaitingForNext(true);
-    setOperation(nextOperation);
-  };
-
-  const calculate = (firstValue: number, secondValue: number, operation: string) => {
-    switch (operation) {
-      case '+':
-        return firstValue + secondValue;
-      case '-':
-        return firstValue - secondValue;
-      case '×':
-        return firstValue * secondValue;
-      case '÷':
-        return firstValue / secondValue;
-      case '=':
-        return secondValue;
-      default:
-        return secondValue;
-    }
-  };
-
-  const addSelectedTotal = () => {
-    if (selectedTotal > 0) {
-      inputNumber(selectedTotal.toString());
-    }
-  };
-
-  const handlePayment = () => {
-    const calculatorTotal = parseFloat(display);
-
-    if (calculatorTotal <= 0) return;
-
-    const paymentData: PaymentData = {
-      orderId: order.id,
-      selectedItems: Array.from(selectedItems),
-      totalAmount: selectedTotal,
-      calculatorTotal
-    };
-
-    // Marquer les items comme payés
-    setPaidItems(prev => new Set([...prev, ...selectedItems]));
-    setSelectedItems(new Set());
-
-    onPaymentComplete(paymentData);
-  };
-
-  // Utiliser la fonction utilitaire pour formater les prix (centimes -> euros)
-  const formatPrice = (centimes: number) => {
-    const euros = centimes / 100;
-    return `${euros.toFixed(2)}€`;
-  };
-
-  const renderItem = ({ item }: { item: OrderLine }) => {
-    const isSelected = selectedItems.has(item.id);
-    const isPaid = paidItems.has(item.id);
-    const itemName = item.type === 'MENU' ? (item.menu?.name || 'Menu') : (item.item?.name || 'Article');
-    const itemTypeLabel = item.type === 'MENU' ? 'Menu' : (item.item?.itemType?.name || 'Article');
+    const subItems = line.type === 'MENU' && line.items
+      ? line.items.map(menuItem => menuItem.item?.name).filter(Boolean)
+      : [];
 
     return (
       <Pressable
-        onPress={() => handleItemToggle(item.id)}
-        className={`flex-row items-center justify-between p-2 border-b border-gray-100 ${isPaid ? 'bg-gray-50 opacity-50' :
-          isSelected ? 'bg-blue-50' : 'bg-white'
-          }`}
-        disabled={isPaid}
+        key={line.id}
+        onPress={() => isSelectable && handleItemToggle(line.id)}
+        disabled={!isSelectable}
+        className="py-3 border-b border-gray-100"
       >
-        <View className="flex-row items-center flex-1">
-          <View className="mr-2">
-            {isPaid ? (
-              <CheckSquare size={16} color="#10B981" />
-            ) : isSelected ? (
-              <CheckSquare size={16} color="#3B82F6" />
-            ) : (
-              <Square size={16} color="#6B7280" />
+        <View className="flex-row items-start">
+          <View className="w-10 items-center pt-0.5">
+            {/* Affichage pour les lignes complètement payées */}
+            {isPaid && (
+              <Check size={18} color="#10B981" strokeWidth={2} />
+            )}
+
+            {/* Affichage pour les lignes non payées ou partiellement payées */}
+            {!isPaid && (
+              <View className={`w-5 h-5 border-2 rounded items-center justify-center ${
+                isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+              }`}>
+                {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+              </View>
             )}
           </View>
+
           <View className="flex-1">
-            <Text className={`text-sm font-medium ${isPaid ? 'text-gray-400' : 'text-gray-900'}`}>
-              {itemName}
-            </Text>
-            <Text className={`text-sm ${isPaid ? 'text-gray-300' : 'text-gray-600'}`}>
-              {itemTypeLabel}
-            </Text>
-          </View>
-        </View>
-        <Text className={`text-sm font-semibold ${isPaid ? 'text-gray-400' : 'text-gray-900'}`}>
-          {formatPrice(item.totalPrice)}
-        </Text>
-      </Pressable>
-    );
-  };
-
-  const CalculatorButton = ({
-    onPress,
-    className = '',
-    children,
-    variant = 'default'
-  }: {
-    onPress: () => void;
-    className?: string;
-    children: React.ReactNode;
-    variant?: 'default' | 'operator' | 'equals' | 'clear';
-  }) => {
-    const baseClass = 'h-12 justify-center items-center rounded-lg border border-gray-300';
-    const variantClass = {
-      default: 'bg-white',
-      operator: 'bg-blue-500',
-      equals: 'bg-green-500',
-      clear: 'bg-red-500'
-    }[variant];
-
-    return (
-      <Pressable
-        onPress={onPress}
-        className={`${baseClass} ${variantClass} ${className}`}
-      >
-        {children}
-      </Pressable>
-    );
-  };
-
-  return (
-    <View className="flex-1 bg-white flex-row">
-      {/* Liste des items à gauche */}
-      <View className="w-80 border-r border-gray-200">
-        <View className="p-3 bg-gray-50 border-b border-gray-200 flex-row justify-between items-center">
-          <Text className="font-semibold text-gray-900">Articles ({(order.lines || []).length - paidItems.size} restants)</Text>
-          <Pressable onPress={onClose} className="p-1">
-            <X size={20} color="#6B7280" />
-          </Pressable>
-        </View>
-
-        <View className="p-3 border-b border-gray-200">
-          <Button
-            variant="outline"
-            onPress={handleToggleSelectAll}
-            className="w-full h-8"
-          >
-            <Text className="text-xs">
-              {allAvailableSelected ? "Tout désélectionner" : "Tout sélectionner"}
-            </Text>
-          </Button>
-        </View>
-
-        <ScrollView className="flex-1">
-          {groupedItems.map(([typeName, items]) => (
-            <View key={typeName}>
-              <View className="px-3 py-1 bg-gray-100">
-                <Text className="text-sm font-semibold text-gray-700 uppercase">
-                  {typeName} ({items.length})
+            <View className="flex-row items-start justify-between">
+              <View className="flex-1 mr-2">
+                <Text className={`font-medium ${
+                  isPaid ? 'text-gray-400 line-through' : isPartiallyPaid ? 'text-orange-600' : 'text-gray-900'
+                }`}>
+                  {itemName}
                 </Text>
-              </View>
-              {items.map(item => renderItem({ item }))}
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Calculatrice à droite */}
-      <View className="flex-1 bg-gray-50 p-4">
-        {/* Écran de la calculatrice avec affichage des opérations - Height fixe */}
-        <View className="bg-white border-2 border-gray-300 p-4 rounded-lg mb-4 h-64">
-          {/* Zone d'affichage des opérations sélectionnées - Scrollable */}
-          <ScrollView className="flex-1 mb-4" showsVerticalScrollIndicator={false}>
-            {calculationLines.length > 0 ? (
-              <>
-                {calculationLines.map((line, index) => (
-                  <View key={index} className="flex-row items-center mb-1">
-                    <Text className="w-6 text-sm text-blue-600 font-mono">
-                      {line.operator}
-                    </Text>
-                    <Text className="flex-1 text-sm text-gray-900 ml-2">
-                      {line.value}
-                    </Text>
-                    <Text className="text-sm text-gray-900 font-mono">
-                      {line.price.toFixed(2)}
-                    </Text>
-                  </View>
-                ))}
-                <View className="border-t border-gray-300 mt-2 pt-2">
-                  <View className="flex-row items-center">
-                    <Text className="w-6 text-sm text-blue-600 font-mono">=</Text>
-                    <Text className="flex-1 text-sm text-blue-600 ml-2 font-semibold">
-                      Sélection
-                    </Text>
-                    <Text className="text-lg text-blue-600 font-mono font-bold">
-                      {selectedTotal.toFixed(2)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Affichage des calculs de la calculatrice */}
-                {calculationHistory.length > 0 && (
-                  <View className="border-t border-gray-300 mt-2 pt-2">
-                    {calculationHistory.slice(-2).map((calc, index) => (
-                      <Text key={index} className="text-xs text-gray-600 font-mono">
-                        {calc}
+                {subItems.length > 0 && (
+                  <View className="mt-1">
+                    {subItems.map((subItem, idx) => (
+                      <Text key={idx} className={`text-xs ${
+                        isPaid ? 'text-gray-300' : 'text-gray-500'
+                      }`}>
+                        • {subItem}
                       </Text>
                     ))}
                   </View>
                 )}
-              </>
-            ) : (
-              <Text className="text-gray-500 text-center italic text-sm">
-                Sélectionnez des articles ou utilisez la calculatrice
-              </Text>
-            )}
-          </ScrollView>
+                {isPaid && (
+                  <Text className="text-xs text-green-600 mt-1">Payé</Text>
+                )}
+                {isPartiallyPaid && !isPaid && (
+                  <Text className="text-xs text-orange-600 mt-1">
+                    Partiellement payé ({Math.round(paidFraction * 100)}%)
+                  </Text>
+                )}
+              </View>
+              <View className="items-end">
+                <Text className={`font-medium ${
+                  isPaid ? 'text-gray-400 line-through' : isPartiallyPaid ? 'text-orange-600' : 'text-gray-900'
+                }`}>
+                  {formatPrice(line.totalPrice)}
+                </Text>
+                {isPartiallyPaid && !isPaid && (
+                  <Text className="text-xs text-orange-600 mt-1">
+                    Reste: {formatPrice(Math.round(line.totalPrice * (1 - paidFraction)))}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
 
-          {/* Ligne d'affichage principal */}
-          <View className="border-t border-gray-300 pt-2">
-            <Text className="text-gray-900 text-right text-3xl font-mono font-bold">
-              {display}
+  // Vérifier si on peut passer au paiement
+  const canProceedToPayment = useMemo(() => {
+    return selectedAmount > 0 && paymentMethod !== null;
+  }, [selectedAmount, paymentMethod]);
+
+  // Composant pour afficher un article sélectionné avec les boutons de fraction
+  const renderSelectedItemCard = (line: OrderLine) => {
+    const status = getLinePaymentStatus(line.id, line.totalPrice);
+    const remainingFraction = Math.max(0, 1.0 - status.paidFraction);
+    // Pour les articles partiellement payés, utiliser le reste par défaut au lieu de 100%
+    const defaultFraction = remainingFraction < 1.0 ? remainingFraction : 1.0;
+    const selectedFraction = itemFractions.get(line.id) ?? defaultFraction;
+    const actualFraction = Math.min(selectedFraction, remainingFraction);
+    const itemAmount = Math.round(line.totalPrice * actualFraction);
+
+    const itemName = line.type === 'MENU'
+      ? line.menu?.name || 'Menu'
+      : line.item?.name || 'Article';
+
+    const fractionButtons = [
+      { label: '100%', value: 1.0 },
+      { label: '50%', value: 0.5 },
+      { label: '33%', value: 0.33 },
+      { label: '25%', value: 0.25 },
+    ];
+
+    return (
+      <View key={line.id} className="bg-white rounded-lg p-4 mb-3 border border-gray-200">
+        <View className="flex-row justify-between items-center mb-3">
+          <Text className="font-semibold text-gray-900 flex-1 mr-2">{itemName}</Text>
+          <Text className="text-sm text-gray-500">{formatPrice(line.totalPrice)}</Text>
+        </View>
+
+        {/* Boutons de fraction */}
+        <View className="flex-row flex-wrap gap-2 mb-2">
+          {fractionButtons.map(({ label, value }) => (
+            <Pressable
+              key={label}
+              onPress={() => handleFractionChange(line.id, value)}
+              disabled={value > remainingFraction}
+              className={`px-3 py-1.5 rounded-md border ${
+                selectedFraction === value
+                  ? 'bg-blue-500 border-blue-500'
+                  : value > remainingFraction
+                  ? 'bg-gray-100 border-gray-200'
+                  : 'bg-white border-gray-300'
+              }`}
+            >
+              <Text className={`text-xs font-medium ${
+                selectedFraction === value
+                  ? 'text-white'
+                  : value > remainingFraction
+                  ? 'text-gray-400'
+                  : 'text-gray-700'
+              }`}>
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+
+          {/* Bouton Custom */}
+          <Pressable
+            onPress={() => setShowCustomDialog(line.id)}
+            className={`px-3 py-1.5 rounded-md border ${
+              !fractionButtons.some(b => b.value === selectedFraction)
+                ? 'bg-blue-500 border-blue-500'
+                : 'bg-white border-gray-300'
+            }`}
+          >
+            <View className="flex-row items-center gap-1">
+              <Percent size={12} color={!fractionButtons.some(b => b.value === selectedFraction) ? 'white' : '#6B7280'} />
+              <Text className={`text-xs font-medium ${
+                !fractionButtons.some(b => b.value === selectedFraction)
+                  ? 'text-white'
+                  : 'text-gray-700'
+              }`}>
+                {!fractionButtons.some(b => b.value === selectedFraction)
+                  ? `${Math.round(selectedFraction * 100)}%`
+                  : 'Custom'
+                }
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+
+        {/* Montant à payer pour cet article */}
+        <View className="pt-2 border-t border-gray-100">
+          <View className="flex-row justify-between items-center">
+            <Text className="text-sm text-gray-600">Montant à payer :</Text>
+            <Text className="font-bold text-blue-600">
+              {formatPrice(itemAmount)}
+              {selectedFraction !== 1.0 && (
+                <Text className="text-xs text-gray-500"> ({Math.round(selectedFraction * 100)}%)</Text>
+              )}
             </Text>
           </View>
         </View>
 
-        {/* Boutons actions rapides */}
-        <View className="flex-row gap-2 mb-4">
-          <Button
-            onPress={addSelectedTotal}
-            disabled={selectedTotal === 0}
-            variant="outline"
-            className="flex-1 h-10"
-          >
-            <Text className="text-xs">Ajouter sélection ({formatPrice(selectedTotal)})</Text>
-          </Button>
-          <Button
-            onPress={clear}
-            variant="outline"
-            className="w-16 h-10"
-          >
-            <Text className="text-xs">Clear</Text>
-          </Button>
-        </View>
-
-        {/* Boutons de la calculatrice */}
-        <View className="gap-2">
-          {/* Première ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => performOperation('÷')} variant="operator" className="flex-1">
-              <DivideIcon size={20} color="white" />
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('×')} variant="operator" className="flex-1">
-              <Text className="text-white font-semibold text-lg">×</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('-')} variant="operator" className="flex-1">
-              <Minus size={20} color="white" />
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('+')} variant="operator" className="flex-1">
-              <Plus size={20} color="white" />
-            </CalculatorButton>
-          </View>
-
-          {/* Deuxième ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => inputNumber('7')} className="flex-1">
-              <Text className="text-lg font-semibold">7</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('8')} className="flex-1">
-              <Text className="text-lg font-semibold">8</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('9')} className="flex-1">
-              <Text className="text-lg font-semibold">9</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => performOperation('=')} variant="equals" className="flex-1">
-              <Equal size={20} color="white" />
-            </CalculatorButton>
-          </View>
-
-          {/* Troisième ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => inputNumber('4')} className="flex-1">
-              <Text className="text-lg font-semibold">4</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('5')} className="flex-1">
-              <Text className="text-lg font-semibold">5</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('6')} className="flex-1">
-              <Text className="text-lg font-semibold">6</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('0')} className="flex-1">
-              <Text className="text-lg font-semibold">0</Text>
-            </CalculatorButton>
-          </View>
-
-          {/* Quatrième ligne */}
-          <View className="flex-row gap-2">
-            <CalculatorButton onPress={() => inputNumber('1')} className="flex-1">
-              <Text className="text-lg font-semibold">1</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('2')} className="flex-1">
-              <Text className="text-lg font-semibold">2</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={() => inputNumber('3')} className="flex-1">
-              <Text className="text-lg font-semibold">3</Text>
-            </CalculatorButton>
-            <CalculatorButton onPress={inputDecimal} className="flex-1">
-              <Text className="text-lg font-semibold">.</Text>
-            </CalculatorButton>
-          </View>
-        </View>
-
-        {/* Bouton de paiement */}
-        <Button
-          onPress={handlePayment}
-          disabled={parseFloat(display) <= 0}
-          className={`w-full h-12 mt-4 ${parseFloat(display) <= 0
-            ? 'bg-gray-300'
-            : 'bg-green-600'
-            }`}
-        >
-          <Text className="text-white font-medium">
-            Encaisser {formatPrice(parseFloat(display) || 0)}
+        {/* Avertissement si partiellement payé */}
+        {status.isPartiallyPaid && (
+          <Text className="text-xs text-orange-600 mt-2">
+            Déjà {Math.round(status.paidFraction * 100)}% payé
           </Text>
-        </Button>
+        )}
+      </View>
+    );
+  };
+
+  // Modal pour le pourcentage personnalisé
+  const [customPercentage, setCustomPercentage] = useState('');
+
+  const CustomPercentageModal = () => {
+    if (!showCustomDialog) return null;
+
+    const line = availableItems.find(l => l.id === showCustomDialog);
+    if (!line) return null;
+
+    const status = getLinePaymentStatus(showCustomDialog, line.totalPrice);
+    const maxPercentage = Math.round((1.0 - status.paidFraction) * 100);
+
+    const handleCustomSubmit = () => {
+      const percentage = parseInt(customPercentage);
+      if (!isNaN(percentage) && percentage > 0 && percentage <= maxPercentage) {
+        handleFractionChange(showCustomDialog, percentage / 100);
+        setShowCustomDialog(null);
+        setCustomPercentage('');
+      } else {
+        Alert.alert('Erreur', `Veuillez entrer un pourcentage entre 1 et ${maxPercentage}`);
+      }
+    };
+
+    return (
+      <Modal
+        visible={true}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCustomDialog(null)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center"
+          onPress={() => setShowCustomDialog(null)}
+        >
+          <Pressable
+            className="bg-white rounded-lg p-6 w-80"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-lg font-semibold">Pourcentage personnalisé</Text>
+              <Pressable onPress={() => setShowCustomDialog(null)}>
+                <X size={20} color="#6B7280" />
+              </Pressable>
+            </View>
+
+            <Text className="text-sm text-gray-600 mb-4">
+              Entrez le pourcentage à payer pour cet article
+              {status.isPartiallyPaid && ` (max: ${maxPercentage}%)`}
+            </Text>
+
+            <View className="flex-row items-center gap-2 mb-6">
+              <TextInput
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-center"
+                placeholder="50"
+                keyboardType="number-pad"
+                value={customPercentage}
+                onChangeText={setCustomPercentage}
+                autoFocus
+                maxLength={3}
+              />
+              <Text className="text-xl font-bold text-gray-700">%</Text>
+            </View>
+
+            <View className="flex-row gap-2">
+              <Button
+                className="flex-1 bg-gray-200"
+                onPress={() => {
+                  setShowCustomDialog(null);
+                  setCustomPercentage('');
+                }}
+              >
+                <Text className="text-gray-700">Annuler</Text>
+              </Button>
+              <Button
+                className="flex-1 bg-blue-500"
+                onPress={handleCustomSubmit}
+              >
+                <Text className="text-white">Valider</Text>
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    );
+  };
+
+  return (
+    <View className="flex-1 bg-white">
+      {CustomPercentageModal()}
+      {/* HEADER */}
+      <View className="bg-white border-b border-gray-200 px-6 py-4">
+        <View className="flex-row items-center">
+          <Pressable onPress={onBack} className="mr-3">
+            <ChevronLeft size={24} color="#000" />
+          </Pressable>
+          <Text className="text-lg font-semibold">Paiement - {tableName}</Text>
+        </View>
+      </View>
+
+      {/* CONTENU */}
+      <View className="flex-1 flex-row">
+        {/* PANNEAU GAUCHE: Articles */}
+        <View className="w-[380px] border-r border-gray-200 bg-white">
+          <View className="px-6 py-4 border-b border-gray-100">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="font-semibold text-gray-900">Articles de la commande</Text>
+              {availableItems.length > 0 && (
+                <Pressable
+                  onPress={handleSelectAll}
+                  className="flex-row items-center gap-2"
+                >
+                  <View className={`w-5 h-5 border-2 rounded items-center justify-center ${
+                    selectedItems.size === availableItems.length && availableItems.length > 0
+                      ? 'bg-blue-500 border-blue-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {selectedItems.size === availableItems.length && availableItems.length > 0 && (
+                      <Check size={14} color="white" strokeWidth={3} />
+                    )}
+                  </View>
+                  <Text className="text-sm text-gray-700">Tout sélectionner</Text>
+                </Pressable>
+              )}
+            </View>
+            <Text className="text-sm text-gray-500">{order.lines?.length || 0} article(s)</Text>
+          </View>
+
+          <ScrollView className="flex-1 px-6">
+            {order.lines?.map(line => renderOrderLine(line))}
+          </ScrollView>
+
+          {/* Résumé en bas */}
+          <View className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+            <View className="flex-row justify-between mb-1">
+              <Text className="text-sm text-gray-600">Total:</Text>
+              <Text className="text-sm font-semibold text-gray-900">
+                {formatPrice(orderTotals.totalAmount)}
+              </Text>
+            </View>
+            <View className="flex-row justify-between mb-1">
+              <Text className="text-sm text-gray-600">Déjà payé:</Text>
+              <Text className="text-sm font-semibold text-green-600">
+                {formatPrice(orderTotals.paidAmount)}
+              </Text>
+            </View>
+            <View className="border-t border-gray-300 pt-1 mt-1">
+              <View className="flex-row justify-between">
+                <Text className="font-bold text-gray-900">Restant:</Text>
+                <Text className="font-bold text-blue-600">
+                  {formatPrice(orderTotals.remainingAmount)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* PANNEAU DROIT: Configuration */}
+        <View className="flex-1 bg-gray-50">
+          {/* Zone scrollable pour les articles sélectionnés */}
+          <ScrollView className="flex-1">
+            <View className="px-6 py-4">
+              {/* Articles sélectionnés avec fractions personnalisées */}
+              {selectedItems.size > 0 ? (
+                <View>
+                  <Text className="font-semibold text-gray-900 mb-3">Articles sélectionnés</Text>
+
+                  {/* Liste des articles sélectionnés avec contrôles de fraction */}
+                  <View>
+                    {Array.from(selectedItems).map(itemId => {
+                      const line = availableItems.find(l => l.id === itemId);
+                      return line ? renderSelectedItemCard(line) : null;
+                    })}
+                  </View>
+
+                  {/* Récapitulatif du montant total */}
+                  <View className="bg-blue-50 rounded-lg p-3 mt-3 border border-blue-200">
+                    <View className="flex-row justify-between items-center">
+                      <Text className="font-medium text-blue-900">Total à payer :</Text>
+                      <Text className="font-bold text-xl text-blue-600">
+                        {formatPrice(selectedAmount)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <View className="flex-1 justify-center items-center py-12">
+                  <Text className="text-gray-500 text-center">
+                    Sélectionnez des articles dans la liste de gauche
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+
+          {/* Section méthode de paiement sticky */}
+          <View className="bg-white border-t border-gray-200">
+            <View className={`px-6 py-4 ${selectedItems.size === 0 ? 'opacity-50' : ''}`}>
+              <Text className="font-semibold text-gray-900 mb-3">Méthode de paiement</Text>
+
+              {/* Affichage unifié des méthodes de paiement */}
+              <View className="flex-row flex-wrap gap-2">
+                <Pressable
+                  onPress={() => setPaymentMethod('cash')}
+                  disabled={selectedItems.size === 0}
+                  className={`flex-1 min-w-[48%] h-16 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'cash'
+                      ? 'bg-blue-50 border-blue-500'
+                      : selectedItems.size === 0
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Banknote size={20} color={paymentMethod === 'cash' ? '#1D4ED8' : '#6B7280'} />
+                  <Text className={`text-sm font-medium mt-1 ${
+                    paymentMethod === 'cash' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
+                  }`}>
+                    Espèces
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPaymentMethod('card')}
+                  disabled={selectedItems.size === 0}
+                  className={`flex-1 min-w-[48%] h-16 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'card'
+                      ? 'bg-blue-50 border-blue-500'
+                      : selectedItems.size === 0
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <CreditCard size={20} color={paymentMethod === 'card' ? '#1D4ED8' : '#6B7280'} />
+                  <Text className={`text-sm font-medium mt-1 ${
+                    paymentMethod === 'card' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
+                  }`}>
+                    Carte
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPaymentMethod('ticket_resto')}
+                  disabled={selectedItems.size === 0}
+                  className={`flex-1 min-w-[48%] h-16 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'ticket_resto'
+                      ? 'bg-blue-50 border-blue-500'
+                      : selectedItems.size === 0
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <Ticket size={20} color={paymentMethod === 'ticket_resto' ? '#1D4ED8' : '#6B7280'} />
+                  <Text className={`text-sm font-medium mt-1 ${
+                    paymentMethod === 'ticket_resto' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
+                  }`}>
+                    Ticket Resto
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPaymentMethod('check')}
+                  disabled={selectedItems.size === 0}
+                  className={`flex-1 min-w-[48%] h-16 rounded-lg border-2 items-center justify-center ${
+                    paymentMethod === 'check'
+                      ? 'bg-blue-50 border-blue-500'
+                      : selectedItems.size === 0
+                      ? 'bg-gray-100 border-gray-200'
+                      : 'bg-white border-gray-300'
+                  }`}
+                >
+                  <FileCheck size={20} color={paymentMethod === 'check' ? '#1D4ED8' : '#6B7280'} />
+                  <Text className={`text-sm font-medium mt-1 ${
+                    paymentMethod === 'check' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
+                  }`}>
+                    Chèque
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* BOUTON PAYER FIXE EN BAS */}
+            <View className="px-6 py-3 border-t border-gray-100">
+              <Button
+                onPress={handlePayment}
+                disabled={!canProceedToPayment || isProcessing}
+                className={`w-full h-12 ${
+                  !canProceedToPayment || isProcessing
+                    ? 'bg-gray-300'
+                    : 'bg-green-600'
+                }`}
+              >
+                <View className="flex-row items-center justify-center gap-2">
+                  <CreditCard size={20} color="white" />
+                  <Text className="text-white font-bold text-base">
+                    {isProcessing
+                      ? 'Traitement...'
+                      : `Payer ${formatPrice(selectedAmount)}`
+                    }
+                  </Text>
+                </View>
+              </Button>
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   );

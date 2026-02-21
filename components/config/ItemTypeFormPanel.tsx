@@ -7,6 +7,7 @@ import { useItemTypes } from '~/hooks/useItemTypes';
 import { useToast } from '~/components/ToastProvider';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { IconSelector, AVAILABLE_ICONS } from '~/components/ui/IconSelector';
+import { VatRateSelector } from '~/components/ui/vat-rate-selector';
 
 // Filtres de catégories pré-calculés (constants - pas besoin de recalculer à chaque render)
 const DRINKS_ICONS = AVAILABLE_ICONS.filter(i => i.category === 'drinks');
@@ -25,6 +26,11 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
   const [name, setName] = useState(itemType?.name || '');
   const [type, setType] = useState<'kitchen' | 'bar'>(itemType?.type === 'bar' ? 'bar' : 'kitchen');
   const [icon, setIcon] = useState<string>(itemType?.icon || ''); // Vide par défaut en création
+  // Convertir la string en nombre pour vatRate (l'API retourne "20.00")
+  const initialVatRate = itemType?.vatRate
+    ? (typeof itemType.vatRate === 'string' ? parseFloat(itemType.vatRate) : itemType.vatRate)
+    : 20;
+  const [vatRate, setVatRate] = useState<number>(initialVatRate);
   const [isSelectingIcon, setIsSelectingIcon] = useState(false); // Navigation vers vue sélection icône
 
   // États d'erreur et de traitement
@@ -123,12 +129,13 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
         name: trimmedName,
         type,
         icon,
-        priorityOrder
+        priorityOrder,
+        vatRate
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [onSave, name, type, icon, priorityOrder, showToast, isProcessing]);
+  }, [onSave, name, type, icon, priorityOrder, vatRate, showToast, isProcessing]);
 
   // Vue de sélection d'icône (full-screen dans le panel)
   if (isSelectingIcon) {
@@ -303,7 +310,23 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           </View>
         </View>
 
-        {/* Groupe de service */}
+        {/* Taux de TVA */}
+        <View style={styles.formGroup}>
+          <Text style={styles.formLabel}>Taux de TVA</Text>
+          <Text style={styles.formHelpText}>
+            Sélectionnez le taux de TVA par défaut pour ce type d'article
+          </Text>
+          <View style={{ marginTop: 12 }}>
+            <VatRateSelector
+              value={vatRate}
+              onChange={(value) => setVatRate(value || 20)}
+              showInheritOption={false}
+              disabled={false}
+            />
+          </View>
+        </View>
+
+        {/* Ordre de priorité */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Groupe de service</Text>
           <Text style={styles.formHelpText}>
@@ -573,6 +596,16 @@ const styles = StyleSheet.create({
   },
   levelList: {
     gap: 6,
+  },
+  radioSubLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  priorityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   levelRow: {
     flexDirection: 'row',

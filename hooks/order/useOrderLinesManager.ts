@@ -8,6 +8,7 @@ import type { MenuSelections } from '~/components/order/OrderLinesForm/OrderLine
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { useOrders } from '~/hooks/useOrders';
 import { useToast } from '~/components/ToastProvider';
+import { usePayments } from '~/hooks/usePayments';
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -36,6 +37,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
   const { createOrderWithLines } = useOrderLines();
   const { updateOrderWithLines } = useOrders();
   const { showToast } = useToast();
+  const { isOrderLinePaid } = usePayments();
 
   // ✅ État unique centralisé
   const [orderLines, setOrderLines] = useState<OrderLine[]>(initialLines);
@@ -269,6 +271,16 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     setOrderLines((prev) => {
       const line = prev.find((l) => l.id === lineId);
       if (!line) return prev;
+
+      // Check for payment allocations
+      if (!line.id.startsWith('draft-') && isOrderLinePaid(line.id)) {
+        const name = line.type === OrderLineType.MENU
+          ? line.menu?.name || 'Menu'
+          : line.item?.name || 'Article';
+        showToast(`Impossible de supprimer "${name}": déjà payé`, 'error');
+        return prev;
+      }
+
       // Prevent deleting non-draft saved lines (ITEM only, MENU always editable)
       if (!line.id.startsWith('draft-') && line.type !== OrderLineType.MENU && line.status !== Status.DRAFT) return prev;
       const name = line.type === OrderLineType.MENU
@@ -277,7 +289,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       showToast(`${name} supprimé`, 'warning');
       return prev.filter((l) => l.id !== lineId);
     });
-  }, [showToast]);
+  }, [showToast, isOrderLinePaid]);
 
   /**
    * Réinitialiser toutes les lignes (vider le panier)
@@ -425,9 +437,33 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
         result = await updateOrderWithLines(orderId!, payload);
       }
 
+      // Update initial lines after successful save
+      if (result?.lines) {
+        setInitialOrderLines(result.lines);
+        setOrderLines(result.lines);
+      }
+
       onSuccess?.(result);
       return result;
-    } catch (error) {
+    } catch (error: any) {
+      // Rollback to initial state on error (before any modifications)
+      setOrderLines([...initialOrderLines]);
+
+      // Extract meaningful error message
+      let errorMessage = 'Erreur lors de la sauvegarde';
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      // Check for specific NF525 errors
+      if (errorMessage.includes('allocation') || errorMessage.includes('payé') || errorMessage.includes('payment')) {
+        showToast('Impossible de modifier: certaines lignes ont déjà été payées', 'error');
+      } else {
+        showToast(errorMessage, 'error');
+      }
+
       onError?.(error as Error);
       throw error;
     } finally {
@@ -437,6 +473,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     hasChanges,
     mode,
     orderLines,
+    initialOrderLines,
     tableId,
     orderId,
     convertToApiFormat,
@@ -445,6 +482,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     updateOrderWithLines,
     onSuccess,
     onError,
+    showToast,
   ]);
 
   // ====================================================================

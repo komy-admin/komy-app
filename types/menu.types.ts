@@ -6,8 +6,9 @@ export type Menu = {
   id: string;
   name: string;
   description?: string;
-  basePrice: number; // 💰 Prix en centimes (ex: 1500 = 15€)
+  basePrice: number; // Prix en centimes (ex: 1500 = 15€)
   isActive: boolean;
+  vatRate?: number; // Taux de TVA (ex: 0.1 pour 10%)
   categories: MenuCategory[];
 };
 
@@ -17,7 +18,7 @@ export type MenuCategory = {
   itemTypeId: string;
   isRequired: boolean;
   maxSelections: number;
-  priceModifier: number; // 💰 Modificateur en centimes (ex: 200 = +2€)
+  priceModifier: number; // Modificateur en centimes (ex: 200 = +2€)
   itemType: ItemType;
   items?: MenuCategoryItem[];
 };
@@ -26,14 +27,14 @@ export type MenuCategoryItem = {
   id: string;
   menuCategoryId: string;
   itemId: string;
-  supplement: number; // 💰 Supplément en centimes (ex: 150 = +1,50€)
+  supplement: number; // Supplément en centimes (ex: 150 = +1,50€)
   isAvailable: boolean;
   item: Item;
 };
 
 export type MenuGroup = {
   id: string;
-  totalPrice: number; // 💰 Prix total en centimes
+  totalPrice: number; // Prix total en centimes
   menu: Menu;
   orderItems: OrderItem[];
 };
@@ -49,48 +50,49 @@ export type MenuPriceCalculationRequest = {
 };
 
 export type MenuPriceCalculationResponse = {
-  basePrice: number; // 💰 Prix en centimes
-  categoryModifiers: number; // 💰 Modificateurs en centimes
-  itemSupplements: number; // 💰 Suppléments en centimes
-  totalPrice: number; // 💰 Prix total en centimes
+  basePrice: number; // Prix en centimes
+  categoryModifiers: number; // Modificateurs en centimes
+  itemSupplements: number; // Suppléments en centimes
+  totalPrice: number; // Prix total en centimes
   breakdown: {
     menu: {
       name: string;
-      basePrice: number; // 💰 Prix en centimes
+      basePrice: number; // Prix en centimes
     };
     categories: Array<{
       name: string;
-      priceModifier: number; // 💰 Modificateur en centimes
+      priceModifier: number; // Modificateur en centimes
     }>;
     items: Array<{
       name: string;
-      supplement: number; // 💰 Supplément en centimes
+      supplement: number; // Supplément en centimes
     }>;
   };
 };
 
-// ✅ Type pour la nouvelle API bulk
+// Type pour la nouvelle API bulk
 export type MenuBulkUpdateRequest = {
   menu: {
     name: string;
     description?: string;
-    basePrice: number; // 💰 Prix en centimes (envoi API)
+    basePrice: number; // Prix en centimes (envoi API)
     isActive: boolean;
+    vatRate: number; // Taux de TVA (ex: 0.1 pour 10%)
   };
   categories: Array<{
     id?: string; // Si présent = update, si absent = create
     itemTypeId: string;
     isRequired: boolean;
     maxSelections: number;
-    priceModifier: number; // 💰 Modificateur en centimes (envoi API)
+    priceModifier: number; // Modificateur en centimes (envoi API)
     items: Array<{
       id?: string; // Si présent = update MenuCategoryItem existant, si absent = create nouveau
       itemId: string;
-      supplement: number; // 💰 Supplément en centimes (envoi API)
+      supplement: number; // Supplément en centimes (envoi API)
       isAvailable: boolean;
     }>;
   }>;
 };
 
-// ✅ Type pour la création bulk (même structure que update)
+// Type pour la création bulk (même structure que update)
 export type MenuBulkCreateRequest = MenuBulkUpdateRequest;

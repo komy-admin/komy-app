@@ -241,6 +241,7 @@ export default function ServerHomePage() {
           isLoading={false}
           width={currentRoom?.width || undefined}
           height={currentRoom?.height || undefined}
+          roomColor={currentRoom?.color}
           onTablePress={handleTablePress}
           onTableLongPress={handleTablePress}
           onTableUpdate={() => { }}
