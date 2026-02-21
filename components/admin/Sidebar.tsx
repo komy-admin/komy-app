@@ -1,5 +1,5 @@
 // components/admin/Sidebar.tsx
-import { Href, Link } from 'expo-router';
+import { Href, router } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { View, Pressable, Platform } from 'react-native';
 import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, ReceiptEuro } from 'lucide-react-native';
@@ -7,7 +7,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../ui';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { navigationEvents } from '~/lib/navigation-events';
 
 const ServiceIcon = ({ size, color, style }: { size: number; color: string; style?: any }) => (
   <MaterialCommunityIcons name="room-service-outline" size={size} color={color} style={style} />
@@ -39,6 +40,14 @@ export function AdminSidebar() {
    });
  }, [accountConfig]);
 
+ const handleNavPress = useCallback((href: string, isActive: boolean) => {
+   if (isActive) {
+     navigationEvents.emit(href);
+   } else {
+     router.push(`/(admin)${href}` as Href);
+   }
+ }, []);
+
  return (
    <View style={{
      width: 100,
@@ -53,31 +62,31 @@ export function AdminSidebar() {
    }}>
      {visibleNavItems.map(({ href, icon: Icon, label }) => {
        const isActive = pathname.includes(href);
-       
+
        return (
-         <Link href={`/(admin)${href}` as Href} key={href} asChild>
-           <Pressable
-             className="py-2 items-center"
-           >
+         <Pressable
+           key={href}
+           className="py-2 items-center"
+           onPress={() => handleNavPress(href, isActive)}
+         >
             <View className="flex items-center justify-center rounded-md w-[70px] h-[70px]" style={isActive ? {backgroundColor: '#54575B', opacity: 1} : {}}>
-              <Icon 
-                size={30} 
+              <Icon
+                size={30}
                 color={isActive ? 'white' : 'gray'}
-                strokeWidth= {1.5} 
+                strokeWidth= {1.5}
                 style={{
                   marginBottom: 2,
                   opacity: isActive ? 1 : 0.8,
                 }}
               />
-              <Text 
+              <Text
                 className="text-xs mt-1 text-white"
                 style={isActive ? {color: 'white'} : {color: 'gray'}}
               >
                 {label}
               </Text>
             </View>
-           </Pressable>
-         </Link>
+         </Pressable>
        );
      })}
    </View>

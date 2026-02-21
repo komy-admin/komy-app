@@ -3,6 +3,7 @@ import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFocusEffect } from '@react-navigation/native';
+import { navigationEvents } from '~/lib/navigation-events';
 import { Table } from "~/types/table.types";
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
@@ -138,6 +139,19 @@ export default function ServicePage() {
       };
     }, [setSelectedTable])
   );
+
+  // Reset toute la vue quand on re-clique sur "Service" dans le menu latéral
+  const resetOrderLines = orderLinesManager.reset;
+  useEffect(() => {
+    return navigationEvents.on('/service', () => {
+      resetOrderLines();
+      setShowOrderModal(false);
+      setShowOrderDetail(false);
+      setShowPaymentView(false);
+      setOrderCreatedFromStart(false);
+      setSelectedTable(null);
+    });
+  }, [resetOrderLines, setSelectedTable]);
 
   const handleChangeRoom = useCallback((room: any) => {
     setSelectedTable(null);
