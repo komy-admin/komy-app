@@ -56,7 +56,7 @@ export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
           </View>
         </View>
       </View>
-      <View style={styles.halfCircle} />
+      <View style={[styles.halfCircle, { backgroundColor: room.color || '#6366F1' }]} />
     </Pressable>
   );
 });
@@ -89,7 +89,6 @@ const styles = StyleSheet.create({
     height: 28,
     borderTopLeftRadius: 14,
     borderBottomLeftRadius: 14,
-    backgroundColor: '#6366F1',
   },
   name: {
     fontSize: 13,

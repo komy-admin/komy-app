@@ -306,7 +306,7 @@ export default function RoomEditionMode() {
           <Pressable
             onPress={handleOpenRoomSettings}
             disabled={!currentRoom}
-            style={styles.settingsButton}
+            style={[styles.settingsButton, currentRoom?.color && { backgroundColor: currentRoom.color }]}
             android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
           >
             {({ pressed }) => (
@@ -331,6 +331,7 @@ export default function RoomEditionMode() {
             editionMode={true}
             width={currentRoom.width}
             height={currentRoom.height}
+            roomColor={currentRoom.color}
             isLoading={roomsLoading}
             containerDimensions={roomContainerDimensions}
             fillContainer

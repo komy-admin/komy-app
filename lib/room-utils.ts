@@ -2,6 +2,22 @@ import { Room } from '~/types/room.types';
 import { Table } from '~/types/table.types';
 
 /**
+ * Génère une teinte claire à partir d'une couleur hex.
+ * Mélange la couleur avec du blanc selon le ratio donné.
+ * - mix=0.10 → background room  (#6366F1 → #EEEDF5)
+ * - mix=0.04 → background table (#6366F1 → #F5F4FA)
+ */
+export function getRoomLightBackground(hex: string, mix: number = 0.1): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lr = Math.round(r * mix + 255 * (1 - mix));
+  const lg = Math.round(g * mix + 255 * (1 - mix));
+  const lb = Math.round(b * mix + 255 * (1 - mix));
+  return `#${lr.toString(16).padStart(2, '0').toUpperCase()}${lg.toString(16).padStart(2, '0').toUpperCase()}${lb.toString(16).padStart(2, '0').toUpperCase()}`;
+}
+
+/**
  * Génère un nom aléatoire pour une table
  * Format: Lettre majuscule (A-Z) + Nombre à 2 chiffres (00-99)
  * Exemples: A01, B23, Z99

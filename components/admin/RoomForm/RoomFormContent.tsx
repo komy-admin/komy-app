@@ -11,6 +11,17 @@ interface RoomFormContentProps {
   onCancel: () => void;
 }
 
+const DEFAULT_ROOM_COLOR = '#6366F1';
+
+const ROOM_COLORS = [
+  { label: 'Indigo', hex: '#6366F1' },
+  { label: 'Violet', hex: '#8B5CF6' },
+  { label: 'Vert', hex: '#10B981' },
+  { label: 'Orange', hex: '#F59E0B' },
+  { label: 'Rose', hex: '#EC4899' },
+  { label: 'Rouge', hex: '#EF4444' },
+] as const;
+
 const ROOM_SIZES = [
   { label: 'Normal', width: 15, height: 15 },
   { label: 'Grand', width: 20, height: 20 },
@@ -99,6 +110,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
     name: '',
     width: 15,
     height: 15,
+    color: DEFAULT_ROOM_COLOR,
   });
 
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
@@ -123,9 +135,10 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         name: room.name || '',
         width: room.width || 15,
         height: room.height || 15,
+        color: room.color ?? DEFAULT_ROOM_COLOR,
       });
     } else {
-      setFormData({ name: '', width: 15, height: 15 });
+      setFormData({ name: '', width: 15, height: 15, color: DEFAULT_ROOM_COLOR });
     }
     setTouchedFields({});
   }, [room]);
@@ -164,6 +177,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
       name: formData.name.trim(),
       width: formData.width,
       height: formData.height,
+      color: formData.color,
     });
   };
 
@@ -217,6 +231,27 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                 </>
               );
             })()}
+          </View>
+
+          {/* Room Color */}
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Couleur</Text>
+            <View style={styles.colorsRow}>
+              {ROOM_COLORS.map((c) => {
+                const selected = formData.color === c.hex;
+                return (
+                  <View key={c.hex} style={[styles.colorSwatchWrapper, selected && styles.colorSwatchWrapperSelected]}>
+                    <Pressable
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c.hex },
+                      ]}
+                      onPress={() => setFormData(prev => ({ ...prev, color: c.hex }))}
+                    />
+                  </View>
+                );
+              })}
+            </View>
           </View>
 
           {/* Room Size - Presets */}
@@ -381,6 +416,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
     fontStyle: 'italic',
+  },
+
+  // Color picker
+  colorsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  colorSwatchWrapper: {
+    flex: 1,
+    flexBasis: 0,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 3,
+  },
+  colorSwatchWrapperSelected: {
+    borderColor: '#2A2E33',
+  },
+  colorSwatch: {
+    height: 30,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Size presets

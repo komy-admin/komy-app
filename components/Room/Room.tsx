@@ -13,6 +13,7 @@ import { RoomGrid } from '~/components/Room/RoomGrid';
 import { RoomTable } from '~/components/Room/RoomTable';
 import { RoomTableService } from '~/components/Room/RoomTableService';
 import { getTableStatus } from '~/lib/utils';
+import { getRoomLightBackground } from '~/lib/room-utils';
 import { useRoomDimensions } from '~/hooks/room/useRoomDimensions';
 import { useRoomZoom } from '~/hooks/room/useRoomZoom';
 import { useRoomValidation } from '~/hooks/room/useRoomValidation';
@@ -29,6 +30,7 @@ interface RoomProps {
   onTablePress: (table: Table | null) => void;
   containerDimensions?: { width: number; height: number };
   fillContainer?: boolean;
+  roomColor?: string | null;
 }
 
 const Room: React.FC<RoomProps> = ({
@@ -42,8 +44,13 @@ const Room: React.FC<RoomProps> = ({
   onTableLongPress,
   onTablePress,
   containerDimensions,
-  fillContainer
+  fillContainer,
+  roomColor,
 }) => {
+  // Couleurs dérivées de la room (calculées une seule fois pour toutes les tables)
+  const resolvedColor = roomColor || '#6366F1';
+  const roomBg = useMemo(() => getRoomLightBackground(resolvedColor), [resolvedColor]);
+  const tableBg = useMemo(() => getRoomLightBackground(resolvedColor, 0.04), [resolvedColor]);
   // 🎯 HOOK: Gestion des dimensions et du zoom optimal
   const { dimensions, isGridReady, CELL_SIZE, EXTRA_LINES } = useRoomDimensions({
     roomWidth: width,
@@ -146,14 +153,14 @@ const Room: React.FC<RoomProps> = ({
   return (
     <GestureHandlerRootView
       nativeID="room-zoom-container"
-      style={styles.container}
+      style={[styles.container, { backgroundColor: roomBg }]}
     >
       <GestureDetector gesture={composedGesture}>
         {/* Vue externe: SEULEMENT translate → zone gestures 100% même sur grandes rooms */}
-        <Animated.View style={[styles.animatedContainer, translateStyle]}>
+        <Animated.View style={[styles.animatedContainer, { backgroundColor: roomBg }, translateStyle]}>
           {/* Vue interne: SEULEMENT scale → visuel zoomé, gestures non affectées */}
           <Animated.View style={scaleStyle}>
-            <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight }]}>
+            <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight, backgroundColor: roomBg }]}>
               <View style={roomAreaStyle}>
                 {editionMode && (
                   <RoomGrid
@@ -210,6 +217,8 @@ const Room: React.FC<RoomProps> = ({
                       isSelected={isEditing}
                       editionMode={editionMode}
                       outOfBounds={!tableInBounds}
+                      roomColor={roomColor}
+                      tableBg={tableBg}
                       onPress={onTablePress}
                       onLongPress={onTableLongPress}
                     />
@@ -228,10 +237,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     overflow: 'hidden',
-    backgroundColor: '#EEEDF5',
   },
   grid: {
-    backgroundColor: '#EEEDF5',
   },
   loading: {
     justifyContent: 'center',
@@ -246,7 +253,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEEDF5', // Nécessaire pour capturer les gestes sur toute la surface
+    // backgroundColor dynamique appliqué inline via roomBg
   }
 });
 

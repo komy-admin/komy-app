@@ -402,6 +402,7 @@ export default function ServicePage() {
                       isLoading={false}
                       width={currentRoom?.width}
                       height={currentRoom?.height}
+                      roomColor={currentRoom?.color}
                       containerDimensions={roomContainerDimensions}
                       fillContainer
                       onTablePress={handleTablePress}
@@ -455,6 +456,7 @@ export default function ServicePage() {
               isLoading={isReassigning}
               width={reassignRoom?.width}
               height={reassignRoom?.height}
+              roomColor={reassignRoom?.color}
               containerDimensions={reassignRoomContainerDimensions}
               onTablePress={handleTableReassign}
               onTableLongPress={handleTableReassign}
