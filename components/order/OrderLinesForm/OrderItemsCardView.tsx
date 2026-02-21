@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState, useRef } from 'react';
-import { View, Pressable, StyleSheet, LayoutChangeEvent, Dimensions } from 'react-native';
+import { View, Pressable, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Text } from '~/components/ui';
 import { Plus } from 'lucide-react-native';
@@ -182,17 +182,20 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   activeMainTab,
   onMainTabChange,
 }) => {
-  const [containerWidth, setContainerWidth] = useState<number>(() => {
-    const windowWidth = Dimensions.get('window').width;
-    return Math.max(0, windowWidth - 32);
-  });
+  const lastMeasuredWidth = useRef(0);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionPositions = useRef<Record<string, number>>({});
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width } = event.nativeEvent.layout;
-    setContainerWidth(width);
+    // ScrollView width minus horizontal padding (16 * 2 = 32)
+    const contentWidth = event.nativeEvent.layout.width - 32;
+    // Seuil de 2px pour éviter les boucles de re-render
+    if (contentWidth > 0 && Math.abs(contentWidth - lastMeasuredWidth.current) > 2) {
+      lastMeasuredWidth.current = contentWidth;
+      setContainerWidth(contentWidth);
+    }
   }, []);
 
   const handleSectionLayout = useCallback((sectionKey: string, event: LayoutChangeEvent) => {
@@ -249,6 +252,8 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
     );
   }
 
+  const isMeasured = containerWidth > 0;
+
   return (
     <ScrollView
       ref={scrollViewRef}
@@ -257,9 +262,9 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
       showsVerticalScrollIndicator={false}
       onScroll={handleScroll}
       scrollEventThrottle={16}
+      onLayout={handleLayout}
     >
-      {/* Pressable global : assure que tout le contenu participe au gesture system
-          pour que le scroll fonctionne partout (espaces vides, headers, gaps) sur iOS/Android */}
+      {isMeasured && (
       <Pressable>
         {/* Section Menus */}
         {filteredMenus.length > 0 && (
@@ -269,7 +274,6 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             </View>
             <View
               style={styles.itemsGrid}
-              onLayout={handleLayout}
             >
               {filteredMenus.map((menu) => (
                 <MenuCard
@@ -294,7 +298,6 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             </View>
             <View
               style={styles.itemsGrid}
-              onLayout={handleLayout}
             >
               {group.items.map((item) => (
                 <OrderItemCard
@@ -308,6 +311,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
           </View>
         ))}
       </Pressable>
+      )}
     </ScrollView>
   );
 });
