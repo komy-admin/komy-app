@@ -381,6 +381,17 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, [onConfigurationModeChange]);
 
   /**
+   * Bouton retour du SidePanel : annule la config menu si active, sinon sort du formulaire
+   */
+  const handleBackPress = useCallback(() => {
+    if (isConfiguringMenu) {
+      handleCancelMenuConfiguration();
+    } else {
+      onCancel?.();
+    }
+  }, [isConfiguringMenu, handleCancelMenuConfiguration, onCancel]);
+
+  /**
    * Confirmer la configuration de menu
    */
   const handleConfirmMenuConfiguration = useCallback(() => {
@@ -555,7 +566,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
               onEditMenu={handleDraftEditMenu}
               onDelete={handleDraftDelete}
               onSave={onSave}
-              onCancel={onCancel}
+              onCancel={handleBackPress}
               hasChanges={hasChanges}
               isProcessing={isProcessing}
               cancelDeleteRef={cancelDeleteRef}
