@@ -499,6 +499,19 @@ const entitiesSlice = createSlice({
         }
       });
     },
+    mergePayments: (state, action: PayloadAction<{ payments: Payment[] }>) => {
+      const { payments } = action.payload;
+      // Fusionner les nouveaux paiements avec ceux existants
+      payments.forEach(payment => {
+        state.payments[payment.id] = payment;
+        // Normaliser aussi les PaymentAllocations
+        if (payment.allocations) {
+          payment.allocations.forEach(allocation => {
+            state.paymentAllocations[allocation.id] = allocation;
+          });
+        }
+      });
+    },
     createPayment: (state, action: PayloadAction<{ payment: Payment }>) => {
       const { payment } = action.payload;
       state.payments[payment.id] = payment;

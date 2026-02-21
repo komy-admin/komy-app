@@ -78,8 +78,7 @@ export const usePayments = () => {
         setLoading(true);
         setError(null);
         const payments = await paymentApiService.getByOrder(orderId);
-        // Stocker dans Redux pour garder la cohérence
-        dispatch(entitiesActions.setPayments({ payments }));
+        dispatch(entitiesActions.mergePayments({ payments }));
         return payments;
       } catch (err) {
         const errorMessage =
