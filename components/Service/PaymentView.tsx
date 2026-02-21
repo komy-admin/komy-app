@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { View, ScrollView, Pressable, Alert, TextInput, Modal } from 'react-native';
+import { View, ScrollView, Pressable, Alert, TextInput, Modal, StyleSheet, Platform } from 'react-native';
 import { Button, Text } from '~/components/ui';
 import {
   ChevronLeft,
@@ -21,11 +21,12 @@ interface PaymentViewProps {
   tableName: string;
   onBack: () => void;
   onPaymentComplete: () => void;
+  onTerminate?: () => void;
 }
 
 type PaymentMethod = 'cash' | 'card' | 'check' | 'ticket_resto';
 
-export default function PaymentView({ order, tableName, onBack, onPaymentComplete }: PaymentViewProps) {
+export default function PaymentView({ order, tableName, onBack, onPaymentComplete, onTerminate }: PaymentViewProps) {
   const { createPayment, getPaymentsByOrder, getAllocationsByOrderLine, payments: allPayments } = usePayments();
 
   // États principaux
@@ -206,10 +207,14 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
         paymentMethod,
         allocations: buildAllocations()
       });
+      setSelectedItems(new Set());
+      setItemFractions(new Map());
+      setPaymentMethod(null);
+      const updatedPayments = await getPaymentsByOrder(order.id);
+      setPayments(updatedPayments);
+      onPaymentComplete();
 
       setIsProcessing(false);
-      onPaymentComplete();
-      onBack();
     } catch (error) {
       console.error('Erreur lors de la création du paiement:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors du paiement');
@@ -500,13 +505,43 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
   return (
     <View className="flex-1 bg-white">
       {CustomPercentageModal()}
+
       {/* HEADER */}
-      <View className="bg-white border-b border-gray-200 px-6 py-4">
-        <View className="flex-row items-center">
-          <Pressable onPress={onBack} className="mr-3">
-            <ChevronLeft size={24} color="#000" />
-          </Pressable>
-          <Text className="text-lg font-semibold">Paiement - {tableName}</Text>
+      <View className="bg-white border-b border-gray-200 pl-4">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center">
+            <Pressable onPress={onBack} className="mr-3">
+              <ChevronLeft size={24} color="#000" />
+            </Pressable>
+            <Text className="text-lg font-semibold">Paiement - {tableName}</Text>
+          </View>
+          {/* Bouton Clôturer la commande */}
+          {onTerminate && (
+            <Pressable
+              onPress={onTerminate}
+              style={{
+                backgroundColor: '#2A2E33',
+                height: 60,
+                paddingHorizontal: 20,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                ...Platform.select({
+                  web: { cursor: 'pointer' as any },
+                }),
+              }}
+            >
+              <Text style={{
+                fontSize: 14,
+                color: '#FBFBFB',
+                fontWeight: '600',
+                textAlign: 'center',
+                letterSpacing: 0.5,
+              }}>
+                CLÔTURER LA COMMANDE
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -543,7 +578,9 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
           </ScrollView>
 
           {/* Résumé en bas */}
-          <View className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <View className={`px-6 py-3 border-t border-gray-200 ${
+            orderTotals.remainingAmount === 0 ? 'bg-green-50' : 'bg-gray-50'
+          }`}>
             <View className="flex-row justify-between mb-1">
               <Text className="text-sm text-gray-600">Total:</Text>
               <Text className="text-sm font-semibold text-gray-900">
@@ -559,11 +596,23 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
             <View className="border-t border-gray-300 pt-1 mt-1">
               <View className="flex-row justify-between">
                 <Text className="font-bold text-gray-900">Restant:</Text>
-                <Text className="font-bold text-blue-600">
+                <Text className={`font-bold ${
+                  orderTotals.remainingAmount === 0 ? 'text-green-600' : 'text-blue-600'
+                }`}>
                   {formatPrice(orderTotals.remainingAmount)}
                 </Text>
               </View>
             </View>
+            {orderTotals.remainingAmount === 0 && (
+              <View className="mt-2 pt-2 border-t border-gray-300">
+                <View className="flex-row items-center justify-center gap-2">
+                  <Check size={20} color="#10B981" strokeWidth={3} />
+                  <Text className="text-green-600 font-semibold">
+                    Commande entièrement payée
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
@@ -573,7 +622,20 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
           <ScrollView className="flex-1">
             <View className="px-6 py-4">
               {/* Articles sélectionnés avec fractions personnalisées */}
-              {selectedItems.size > 0 ? (
+              {orderTotals.remainingAmount === 0 ? (
+                <View className="flex-1 justify-center items-center py-12">
+                  <View className="bg-green-100 rounded-full p-6 mb-4">
+                    <Check size={48} color="#10B981" strokeWidth={3} />
+                  </View>
+                  <Text className="text-xl font-bold text-green-700 mb-2">
+                    Paiement complet
+                  </Text>
+                  <Text className="text-gray-600 text-center px-8">
+                    La commande a été entièrement payée.
+                    Vous pouvez fermer cette vue ou consulter l'historique des paiements.
+                  </Text>
+                </View>
+              ) : selectedItems.size > 0 ? (
                 <View>
                   <Text className="font-semibold text-gray-900 mb-3">Articles sélectionnés</Text>
 
@@ -606,9 +668,10 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
           </ScrollView>
 
           {/* Section méthode de paiement sticky */}
-          <View className="bg-white border-t border-gray-200">
-            <View className={`px-6 py-4 ${selectedItems.size === 0 ? 'opacity-50' : ''}`}>
-              <Text className="font-semibold text-gray-900 mb-3">Méthode de paiement</Text>
+          {orderTotals.remainingAmount > 0 && (
+            <View className="bg-white border-t border-gray-200">
+              <View className={`px-6 py-4 ${selectedItems.size === 0 ? 'opacity-50' : ''}`}>
+                <Text className="font-semibold text-gray-900 mb-3">Méthode de paiement</Text>
 
               {/* Affichage unifié des méthodes de paiement */}
               <View className="flex-row flex-wrap gap-2">
@@ -713,6 +776,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
               </Button>
             </View>
           </View>
+          )}
         </View>
       </View>
     </View>

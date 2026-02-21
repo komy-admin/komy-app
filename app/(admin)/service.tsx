@@ -266,6 +266,11 @@ export default function ServicePage() {
     setShowPaymentView(false);
   }, []);
 
+  const handleTerminateFromPayment = useCallback(() => {
+    setShowPaymentView(false);
+    handleTerminate();
+  }, []);
+
   const handleCloseOrderDetail = useCallback(() => {
     setShowOrderDetail(false);
     setSelectedTable(null);
@@ -317,6 +322,7 @@ export default function ServicePage() {
           tableName={selectedTable?.name || 'Table'}
           onBack={handleBackFromPayment}
           onPaymentComplete={handlePaymentComplete}
+          onTerminate={handleTerminateFromPayment}
         />
       ) : /* OrderLinesForm en pleine page - remplace tout le layout */
       showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
