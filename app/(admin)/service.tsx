@@ -353,7 +353,6 @@ export default function ServicePage() {
               onAddMenu={orderLinesManager.addMenu}
               onUpdateMenu={orderLinesManager.updateMenu}
               onDeleteLine={orderLinesManager.deleteLine}
-              onClearAll={orderLinesManager.clearAllLines}
               onSave={orderLinesManager.save}
               onCancel={handleSmartCloseOrderModal}
               hasChanges={orderLinesManager.hasChanges}

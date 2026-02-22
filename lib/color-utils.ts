@@ -15,11 +15,21 @@ export const getColorWithOpacity = (hexColor: string, opacity: number): string =
 };
 
 /**
- * Récupérer le prix d'un menu (gère les différentes propriétés possibles)
+ * Récupérer le prix minimum d'un menu (basePrice + supplements obligatoires)
+ * Inclut le priceModifier des catégories obligatoires et le supplement minimum
+ * des items obligatoires (si la catégorie n'a qu'un seul article disponible)
  * @param menu - Menu dont on veut récupérer le prix
- * @returns Prix du menu
+ * @returns Prix minimum du menu en centimes
  */
 export const getMenuPrice = (menu: Menu): number => {
-  // Certains menus ont un 'price' direct, d'autres ont 'basePrice'
-  return (menu as any).price || menu.basePrice || 0;
+  const base = (menu as any).price || menu.basePrice || 0;
+  if (!menu.categories) return base;
+
+  let requiredModifiers = 0;
+  menu.categories.forEach((cat) => {
+    if (!cat.isRequired) return;
+    requiredModifiers += cat.priceModifier || 0;
+  });
+
+  return base + requiredModifiers;
 };

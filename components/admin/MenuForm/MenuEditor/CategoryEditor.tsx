@@ -5,6 +5,7 @@ import { ItemType } from '~/types/item-type.types';
 import { IconButton } from '~/components/ui/IconButton';
 import { SelectButton } from '~/components/ui/select-button';
 import { NumberInput } from '~/components/ui/number-input';
+import { formatPrice } from '~/lib/utils';
 
 interface CategoryEditorProps {
   category: MenuCategoryFormData;
@@ -66,9 +67,23 @@ export const CategoryEditor = memo<CategoryEditorProps>(({
             <Text style={styles.categoryHeaderTitle}>
               {itemType?.name || 'Configuration de catégorie'}
             </Text>
-            <Text style={styles.categoryHeaderSubtitle}>
-              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • Max {category.maxSelections} sélection{parseInt(category.maxSelections) > 1 ? 's' : ''}
-            </Text>
+            <View style={styles.categoryHeaderTags}>
+              <View style={[styles.categoryTag, category.isRequired ? styles.categoryTagRequired : styles.categoryTagOptional]}>
+                <Text style={[styles.categoryTagText, category.isRequired ? styles.categoryTagTextRequired : styles.categoryTagTextOptional]}>
+                  {category.isRequired ? 'Obligatoire' : 'Optionnel'}
+                </Text>
+              </View>
+              <View style={styles.categoryTagSelections}>
+                <Text style={styles.categoryTagSelectionsText}>
+                  Max {category.maxSelections} sélection{parseInt(category.maxSelections) > 1 ? 's' : ''}
+                </Text>
+              </View>
+              {Number(category.priceModifier) > 0 && (
+                <View style={styles.categoryTagPrice}>
+                  <Text style={styles.categoryTagPriceText}>+{formatPrice(Number(category.priceModifier) * 100)}</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
         <View style={styles.categoryHeaderActions}>
@@ -245,11 +260,55 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     marginBottom: 3,
   },
-  categoryHeaderSubtitle: {
-    fontSize: 13,
-    fontWeight: '500',
+  categoryHeaderTags: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  categoryTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  categoryTagRequired: {
+    backgroundColor: '#FEF3C7',
+  },
+  categoryTagOptional: {
+    backgroundColor: '#F1F5F9',
+  },
+  categoryTagText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  categoryTagTextRequired: {
+    color: '#92400E',
+  },
+  categoryTagTextOptional: {
     color: '#64748B',
-    letterSpacing: 0.1,
+  },
+  categoryTagSelections: {
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  categoryTagSelectionsText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4338CA',
+  },
+  categoryTagPrice: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  categoryTagPriceText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065F46',
   },
   categoryHeaderActions: {
     flexDirection: 'row',

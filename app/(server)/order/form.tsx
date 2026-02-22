@@ -58,7 +58,6 @@ export default function OrderFormPage() {
           onAddMenu={manager.addMenu}
           onUpdateMenu={manager.updateMenu}
           onDeleteLine={manager.deleteLine}
-          onClearAll={manager.clearAllLines}
           onSave={manager.save}
           onCancel={() => {
             manager.reset();

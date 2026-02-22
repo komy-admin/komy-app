@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { OrderLine, OrderLineType, OrderLineState, SelectedTag, DraftMenuItemWithMeta, CreateOrderLineRequest, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { generateBulkPayload } from '~/utils/order-line-tracker';
@@ -19,6 +19,146 @@ export interface UseOrderLinesManagerOptions {
   onError?: (error: Error) => void;
 }
 
+// ====================================================================
+// HELPERS PURS (hors du hook, pas recréés à chaque render)
+// ====================================================================
+
+/**
+ * Construire les items et calculer le prix total d'un menu à partir des sélections
+ */
+function buildMenuData(
+  menu: Menu,
+  selections: MenuSelections,
+  itemTypes: any[],
+) {
+  const now = new Date().toISOString();
+  const menuItems: DraftMenuItemWithMeta[] = [];
+  let totalPrice = menu.basePrice || 0;
+
+  Object.entries(selections).forEach(([categoryId, selectionsArray]) => {
+    const category = menu.categories?.find((c) => c.id === categoryId);
+    if (!category) return;
+
+    totalPrice += category.priceModifier || 0;
+
+    for (const selection of selectionsArray) {
+      const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
+      if (!menuCategoryItem?.item) continue;
+
+      const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
+
+      menuItems.push({
+        id: `menu-item-${Date.now()}-${Math.random()}`,
+        categoryId,
+        categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
+        status: Status.DRAFT,
+        item: {
+          id: menuCategoryItem.item.id,
+          name: menuCategoryItem.item.name,
+          price: menuCategoryItem.supplement || 0,
+          description: menuCategoryItem.item.description,
+          allergens: menuCategoryItem.item.allergens,
+          itemType: menuCategoryItem.item.itemType,
+          snapshotAt: now,
+        },
+        supplementPrice: menuCategoryItem.supplement || 0,
+        tags: selection.tags,
+        note: selection.note,
+      });
+
+      totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
+    }
+  });
+
+  const items = menuItems.map((menuItem) => ({
+    id: menuItem.id,
+    categoryId: menuItem.categoryId,
+    categoryName: menuItem.categoryName,
+    status: menuItem.status,
+    item: menuItem.item,
+    supplementPrice: menuItem.supplementPrice,
+    tags: menuItem.tags,
+    note: menuItem.note,
+  })) as OrderLineItem[];
+
+  return { items, totalPrice, now };
+}
+
+/**
+ * Convertir les lignes au format API pour création
+ */
+function convertToApiFormat(lines: OrderLine[]): CreateOrderLineRequest[] {
+  return lines.map((line): CreateOrderLineRequest => {
+    if (line.type === OrderLineType.ITEM) {
+      return {
+        type: OrderLineType.ITEM,
+        itemId: line.item!.id,
+        note: line.note,
+        tags: line.tags?.length
+          ? Object.fromEntries(line.tags.map((t) => [t.tagId, t.value]))
+          : undefined,
+      };
+    } else {
+      const selectedItems: Record<string, Array<{ itemId: string; tags?: Record<string, any>; note?: string }>> = {};
+      const menuItems = (line.items as DraftMenuItemWithMeta[] | undefined) || [];
+      for (const item of menuItems) {
+        if (!selectedItems[item.categoryId]) {
+          selectedItems[item.categoryId] = [];
+        }
+        selectedItems[item.categoryId].push({
+          itemId: item.item.id,
+          tags: item.tags?.length
+            ? Object.fromEntries(item.tags.map((t) => [t.tagId, t.value]))
+            : undefined,
+          note: item.note,
+        });
+      }
+      return {
+        type: OrderLineType.MENU,
+        menuId: line.menu!.id,
+        note: line.note,
+        selectedItems,
+      };
+    }
+  });
+}
+
+/**
+ * Analyser les changements entre lignes courantes et initiales
+ */
+function analyzeChanges(orderLines: OrderLine[], initialOrderLines: OrderLine[]): OrderLineState[] {
+  const states: OrderLineState[] = [];
+  const currentIds = new Set(orderLines.map((l) => l.id));
+  const originalIds = new Set(initialOrderLines.map((l) => l.id));
+
+  for (const line of orderLines) {
+    if (line.id.startsWith('draft-')) {
+      states.push({ original: null, current: line, status: 'created', changes: undefined });
+    } else if (originalIds.has(line.id)) {
+      const originalLine = initialOrderLines.find((l) => l.id === line.id)!;
+      const isModified = JSON.stringify(originalLine) !== JSON.stringify(line);
+      states.push({
+        original: originalLine,
+        current: line,
+        status: isModified ? 'modified' : 'unchanged',
+        changes: isModified ? line : undefined,
+      });
+    }
+  }
+
+  for (const line of initialOrderLines) {
+    if (!currentIds.has(line.id)) {
+      states.push({ original: line, current: line, status: 'deleted', changes: undefined });
+    }
+  }
+
+  return states;
+}
+
+// ====================================================================
+// HOOK
+// ====================================================================
+
 /**
  * Hook centralisé pour gérer les OrderLines (création, modification, suppression)
  *
@@ -33,13 +173,19 @@ export interface UseOrderLinesManagerOptions {
  * - Sauvegarde via API
  */
 export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
-  const { initialLines = [], mode, orderId, tableId, onSuccess, onError } = options;
+  const { initialLines = [], mode, orderId, tableId } = options;
   const { createOrderWithLines } = useOrderLines();
   const { updateOrderWithLines } = useOrders();
   const { showToast } = useToast();
   const { isOrderLinePaid } = usePayments();
 
-  // ✅ État unique centralisé
+  // Stabiliser onSuccess/onError via refs pour ne pas recréer save à chaque render parent
+  const onSuccessRef = useRef(options.onSuccess);
+  onSuccessRef.current = options.onSuccess;
+  const onErrorRef = useRef(options.onError);
+  onErrorRef.current = options.onError;
+
+  // État unique centralisé
   const [orderLines, setOrderLines] = useState<OrderLine[]>(initialLines);
   const [initialOrderLines, setInitialOrderLines] = useState<OrderLine[]>(initialLines);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,6 +207,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     (item: Item, customization: { tags: SelectedTag[]; note?: string }) => {
       const tagsPrice = customization.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
       const totalPrice = item.price + tagsPrice;
+      const now = new Date().toISOString();
 
       const newLine: OrderLine = {
         id: `draft-item-${Date.now()}-${Math.random()}`,
@@ -78,13 +225,12 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
           description: item.description,
           allergens: item.allergens,
           itemType: item.itemType,
-          snapshotAt: new Date().toISOString(),
-          // Stocker les tags de l'item original pour édition future
+          snapshotAt: now,
           tags: item.tags,
         },
         menu: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       };
 
       setOrderLines((prev) => [...prev, newLine]);
@@ -101,7 +247,6 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       setOrderLines((prev) =>
         prev.map((line) => {
           if (line.id !== lineId || line.type !== OrderLineType.ITEM) return line;
-          // Prevent modifying non-draft saved lines
           if (!line.id.startsWith('draft-') && line.status !== Status.DRAFT) return line;
 
           const tagsPrice = customization.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
@@ -125,42 +270,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
    */
   const addMenu = useCallback(
     (menu: Menu, selections: MenuSelections, itemTypes: any[]) => {
-      // Construire les items du menu
-      const menuItems: DraftMenuItemWithMeta[] = [];
-      let totalPrice = menu.basePrice || 0;
-
-      Object.entries(selections).forEach(([categoryId, selectionsArray]) => {
-        const category = menu.categories?.find((c) => c.id === categoryId);
-        if (!category) return;
-
-        for (const selection of selectionsArray) {
-          const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
-          if (!menuCategoryItem?.item) continue;
-
-          const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
-
-          menuItems.push({
-            id: `menu-item-${Date.now()}-${Math.random()}`,
-            categoryId,
-            categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
-            status: Status.DRAFT,
-            item: {
-              id: menuCategoryItem.item.id,
-              name: menuCategoryItem.item.name,
-              price: menuCategoryItem.supplement || 0,
-              description: menuCategoryItem.item.description,
-              allergens: menuCategoryItem.item.allergens,
-              itemType: menuCategoryItem.item.itemType,
-              snapshotAt: new Date().toISOString(),
-            },
-            supplementPrice: menuCategoryItem.supplement || 0,
-            tags: selection.tags,
-            note: selection.note,
-          });
-
-          totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
-        }
-      });
+      const { items, totalPrice, now } = buildMenuData(menu, selections, itemTypes);
 
       const newLine: OrderLine = {
         id: `draft-menu-${Date.now()}`,
@@ -175,20 +285,11 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
           name: menu.name,
           description: menu.description,
           basePrice: menu.basePrice,
-          snapshotAt: new Date().toISOString(),
+          snapshotAt: now,
         },
-        items: menuItems.map((menuItem) => ({
-          id: menuItem.id,
-          categoryId: menuItem.categoryId,
-          categoryName: menuItem.categoryName,
-          status: menuItem.status,
-          item: menuItem.item,
-          supplementPrice: menuItem.supplementPrice,
-          tags: menuItem.tags,
-          note: menuItem.note,
-        })) as OrderLineItem[],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        items,
+        createdAt: now,
+        updatedAt: now,
       };
 
       setOrderLines((prev) => [...prev, newLine]);
@@ -206,55 +307,11 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
         prev.map((line) => {
           if (line.id !== lineId || line.type !== OrderLineType.MENU) return line;
 
-          // Reconstruire les items du menu
-          const menuItems: DraftMenuItemWithMeta[] = [];
-          let totalPrice = menu.basePrice || 0;
-
-          Object.entries(selections).forEach(([categoryId, selectionsArray]) => {
-            const category = menu.categories?.find((c) => c.id === categoryId);
-            if (!category) return;
-
-            for (const selection of selectionsArray) {
-              const menuCategoryItem = category.items?.find((mi) => mi.item?.id === selection.itemId);
-              if (!menuCategoryItem?.item) continue;
-
-              const tagsPrice = selection.tags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
-
-              menuItems.push({
-                id: `menu-item-${Date.now()}-${Math.random()}`,
-                categoryId,
-                categoryName: itemTypes.find((t) => t.id === category.itemTypeId)?.name || '',
-                status: Status.DRAFT,
-                item: {
-                  id: menuCategoryItem.item.id,
-                  name: menuCategoryItem.item.name,
-                  price: menuCategoryItem.supplement || 0,
-                  description: menuCategoryItem.item.description,
-                  allergens: menuCategoryItem.item.allergens,
-                  itemType: menuCategoryItem.item.itemType,
-                  snapshotAt: new Date().toISOString(),
-                },
-                supplementPrice: menuCategoryItem.supplement || 0,
-                tags: selection.tags,
-                note: selection.note,
-              });
-
-              totalPrice += (menuCategoryItem.supplement || 0) + tagsPrice;
-            }
-          });
+          const { items, totalPrice } = buildMenuData(menu, selections, itemTypes);
 
           return {
             ...line,
-            items: menuItems.map((menuItem) => ({
-              id: menuItem.id,
-              categoryId: menuItem.categoryId,
-              categoryName: menuItem.categoryName,
-              status: menuItem.status,
-              item: menuItem.item,
-              supplementPrice: menuItem.supplementPrice,
-              tags: menuItem.tags,
-              note: menuItem.note,
-            })) as OrderLineItem[],
+            items,
             unitPrice: totalPrice,
             totalPrice: totalPrice,
           };
@@ -272,7 +329,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       const line = prev.find((l) => l.id === lineId);
       if (!line) return prev;
 
-      // Check for payment allocations
+      // Vérifier les allocations de paiement
       if (!line.id.startsWith('draft-') && isOrderLinePaid(line.id)) {
         const name = line.type === OrderLineType.MENU
           ? line.menu?.name || 'Menu'
@@ -281,8 +338,9 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
         return prev;
       }
 
-      // Prevent deleting non-draft saved lines (ITEM only, MENU always editable)
+      // Empêcher la suppression de lignes sauvegardées non-draft (ITEM uniquement, MENU toujours éditable)
       if (!line.id.startsWith('draft-') && line.type !== OrderLineType.MENU && line.status !== Status.DRAFT) return prev;
+
       const name = line.type === OrderLineType.MENU
         ? line.menu?.name || 'Menu'
         : line.item?.name || 'Article';
@@ -290,13 +348,6 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       return prev.filter((l) => l.id !== lineId);
     });
   }, [showToast, isOrderLinePaid]);
-
-  /**
-   * Réinitialiser toutes les lignes (vider le panier)
-   */
-  const clearAllLines = useCallback(() => {
-    setOrderLines([]);
-  }, []);
 
   /**
    * Réinitialiser l'état aux valeurs initiales (annuler les modifications)
@@ -314,112 +365,27 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
    * ET qu'il y a au moins une ligne (on ne peut pas sauvegarder une commande vide)
    */
   const hasChanges = useMemo((): boolean => {
-    // Une commande vide ne peut jamais être sauvegardée
-    if (orderLines.length === 0) {
-      return false;
-    }
+    if (orderLines.length === 0) return false;
+    if (mode === 'create') return true;
 
-    if (mode === 'create') {
-      return orderLines.length > 0;
-    }
+    // Comparaison rapide : si le nombre de lignes diffère, c'est modifié
+    if (orderLines.length !== initialOrderLines.length) return true;
+
+    // Comparaison par identité de référence avant JSON (court-circuit rapide)
+    if (orderLines === initialOrderLines) return false;
+
     return JSON.stringify(orderLines) !== JSON.stringify(initialOrderLines);
   }, [orderLines, initialOrderLines, mode]);
-
-  /**
-   * Analyser les changements (created, modified, deleted)
-   */
-  const analyzeChanges = useCallback((): OrderLineState[] => {
-    const states: OrderLineState[] = [];
-    const currentIds = new Set(orderLines.map((l) => l.id));
-    const originalIds = new Set(initialOrderLines.map((l) => l.id));
-
-    // Nouvelles lignes
-    for (const line of orderLines) {
-      if (line.id.startsWith('draft-')) {
-        states.push({
-          original: null,
-          current: line,
-          status: 'created',
-          changes: undefined,
-        });
-      } else if (originalIds.has(line.id)) {
-        const originalLine = initialOrderLines.find((l) => l.id === line.id)!;
-        const isModified = JSON.stringify(originalLine) !== JSON.stringify(line);
-        states.push({
-          original: originalLine,
-          current: line,
-          status: isModified ? 'modified' : 'unchanged',
-          changes: isModified ? line : undefined,
-        });
-      }
-    }
-
-    // Lignes supprimées
-    for (const line of initialOrderLines) {
-      if (!currentIds.has(line.id)) {
-        states.push({
-          original: line,
-          current: line,
-          status: 'deleted',
-          changes: undefined,
-        });
-      }
-    }
-
-    return states;
-  }, [orderLines, initialOrderLines]);
 
   // ====================================================================
   // SAUVEGARDE
   // ====================================================================
 
   /**
-   * Convertir les lignes au format API pour création
-   */
-  const convertToApiFormat = useCallback((lines: OrderLine[]): CreateOrderLineRequest[] => {
-    return lines.map((line): CreateOrderLineRequest => {
-      if (line.type === OrderLineType.ITEM) {
-        return {
-          type: OrderLineType.ITEM,
-          itemId: line.item!.id,
-          note: line.note,
-          tags: line.tags?.length
-            ? Object.fromEntries(line.tags.map((t) => [t.tagId, t.value]))
-            : undefined,
-        };
-      } else {
-        // MENU - grouper les items par categoryId
-        const selectedItems: Record<string, Array<{ itemId: string; tags?: Record<string, any>; note?: string }>> = {};
-        const menuItems = (line.items as DraftMenuItemWithMeta[] | undefined) || [];
-        for (const item of menuItems) {
-          if (!selectedItems[item.categoryId]) {
-            selectedItems[item.categoryId] = [];
-          }
-          selectedItems[item.categoryId].push({
-            itemId: item.item.id,
-            tags: item.tags?.length
-              ? Object.fromEntries(item.tags.map((t) => [t.tagId, t.value]))
-              : undefined,
-            note: item.note,
-          });
-        }
-        return {
-          type: OrderLineType.MENU,
-          menuId: line.menu!.id,
-          note: line.note,
-          selectedItems,
-        };
-      }
-    });
-  }, []);
-
-  /**
    * Sauvegarder les changements
    */
   const save = useCallback(async () => {
-    if (!hasChanges) {
-      return null;
-    }
+    if (!hasChanges) return null;
 
     setIsProcessing(true);
 
@@ -427,29 +393,26 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       let result;
 
       if (mode === 'create') {
-        // Création : convertir et envoyer via useOrderLines
         const apiData = convertToApiFormat(orderLines);
         result = await createOrderWithLines(tableId, apiData, Status.DRAFT);
       } else {
-        // Mise à jour : analyser les changements et envoyer via useOrders
-        const states = analyzeChanges();
+        const states = analyzeChanges(orderLines, initialOrderLines);
         const payload = generateBulkPayload(states);
         result = await updateOrderWithLines(orderId!, payload);
       }
 
-      // Update initial lines after successful save
+      // Mettre à jour les lignes initiales après sauvegarde réussie
       if (result?.lines) {
         setInitialOrderLines(result.lines);
         setOrderLines(result.lines);
       }
 
-      onSuccess?.(result);
+      onSuccessRef.current?.(result);
       return result;
     } catch (error: any) {
-      // Rollback to initial state on error (before any modifications)
+      // Rollback vers l'état initial en cas d'erreur
       setOrderLines([...initialOrderLines]);
 
-      // Extract meaningful error message
       let errorMessage = 'Erreur lors de la sauvegarde';
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -457,14 +420,13 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
         errorMessage = error.message;
       }
 
-      // Check for specific NF525 errors
       if (errorMessage.includes('allocation') || errorMessage.includes('payé') || errorMessage.includes('payment')) {
         showToast('Impossible de modifier: certaines lignes ont déjà été payées', 'error');
       } else {
         showToast(errorMessage, 'error');
       }
 
-      onError?.(error as Error);
+      onErrorRef.current?.(error as Error);
       throw error;
     } finally {
       setIsProcessing(false);
@@ -476,12 +438,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     initialOrderLines,
     tableId,
     orderId,
-    convertToApiFormat,
-    analyzeChanges,
     createOrderWithLines,
     updateOrderWithLines,
-    onSuccess,
-    onError,
     showToast,
   ]);
 
@@ -501,11 +459,7 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
     addMenu,
     updateMenu,
     deleteLine,
-    clearAllLines,
     reset,
     save,
-
-    // Pour compatibilité avec OrderLinesForm actuel
-    setOrderLines,
   };
 };

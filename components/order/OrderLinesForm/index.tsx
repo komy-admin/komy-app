@@ -11,10 +11,10 @@ import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm
 import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
 import { SidePanel } from '~/components/SidePanel';
 import { Item } from '~/types/item.types';
-import { Menu } from '~/types/menu.types';
+import { Menu, MenuCategory } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { SlidePanel } from '~/components/ui/SlidePanel';
-import { MenuCategory, MenuCategoryItem, MenuItemWithCustomization } from '~/types/menu-configuration.types';
+import { MenuCategoryItem, MenuItemWithCustomization } from '~/types/menu-configuration.types';
 
 /**
  * OrderLinesForm - Version refactorisée (composant présentationnel)
@@ -85,13 +85,15 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   const [editingMenuLineId, setEditingMenuLineId] = useState<string | null>(null);
 
   // Fermer la configuration menu si la ligne éditée a été supprimée
-  if (editingMenuLineId && isConfiguringMenu && !lines.some(l => l.id === editingMenuLineId)) {
-    setIsConfiguringMenu(false);
-    setMenuBeingConfigured(null);
-    setTempMenuSelections({});
-    setEditingMenuLineId(null);
-    onConfigurationModeChange?.(false);
-  }
+  useEffect(() => {
+    if (editingMenuLineId && isConfiguringMenu && !lines.some(l => l.id === editingMenuLineId)) {
+      setIsConfiguringMenu(false);
+      setMenuBeingConfigured(null);
+      setTempMenuSelections({});
+      setEditingMenuLineId(null);
+      onConfigurationModeChange?.(false);
+    }
+  }, [editingMenuLineId, isConfiguringMenu, lines, onConfigurationModeChange]);
 
   // Customisation d'item (via SlidePanel)
   const [customizationPanelVisible, setCustomizationPanelVisible] = useState(false);
@@ -204,30 +206,24 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       // et aucun item n'a de tags ni de note → ajouter directement sans configuration
       const categories = menu.categories || [];
       if (categories.length > 0) {
+        const selections: MenuSelections = {};
         const canAutoAdd = categories.every((cat: MenuCategory) => {
           if (!cat.isRequired) return false;
           const availableItems = (cat.items || []).filter((mci: MenuCategoryItem) => {
             if (mci.isAvailable === false) return false;
-            const fullItem = mci.item || items.find((i) => i.id === mci.itemId);
-            return !!fullItem;
+            return !!(mci.item || items.find((i) => i.id === mci.itemId));
           });
           if (availableItems.length !== 1) return false;
           const fullItem = availableItems[0].item || items.find((i) => i.id === availableItems[0].itemId);
           if (!fullItem) return false;
           const hasTags = fullItem.tags && fullItem.tags.length > 0;
-          return !fullItem.hasNote && !hasTags;
+          if (fullItem.hasNote || hasTags) return false;
+          // Construire la sélection au même passage
+          selections[cat.id] = [{ itemId: fullItem.id, tags: [], note: undefined }];
+          return true;
         });
 
         if (canAutoAdd) {
-          const selections: MenuSelections = {};
-          categories.forEach((cat: MenuCategory) => {
-            const availableItems = (cat.items || []).filter((mci: MenuCategoryItem) => {
-              if (mci.isAvailable === false) return false;
-              return !!(mci.item || items.find((i) => i.id === mci.itemId));
-            });
-            const fullItem = availableItems[0].item || items.find((i) => i.id === availableItems[0].itemId);
-            selections[cat.id] = [{ itemId: fullItem!.id, tags: [], note: undefined }];
-          });
           onAddMenu(menu, selections, itemTypes);
           return;
         }
@@ -254,14 +250,20 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       if (!fullMenu) return;
 
       // Reconstruire tempMenuSelections depuis menuLine.items (groupé par catégorie)
+      // On distribue séquentiellement : pour chaque item, on trouve la prochaine catégorie
+      // avec le même categoryName qui n'est pas encore pleine (maxSelections)
       const selections: MenuSelections = {};
       menuLine.items.forEach((menuItem) => {
         // Type guard : menuItem devrait avoir item et categoryName
         if (!menuItem.item || !menuItem.categoryName) return;
 
+        // Trouver la prochaine catégorie matching qui a encore de la place
         const category = fullMenu.categories?.find((cat: MenuCategory) => {
-          const categoryName = itemTypes.find((t) => t.id === cat.itemTypeId)?.name;
-          return categoryName === menuItem.categoryName;
+          const catName = itemTypes.find((t) => t.id === cat.itemTypeId)?.name;
+          if (catName !== menuItem.categoryName) return false;
+          // Vérifier que cette catégorie n'est pas déjà pleine
+          const currentCount = selections[cat.id]?.length || 0;
+          return currentCount < cat.maxSelections;
         });
 
         if (category && 'id' in category) {
@@ -451,13 +453,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     [lines, handleEditItem]
   );
 
-  const handleDraftEditMenu = useCallback(
-    (menuLine: OrderLine) => {
-      handleEditMenu(menuLine);
-    },
-    [handleEditMenu]
-  );
-
   const handleDraftDelete = useCallback(
     (index: number) => {
       const line = lines[index];
@@ -479,35 +474,37 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    *
    * Note: Le récapitulatif de commande est maintenant un side panel permanent (pas dans le portal)
    */
+  const confirmCustomizationRef = useRef(handleConfirmCustomization);
+  confirmCustomizationRef.current = handleConfirmCustomization;
+  const confirmMenuItemRef = useRef(handleConfirmMenuItemCustomization);
+  confirmMenuItemRef.current = handleConfirmMenuItemCustomization;
+
   useEffect(() => {
     if (customizationPanelVisible && itemToCustomize) {
-      // Priorité 1 : Customisation d'item normal
       renderPanel(
         <SlidePanel visible={true} onClose={handleCancelCustomization} width="35%" minWidth={350} maxWidth={600}>
           <ItemCustomizationPanelContent
             item={itemToCustomize.item}
             availableTags={itemToCustomize.item.tags || []}
             initialData={itemToCustomize.initialData}
-            onConfirm={handleConfirmCustomization}
+            onConfirm={(c) => confirmCustomizationRef.current(c)}
             onCancel={handleCancelCustomization}
           />
         </SlidePanel>
       );
     } else if (menuItemPanelVisible && menuItemToCustomize) {
-      // Priorité 2 : Customisation d'item de menu
       renderPanel(
         <SlidePanel visible={true} onClose={handleCancelMenuItemCustomization} width="35%" minWidth={350} maxWidth={600}>
           <ItemCustomizationPanelContent
             item={menuItemToCustomize.item}
             availableTags={menuItemToCustomize.item.tags || []}
             initialData={undefined}
-            onConfirm={handleConfirmMenuItemCustomization}
+            onConfirm={(c) => confirmMenuItemRef.current(c)}
             onCancel={handleCancelMenuItemCustomization}
           />
         </SlidePanel>
       );
     } else {
-      // Aucun panel actif : nettoyer
       clearPanel();
     }
   }, [
@@ -516,9 +513,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     menuItemPanelVisible,
     menuItemToCustomize,
     handleCancelCustomization,
-    handleConfirmCustomization,
     handleCancelMenuItemCustomization,
-    handleConfirmMenuItemCustomization,
     renderPanel,
     clearPanel,
   ]);
@@ -563,7 +558,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
               title={title}
               draftLines={lines}
               onEdit={handleDraftEdit}
-              onEditMenu={handleDraftEditMenu}
+              onEditMenu={handleEditMenu}
               onDelete={handleDraftDelete}
               onSave={onSave}
               onCancel={handleBackPress}
@@ -660,15 +655,10 @@ const styles = StyleSheet.create({
   },
   contentWithNav: {
     flex: 1,
-    flexDirection: 'row' as const,
+    flexDirection: 'row',
   },
   contentArea: {
     flex: 1,
   },
 });
 
-// Ré-exporter les composants utilisés par les parents
-export { OrderLinesHeader } from './OrderLinesHeader';
-export { OrderLinesButton } from './OrderLinesButton';
-export { OrderLinesNavigation } from './OrderLinesNavigation';
-export { OrderLinesFooter } from './OrderLinesFooter';

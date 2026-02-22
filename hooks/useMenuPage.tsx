@@ -12,6 +12,7 @@ import { useAdminFormView } from '@/components/admin/AdminForm/AdminFormView';
 import { CreditCard as Edit2, Trash, Power, ListFilter } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
 import { formatPrice, getContrastColor, sortActiveFirst } from '~/lib/utils';
+import { getMenuPrice } from '~/lib/color-utils';
 
 // ============================================================
 // Hook principal — logique métier de la page Menu admin
@@ -24,8 +25,8 @@ export function useMenuPage() {
   const { showToast } = useToast();
 
   // Redux hooks
-  const { items, itemTypes, loading, error, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
-  const { allMenus, loading: menusLoading, error: menusError, createMenuBulk, updateMenuBulk, updateMenu, deleteMenu, createMenuCategoryItem, loadMenuCategoryItems } = useMenus();
+  const { items, itemTypes, loading, createMenuItem, updateMenuItem, deleteMenuItem, getItemsByType, toggleItemStatus } = useMenu();
+  const { allMenus, loading: menusLoading, createMenuBulk, updateMenuBulk, updateMenu, deleteMenu, createMenuCategoryItem, loadMenuCategoryItems } = useMenus();
   const { tags } = useTags();
 
   // ============================================================
@@ -184,15 +185,25 @@ export function useMenuPage() {
             })) || [],
         })) || [];
 
+      // Trier les catégories par priorityOrder de l'itemType, puis alphabétiquement
+      const sortedCategories = [...(menuData.categories || [])].sort((a: any, b: any) => {
+        const priorityA = itemTypes.find(t => t.id === a.itemTypeId)?.priorityOrder ?? 999;
+        const priorityB = itemTypes.find(t => t.id === b.itemTypeId)?.priorityOrder ?? 999;
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        const nameA = itemTypes.find(t => t.id === a.itemTypeId)?.name || '';
+        const nameB = itemTypes.find(t => t.id === b.itemTypeId)?.name || '';
+        return nameA.localeCompare(nameB);
+      });
+
       const menuPayload = {
         menu: {
           name: menuData.name,
           description: menuData.description || '',
           basePrice: Number(menuData.basePrice),
           isActive: Boolean(menuData.isActive),
-          vatRate: Number(menuData.vatRate) || 10, // Include VAT rate, default to 10%
+          vatRate: Number(menuData.vatRate) || 10,
         },
-        categories: mapCategories(menuData.categories, Boolean(menuData.id)),
+        categories: mapCategories(sortedCategories, Boolean(menuData.id)),
       };
 
       if (menuData.id) {
@@ -208,7 +219,7 @@ export function useMenuPage() {
       showToast('Erreur lors de la sauvegarde du menu', 'error');
       throw err;
     }
-  }, [updateMenuBulk, createMenuBulk, showToast, handleCloseMenuModal]);
+  }, [itemTypes, updateMenuBulk, createMenuBulk, showToast, handleCloseMenuModal]);
 
   const handleDeleteMenu = useCallback((id: string) => {
     const menu = allMenus.find(m => m.id === id);
@@ -257,17 +268,16 @@ export function useMenuPage() {
   }, [activeTab, filters, getItemsByType]);
 
   const filteredMenus = useMemo(() => {
-    return filterMenus([...allMenus], filters).sort(sortActiveFirst);
+    return filterMenus(allMenus, filters).sort(sortActiveFirst);
   }, [allMenus, filters]);
 
   const tousSections = useMemo(() => {
     if (activeTab !== 'tous') return undefined;
     const sections: { title: string; data: any[] }[] = [];
 
-    // Menus filtrés
-    const menusFiltered = filterMenus(filteredMenus, filters);
-    if (menusFiltered.length > 0) {
-      sections.push({ title: 'Menus', data: menusFiltered.map(m => ({ ...m, _type: 'menu' as const })) });
+    // Menus (déjà filtrés via filteredMenus)
+    if (filteredMenus.length > 0) {
+      sections.push({ title: 'Menus', data: filteredMenus.map(m => ({ ...m, _type: 'menu' as const })) });
     }
 
     // Items par type, triés par priorité puis alpha
@@ -350,7 +360,7 @@ export function useMenuPage() {
   const menuTableColumns = useMemo(() => [
     { label: '', key: 'color', width: 64, headerRender: headerFilterIcon, render: (menu: Menu) => renderColorCircle('#7C3AED', menu.name, '#FFFFFF') },
     { label: 'Nom', key: 'name', width: '34%' },
-    { label: 'Prix de base', key: 'basePrice', width: '17%', render: (menu: Menu) => <Text>{formatPrice(Number(menu.basePrice))}</Text> },
+    { label: 'Prix', key: 'basePrice', width: '17%', render: (menu: Menu) => <Text>{formatPrice(getMenuPrice(menu))}</Text> },
     { label: 'Catégories', key: 'categories', width: '28%', render: (menu: Menu) => (
       <Text style={{ fontSize: 12, color: '#666666' }}>
         {menu.categories?.length || 0} catégorie{(menu.categories?.length || 0) > 1 ? 's' : ''}
@@ -366,7 +376,7 @@ export function useMenuPage() {
     } },
     { label: 'Nom', key: 'name', width: '46%' },
     { label: 'Prix', key: 'price', width: '23%', render: (entry: any) => (
-      <Text>{formatPrice(entry._type === 'menu' ? Number(entry.basePrice) : entry.price)}</Text>
+      <Text>{formatPrice(entry._type === 'menu' ? getMenuPrice(entry) : entry.price)}</Text>
     ) },
     { label: 'Statut', key: 'statut', width: '24%', render: (entry: any) => renderStatus(entry.isActive) },
   ], [renderColorCircle, renderStatus, headerFilterIcon]);
@@ -381,17 +391,17 @@ export function useMenuPage() {
     filters, setFilters, handleClearFilters,
 
     // Données
-    items, itemTypes, tags, allMenus,
-    loading, menusLoading, error, menusError,
+    items, itemTypes, tags,
+    loading, menusLoading,
     filteredItems, filteredMenus, tousSections,
 
     // Items CRUD
     itemFormView, currentItem, handleCreateItem, handleEditItem, handleCloseItemModal, handleSaveItem,
-    isDeleteItemModalVisible, itemToDelete, isDeleting, handleDeleteItem, confirmDeleteItem, handleCloseDeleteItemModal,
+    isDeleteItemModalVisible, itemToDelete, isDeleting, confirmDeleteItem, handleCloseDeleteItemModal,
 
     // Menus CRUD
     menuFormView, currentMenu, handleCreateMenu, handleEditMenu, handleCloseMenuModal, handleBulkMenuSave,
-    isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, handleDeleteMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
+    isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
     createMenuCategoryItem, loadMenuCategoryItems,
 
     // Actions & colonnes
