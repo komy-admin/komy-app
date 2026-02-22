@@ -787,8 +787,8 @@ const RoomTable: React.FC<TableViewProps> = ({
       <Animated.View style={animatedStyle}>
         <GestureDetector gesture={composedGesture}>
           <Animated.View style={[{ width: '100%', height: '100%' }, containerStyle]}>
-            <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
-            <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
+            {!(isEditing && isSelected) && <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />}
+            {!(isEditing && isSelected) && <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />}
 
             <View style={styles.innerContainer}>
               <View style={[styles.table, tableStyle]}>
@@ -796,8 +796,8 @@ const RoomTable: React.FC<TableViewProps> = ({
               </View>
             </View>
 
-            <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
-            <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+            {!(isEditing && isSelected) && <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />}
+            {!(isEditing && isSelected) && <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />}
           </Animated.View>
         </GestureDetector>
 
