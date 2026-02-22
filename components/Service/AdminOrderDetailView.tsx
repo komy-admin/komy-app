@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { ItemType } from '~/types/item-type.types';
 import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusTagColor, getStatusText, getBorderStyle, hasMenuMixedStatuses } from '~/lib/utils';
+import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText, getBorderStyle, hasMenuMixedStatuses } from '~/lib/utils';
 import { Order } from '~/types/order.types';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import StatusSelector from './StatusSelector';
@@ -174,7 +174,7 @@ const AdminOrderLineItem = ({
             </View>
             {/* Tag du statut */}
             <View style={{
-              backgroundColor: getStatusTagColor(itemStatus),
+              backgroundColor: getStatusColor(itemStatus),
               paddingHorizontal: 8,
               paddingVertical: 3,
               borderRadius: 12,
@@ -393,7 +393,7 @@ const AdminMenuOrderGroup = ({
                     {/* Indicateur de statuts mixtes */}
                     {hasMixed && (
                       <View style={{
-                        backgroundColor: getStatusTagColor(itemStatus),
+                        backgroundColor: getStatusColor(itemStatus),
                         borderRadius: 6,
                         paddingHorizontal: 8,
                         paddingVertical: 4,
@@ -406,7 +406,7 @@ const AdminMenuOrderGroup = ({
                     {/* Afficher le tag de statut global seulement si pas de statuts mixtes */}
                     {!hasMixed && (
                       <View style={{
-                        backgroundColor: getStatusTagColor(itemStatus),
+                        backgroundColor: getStatusColor(itemStatus),
                         paddingHorizontal: 8,
                         paddingVertical: 3,
                         borderRadius: 12,
@@ -677,7 +677,7 @@ const AdminOrderItemsGroup = ({
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={{
-                      backgroundColor: getStatusTagColor(itemStatus),
+                      backgroundColor: getStatusColor(itemStatus),
                       paddingHorizontal: 8,
                       paddingVertical: 3,
                       borderRadius: 12,

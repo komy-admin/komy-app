@@ -6,7 +6,7 @@ import { ItemType } from '~/types/item-type.types';
 import { Status } from '~/types/status.enum';
 import { formatPrice, getStatusText } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
-import { getOrderLineStatus, getStatusColor } from '@/lib/status.utils';
+import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
 
 
 // A grouped row: identical lines merged with quantity
@@ -387,9 +387,9 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(totalPrice)}</RNText>
           {isLocked ? (
             <View style={styles.lockIconWrap}>
-              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#EF444418' : `${getStatusColor(line.status)}18` }]}>
-                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusColor(line.status)} strokeWidth={2.5} />
-                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusColor(line.status) }]}>
+              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#FEF2F2' : getStatusColor(line.status) }]}>
+                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusTextColor(line.status)} strokeWidth={2.5} />
+                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusTextColor(line.status) }]}>
                   {hasAllocations ? 'Payé' : getStatusText(line.status!)}
                 </RNText>
               </View>
@@ -491,9 +491,9 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
           {isLocked ? (
             <View style={styles.lockIconWrap}>
-              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#EF444418' : `${getStatusColor(getOrderLineStatus(line) || '')}18` }]}>
-                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusColor(getOrderLineStatus(line) || '')} strokeWidth={2.5} />
-                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusColor(getOrderLineStatus(line) || '') }]}>
+              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#FEF2F2' : getStatusColor(getOrderLineStatus(line) || '') }]}>
+                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusTextColor(getOrderLineStatus(line) || '')} strokeWidth={2.5} />
+                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusTextColor(getOrderLineStatus(line) || '') }]}>
                   {hasAllocations ? 'Payé' : getStatusText(getOrderLineStatus(line) || '')}
                 </RNText>
               </View>

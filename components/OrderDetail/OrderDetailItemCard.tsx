@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Clock, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { DateFormat, formatDate, getStatusColor, getStatusTagColor, getStatusText, getStatusBackgroundColor, getTagFieldTypeConfig } from '~/lib/utils';
+import { DateFormat, formatDate, getStatusColor, getStatusText, getStatusBackgroundColor, getTagFieldTypeConfig } from '~/lib/utils';
 import { IconButton } from '~/components/ui/IconButton';
 
 export interface OrderDetailItemCardProps {
@@ -111,7 +111,7 @@ export const OrderDetailItemCard = memo<OrderDetailItemCardProps>(({
   );
 
   const statusBadgeStyle = useMemo(
-    () => [styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }],
+    () => [styles.statusBadge, { backgroundColor: getStatusColor(itemStatus) }],
     [itemStatus]
   );
 

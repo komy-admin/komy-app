@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChevronDown, ChevronUp, Clock, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { getMostImportantStatus, getStatusTagColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
+import { getMostImportantStatus, getStatusColor, getStatusText, hasMenuMixedStatuses, getStatusBackgroundColor, formatDate, DateFormat, getTagFieldTypeConfig } from '~/lib/utils';
 import { IconButton } from '~/components/ui/IconButton';
 
 export interface OrderDetailMenuCardProps {
@@ -69,7 +69,7 @@ const MenuCategoryItem = memo<MenuCategoryItemProps>(({ item, isLastItem, onItem
 
   // ✅ useMemo : Style dynamique pour le status badge
   const statusBadgeStyle = useMemo(
-    () => [styles.itemRowStatus, { backgroundColor: getStatusTagColor(item.status) }],
+    () => [styles.itemRowStatus, { backgroundColor: getStatusColor(item.status) }],
     [item.status]
   );
 
@@ -206,7 +206,7 @@ export const OrderDetailMenuCard = memo<OrderDetailMenuCardProps>(({
   );
 
   const statusBadgeStyle = useMemo(
-    () => [styles.statusBadge, { backgroundColor: getStatusTagColor(itemStatus) }],
+    () => [styles.statusBadge, { backgroundColor: getStatusColor(itemStatus) }],
     [itemStatus]
   );
 

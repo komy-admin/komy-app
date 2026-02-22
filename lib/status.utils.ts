@@ -104,7 +104,7 @@ export const getStatusColor = (status: Status) => {
     [Status.SERVED]: "#B7E1CC",
     [Status.ERROR]: "#F7BFB5",
     [Status.TERMINATED]: "#EBEBEB",
-    [Status.DRAFT]: "#EBEBEB",
+    [Status.DRAFT]: "#D1D5DB",
   };
   return colors[status] || colors[Status.ERROR];
 };
@@ -122,15 +122,16 @@ export const getStatusBackgroundColor = (status: Status): string => {
   return colors[status] || colors[Status.ERROR];
 };
 
-export const getStatusTagColor = (status: Status) => {
+
+export const getStatusTextColor = (status: Status): string => {
   const colors = {
-    [Status.READY]: "#D7E3FC",
-    [Status.PENDING]: "#F9F1C8",
-    [Status.INPROGRESS]: "#FFD1AD",
-    [Status.SERVED]: "#B7E1CC",
-    [Status.ERROR]: "#F7BFB5",
-    [Status.TERMINATED]: "#EBEBEB",
-    [Status.DRAFT]: "#D1D5DB",
+    [Status.READY]: "#1E3A5F",
+    [Status.PENDING]: "#92400E",
+    [Status.INPROGRESS]: "#9A3412",
+    [Status.SERVED]: "#065F46",
+    [Status.ERROR]: "#991B1B",
+    [Status.TERMINATED]: "#374151",
+    [Status.DRAFT]: "#374151",
   };
   return colors[status] || colors[Status.ERROR];
 };
