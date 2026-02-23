@@ -136,15 +136,10 @@ export default function RoomEditionMode() {
   const handleSaveTable = useCallback(async (updates: Partial<Table>) => {
     if (!selectedTable?.id) return;
 
-    try {
-      await updateTableFast(selectedTable.id, updates);
-      setIsEditPanelVisible(false);
-      setSelectedTable(null);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la sauvegarde de la table';
-      showToast(errorMessage, 'error');
-    }
-  }, [selectedTable?.id, updateTableFast, setSelectedTable, showToast]);
+    await updateTableFast(selectedTable.id, updates);
+    setIsEditPanelVisible(false);
+    setSelectedTable(null);
+  }, [selectedTable?.id, updateTableFast, setSelectedTable]);
 
   const handleAddTable = useCallback(async () => {
     if (!currentRoom?.id || isCreatingTable || isCreateOperationInProgress()) return;
@@ -159,7 +154,7 @@ export default function RoomEditionMode() {
       }
 
       const tableToCreate = {
-        name: generateTableName(),
+        name: generateTableName(currentRoom.name, currentRoomTables),
         xStart: position.x,
         yStart: position.y,
         width: 2,

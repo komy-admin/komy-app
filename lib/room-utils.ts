@@ -18,14 +18,22 @@ export function getRoomLightBackground(hex: string, mix: number = 0.1): string {
 }
 
 /**
- * Génère un nom aléatoire pour une table
- * Format: Lettre majuscule (A-Z) + Nombre à 2 chiffres (00-99)
- * Exemples: A01, B23, Z99
+ * Génère un nom unique pour une table basé sur le nom de la room.
+ * Préfixe = première lettre du nom de la room (ex: "Terrasse" → T01, T02...)
+ * Réutilise les numéros libres (si T02 supprimé, le prochain sera T02).
  */
-export function generateTableName(): string {
-  const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-  const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-  return `${letter}${number}`;
+export function generateTableName(roomName: string, existingTables: Table[]): string {
+  const prefix = (roomName.trim()[0] || 'T').toUpperCase();
+  const usedNumbers = new Set<number>();
+  const pattern = new RegExp(`^${prefix}(\\d{2})$`);
+  for (const table of existingTables) {
+    const match = table.name.match(pattern);
+    if (match) usedNumbers.add(parseInt(match[1], 10));
+  }
+  for (let i = 1; i <= 99; i++) {
+    if (!usedNumbers.has(i)) return `${prefix}${i.toString().padStart(2, '0')}`;
+  }
+  return `${prefix}${(existingTables.length + 1).toString().padStart(2, '0')}`;
 }
 
 /**

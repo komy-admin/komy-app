@@ -4,6 +4,7 @@ import { X } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
 import { TextInput, NumberInput } from '~/components/ui';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { useToast } from '~/components/ToastProvider';
 
 interface TableFormContentProps {
   table: Table;
@@ -31,6 +32,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
   const [initialValues, setInitialValues] = useState<FormData | null>(null);
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const { showToast } = useToast();
 
   // Mark field as touched
   const markFieldAsTouched = useCallback((fieldName: string) => {
@@ -97,8 +99,14 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         seats: parseInt(formData.seats, 10),
         shape: formData.shape,
       });
-    } catch (error) {
-      console.error('Error saving table:', error);
+    } catch (error: any) {
+      let errorMessage = 'Erreur lors de la sauvegarde de la table';
+      if (error.response?.status === 409) {
+        errorMessage = error.response.data?.message || 'Ce nom est déjà utilisé dans cette salle';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      showToast(errorMessage, 'error');
     } finally {
       setIsSaving(false);
     }
