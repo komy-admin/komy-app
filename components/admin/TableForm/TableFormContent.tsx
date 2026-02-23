@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Text as RNText, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
@@ -14,14 +14,10 @@ interface TableFormContentProps {
 interface FormData {
   name: string;
   seats: string;
+  shape: 'square' | 'rounded';
 }
 
-/**
- * TableFormContent - Formulaire d'édition de table pour SlidePanel
- *
- * Utilise KeyboardSafeFormView pour une gestion optimale du keyboard.
- * Pattern cohérent avec TeamForm, RoomForm, etc.
- */
+/** Formulaire d'édition de table (nom, couverts, forme) pour SlidePanel */
 export const TableFormContent: React.FC<TableFormContentProps> = ({
   table,
   onSave,
@@ -29,21 +25,12 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
 }) => {
   const [formData, setFormData] = useState<FormData>({
     name: '',
-    seats: ''
+    seats: '',
+    shape: 'square',
   });
   const [initialValues, setInitialValues] = useState<FormData | null>(null);
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
-
-  // Ref pour éviter les state updates sur composant unmonted
-  const isMountedRef = useRef(true);
-
-  // Cleanup au unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   // Mark field as touched
   const markFieldAsTouched = useCallback((fieldName: string) => {
@@ -74,61 +61,46 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
     }
   }, [touchedFields, formData]);
 
-  // Initialiser le formulaire quand la table change
   useEffect(() => {
-    if (table) {
-      const initialFormData = {
-        name: table.name || '',
-        seats: table.seats?.toString() || '1'
-      };
-      setFormData(initialFormData);
-      setInitialValues(initialFormData);
-      setTouchedFields({});
-    }
-  }, [table]); // ✅ Dépend de l'objet complet pour détecter tous les changements
+    const initialFormData: FormData = {
+      name: table.name || '',
+      seats: table.seats?.toString() || '1',
+      shape: table.shape || 'square',
+    };
+    setFormData(initialFormData);
+    setInitialValues(initialFormData);
+    setTouchedFields({});
+  }, [table]);
 
-  // Check if form has changes
   const hasChanges = useMemo(() => {
     if (!initialValues) return false;
-    return formData.name !== initialValues.name || formData.seats !== initialValues.seats;
+    return (
+      formData.name !== initialValues.name ||
+      formData.seats !== initialValues.seats ||
+      formData.shape !== initialValues.shape
+    );
   }, [formData, initialValues]);
 
-  // Form validation for button disable
   const isFormValid = useMemo(() => {
-    if (!table || !hasChanges) return false; // Disabled if no changes
-
-    // Seul le nom doit être validé (seats est contrôlé par NumberInput min={1})
-    const nameValid = formData.name.trim().length > 0;
-
-    return nameValid;
-  }, [formData, table, hasChanges]);
+    if (!hasChanges) return false;
+    return formData.name.trim().length > 0;
+  }, [formData.name, hasChanges]);
 
   const handleSave = useCallback(async () => {
-    // Mark all fields as touched to show errors
-    setTouchedFields({
-      name: true,
-      seats: true,
-    });
-
-    // Validate manually
-    if (!isFormValid) {
-      return;
-    }
+    setTouchedFields({ name: true, seats: true });
+    if (!isFormValid) return;
 
     setIsSaving(true);
-
     try {
       await onSave({
         name: formData.name.trim(),
-        seats: parseInt(formData.seats, 10)
+        seats: parseInt(formData.seats, 10),
+        shape: formData.shape,
       });
     } catch (error) {
       console.error('Error saving table:', error);
     } finally {
-      // ✅ Éviter state update si composant unmounted
-      if (isMountedRef.current) {
-        setIsSaving(false);
-      }
+      setIsSaving(false);
     }
   }, [formData, onSave, isFormValid]);
 
@@ -205,20 +177,37 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
               <RNText style={styles.formHelpText}>Entre 1 et 20 couverts</RNText>
             )}
           </View>
+
+          <View style={styles.formGroup}>
+            <RNText style={styles.formLabel}>Forme de la table</RNText>
+            <View style={styles.shapeSelector}>
+              <Pressable
+                style={[
+                  styles.shapeOption,
+                  formData.shape === 'square' && styles.shapeOptionActive,
+                ]}
+                onPress={() => setFormData(prev => ({ ...prev, shape: 'square' }))}
+              >
+                <View style={[styles.shapePreview, { borderRadius: 4 }]} />
+                <RNText style={[styles.shapeLabel, formData.shape === 'square' && styles.shapeLabelActive]}>Carré</RNText>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.shapeOption,
+                  formData.shape === 'rounded' && styles.shapeOptionActive,
+                ]}
+                onPress={() => setFormData(prev => ({ ...prev, shape: 'rounded' }))}
+              >
+                <View style={[styles.shapePreview, { borderRadius: 9999 }]} />
+                <RNText style={[styles.shapeLabel, formData.shape === 'rounded' && styles.shapeLabelActive]}>Arrondi</RNText>
+              </Pressable>
+            </View>
+          </View>
         </Pressable>
       </KeyboardAwareScrollViewWrapper>
 
-      {/* Footer avec boutons */}
+      {/* Footer */}
       <View style={styles.footer}>
-        {/* Bouton Annuler */}
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={onCancel}
-        >
-          <RNText style={styles.cancelButtonText}>Annuler</RNText>
-        </TouchableOpacity>
-
-        {/* Bouton Enregistrer */}
         <TouchableOpacity
           style={[
             styles.saveButton,
@@ -308,34 +297,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     backgroundColor: '#FAFAFA',
-    gap: 12,
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
   },
   saveButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -352,5 +319,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  shapeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  shapeOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  shapeOptionActive: {
+    borderColor: '#4F46E5',
+    backgroundColor: '#EEF2FF',
+  },
+  shapePreview: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#CBD5E1',
+  },
+  shapeLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  shapeLabelActive: {
+    color: '#4F46E5',
   },
 });

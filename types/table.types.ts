@@ -1,5 +1,4 @@
 import { Order } from "./order.types";
-import { Status } from "./status.enum";
 
 export type Table = {
   id: string;
@@ -11,6 +10,7 @@ export type Table = {
   roomId: string;
   orders: Order[];
   seats: number;
+  shape?: 'square' | 'rounded';
   account: string;
   createdAt: string;
   updatedAt: string;

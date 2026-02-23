@@ -1,56 +1,30 @@
 /**
- * 🏓 COMPOSANT ROOMTABLE
+ * RoomTable - Table interactive avec drag & drop, resize et snap-to-grid.
  *
- * Représente une table interactive dans une salle de restaurant.
- * Gère le drag & drop, le resize, et la synchronisation avec le backend.
+ * ARCHITECTURE :
+ * - Coordonnées : Backend en GRILLE (entiers) ↔ UI en PIXELS (grille * CELL_SIZE)
+ * - Flux : Backend props → SharedValues → Animations → Visual → Gesture → Validation → onUpdate()
+ * - Validation : limites room + collisions AABB + taille min (MIN_CELLS)
+ * - Si invalide → rollback vers backend (source de vérité)
  *
- * 🎯 ARCHITECTURE GLOBALE :
+ * SHARED VALUES (17+) :
+ * - Position : translateX/Y (drag offset), currentX/Y (position courante), lastValidX/Y (rollback)
+ * - Dimensions : width/height (visuelles), currentWidth/Height (courantes), startWidth/Height (référence)
+ * - Effets : scale (zoom au grab), opacity (feedback validité), ghost (preview snap position)
+ * - Cache : cachedTable*InCells, cachedMax* (limites pré-calculées pour éviter 60fps de calculs)
  *
- * 1️⃣ SYSTÈME DE COORDONNÉES :
- *    - Backend : Coordonnées de GRILLE (entiers, ex: xStart=2, width=3)
- *    - UI : Coordonnées en PIXELS (ex: currentX=100px, width=150px)
- *    - Conversion : pixels = grille * CELL_SIZE
- *
- * 2️⃣ FLUX DE DONNÉES (UNIDIRECTIONNEL) :
- *    Backend (table props) → SharedValues (UI) → Animations → Visual
- *    └─ Update via onUpdate() ←─ Validation ←─ User Gesture ─┘
- *
- * 3️⃣ SYNCHRONISATION BACKEND ↔ UI :
- *    - useEffect surveille table.xStart, table.yStart, table.width, table.height
- *    - Dès qu'une prop change → sync vers les SharedValues
- *    - Protection anti-cascade : skip si déjà synchronisé
- *
- * 4️⃣ GESTES (React Native Gesture Handler + Reanimated) :
- *    - Drag : Mouvement fluide + ghost preview + snap final
- *    - Resize : 4 handles (gauche, droite, haut, bas) avec snap-to-grid
- *    - Tap/LongPress : Sélection et menu contextuel
- *
- * 5️⃣ VALIDATION :
- *    - Limites de la room (0 ≤ x ≤ roomWidth)
- *    - Collisions AABB avec autres tables
- *    - Taille minimum (MIN_CELLS = 2)
- *    - Si invalide → rollback vers backend (source de vérité)
- *
- * 6️⃣ OPTIMISATIONS :
- *    - Précalcul des limites dans onStart (évite 60 calculs/sec)
- *    - SharedValues pour accès worklet (thread UI)
- *    - Math.round strict pour éviter problèmes de précision décimale
- *    - Ghost preview calculé séparément du mouvement réel
- *
- * ⚠️ POINTS CRITIQUES À RETENIR :
- * - Toujours utiliser table.* (backend) comme source de vérité en cas d'échec
- * - Math.round STRICT sur toutes conversions pixels→grille (évite 2.000001)
- * - startX/startWidth capturés dans onStart = RÉFÉRENCE pour tout le geste
- * - alreadySynced check = évite cascades de syncs infinies
+ * GESTURES (7) :
+ * - Mode édition sélectionné : drag (pan libre) + 4 resize handles (haut/bas/gauche/droite) + editTap
+ * - Mode non-sélectionné : tap (sélection) + longPress (sélection)
  */
 import React, { useMemo, useCallback } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, Text as RNText } from "react-native";
 import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { isTableInBounds } from "~/hooks/room/useRoomValidation";
-import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
-import { RoomChairs } from "./RoomChairs";
+import { RoomChairs, RoomChairsRounded } from "./RoomChairs";
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   GestureDetector,
   Gesture,
@@ -77,9 +51,12 @@ interface TableViewProps {
   CELL_SIZE: number;
   currentZoomScale: SharedValue<number>; // ⚡ SharedValue direct (pas number)
   isSelected: boolean;
+  roomColor?: string | null;
+  tableBg?: string;
   onPress: (table: Table) => void;
   onLongPress: (table: Table) => void;
   onUpdate: (id: string, updates: Partial<Table>) => void;
+  onEditTap?: (table: Table) => void;
 }
 
 const RoomTable: React.FC<TableViewProps> = ({
@@ -94,135 +71,86 @@ const RoomTable: React.FC<TableViewProps> = ({
   CELL_SIZE,
   currentZoomScale,
   isSelected,
+  roomColor,
+  tableBg = '#F5F4FA',
   onPress,
   onLongPress,
-  onUpdate
+  onUpdate,
+  onEditTap,
 }) => {
-  /**
-   * 🎯 SYSTÈME DE SHARED VALUES (React Native Reanimated)
-   *
-   * Les SharedValues permettent des animations fluides 60fps en s'exécutant sur le thread UI.
-   * Elles sont séparées en plusieurs catégories :
-   */
-
-  // 📍 POSITIONS DE TRANSLATION (pour le drag fluide)
-  // translateX/Y : offset temporaire pendant le drag, remis à 0 après validation
-  // startX/Y : position de départ du geste (capturée dans onStart)
+  // --- SHARED VALUES : Position ---
+  // translateX/Y : offset libre pendant le drag, remis à 0 après validation
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  // startX/Y : position capturée au début du geste (référence stable pour calculs)
   const startX = useSharedValue(table.xStart * CELL_SIZE);
   const startY = useSharedValue(table.yStart * CELL_SIZE);
-
-  // 📌 POSITIONS ACTUELLES (source de vérité côté UI)
-  // currentX/Y : position réelle de la table en pixels, synchronisée avec le backend
+  // currentX/Y : position courante en pixels (source de vérité UI, synchronisée avec le backend)
   const currentX = useSharedValue(table.xStart * CELL_SIZE);
   const currentY = useSharedValue(table.yStart * CELL_SIZE);
-
-  // ✅ DERNIÈRE POSITION VALIDE (pour rollback en cas d'échec)
-  // lastValidX/Y : sauvegarde de la dernière position validée sans collision
+  // lastValidX/Y : dernière position validée (pour rollback si collision ou hors-limites)
   const lastValidX = useSharedValue(table.xStart * CELL_SIZE);
   const lastValidY = useSharedValue(table.yStart * CELL_SIZE);
 
-  // 📏 DIMENSIONS ANIMÉES (pour le resize)
+  // --- SHARED VALUES : Dimensions ---
   // width/height : dimensions visuelles animées pendant le resize
-  // startWidth/Height : dimensions de départ du geste (capturées dans onStart)
   const width = useSharedValue(table.width * CELL_SIZE);
   const height = useSharedValue(table.height * CELL_SIZE);
+  // startWidth/Height : dimensions capturées au début du resize (référence stable)
   const startWidth = useSharedValue(table.width * CELL_SIZE);
   const startHeight = useSharedValue(table.height * CELL_SIZE);
-
-  // 📐 DIMENSIONS ACTUELLES (source de vérité côté UI)
-  // currentWidth/Height : dimensions réelles de la table, synchronisées avec le backend
+  // currentWidth/Height : dimensions courantes (source de vérité UI)
   const currentWidth = useSharedValue(table.width * CELL_SIZE);
   const currentHeight = useSharedValue(table.height * CELL_SIZE);
 
-  // 🎨 EFFETS VISUELS
-  // scale : agrandissement lors de la sélection (1.05x pendant le drag)
-  // opacity : transparence pour indiquer une position invalide
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
+  // --- SHARED VALUES : Effets visuels ---
+  const scale = useSharedValue(1);    // Zoom visuel au grab (1.05x)
+  const opacity = useSharedValue(1);  // Feedback visuel de validité (0.5 si invalide)
 
-  // 👻 APERÇU FANTÔME (preview de la position snappée)
-  // Affiche une silhouette semi-transparente à la position snappée pendant le drag
+  // --- SHARED VALUES : Ghost preview ---
+  // Aperçu en pointillé de la position snappée pendant le drag
   const ghostOpacity = useSharedValue(0);
   const ghostX = useSharedValue(0);
   const ghostY = useSharedValue(0);
 
-  // ⚡ CACHE DE PERFORMANCE (précalculs pour le drag)
-  // Ces valeurs sont calculées une seule fois au début du drag pour éviter
-  // de recalculer à chaque frame (60 fois par seconde)
+  // --- SHARED VALUES : Cache de performance ---
+  // Pré-calculés dans onStart pour éviter des recalculs à chaque frame (60fps)
   const cachedTableWidthInCells = useSharedValue(0);
   const cachedTableHeightInCells = useSharedValue(0);
-  const cachedMaxX = useSharedValue(0);
-  const cachedMaxY = useSharedValue(0);
+  const cachedMaxX = useSharedValue(0);  // roomWidth - tableWidth (limite droite)
+  const cachedMaxY = useSharedValue(0);  // roomHeight - tableHeight (limite basse)
 
-  // 🔍 ZOOM SCALE : currentZoomScale (SharedValue) utilisé directement dans les gestures
-
-  // Vérifier si une position est valide (dans les limites et sans collision)
-  const isValidPosition = useCallback((x: number, y: number, w: number, h: number) => {
-    'worklet';
-    // Vérifier les limites de la room
-    if (x < 0 || y < 0 || x + w > roomWidth || y + h > roomHeight) {
-      return false;
-    }
-
-    // Vérifier les collisions avec d'autres tables
-    // NOTE: Cette vérification se fait côté JS, pas dans le worklet
-    return true; // La vérification complète sera faite dans onEnd
-  }, [roomWidth, roomHeight]);
-
-  /**
-   * 🔄 SYNCHRONISATION BACKEND → UI
-   *
-   * Ce useEffect synchronise les SharedValues (UI) avec les props du backend.
-   * Il se déclenche quand table.xStart, table.yStart, table.width ou table.height changent.
-   *
-   * ⚠️ PROBLÈME CRITIQUE RÉSOLU :
-   * Sans la vérification alreadySynced, on avait des "cascades de syncs" :
-   * 1. Le backend met à jour table.xStart = 2
-   * 2. Le useEffect sync met currentX.value = 2
-   * 3. Cela déclenche un re-render qui réexécute useEffect
-   * 4. Boucle infinie de syncs causant une désynchronisation
-   *
-   * 💡 SOLUTION :
-   * On vérifie si les SharedValues sont DÉJÀ égales aux valeurs backend.
-   * Si oui → skip le sync (évite la cascade)
-   * Si non → sync nécessaire (changement réel du backend)
-   */
+  // --- SYNC BACKEND → SHARED VALUES ---
+  // Quand le backend pousse de nouvelles valeurs (via WebSocket ou API response),
+  // on met à jour toutes les SharedValues. Skip si déjà synchronisé pour éviter les cascades.
   React.useEffect(() => {
     const targetX = table.xStart * CELL_SIZE;
     const targetY = table.yStart * CELL_SIZE;
     const targetWidth = table.width * CELL_SIZE;
     const targetHeight = table.height * CELL_SIZE;
 
-    // ✋ Vérifier si déjà synchronisé pour éviter les syncs inutiles
-    const alreadySynced = (
+    const alreadySynced =
       currentX.value === targetX &&
       currentY.value === targetY &&
       currentWidth.value === targetWidth &&
-      currentHeight.value === targetHeight
-    );
-
+      currentHeight.value === targetHeight;
     if (alreadySynced) return;
 
-    // 📥 Synchroniser les valeurs actuelles
     currentX.value = targetX;
     currentY.value = targetY;
     currentWidth.value = targetWidth;
     currentHeight.value = targetHeight;
-
-    // ✅ Mettre à jour les positions valides (pour rollback)
     lastValidX.value = targetX;
     lastValidY.value = targetY;
-
-    // 🎨 Synchroniser aussi les valeurs animées
     width.value = targetWidth;
     height.value = targetHeight;
     translateX.value = 0;
     translateY.value = 0;
   }, [table.xStart, table.yStart, table.width, table.height]);
 
-  // Callbacks
+  const tableBorderRadius = table.shape === 'rounded' ? 9999 : 8;
+
+  // --- CALLBACKS ---
   const handlePress = useCallback(() => {
     onPress(table);
   }, [onPress, table]);
@@ -231,33 +159,16 @@ const RoomTable: React.FC<TableViewProps> = ({
     onLongPress(table);
   }, [onLongPress, table]);
 
-  /**
-   * 🔍 DÉTECTION DE COLLISION (AABB - Axis-Aligned Bounding Box)
-   *
-   * Vérifie si une table entre en collision avec d'autres tables.
-   * Utilise l'algorithme AABB qui vérifie le chevauchement de rectangles.
-   *
-   * 📐 PRINCIPE AABB :
-   * Deux rectangles se chevauchent SI ET SEULEMENT SI :
-   * - Le côté gauche de A est à gauche du côté droit de B (x < otherX + otherW)
-   * - Le côté droit de A est à droite du côté gauche de B (x + w > otherX)
-   * - Le côté haut de A est au-dessus du côté bas de B (y < otherY + otherH)
-   * - Le côté bas de A est en-dessous du côté haut de B (y + h > otherY)
-   *
-   * ⚠️ IMPORTANT : Utilise les coordonnées de la GRILLE (entiers), pas les pixels
-   *
-   * @param x - Position X en cellules de grille
-   * @param y - Position Y en cellules de grille
-   * @param w - Largeur en cellules de grille
-   * @param h - Hauteur en cellules de grille
-   * @returns true si collision détectée, false sinon
-   */
+  const handleEditTap = useCallback(() => {
+    onEditTap?.(table);
+  }, [onEditTap, table]);
+
+  // --- COLLISION DETECTION ---
+  // Détection AABB (Axis-Aligned Bounding Box) en coordonnées grille.
+  // Vérifie si la position (x,y,w,h) chevauche une autre table.
   const checkCollision = useCallback((x: number, y: number, w: number, h: number): boolean => {
     return tables.some(otherTable => {
-      // Ignorer la table elle-même
       if (otherTable.id === table.id) return false;
-
-      // AABB collision detection avec des entiers (coordonnées grille)
       return (
         x < otherTable.xStart + otherTable.width &&
         x + w > otherTable.xStart &&
@@ -267,69 +178,41 @@ const RoomTable: React.FC<TableViewProps> = ({
     });
   }, [tables, table.id]);
 
-  /**
-   * 🚚 MISE À JOUR DE POSITION (après drag)
-   *
-   * Appelée quand l'utilisateur relâche une table après l'avoir déplacée.
-   * Valide la nouvelle position et met à jour le backend ou rollback si invalide.
-   *
-   * 📍 PROCESSUS :
-   * 1. Conversion pixels → grille (avec Math.round strict pour éviter décimales)
-   * 2. Vérification des limites de la room
-   * 3. Vérification des collisions AABB
-   * 4a. Si valide → Mise à jour backend + sync des SharedValues
-   * 4b. Si invalide → Animation de retour à lastValidX/Y
-   *
-   * ⚠️ IMPORTANCE DU Math.round :
-   * Sans arrondi strict, on peut avoir gridX = 2.0000001 au lieu de 2
-   * Cela casse la détection AABB qui attend des entiers purs
-   */
+  // --- VALIDATION POSITION (après drag) ---
+  // Convertit pixels → grille, vérifie bounds + collisions.
+  // Si valide : met à jour les SharedValues + appelle onUpdate (→ backend).
+  // Si invalide : rollback animé vers lastValidX/Y.
   const handleUpdatePosition = useCallback((newX: number, newY: number) => {
-    // 1️⃣ Convertir pixels → grille avec arrondi strict pour éviter les décimales
     const gridX = Math.round(newX / CELL_SIZE);
     const gridY = Math.round(newY / CELL_SIZE);
     const tableWidth = Math.round(currentWidth.value / CELL_SIZE);
     const tableHeight = Math.round(currentHeight.value / CELL_SIZE);
 
-    // 2️⃣ Vérifier les limites de la room
     const withinBounds = isTableInBounds(
       { xStart: gridX, yStart: gridY, width: tableWidth, height: tableHeight },
       roomWidth, roomHeight
     );
 
-    // 3️⃣ Vérifier les collisions
     const hasCollision = checkCollision(gridX, gridY, tableWidth, tableHeight);
 
-    // 4️⃣ Si position valide, mettre à jour
     if (!hasCollision && withinBounds) {
-      // ✅ Reconvertir en pixels pour cohérence (garantit alignement parfait)
       const validX = gridX * CELL_SIZE;
       const validY = gridY * CELL_SIZE;
-
-      // Sauvegarder comme dernière position valide
       lastValidX.value = validX;
       lastValidY.value = validY;
       currentX.value = validX;
       currentY.value = validY;
       translateX.value = 0;
       translateY.value = 0;
-
-      // 📤 Envoyer au backend (en coordonnées grille)
-      onUpdate(table.id, {
-        xStart: gridX,
-        yStart: gridY
-      });
+      onUpdate(table.id, { xStart: gridX, yStart: gridY });
     } else {
-      // ❌ Collision ou hors limites → animation de retour
+      // Rollback animation
       const deltaX = lastValidX.value - currentX.value;
       const deltaY = lastValidY.value - currentY.value;
-
       translateX.value = withSpring(deltaX, {}, () => {
-        // Une fois l'animation terminée, reset les valeurs
         translateX.value = 0;
         currentX.value = lastValidX.value;
       });
-
       translateY.value = withSpring(deltaY, {}, () => {
         translateY.value = 0;
         currentY.value = lastValidY.value;
@@ -337,62 +220,31 @@ const RoomTable: React.FC<TableViewProps> = ({
     }
   }, [CELL_SIZE, onUpdate, table.id, checkCollision, roomWidth, roomHeight, currentWidth, currentHeight, lastValidX, lastValidY]);
 
-  /**
-   * 📏 MISE À JOUR DE TAILLE (après resize)
-   *
-   * Appelée quand l'utilisateur relâche un handle de resize.
-   * Peut aussi mettre à jour la position (resize gauche/haut déplace la table).
-   *
-   * 📐 PROCESSUS :
-   * 1. Conversion pixels → grille + application de la taille MIN_CELLS
-   * 2. Vérification des limites de la room
-   * 3. Vérification des collisions AABB
-   * 4a. Si valide → Mise à jour backend + sync des SharedValues
-   * 4b. Si invalide → Reset COMPLET vers les valeurs BACKEND
-   *
-   * ⚠️ BUG RÉSOLU - RESET VERS BACKEND :
-   * Avant, on faisait : width.value = withSpring(currentWidth.value)
-   * Problème : currentWidth peut être désynchronisé du backend !
-   * Si on déplace une table puis resize, currentWidth peut avoir l'ancienne restriction.
-   *
-   * 💡 SOLUTION :
-   * Reset TOUJOURS vers table.width * CELL_SIZE (valeur backend = source de vérité)
-   * Cela garantit que les SharedValues reflètent l'état réel du backend
-   *
-   * @param newWidth - Nouvelle largeur en pixels
-   * @param newHeight - Nouvelle hauteur en pixels
-   * @param newX - Nouvelle position X en pixels (optionnel, pour resize gauche)
-   * @param newY - Nouvelle position Y en pixels (optionnel, pour resize haut)
-   */
+  // --- VALIDATION DIMENSIONS (après resize) ---
+  // Convertit pixels → grille, applique contrainte MIN_CELLS, vérifie bounds + collisions.
+  // Si valide : met à jour SharedValues + onUpdate. Gère aussi le déplacement X/Y (left/top resize).
+  // Si invalide : rollback animé vers les valeurs backend (source de vérité absolue).
   const handleUpdateSize = useCallback((newWidth: number, newHeight: number, newX?: number, newY?: number) => {
-    // 1️⃣ Convertir avec arrondi strict
     const gridWidth = Math.round(newWidth / CELL_SIZE);
     const gridHeight = Math.round(newHeight / CELL_SIZE);
     const finalGridX = newX !== undefined ? Math.round(newX / CELL_SIZE) : table.xStart;
     const finalGridY = newY !== undefined ? Math.round(newY / CELL_SIZE) : table.yStart;
-
-    // Appliquer les contraintes de taille minimale (2 cellules minimum)
     const constrainedWidth = Math.max(MIN_CELLS, gridWidth);
     const constrainedHeight = Math.max(MIN_CELLS, gridHeight);
 
-    // 2️⃣ Vérification des limites de la room
     const withinBounds = isTableInBounds(
       { xStart: finalGridX, yStart: finalGridY, width: constrainedWidth, height: constrainedHeight },
       roomWidth, roomHeight
     );
 
-    // 3️⃣ Vérification des collisions
     const hasCollision = checkCollision(finalGridX, finalGridY, constrainedWidth, constrainedHeight);
 
-    // 4️⃣ Valider et appliquer OU rollback
     if (!hasCollision && withinBounds) {
-      // ✅ Tout est valide - reconvertir en pixels pour cohérence
       const validX = finalGridX * CELL_SIZE;
       const validY = finalGridY * CELL_SIZE;
       const validWidth = constrainedWidth * CELL_SIZE;
       const validHeight = constrainedHeight * CELL_SIZE;
 
-      // Mettre à jour les positions si elles ont changé (resize gauche/haut)
       if (newX !== undefined) {
         currentX.value = validX;
         lastValidX.value = validX;
@@ -407,7 +259,6 @@ const RoomTable: React.FC<TableViewProps> = ({
       currentWidth.value = validWidth;
       currentHeight.value = validHeight;
 
-      // 📤 Construire les updates pour le backend
       const updates: Partial<Table> = {
         width: constrainedWidth,
         height: constrainedHeight
@@ -421,9 +272,7 @@ const RoomTable: React.FC<TableViewProps> = ({
 
       onUpdate(table.id, updates);
     } else {
-      // ❌ Collision ou hors limites → RESET COMPLET vers les valeurs du BACKEND (source de vérité)
-      // ⚠️ IMPORTANT : Ne PAS utiliser currentWidth/currentHeight qui peuvent être désynchronisés
-      // Toujours utiliser table.width/height qui viennent du backend
+      // Rollback to backend values (source of truth)
       const backendWidth = table.width * CELL_SIZE;
       const backendHeight = table.height * CELL_SIZE;
       const backendX = table.xStart * CELL_SIZE;
@@ -431,8 +280,6 @@ const RoomTable: React.FC<TableViewProps> = ({
 
       width.value = withSpring(backendWidth);
       height.value = withSpring(backendHeight);
-
-      // Réinitialiser aussi les positions (pour resize gauche/haut)
       currentX.value = backendX;
       currentY.value = backendY;
       currentWidth.value = backendWidth;
@@ -442,28 +289,25 @@ const RoomTable: React.FC<TableViewProps> = ({
     }
   }, [CELL_SIZE, onUpdate, table.id, table.xStart, table.yStart, table.width, table.height, checkCollision, roomWidth, roomHeight, currentWidth, currentHeight, lastValidX, lastValidY]);
 
-  // Geste de tap
+  // --- GESTURES : Sélection (mode non-édition) ---
+  // Tap simple pour sélectionner, longPress pour sélection alternative
   const tapGesture = useMemo(() =>
     Gesture.Tap()
-      .onEnd(() => {
-        'worklet';
-        runOnJS(handlePress)();
-      })
-      .runOnJS(false),
+      .runOnJS(true)
+      .onEnd(handlePress),
     [handlePress]);
 
-  // Geste de long press
   const longPressGesture = useMemo(() =>
     Gesture.LongPress()
       .minDuration(500)
-      .onEnd(() => {
-        'worklet';
-        runOnJS(handleLongPress)();
-      })
-      .runOnJS(false),
+      .runOnJS(true)
+      .onEnd(handleLongPress),
     [handleLongPress]);
 
-  // Gestes de redimensionnement avec snap-to-grid en temps réel
+  // --- GESTURES : Resize (4 handles, snap-to-grid, zoom-compensé) ---
+  // Chaque handle modifie width/height avec compensation du zoom courant.
+  // Left/Top modifient aussi la position (la table grandit vers la gauche/haut).
+
   const rightResizeGesture = useMemo(() =>
     Gesture.Pan()
       .enabled(isEditing && editionMode)
@@ -473,79 +317,46 @@ const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
-        // 🔍 Compenser le zoom pour que le resize suive le curseur
+        // Compenser le zoom pour que le resize suive le curseur
         const compensatedTranslationX = event.translationX / currentZoomScale.value;
         const rawWidth = startWidth.value + compensatedTranslationX;
-        // Snap to grid pendant le resize
-        const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
-        width.value = snappedWidth;
+        // Snap to grid avec taille minimum
+        width.value = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
       })
       .onEnd(() => {
         'worklet';
-        // Ne PAS mettre à jour currentWidth ici - laisser handleUpdateSize le faire
         runOnJS(handleUpdateSize)(width.value, currentHeight.value);
       })
       .runOnJS(false),
     [isEditing, editionMode, handleUpdateSize]);
 
-  /**
-   * ↔️ GESTE DE RESIZE GAUCHE
-   *
-   * Plus complexe que le resize droit car il modifie À LA FOIS :
-   * - La largeur de la table (width)
-   * - La position X de la table (xStart)
-   *
-   * 🎯 PRINCIPE :
-   * Quand on tire le bord gauche vers la gauche :
-   * - La table s'agrandit (width augmente)
-   * - La table se déplace vers la gauche (xStart diminue)
-   *
-   * ⚠️ BUG RÉSOLU - UTILISATION DE startWidth/startX :
-   * Avant : deltaWidth = snappedWidth - currentWidth.value
-   * Problème : currentWidth peut changer pendant le geste → calculs erronés
-   *
-   * 💡 SOLUTION :
-   * Toujours utiliser startWidth et startX capturés dans onStart comme RÉFÉRENCE.
-   * Ces valeurs sont figées pendant tout le geste, garantissant la cohérence des calculs.
-   *
-   * 📐 CALCUL :
-   * Si on ajoute 2 cellules de largeur (deltaGrid = +2) :
-   * newX = startX - 2 * CELL_SIZE (on décale de 2 cellules vers la gauche)
-   */
+  // Left resize : modifie width ET xStart (la table se déplace vers la gauche)
+  // Utilise startWidth/startX capturés dans onStart comme référence stable
   const leftResizeGesture = useMemo(() =>
     Gesture.Pan()
       .enabled(isEditing && editionMode)
       .onStart(() => {
         'worklet';
-        // 💾 Capturer les valeurs de départ (RÉFÉRENCE pour tout le geste)
         startWidth.value = currentWidth.value;
         startX.value = currentX.value;
       })
       .onUpdate((event) => {
         'worklet';
-        // 🔍 Compenser le zoom pour que le resize suive le curseur
         const compensatedTranslationX = event.translationX / currentZoomScale.value;
-        // 📏 Calculer la nouvelle largeur (tirer vers gauche = réduire translationX)
+        // Tirer vers la gauche = réduire translationX = agrandir la table
         const rawWidth = startWidth.value - compensatedTranslationX;
         const snappedWidth = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawWidth / CELL_SIZE) * CELL_SIZE);
-
-        // ⚠️ IMPORTANT : Utiliser startWidth comme référence (pas currentWidth)
+        // Delta par rapport au startWidth (pas currentWidth qui peut changer)
         const deltaWidth = snappedWidth - startWidth.value;
-
-        // Appliquer le resize visuel
         width.value = snappedWidth;
-        // Déplacer vers la gauche de la différence (compensation visuelle)
+        // Compenser visuellement le déplacement vers la gauche
         translateX.value = -deltaWidth;
       })
       .onEnd(() => {
         'worklet';
-        // 🧮 Calculer le décalage en cellules de grille
         const deltaGrid = (width.value - startWidth.value) / CELL_SIZE;
-
-        // ⚠️ IMPORTANT : Utiliser startX comme référence (pas currentX)
+        // Nouvelle position X = startX décalé du delta
         const newX = startX.value - deltaGrid * CELL_SIZE;
-
-        // 🚀 Validation et update backend (avec nouvelle position X)
         runOnJS(handleUpdateSize)(width.value, currentHeight.value, newX, undefined);
       })
       .runOnJS(false),
@@ -560,20 +371,18 @@ const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
-        // 🔍 Compenser le zoom pour que le resize suive le curseur
         const compensatedTranslationY = event.translationY / currentZoomScale.value;
         const rawHeight = startHeight.value + compensatedTranslationY;
-        const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
-        height.value = snappedHeight;
+        height.value = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
       })
       .onEnd(() => {
         'worklet';
-        // Ne PAS mettre à jour currentHeight ici - laisser handleUpdateSize le faire
         runOnJS(handleUpdateSize)(currentWidth.value, height.value);
       })
       .runOnJS(false),
     [isEditing, editionMode, handleUpdateSize]);
 
+  // Top resize : modifie height ET yStart (même logique que left resize sur l'axe Y)
   const topResizeGesture = useMemo(() =>
     Gesture.Pan()
       .enabled(isEditing && editionMode)
@@ -584,71 +393,38 @@ const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
-        // 🔍 Compenser le zoom pour que le resize suive le curseur
         const compensatedTranslationY = event.translationY / currentZoomScale.value;
         const rawHeight = startHeight.value - compensatedTranslationY;
         const snappedHeight = Math.max(MIN_CELLS * CELL_SIZE, Math.round(rawHeight / CELL_SIZE) * CELL_SIZE);
-        const deltaHeight = snappedHeight - startHeight.value; // Utiliser startHeight comme référence
-
         height.value = snappedHeight;
-        translateY.value = -deltaHeight;
+        translateY.value = -(snappedHeight - startHeight.value);
       })
       .onEnd(() => {
         'worklet';
-        const deltaGrid = (height.value - startHeight.value) / CELL_SIZE; // Utiliser startHeight
-        const newY = startY.value - deltaGrid * CELL_SIZE; // Utiliser startY
-
+        const deltaGrid = (height.value - startHeight.value) / CELL_SIZE;
+        const newY = startY.value - deltaGrid * CELL_SIZE;
         runOnJS(handleUpdateSize)(currentWidth.value, height.value, undefined, newY);
       })
       .runOnJS(false),
     [isEditing, editionMode, handleUpdateSize]);
 
-  /**
-   * 🖐️ GESTE DE DRAG (déplacement de table)
-   *
-   * Geste Pan qui permet de déplacer une table avec le doigt/souris.
-   * Utilise un système de "drag fluide + ghost preview + snap final".
-   *
-   * 🎯 FONCTIONNEMENT EN 3 PHASES :
-   *
-   * 1️⃣ onStart (début du drag) :
-   *    - Agrandit légèrement la table (scale = 1.05) pour feedback visuel
-   *    - Sauvegarde la position de départ dans lastValidX/Y
-   *    - Précalcule les limites max (roomWidth - tableWidth) pour performance
-   *    - Reset translateX/Y à 0
-   *
-   * 2️⃣ onUpdate (pendant le drag, ~60fps) :
-   *    - translateX/Y suit EXACTEMENT le doigt (pas de snap)
-   *    - Calcule la position snappée pour le GHOST uniquement
-   *    - Le ghost montre où la table va se placer quand on relâche
-   *    - Contraindre ghost dans les limites de la room
-   *
-   * 3️⃣ onEnd (relâchement) :
-   *    - Calcule la position finale snappée à la grille
-   *    - Appelle handleUpdatePosition qui valide et met à jour backend
-   *    - Reset scale à 1 et cache le ghost
-   *
-   * ⚡ OPTIMISATION :
-   * Les valeurs cachedMaxX/Y sont calculées UNE SEULE FOIS dans onStart.
-   * Cela évite de recalculer 60 fois par seconde dans onUpdate.
-   */
+  // --- GESTURE : Drag (déplacement libre + ghost preview + snap final) ---
+  // onStart : capture position initiale, pré-calcule les limites de la room
+  // onUpdate : déplacement libre (compensé zoom) + ghost preview snappé sur la grille
+  // onEnd : snap final sur la grille, validation bounds + collisions via handleUpdatePosition
   const dragGesture = useMemo(() =>
     Gesture.Pan()
       .enabled(isEditing && editionMode)
       .onStart(() => {
         'worklet';
-        // 🎨 Feedback visuel : agrandir légèrement
         scale.value = 1.05;
-
-        // 💾 Sauvegarder la position actuelle
         lastValidX.value = currentX.value;
         lastValidY.value = currentY.value;
         startX.value = currentX.value;
         startY.value = currentY.value;
         translateX.value = 0;
         translateY.value = 0;
-
-        // ⚡ Précalculer une seule fois au début du drag (optimisation)
+        // Precompute limits once (avoids 60fps recalculations)
         cachedTableWidthInCells.value = Math.round(currentWidth.value / CELL_SIZE);
         cachedTableHeightInCells.value = Math.round(currentHeight.value / CELL_SIZE);
         cachedMaxX.value = roomWidth - cachedTableWidthInCells.value;
@@ -656,58 +432,53 @@ const RoomTable: React.FC<TableViewProps> = ({
       })
       .onUpdate((event) => {
         'worklet';
-        // 👆 Mouvement direct SANS snap (suit exactement le doigt)
-        // 🔍 Diviser par zoomScale pour compenser le zoom sur grandes grilles
         const compensatedTranslationX = event.translationX / currentZoomScale.value;
         const compensatedTranslationY = event.translationY / currentZoomScale.value;
-
         translateX.value = compensatedTranslationX;
         translateY.value = compensatedTranslationY;
 
-        // 👻 Calculs optimisés pour le fantôme (preview de la position snappée)
+        // Ghost preview at snapped position
         const snappedGridX = Math.round((currentX.value + compensatedTranslationX) / CELL_SIZE);
         const snappedGridY = Math.round((currentY.value + compensatedTranslationY) / CELL_SIZE);
-
-        // Contraindre dans les limites de la room
         const constrainedX = Math.max(0, Math.min(snappedGridX, cachedMaxX.value));
         const constrainedY = Math.max(0, Math.min(snappedGridY, cachedMaxY.value));
-
-        // Positionner le ghost à la position snappée
         ghostX.value = constrainedX * CELL_SIZE;
         ghostY.value = constrainedY * CELL_SIZE;
         ghostOpacity.value = 0.3;
       })
       .onEnd(() => {
         'worklet';
-        // 🎨 Reset des effets visuels
         scale.value = withSpring(1);
         ghostOpacity.value = withSpring(0);
 
-        // 📍 Snap final à la grille - réutiliser les valeurs précalculées
         const snappedGridX = Math.round((currentX.value + translateX.value) / CELL_SIZE);
         const snappedGridY = Math.round((currentY.value + translateY.value) / CELL_SIZE);
-
         const constrainedX = Math.max(0, Math.min(snappedGridX, cachedMaxX.value));
         const constrainedY = Math.max(0, Math.min(snappedGridY, cachedMaxY.value));
-
-        const finalX = constrainedX * CELL_SIZE;
-        const finalY = constrainedY * CELL_SIZE;
-
-        // 🚀 Envoyer au JS thread pour validation et update backend
-        runOnJS(handleUpdatePosition)(finalX, finalY);
+        runOnJS(handleUpdatePosition)(constrainedX * CELL_SIZE, constrainedY * CELL_SIZE);
       })
       .runOnJS(false),
   [isEditing, editionMode, handleUpdatePosition, roomWidth, roomHeight]);
 
-  // Geste composé uniquement pour la table principale (pas les handles)
+  // --- GESTURE : Edit tap (tap sur table sélectionnée → ouvre le panel d'édition) ---
+  const editTapGesture = useMemo(() =>
+    Gesture.Tap()
+      .runOnJS(true)
+      .onEnd(handleEditTap),
+    [handleEditTap]);
+
+  // --- GESTURE COMPOSÉE ---
+  // Mode édition sélectionné : Race(editTap, drag) → le drag démarre si le tap ne match pas
+  // Mode non-sélectionné : Exclusive(longPress, tap) → longPress prioritaire sur tap
   const composedGesture = useMemo(() => {
     if (isEditing && editionMode) {
-      return dragGesture;
+      return Gesture.Race(editTapGesture, dragGesture);
     }
     return Gesture.Exclusive(longPressGesture, tapGesture);
-  }, [isEditing, editionMode, dragGesture, longPressGesture, tapGesture]);
+  }, [isEditing, editionMode, editTapGesture, dragGesture, longPressGesture, tapGesture]);
 
-  // Style animé pour la table
+  // --- STYLES ANIMÉS ---
+  // Position + dimensions + scale + opacity, recalculés à chaque frame par Reanimated
   const animatedStyle = useAnimatedStyle(() => {
     return {
       position: 'absolute' as const,
@@ -723,7 +494,8 @@ const RoomTable: React.FC<TableViewProps> = ({
     };
   }, [isSelected]);
 
-  // Style pour l'aperçu fantôme
+  // Ghost preview : rectangle en pointillé montrant la position snappée sur la grille
+  // Reste carré (borderRadius: 5) même pour les tables arrondies pour montrer l'espace grille
   const ghostStyle = useAnimatedStyle(() => {
     return {
       position: 'absolute' as const,
@@ -741,7 +513,8 @@ const RoomTable: React.FC<TableViewProps> = ({
     };
   });
 
-  // Reset des animations quand on quitte l'édition
+  // --- EFFETS : Reset et feedback visuel ---
+  // Remise à zéro des animations quand la table n'est plus en édition
   React.useEffect(() => {
     if (!isEditing) {
       translateX.value = withSpring(0);
@@ -750,7 +523,7 @@ const RoomTable: React.FC<TableViewProps> = ({
     }
   }, [isEditing]);
 
-  // Validation de position
+  // Feedback visuel : opacity réduite si la position est invalide (collision ou hors-limites)
   React.useEffect(() => {
     if (!positionValid && isEditing) {
       opacity.value = withSpring(0.5);
@@ -760,15 +533,16 @@ const RoomTable: React.FC<TableViewProps> = ({
   }, [positionValid, isEditing]);
 
   const tableStyle = useMemo(() => ({
-    // ✅ Appliquer les couleurs de status même en editionMode si une commande existe
-    backgroundColor: status ? getStatusColor(status) : '#D9D9D9',
+    backgroundColor: status ? getStatusColor(status) : tableBg,
+    borderRadius: tableBorderRadius,
     ...(isEditing
       ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' as const }
       : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const }
     ),
-  }), [status, isEditing]);
+  }), [status, isEditing, tableBg, tableBorderRadius]);
 
-  // 🎨 Style pour le conteneur avec curseur et texte non sélectionnable (web)
+  // --- STYLES STATIQUES ---
+  // Web : cursor move en mode édition + texte non-sélectionnable
   const containerStyle = useMemo(() => ({
     ...(Platform.OS === 'web' && {
       userSelect: 'none' as any,
@@ -781,50 +555,57 @@ const RoomTable: React.FC<TableViewProps> = ({
 
   return (
     <>
-      {/* Aperçu fantôme de la position snappée */}
       {isEditing && editionMode && <Animated.View style={ghostStyle} pointerEvents="none" />}
 
       <Animated.View style={animatedStyle}>
         <GestureDetector gesture={composedGesture}>
           <Animated.View style={[{ width: '100%', height: '100%' }, containerStyle]}>
-            {!(isEditing && isSelected) && <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />}
-            {!(isEditing && isSelected) && <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />}
+            {!(isEditing && isSelected) && (
+              table.shape === 'rounded'
+                ? <RoomChairsRounded table={table} CELL_SIZE={CELL_SIZE} />
+                : <>
+                    <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
+                    <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
+                  </>
+            )}
 
             <View style={styles.innerContainer}>
               <View style={[styles.table, tableStyle]}>
-                <Text style={styles.tableText}>{table.name}</Text>
+                <View style={styles.emptyTableContent}>
+                  <View style={[styles.emptyTableIcon, isSelected && { backgroundColor: roomColor || '#6366F1' }]}>
+                    <MaterialCommunityIcons name="square-edit-outline" size={18} color={isSelected ? '#FFFFFF' : roomColor || '#6366F1'} />
+                  </View>
+                  <RNText style={styles.emptyTableText} numberOfLines={1}>{table.name}</RNText>
+                </View>
               </View>
             </View>
 
-            {!(isEditing && isSelected) && <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />}
-            {!(isEditing && isSelected) && <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />}
+            {!(isEditing && isSelected) && table.shape !== 'rounded' && (
+              <>
+                <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
+                <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+              </>
+            )}
           </Animated.View>
         </GestureDetector>
 
         {isEditing && editionMode && (
           <>
-            {/* Handle de redimensionnement droit */}
             <GestureDetector gesture={rightResizeGesture}>
               <Animated.View style={styles.rightHandle}>
                 <View style={styles.handleDot} />
               </Animated.View>
             </GestureDetector>
-
-            {/* Handle de redimensionnement gauche */}
             <GestureDetector gesture={leftResizeGesture}>
               <Animated.View style={styles.leftHandle}>
                 <View style={styles.handleDot} />
               </Animated.View>
             </GestureDetector>
-
-            {/* Handle de redimensionnement bas */}
             <GestureDetector gesture={bottomResizeGesture}>
               <Animated.View style={styles.bottomHandle}>
                 <View style={styles.handleDot} />
               </Animated.View>
             </GestureDetector>
-
-            {/* Handle de redimensionnement haut */}
             <GestureDetector gesture={topResizeGesture}>
               <Animated.View style={styles.topHandle}>
                 <View style={styles.handleDot} />
@@ -837,9 +618,7 @@ const RoomTable: React.FC<TableViewProps> = ({
   );
 };
 
-// 🚀 OPTIMISATION: React.memo pour éviter re-renders inutiles
 const RoomTableMemoized = React.memo(RoomTable, (prevProps, nextProps) => {
-  // Comparaison granulaire: re-render seulement si ces props changent
   return (
     prevProps.table.id === nextProps.table.id &&
     prevProps.table.xStart === nextProps.table.xStart &&
@@ -848,12 +627,13 @@ const RoomTableMemoized = React.memo(RoomTable, (prevProps, nextProps) => {
     prevProps.table.height === nextProps.table.height &&
     prevProps.table.name === nextProps.table.name &&
     prevProps.table.seats === nextProps.table.seats &&
+    prevProps.table.shape === nextProps.table.shape &&
     prevProps.status === nextProps.status &&
     prevProps.isEditing === nextProps.isEditing &&
     prevProps.positionValid === nextProps.positionValid &&
-    prevProps.isSelected === nextProps.isSelected
-    // ⚡ currentZoomScale est une SharedValue (référence stable, pas besoin de comparer)
-    // Note: on ignore tables, callbacks et autres props stables
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.roomColor === nextProps.roomColor &&
+    prevProps.tableBg === nextProps.tableBg
   );
 });
 
@@ -872,7 +652,6 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 5,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -882,30 +661,44 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     elevation: 3,
   },
-  tableText: {
-    color: '#2A2E33',
-    fontWeight: 'bold',
-  },
-  // 🎯 HANDLES DE RESIZE - Style de base avec priorité et curseurs
-  rightHandle: {
-    position: 'absolute',
-    right: -5,
-    top: '50%',
-    width: 30,
-    height: 30,
-    transform: [{ translateY: -15 }],
+  emptyTableContent: {
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10001, // Priorité sur le drag de la table
+    gap: 8,
+  },
+  emptyTableIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyTableText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#2A2E33',
+  },
+  // Resize handles
+  rightHandle: {
+    position: 'absolute',
+    right: -4,
+    top: '50%',
+    width: 24,
+    height: 24,
+    transform: [{ translateY: -12 }],
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10001,
     ...(Platform.OS === 'web' && { cursor: 'ew-resize' as any }),
   },
   leftHandle: {
     position: 'absolute',
-    left: -5,
+    left: -4,
     top: '50%',
-    width: 30,
-    height: 30,
-    transform: [{ translateY: -15 }],
+    width: 24,
+    height: 24,
+    transform: [{ translateY: -12 }],
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10001,
@@ -913,11 +706,11 @@ const styles = StyleSheet.create({
   },
   bottomHandle: {
     position: 'absolute',
-    bottom: -5,
+    bottom: -4,
     left: '50%',
-    width: 30,
-    height: 30,
-    transform: [{ translateX: -15 }],
+    width: 24,
+    height: 24,
+    transform: [{ translateX: -12 }],
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10001,
@@ -925,29 +718,22 @@ const styles = StyleSheet.create({
   },
   topHandle: {
     position: 'absolute',
-    top: -5,
+    top: -4,
     left: '50%',
-    width: 30,
-    height: 30,
-    transform: [{ translateX: -15 }],
+    width: 24,
+    height: 24,
+    transform: [{ translateX: -12 }],
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10001,
     ...(Platform.OS === 'web' && { cursor: 'ns-resize' as any }),
   },
   handleDot: {
-    width: 20, // Légèrement plus gros pour meilleure visibilité
-    height: 20,
+    width: 14,
+    height: 14,
     backgroundColor: '#2A2E33',
-    borderRadius: 10,
-    // Halo pour meilleur feedback visuel
-    shadowColor: '#2A2E33',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    borderRadius: 7,
   },
 });
 
-// 🚀 Export de la version memoïzée pour optimisation des re-renders
 export { RoomTableMemoized as RoomTable };

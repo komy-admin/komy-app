@@ -58,8 +58,11 @@ const FIXED_TABLES: { gx: number; gy: number; gw: number; gh: number }[] = [
 ];
 
 /** Aperçu SVG : room proportionnelle, mêmes tables partout */
+let clipIdCounter = 0;
+
 const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }> = React.memo(
   ({ roomW, roomH, selected }) => {
+    const [clipId] = useState(() => `roomClip-${++clipIdCounter}`);
     const maxDim = Math.max(roomW, roomH, MAX_DIM);
     const scale = (CONTAINER_SIZE - 10) / maxDim;
     const svgW = roomW * scale;
@@ -74,7 +77,7 @@ const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }>
     return (
       <Svg width={CONTAINER_SIZE} height={CONTAINER_SIZE}>
         <Defs>
-          <ClipPath id="roomClip">
+          <ClipPath id={clipId}>
             <Rect x={offsetX} y={offsetY} width={svgW} height={svgH} rx={3} ry={3} />
           </ClipPath>
         </Defs>
@@ -93,7 +96,7 @@ const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }>
             height={t.gh * scale}
             rx={2} ry={2}
             fill={tableFill} stroke={tableStroke} strokeWidth={0.6}
-            clipPath="url(#roomClip)"
+            clipPath={`url(#${clipId})`}
           />
         ))}
       </Svg>
@@ -192,7 +195,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
     <View style={styles.panelContent}>
       <View style={styles.panelHeader}>
         <Text style={styles.panelTitle}>
-          {room ? `Modifier "${room.name}"` : 'Créer une nouvelle salle'}
+          {room ? `Modifier : ${room.name}` : 'Créer une nouvelle salle'}
         </Text>
         <TouchableOpacity onPress={onCancel}>
           <X size={24} color="#64748B" strokeWidth={2} />

@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: 90,
-    backgroundColor: '#DDDCE4',
+    backgroundColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

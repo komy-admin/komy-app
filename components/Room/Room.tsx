@@ -31,6 +31,7 @@ interface RoomProps {
   containerDimensions?: { width: number; height: number };
   fillContainer?: boolean;
   roomColor?: string | null;
+  onTableEditTap?: (table: Table) => void;
 }
 
 const Room: React.FC<RoomProps> = ({
@@ -46,12 +47,13 @@ const Room: React.FC<RoomProps> = ({
   containerDimensions,
   fillContainer,
   roomColor,
+  onTableEditTap,
 }) => {
   // Couleurs dérivées de la room (calculées une seule fois pour toutes les tables)
   const resolvedColor = roomColor || '#6366F1';
   const roomBg = useMemo(() => getRoomLightBackground(resolvedColor), [resolvedColor]);
   const tableBg = useMemo(() => getRoomLightBackground(resolvedColor, 0.04), [resolvedColor]);
-  // 🎯 HOOK: Gestion des dimensions et du zoom optimal
+  // Dimensions et zoom optimal (CELL_SIZE, grille étendue, zoom auto-fill)
   const { dimensions, isGridReady, CELL_SIZE, EXTRA_LINES } = useRoomDimensions({
     roomWidth: width,
     roomHeight: height,
@@ -60,7 +62,7 @@ const Room: React.FC<RoomProps> = ({
     fillContainer
   });
 
-  // 🎯 HOOK: Gestion du zoom (pan, pinch, wheel)
+  // Zoom interactif (pan, pinch, wheel)
   const {
     translateX,
     translateY,
@@ -73,7 +75,7 @@ const Room: React.FC<RoomProps> = ({
     hasSelectedTable: !!editingTableId,
   });
 
-  // 🎯 HOOK: Validation des positions de tables
+  // Validation des positions (bounds + collisions)
   const { isPositionValid, isInBounds } = useRoomValidation({
     tables,
     editingTableId,
@@ -81,8 +83,7 @@ const Room: React.FC<RoomProps> = ({
     roomHeight: height
   });
 
-  // 🚀 OPTIMISATION: Memoïser les statuts des tables
-  // Évite de recalculer getTableStatus() pour CHAQUE table à CHAQUE render
+  // Statuts mémoïsés (évite de recalculer getTableStatus() pour chaque table à chaque render)
   const tableStatuses = useMemo(() => {
     return tables.reduce((acc, table) => {
       acc[table.id] = getTableStatus(table);
@@ -113,9 +114,8 @@ const Room: React.FC<RoomProps> = ({
     ),
   [panGesture, pinchGesture, tapGesture]);
 
-  // 🔍 SÉPARATION DES TRANSFORMS (Fix détection gestures sur grandes grilles)
-  // AVANT: scale + translate sur même vue → zone gestures réduite à scale% sur grandes rooms
-  // APRÈS: translate sur vue externe (gestures 100%), scale sur vue interne (visuel seulement)
+  // Séparation des transforms (fix détection gestures sur grandes grilles)
+  // translate sur vue externe (zone gestures 100%), scale sur vue interne (visuel seulement)
   const translateStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -139,8 +139,8 @@ const Room: React.FC<RoomProps> = ({
     top: EXTRA_LINES * CELL_SIZE,
     width: width * CELL_SIZE,
     height: height * CELL_SIZE,
-    ...(!editionMode && { borderWidth: 2, borderColor: '#2A2E33' }),
-  }), [EXTRA_LINES, CELL_SIZE, width, height, editionMode]);
+    ...(!editionMode && { borderWidth: 2, borderColor: resolvedColor }),
+  }), [EXTRA_LINES, CELL_SIZE, width, height, editionMode, resolvedColor]);
 
   if (isLoading || !dimensions || !isGridReady) {
     return (
@@ -160,7 +160,7 @@ const Room: React.FC<RoomProps> = ({
         <Animated.View style={[styles.animatedContainer, { backgroundColor: roomBg }, translateStyle]}>
           {/* Vue interne: SEULEMENT scale → visuel zoomé, gestures non affectées */}
           <Animated.View style={scaleStyle}>
-            <View style={[styles.grid, { width: dimensions.gridWidth, height: dimensions.gridHeight, backgroundColor: roomBg }]}>
+            <View style={{ width: dimensions.gridWidth, height: dimensions.gridHeight, backgroundColor: roomBg }}>
               <View style={roomAreaStyle}>
                 {editionMode && (
                   <RoomGrid
@@ -169,14 +169,12 @@ const Room: React.FC<RoomProps> = ({
                     GRID_COLS={width}
                     GRID_ROWS={height}
                     CELL_SIZE={CELL_SIZE}
+                    borderColor={resolvedColor}
                   />
                 )}
-                {/* 🚀 OPTIMISATION v2.1: Composant adapté selon le contexte
-                    - Table sélectionnée en mode édition → RoomTable complet (drag, resize)
-                    - Toutes les autres tables → RoomTableService léger
-
-                    Gain mode édition: ~88% réduction SharedValues (255 → 31 pour 15 tables)
-                    Gain mode service: ~94% réduction SharedValues */}
+                {/* Composant adapté selon le contexte :
+                    - Table sélectionnée en édition → RoomTable complet (drag, resize, 17+ SharedValues)
+                    - Toutes les autres → RoomTableService léger (0 SharedValues) */}
                 {tables.map(table => {
                   const isEditing = editingTableId === table.id;
                   const tableInBounds = isInBounds(table);
@@ -200,9 +198,12 @@ const Room: React.FC<RoomProps> = ({
                         CELL_SIZE={CELL_SIZE}
                         currentZoomScale={scale}
                         isSelected
+                        roomColor={roomColor}
+                        tableBg={tableBg}
                         onPress={() => onTablePress(table)}
                         onLongPress={onTableLongPress}
                         onUpdate={onTableUpdate}
+                        onEditTap={onTableEditTap}
                       />
                     );
                   }
@@ -238,8 +239,6 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
-  grid: {
-  },
   loading: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -253,7 +252,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    // backgroundColor dynamique appliqué inline via roomBg
   }
 });
 

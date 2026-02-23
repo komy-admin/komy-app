@@ -1,17 +1,15 @@
 /**
- * useRoomDimensions - Hook personnalisé pour les calculs de dimensions de la Room
+ * useRoomDimensions - Calculs de dimensions de la Room.
  *
- * 🚀 OPTIMISATION v2.1:
- * - Calcul synchrone des dimensions initiales (pas d'effet async)
- * - Plus de flash de rendu (isGridReady=false→true)
- * - useMemo pour calculs instantanés au mount
+ * Calcul synchrone via useMemo (pas d'effet async, pas de flash de rendu).
+ * Retourne CELL_SIZE, EXTRA_LINES, dimensions de grille et zoom optimal.
  */
 
 import { useMemo } from 'react';
 import { Dimensions } from 'react-native';
 
-const CELL_SIZE = 50;
-const EXTRA_LINES = 10; // Extension de la grille pour capturer les gestes partout
+export const CELL_SIZE = 50;
+export const EXTRA_LINES = 10; // Extension de la grille pour capturer les gestes partout
 
 interface UseRoomDimensionsProps {
   roomWidth: number; // Largeur en cellules
@@ -35,7 +33,7 @@ export const useRoomDimensions = ({
   fillContainer
 }: UseRoomDimensionsProps) => {
 
-  // 🚀 Calcul synchrone des dimensions - plus besoin d'effet
+  // Calcul synchrone des dimensions
   const dimensions = useMemo((): RoomDimensions | null => {
     if (isLoading) return null;
     // Attendre la mesure réelle du conteneur avant de calculer le zoom
@@ -87,8 +85,7 @@ export const useRoomDimensions = ({
     };
   }, [roomWidth, roomHeight, isLoading, containerDimensions, fillContainer]);
 
-  // 🚀 isGridReady est maintenant dérivé directement de dimensions
-  // Plus de double rendu avec setState(false) puis setState(true)
+  // Dérivé de dimensions (pas de double rendu)
   const isGridReady = dimensions !== null;
 
   return {

@@ -1,31 +1,15 @@
 /**
- * 🏓 COMPOSANT ROOMTABLESERVICE (VERSION LÉGÈRE)
+ * RoomTableService - Version légère de RoomTable pour le mode service et les tables non-sélectionnées.
  *
- * Version optimisée pour le mode SERVICE uniquement.
- * Affiche les tables avec leurs statuts sans la complexité du drag & drop.
- *
- * 🚀 OPTIMISATIONS vs RoomTable complet :
- * - SharedValues : 0 au lieu de 17+
- * - Gesture handlers : 2 au lieu de 7
- * - Pas de drag, resize, ghost preview
- * - Pas de collision detection
- * - Pas de sync complexe backend→UI
- * - Pas d'animation au tap (performance maximale)
- *
- * 🎨 UI :
- * - Bordure noire (#2A2E33) quand la table est sélectionnée
- *
- * 📊 GAIN DE PERFORMANCE :
- * Pour 15 tables : ~255 SharedValues + 75 gestures économisés
- * Réduction de ~94% de la charge en mode service
+ * Pas de drag, resize, ghost preview ni collision detection.
+ * 0 SharedValues (vs 17+ pour RoomTable), 2 gestures (tap + longPress).
  */
 import React, { useMemo, useCallback } from "react";
 import { Platform, StyleSheet, View, Text as RNText } from "react-native";
 import { getStatusColor, getPriorityItemTypeDetailsForStatus } from "~/lib/utils";
 import { Table } from "~/types/table.types";
-import { Text } from "../ui";
 import { Status } from "~/types/status.enum";
-import { RoomChairs } from "./RoomChairs";
+import { RoomChairs, RoomChairsRounded } from "./RoomChairs";
 import {
   GestureDetector,
   Gesture,
@@ -72,7 +56,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     onLongPress(table);
   }, [onLongPress, table]);
 
-  // 🖐️ GESTES SIMPLES (2 au lieu de 7)
+  // Gestes simples : tap + longPress
   const tapGesture = useMemo(() =>
     Gesture.Tap()
       .runOnJS(true)
@@ -112,6 +96,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     return '';
   }, [table.orders?.[0]?.id, table.orders?.[0]?.updatedAt, status, itemTypesRecord]);
 
+  const tableBorderRadius = table.shape === 'rounded' ? 9999 : 8;
 
   // Style pour tables sans commande ou en mode édition
   const tableStyle = useMemo(() => {
@@ -121,6 +106,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
         borderWidth: 2,
         borderColor: '#EF4444',
         borderStyle: 'dashed' as const,
+        borderRadius: tableBorderRadius,
       };
     }
     if (isSelected) {
@@ -129,6 +115,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
         borderWidth: 3,
         borderColor: '#2A2E33',
         borderStyle: 'solid' as const,
+        borderRadius: tableBorderRadius,
       };
     }
     return {
@@ -136,8 +123,9 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
       borderWidth: status ? 2 : 0,
       borderColor: '#2A2E33',
       borderStyle: 'solid' as const,
+      borderRadius: tableBorderRadius,
     };
-  }, [status, isSelected, outOfBounds, tableBg]);
+  }, [status, isSelected, outOfBounds, tableBg, tableBorderRadius]);
 
   // Style du conteneur avec curseur pointer (web)
   const containerStyle = useMemo(() => ({
@@ -159,13 +147,24 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     <View style={containerStyle}>
       <GestureDetector gesture={composedGesture}>
         <View style={styles.fullSize}>
-          <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
-          <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
+          {table.shape === 'rounded' ? (
+            <RoomChairsRounded table={table} CELL_SIZE={CELL_SIZE} />
+          ) : (
+            <>
+              <RoomChairs position="top" table={table} CELL_SIZE={CELL_SIZE} />
+              <RoomChairs position="left" table={table} CELL_SIZE={CELL_SIZE} />
+            </>
+          )}
 
           <View style={styles.innerContainer}>
             {editionMode ? (
               <View style={[styles.table, tableStyle]}>
-                <Text style={styles.tableText}>{table.name}</Text>
+                <View style={styles.emptyTableContent}>
+                  <View style={[styles.emptyTableIcon]}>
+                    <MaterialCommunityIcons name="square-edit-outline" size={18} color={roomColor || '#6366F1'} />
+                  </View>
+                  <RNText style={styles.emptyTableText} numberOfLines={1}>{table.name}</RNText>
+                </View>
               </View>
             ) : (
               <View style={[styles.table, tableStyle]}>
@@ -188,15 +187,19 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
             )}
           </View>
 
-          <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
-          <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+          {table.shape !== 'rounded' && (
+            <>
+              <RoomChairs position="right" table={table} CELL_SIZE={CELL_SIZE} />
+              <RoomChairs position="bottom" table={table} CELL_SIZE={CELL_SIZE} />
+            </>
+          )}
         </View>
       </GestureDetector>
     </View>
   );
 };
 
-// 🚀 OPTIMISATION: React.memo avec comparaison granulaire
+// React.memo avec comparaison granulaire
 const RoomTableServiceMemoized = React.memo(RoomTableService, (prevProps, nextProps) => {
   return (
     prevProps.table.id === nextProps.table.id &&
@@ -206,6 +209,7 @@ const RoomTableServiceMemoized = React.memo(RoomTableService, (prevProps, nextPr
     prevProps.table.height === nextProps.table.height &&
     prevProps.table.name === nextProps.table.name &&
     prevProps.table.seats === nextProps.table.seats &&
+    prevProps.table.shape === nextProps.table.shape &&
     prevProps.table.orders?.[0]?.id === nextProps.table.orders?.[0]?.id &&
     prevProps.table.orders?.[0]?.updatedAt === nextProps.table.orders?.[0]?.updatedAt &&
     prevProps.status === nextProps.status &&
@@ -237,16 +241,11 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.10,
     shadowRadius: 6,
     elevation: 3,
-  },
-  tableText: {
-    color: '#2A2E33',
-    fontWeight: 'bold',
   },
   // --- Contenu des tables ---
   emptyTableContent: {

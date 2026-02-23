@@ -1,14 +1,9 @@
 /**
- * 🏗️ ROOM EDITION MODE - Édition des rooms et tables
+ * Room Edition Mode - Édition des rooms et tables.
  *
- * COMPOSANTS:
- * ├── RoomComponent → Grille interactive (zoom, pan, tables drag & drop)
- * ├── RoomFormContent → Panel settings room (nom, taille)
- * ├── TableFormContent → Panel édition table (nom, couverts)
- * ├── TableQuickActions → Boutons flottants (éditer, supprimer)
- * └── DeleteConfirmationModal → Confirmation suppression
- *
- * HOOKS: useRooms, useTables, useTableEditor, usePanelPortal
+ * Composants : RoomComponent (grille interactive), RoomFormContent (settings room),
+ *              TableFormContent (édition table), DeleteConfirmationModal
+ * Hooks : useRooms, useTables, useTableEditor, usePanelPortal
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -19,7 +14,7 @@ import RoomComponent from '~/components/Room/Room';
 import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
 import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
-import { TableQuickActions } from '~/components/Room/TableQuickActions';
+import { Trash2 } from 'lucide-react-native';
 import { TableFormContent } from '~/components/admin/TableForm/TableFormContent';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
@@ -130,7 +125,7 @@ export default function RoomEditionMode() {
     }
   }, [selectedTable?.id, deleteTableFast, setSelectedTable, showToast]);
 
-  const handleOpenEditPanel = useCallback(() => {
+  const handleEditTap = useCallback((_table: Table) => {
     setIsEditPanelVisible(true);
   }, []);
 
@@ -170,7 +165,7 @@ export default function RoomEditionMode() {
         width: 2,
         height: 2,
         roomId: currentRoom.id,
-        seats: 2
+        seats: 4
       };
 
       // Utiliser le hook dédié pour la création haute performance
@@ -247,25 +242,12 @@ export default function RoomEditionMode() {
 
   return (
     <View style={styles.container}>
-      <View style={[
-        styles.headerContainer,
-        {
-          zIndex: 10,
-          elevation: 5,
-          borderBottomWidth: 1,
-          borderBottomColor: '#EFEFEF',
-          ...Platform.select({
-            android: {
-              shadowColor: 'transparent', // Pas d'ombre visible sur Android
-            },
-          }),
-        }
-      ]}>
+      <View style={styles.headerContainer}>
         <Pressable
           onPress={handleGoBack}
           style={styles.backButton}
         >
-          <ArrowLeftToLine size={20} color="#FBFBFB" />
+          <ArrowLeftToLine size={20} color="#FFFFFF" />
         </Pressable>
         <ScrollView
           horizontal
@@ -338,14 +320,21 @@ export default function RoomEditionMode() {
             onTablePress={handleTablePress}
             onTableLongPress={handleTablePress}
             onTableUpdate={handleTableUpdate}
+            onTableEditTap={handleEditTap}
           />
 
-          {/* TableQuickActions - Bouton flottant quand une table est sélectionnée */}
+          {/* Bouton delete flottant quand une table est sélectionnée */}
           {selectedTable && !isEditPanelVisible && (
-            <TableQuickActions
-              onEdit={handleOpenEditPanel}
-              onDelete={handleDeleteTable}
-            />
+            <Pressable
+              onPress={handleDeleteTable}
+              style={styles.deleteButtonWrapper}
+              accessibilityLabel="Supprimer la table"
+              accessibilityRole="button"
+            >
+              <View style={styles.deleteButton}>
+                <Trash2 size={24} color="#FFFFFF" strokeWidth={2} />
+              </View>
+            </Pressable>
           )}
         </View>
       )}
@@ -373,11 +362,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#EFEFEF',
+    zIndex: 10,
+    elevation: 5,
+    ...Platform.select({
+      android: { shadowColor: 'transparent' },
+    }),
   },
   backButton: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#475569',
+    backgroundColor: '#2A2E33',
+    borderLeftColor: '#FFFFFF',
+    borderWidth: 1,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
@@ -429,5 +425,24 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  deleteButtonWrapper: {
+    position: 'absolute',
+    bottom: 30,
+    right: 25,
+    zIndex: 1000,
+  },
+  deleteButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

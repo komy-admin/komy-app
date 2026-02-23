@@ -1,17 +1,14 @@
 /**
- * 🚀 RoomGrid - Grille optimisée avec SVG
+ * RoomGrid - Grille SVG pour le mode édition.
  *
- * OPTIMISATION v2.1 :
- * - SVG au lieu de 100+ View components (gain 10x performance)
- * - Un seul composant au lieu de boucles Array.from()
- * - React.memo pour éviter re-renders inutiles
- *
- * AVANT (30x30) : ~100 composants View avec borderStyle: 'dashed' → LAG
- * APRÈS (30x30) : 1 composant SVG → FLUIDE 60fps
+ * Un seul composant SVG au lieu de 100+ View (gain 10x performance).
+ * Lignes principales (room) + lignes extended (overflow avec opacity réduite) + bordure salle.
+ * React.memo : ne re-render que si les dimensions changent.
  */
 
 import React from "react";
 import Svg, { Line, Rect, G } from 'react-native-svg';
+import { EXTRA_LINES } from '~/hooks/room/useRoomDimensions';
 
 interface GridLinesInterface {
   width: number;
@@ -19,10 +16,10 @@ interface GridLinesInterface {
   GRID_ROWS: number;
   GRID_COLS: number;
   CELL_SIZE: number;
+  borderColor?: string;
 }
 
-const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_COLS, GRID_ROWS, CELL_SIZE }) => {
-  const EXTRA_LINES = 10;
+const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_COLS, GRID_ROWS, CELL_SIZE, borderColor = '#2A2E33' }) => {
   const extendedHeight = height + (EXTRA_LINES * 2 * CELL_SIZE);
   const extendedWidth = width + (EXTRA_LINES * 2 * CELL_SIZE);
 
@@ -45,7 +42,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={0}
             x2={(i + EXTRA_LINES) * CELL_SIZE}
             y2={extendedHeight}
-            stroke="#F1F1F1"
+            stroke="#D1D5DB"
             strokeWidth={1}
             strokeDasharray="4,4"
           />
@@ -59,7 +56,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={(i + 1 + EXTRA_LINES) * CELL_SIZE}
             x2={extendedWidth}
             y2={(i + 1 + EXTRA_LINES) * CELL_SIZE}
-            stroke="#F1F1F1"
+            stroke="#D1D5DB"
             strokeWidth={1}
             strokeDasharray="4,4"
           />
@@ -73,7 +70,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={0}
             x2={i * CELL_SIZE}
             y2={extendedHeight}
-            stroke="#F1F1F1"
+            stroke="#D1D5DB"
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}
@@ -88,7 +85,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={0}
             x2={(GRID_COLS + EXTRA_LINES + i + 1) * CELL_SIZE}
             y2={extendedHeight}
-            stroke="#F1F1F1"
+            stroke="#D1D5DB"
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}
@@ -103,7 +100,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={i * CELL_SIZE}
             x2={extendedWidth}
             y2={i * CELL_SIZE}
-            stroke="#F1F1F1"
+            stroke="#D1D5DB"
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}
@@ -118,7 +115,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={(GRID_ROWS + EXTRA_LINES + i) * CELL_SIZE}
             x2={extendedWidth}
             y2={(GRID_ROWS + EXTRA_LINES + i) * CELL_SIZE}
-            stroke="#F1F1F1"
+            stroke="#D1D5DB"
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}
@@ -132,7 +129,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
           width={width}
           height={height}
           fill="none"
-          stroke="#2A2E33"
+          stroke={borderColor}
           strokeWidth={2}
         />
       </G>
@@ -140,14 +137,14 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
   );
 };
 
-// 🚀 React.memo pour éviter re-renders inutiles
-// La grille ne change que si dimensions changent
+// React.memo : la grille ne change que si les dimensions changent
 export const RoomGrid = React.memo(RoomGridComponent, (prev, next) => {
   return (
     prev.width === next.width &&
     prev.height === next.height &&
     prev.GRID_COLS === next.GRID_COLS &&
     prev.GRID_ROWS === next.GRID_ROWS &&
-    prev.CELL_SIZE === next.CELL_SIZE
+    prev.CELL_SIZE === next.CELL_SIZE &&
+    prev.borderColor === next.borderColor
   );
 });
