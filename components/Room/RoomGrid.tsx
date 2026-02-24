@@ -8,7 +8,7 @@
 
 import React from "react";
 import Svg, { Line, Rect, G } from 'react-native-svg';
-import { EXTRA_LINES } from '~/hooks/room/useRoomDimensions';
+import { EXTRA_LINES } from '~/hooks/room/constants';
 
 interface GridLinesInterface {
   width: number;

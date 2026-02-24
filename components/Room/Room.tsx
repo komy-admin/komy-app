@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import {
   GestureHandlerRootView,
@@ -7,6 +7,7 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
 } from 'react-native-reanimated';
 import { Table } from '~/types/table.types';
 import { RoomGrid } from '~/components/Room/RoomGrid';
@@ -14,6 +15,7 @@ import { RoomTable } from '~/components/Room/RoomTable';
 import { RoomTableService } from '~/components/Room/RoomTableService';
 import { getTableStatus } from '~/lib/utils';
 import { getRoomLightBackground } from '~/lib/room-utils';
+import { CELL_SIZE, EXTRA_LINES } from '~/hooks/room/constants';
 import { useRoomDimensions } from '~/hooks/room/useRoomDimensions';
 import { useRoomZoom } from '~/hooks/room/useRoomZoom';
 import { useRoomValidation } from '~/hooks/room/useRoomValidation';
@@ -53,8 +55,8 @@ const Room: React.FC<RoomProps> = ({
   const resolvedColor = roomColor || '#6366F1';
   const roomBg = useMemo(() => getRoomLightBackground(resolvedColor), [resolvedColor]);
   const tableBg = useMemo(() => getRoomLightBackground(resolvedColor, 0.04), [resolvedColor]);
-  // Dimensions et zoom optimal (CELL_SIZE, grille étendue, zoom auto-fill)
-  const { dimensions, isGridReady, CELL_SIZE, EXTRA_LINES } = useRoomDimensions({
+  // Dimensions et zoom optimal
+  const { dimensions, isGridReady } = useRoomDimensions({
     roomWidth: width,
     roomHeight: height,
     isLoading,
@@ -62,7 +64,25 @@ const Room: React.FC<RoomProps> = ({
     fillContainer
   });
 
-  // Zoom interactif (pan, pinch, wheel)
+  // SharedValues pour le clamping du pan (synchro via useEffect, pas dans le render)
+  const roomPixelWidthSV = useSharedValue(width * CELL_SIZE);
+  const roomPixelHeightSV = useSharedValue(height * CELL_SIZE);
+  const containerWidthSV = useSharedValue(containerDimensions?.width || 0);
+  const containerHeightSV = useSharedValue(containerDimensions?.height || 0);
+
+  useEffect(() => {
+    roomPixelWidthSV.value = width * CELL_SIZE;
+    roomPixelHeightSV.value = height * CELL_SIZE;
+  }, [width, height]);
+
+  useEffect(() => {
+    if (containerDimensions) {
+      containerWidthSV.value = containerDimensions.width;
+      containerHeightSV.value = containerDimensions.height;
+    }
+  }, [containerDimensions]);
+
+  // Zoom interactif (pan, pinch, wheel) avec focal point zoom
   const {
     translateX,
     translateY,
@@ -73,6 +93,10 @@ const Room: React.FC<RoomProps> = ({
     initialZoom: dimensions?.initialZoom || 1,
     editionMode,
     hasSelectedTable: !!editingTableId,
+    roomPixelWidth: roomPixelWidthSV,
+    roomPixelHeight: roomPixelHeightSV,
+    containerWidth: containerWidthSV,
+    containerHeight: containerHeightSV,
   });
 
   // Validation des positions (bounds + collisions)
@@ -140,7 +164,13 @@ const Room: React.FC<RoomProps> = ({
     width: width * CELL_SIZE,
     height: height * CELL_SIZE,
     ...(!editionMode && { borderWidth: 2, borderColor: resolvedColor }),
-  }), [EXTRA_LINES, CELL_SIZE, width, height, editionMode, resolvedColor]);
+  }), [width, height, editionMode, resolvedColor]);
+
+  const gridStyle = useMemo(() => ({
+    width: dimensions?.gridWidth ?? 0,
+    height: dimensions?.gridHeight ?? 0,
+    backgroundColor: roomBg,
+  }), [dimensions?.gridWidth, dimensions?.gridHeight, roomBg]);
 
   if (isLoading || !dimensions || !isGridReady) {
     return (
@@ -156,77 +186,74 @@ const Room: React.FC<RoomProps> = ({
       style={[styles.container, { backgroundColor: roomBg }]}
     >
       <GestureDetector gesture={composedGesture}>
-        {/* Vue externe: SEULEMENT translate → zone gestures 100% même sur grandes rooms */}
-        <Animated.View style={[styles.animatedContainer, { backgroundColor: roomBg }, translateStyle]}>
-          {/* Vue interne: SEULEMENT scale → visuel zoomé, gestures non affectées */}
-          <Animated.View style={scaleStyle}>
-            <View style={{ width: dimensions.gridWidth, height: dimensions.gridHeight, backgroundColor: roomBg }}>
-              <View style={roomAreaStyle}>
-                {editionMode && (
-                  <RoomGrid
-                    width={width * CELL_SIZE}
-                    height={height * CELL_SIZE}
-                    GRID_COLS={width}
-                    GRID_ROWS={height}
-                    CELL_SIZE={CELL_SIZE}
-                    borderColor={resolvedColor}
-                  />
-                )}
-                {/* Composant adapté selon le contexte :
-                    - Table sélectionnée en édition → RoomTable complet (drag, resize, 17+ SharedValues)
-                    - Toutes les autres → RoomTableService léger (0 SharedValues) */}
-                {tables.map(table => {
-                  const isEditing = editingTableId === table.id;
-                  const tableInBounds = isInBounds(table);
+        {/* Zone de détection des gestures : fixe, plein conteneur, jamais transformée */}
+        <Animated.View style={[styles.gestureArea, { backgroundColor: roomBg }]}>
+          {/* Translate (déplacement) */}
+          <Animated.View style={[styles.transformLayer, translateStyle]}>
+            {/* Scale (zoom visuel) */}
+            <Animated.View style={scaleStyle}>
+              <View style={gridStyle}>
+                <View style={roomAreaStyle}>
+                  {editionMode && (
+                    <RoomGrid
+                      width={width * CELL_SIZE}
+                      height={height * CELL_SIZE}
+                      GRID_COLS={width}
+                      GRID_ROWS={height}
+                      CELL_SIZE={CELL_SIZE}
+                      borderColor={resolvedColor}
+                    />
+                  )}
+                  {tables.map(table => {
+                    const isEditing = editingTableId === table.id;
+                    const tableInBounds = isInBounds(table);
 
-                  // Mode service : masquer les tables hors-limites
-                  if (!editionMode && !tableInBounds) return null;
+                    if (!editionMode && !tableInBounds) return null;
 
-                  // Table sélectionnée en mode édition → RoomTable complet (drag, resize)
-                  if (editionMode && isEditing) {
+                    if (editionMode && isEditing) {
+                      return (
+                        <RoomTable
+                          key={table.id}
+                          table={table}
+                          tables={tables}
+                          roomWidth={width}
+                          roomHeight={height}
+                          status={tableStatuses[table.id]}
+                          isEditing
+                          editionMode
+                          positionValid={isPositionValid(table)}
+                          CELL_SIZE={CELL_SIZE}
+                          currentZoomScale={scale}
+                          isSelected
+                          roomColor={roomColor}
+                          tableBg={tableBg}
+                          onPress={() => onTablePress(table)}
+                          onLongPress={onTableLongPress}
+                          onUpdate={onTableUpdate}
+                          onEditTap={onTableEditTap}
+                        />
+                      );
+                    }
+
                     return (
-                      <RoomTable
+                      <RoomTableService
                         key={table.id}
                         table={table}
-                        tables={tables}
-                        roomWidth={width}
-                        roomHeight={height}
                         status={tableStatuses[table.id]}
-                        isEditing
-                        editionMode
-                        positionValid={isPositionValid(table)}
                         CELL_SIZE={CELL_SIZE}
-                        currentZoomScale={scale}
-                        isSelected
+                        isSelected={isEditing}
+                        editionMode={editionMode}
+                        outOfBounds={!tableInBounds}
                         roomColor={roomColor}
                         tableBg={tableBg}
-                        onPress={() => onTablePress(table)}
+                        onPress={onTablePress}
                         onLongPress={onTableLongPress}
-                        onUpdate={onTableUpdate}
-                        onEditTap={onTableEditTap}
                       />
                     );
-                  }
-
-                  // Composant léger pour toutes les autres tables
-                  return (
-                    <RoomTableService
-                      key={table.id}
-                      table={table}
-                      status={tableStatuses[table.id]}
-                      CELL_SIZE={CELL_SIZE}
-                      isSelected={isEditing}
-                      editionMode={editionMode}
-                      outOfBounds={!tableInBounds}
-                      roomColor={roomColor}
-                      tableBg={tableBg}
-                      onPress={onTablePress}
-                      onLongPress={onTableLongPress}
-                    />
-                  );
-                })}
+                  })}
+                </View>
               </View>
-            </View>
+            </Animated.View>
           </Animated.View>
         </Animated.View>
       </GestureDetector>
@@ -248,11 +275,15 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#F5F5F5',
   },
-  animatedContainer: {
+  gestureArea: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  transformLayer: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
 });
 
 export default Room;
