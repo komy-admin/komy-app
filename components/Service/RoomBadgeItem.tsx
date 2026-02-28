@@ -7,6 +7,7 @@ interface RoomBadgeItemProps {
   isActive: boolean;
   enrichedTables: any[];
   onPress: (room: any) => void;
+  showInactiveIndicator?: boolean;
 }
 
 export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
@@ -14,6 +15,7 @@ export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
   isActive,
   enrichedTables,
   onPress,
+  showInactiveIndicator = false,
 }) => {
   const handlePress = useCallback(() => {
     onPress(room);
@@ -31,16 +33,22 @@ export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
       onPress={handlePress}
       style={[
         styles.card,
+        showInactiveIndicator && !room.isActive && styles.cardInactive,
         isActive && styles.cardActive,
       ]}
     >
       <View style={styles.cardContent}>
-        <RNText
-          style={styles.name}
-          numberOfLines={1}
-        >
-          {room.name}
-        </RNText>
+        <View style={styles.nameRow}>
+          <RNText
+            style={[
+              styles.name,
+              showInactiveIndicator && !room.isActive && styles.nameInactive,
+            ]}
+            numberOfLines={1}
+          >
+            {room.name}
+          </RNText>
+        </View>
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Utensils size={12} color="rgba(42,46,51,0.4)" />
@@ -56,7 +64,10 @@ export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
           </View>
         </View>
       </View>
-      <View style={[styles.halfCircle, { backgroundColor: room.color || '#6366F1' }]} />
+      <View style={[
+        styles.halfCircle,
+        { backgroundColor: showInactiveIndicator && !room.isActive ? '#D1D5DB' : (room.color || '#6366F1') }
+      ]} />
     </Pressable>
   );
 });
@@ -90,10 +101,25 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 14,
     borderBottomLeftRadius: 14,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   name: {
     fontSize: 13,
     fontWeight: '700',
     color: '#2A2E33',
+  },
+  nameInactive: {
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through' as const,
+  },
+  cardInactive: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1.5,
+    borderStyle: 'dashed' as const,
+    borderColor: '#C7C7CC',
   },
   statsRow: {
     flexDirection: 'row',

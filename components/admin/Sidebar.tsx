@@ -1,7 +1,6 @@
 // components/admin/Sidebar.tsx
-import { Href, router } from 'expo-router';
-import { usePathname } from 'expo-router';
-import { View, Pressable, Platform } from 'react-native';
+import { Href, router, usePathname } from 'expo-router';
+import { View, Pressable, Platform, StyleSheet } from 'react-native';
 import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, ReceiptEuro } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../ui';
@@ -16,7 +15,7 @@ const ServiceIcon = ({ size, color, style }: { size: number; color: string; styl
 
 const NAV_ITEMS = [
   { href: '/service', icon: ServiceIcon, label: 'Service', configKey: null },
-  { href: '/room', icon: LayoutDashboard, label: 'Salles', configKey: null },
+  { href: '/room/edition-mode', icon: LayoutDashboard, label: 'Salles', configKey: null },
   { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null },
   { href: '/payments', icon: ReceiptEuro, label: 'Paiements', configKey: null },
   { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const },
@@ -49,17 +48,7 @@ export function AdminSidebar() {
  }, []);
 
  return (
-   <View style={{
-     width: 100,
-     backgroundColor: '#2A2E33',
-     paddingTop: 8,
-     zIndex: 100, // Toujours au-dessus (web/iOS)
-     ...Platform.select({
-       android: {
-         elevation: 20, // Plus élevé que tous les autres composants
-       },
-     }),
-   }}>
+   <View style={styles.container}>
      {visibleNavItems.map(({ href, icon: Icon, label }) => {
        const isActive = pathname.includes(href);
 
@@ -92,3 +81,15 @@ export function AdminSidebar() {
    </View>
  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    width: 100,
+    backgroundColor: '#2A2E33',
+    paddingTop: 8,
+    zIndex: 100,
+    ...Platform.select({
+      android: { elevation: 20 },
+    }),
+  },
+});

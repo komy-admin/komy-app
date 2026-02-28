@@ -43,6 +43,7 @@ export default function ServicePage() {
   const [showPaymentView, setShowPaymentView] = useState(false);
 
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
+  const activeRooms = useMemo(() => rooms.filter(room => room.isActive), [rooms]);
   const appInitialized = useAppSelector(selectAppInitialized);
   const appLoading = useAppSelector(selectIsAppInitializing);
   const { enrichedTables, currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
@@ -54,8 +55,16 @@ export default function ServicePage() {
     updateOrderStatus
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
+  const activeItems = useMemo(() => allItems.filter(item => item.isActive), [allItems]);
   const { deleteOrderLine } = useOrderLines();
   const { showToast } = useToast();
+
+  // S'assurer que la currentRoom est active, sinon basculer sur la première active
+  useEffect(() => {
+    if (activeRooms.length > 0 && (!currentRoom || !currentRoom.isActive)) {
+      setCurrentRoom(activeRooms[0].id);
+    }
+  }, [activeRooms, currentRoom, setCurrentRoom]);
 
   const handleOrderCleanup = useCallback(() => {
     setSelectedTable(null);
@@ -283,7 +292,7 @@ export default function ServicePage() {
   const handleTerminateFromPayment = useCallback(() => {
     setShowPaymentView(false);
     handleTerminate();
-  }, []);
+  }, [handleTerminate]);
 
   const handleCloseOrderDetail = useCallback(() => {
     setShowOrderDetail(false);
@@ -324,11 +333,11 @@ export default function ServicePage() {
   }), [windowDimensions.width, windowDimensions.height]);
 
   const handleCreateFirstRoom = useCallback(() => {
-    router.push('/(admin)/room');
+    router.push('/(admin)/room/edition-mode?openCreate=1');
   }, []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.flex1}>
       {/* PaymentView en pleine page */}
       {showPaymentView && selectedTableOrder ? (
         <PaymentView
@@ -340,13 +349,13 @@ export default function ServicePage() {
         />
       ) : /* OrderLinesForm en pleine page - remplace tout le layout */
       showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
-        <View style={{ flex: 1, flexDirection: 'column' }}>
+        <View style={styles.columnLayout}>
           {/* OrderLinesForm */}
-          <View style={{ flex: 1 }}>
+          <View style={styles.flex1}>
             <OrderLinesForm
               title={orderModalTitle}
               lines={orderLinesManager.orderLines}
-              items={allItems.filter(item => item.isActive)}
+              items={activeItems}
               itemTypes={allItemTypes}
               onAddItem={orderLinesManager.addItem}
               onUpdateItem={orderLinesManager.updateItem}
@@ -366,9 +375,9 @@ export default function ServicePage() {
         <View style={styles.flex1}>
           <View style={styles.mainContentContainer}>
             {/* Header avec tabs des rooms */}
-            {rooms.length > 0 && !showOrderDetail && !showOrderModal && (
+            {activeRooms.length > 0 && !showOrderDetail && !showOrderModal && (
               <RoomTabsHeader
-                rooms={rooms}
+                rooms={activeRooms}
                 currentRoomId={currentRoom?.id}
                 enrichedTables={enrichedTables}
                 onRoomChange={handleChangeRoom}
@@ -376,7 +385,7 @@ export default function ServicePage() {
               />
             )}
 
-            {appInitialized && !appLoading && rooms.length === 0 ? (
+            {appInitialized && !appLoading && activeRooms.length === 0 ? (
               <EmptyRoomsState onCreateFirstRoom={handleCreateFirstRoom} />
             ) : appLoading || !appInitialized ? (
               <View style={styles.loadingContainer}>
@@ -452,10 +461,10 @@ export default function ServicePage() {
               contentContainerStyle={styles.reassignScrollContent}
               nestedScrollEnabled={true}
             >
-              {rooms.length === 0 ? (
+              {activeRooms.length === 0 ? (
                 <Text style={styles.emptyText}>Aucune room disponible</Text>
               ) : (
-                rooms.map((room) => (
+                activeRooms.map((room) => (
                   <RoomBadgeItem
                     key={room.id}
                     room={room}

@@ -8,13 +8,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from "react-native";
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
 import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
 import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
-import { Trash2 } from 'lucide-react-native';
 import { TableFormContent } from '~/components/admin/TableForm/TableFormContent';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
@@ -24,18 +23,18 @@ import { useTableEditor } from '~/hooks/useTableEditor';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { generateTableName, findAvailablePosition } from '~/lib/room-utils';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
-import { RoomFormContent } from '~/components/admin/RoomForm';
-import { ArrowLeftToLine, SlidersHorizontal } from 'lucide-react-native';
+import { RoomFormContent, RoomModeSelection } from '~/components/admin/RoomForm';
+import { LayoutPanelLeft, Trash2 } from 'lucide-react-native';
 
 // Constantes
-const SLIDE_PANEL_WIDTH = 400;
+const SLIDE_PANEL_WIDTH = 450;
 
 export default function RoomEditionMode() {
-  const router = useRouter();
+  const { openCreate } = useLocalSearchParams<{ openCreate?: string }>();
   const { showToast } = useToast();
 
   // Utilisation des hooks Redux
-  const { rooms, currentRoom, setCurrentRoom, updateRoom, loading: roomsLoading } = useRooms();
+  const { rooms, currentRoom, setCurrentRoom, updateRoom, createRoom, deleteRoom } = useRooms();
   const { currentRoomTables, enrichedTables, selectedTable, setSelectedTable } = useTables();
 
   // Hook spécialisé pour l'édition haute performance
@@ -51,7 +50,11 @@ export default function RoomEditionMode() {
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isEditPanelVisible, setIsEditPanelVisible] = useState(false);
-  const [isRoomSettingsVisible, setIsRoomSettingsVisible] = useState(false);
+  const [roomPanelMode, setRoomPanelMode] = useState<'closed' | 'selection' | 'create' | 'edit'>('closed');
+  const [roomToEdit, setRoomToEdit] = useState<Room | null>(null);
+  const [isRoomDeleteModalVisible, setIsRoomDeleteModalVisible] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [isRoomDeleting, setIsRoomDeleting] = useState(false);
 
   // Définir la première room comme currentRoom si aucune n'est sélectionnée
   useEffect(() => {
@@ -59,6 +62,13 @@ export default function RoomEditionMode() {
       setCurrentRoom(rooms[0].id);
     }
   }, [currentRoom, rooms, setCurrentRoom]);
+
+  // Ouvrir le panel de création si demandé via paramètre URL
+  useEffect(() => {
+    if (openCreate === '1' && rooms.length === 0) {
+      setRoomPanelMode('create');
+    }
+  }, [openCreate, rooms.length]);
 
   // Désélectionner la table lors de la navigation
   useFocusEffect(
@@ -184,39 +194,147 @@ export default function RoomEditionMode() {
     setSelectedTable(null);
   }, [setCurrentRoom, setSelectedTable]);
 
-  const handleGoBack = useCallback(() => {
-    router.back();
-  }, [router]);
+  const handleOpenRoomPanel = useCallback(() => {
+    setRoomPanelMode(rooms.length === 0 ? 'create' : 'selection');
+  }, [rooms.length]);
 
-  const handleOpenRoomSettings = useCallback(() => {
-    setIsRoomSettingsVisible(true);
+  const handleCloseRoomPanel = useCallback(() => {
+    setRoomPanelMode('closed');
+    setRoomToEdit(null);
   }, []);
 
-  const handleCloseRoomSettings = useCallback(() => {
-    setIsRoomSettingsVisible(false);
+  const handleBackToSelection = useCallback(() => {
+    setRoomPanelMode('selection');
+    setRoomToEdit(null);
   }, []);
 
-  const handleSaveRoomSettings = useCallback(async (roomData: Partial<Room>) => {
-    if (!currentRoom?.id) return;
+  const handleSelectCreateRoom = useCallback(() => {
+    setRoomPanelMode('create');
+  }, []);
+
+  const handleSelectEditRoom = useCallback((room: Room) => {
+    setRoomToEdit(room);
+    setRoomPanelMode('edit');
+  }, []);
+
+  const handleSaveNewRoom = useCallback(async (roomData: Partial<Room>) => {
     try {
-      await updateRoom(currentRoom.id, roomData);
-      setIsRoomSettingsVisible(false);
-      showToast('Salle mise à jour', 'success');
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la mise à jour';
+      const newRoom = await createRoom(roomData);
+      setCurrentRoom(newRoom.id);
+      setRoomPanelMode('closed');
+      showToast('Salle créée avec succès', 'success');
+    } catch (error: any) {
+      let errorMessage = 'Erreur lors de la création';
+
+      if (error.response?.status === 409) {
+        errorMessage = error.response.data?.message || 'Une salle avec ce nom existe déjà';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       showToast(errorMessage, 'error');
     }
-  }, [currentRoom?.id, updateRoom, showToast]);
+  }, [createRoom, setCurrentRoom, showToast]);
 
-  // Sync panel with global portal
+  const handleDeleteRoom = useCallback((room: Room) => {
+    setRoomToDelete(room);
+    setRoomPanelMode('closed');
+    setIsRoomDeleteModalVisible(true);
+  }, []);
+
+  const handleCloseRoomDeleteModal = useCallback(() => {
+    setIsRoomDeleteModalVisible(false);
+    setRoomToDelete(null);
+  }, []);
+
+  const handleConfirmDeleteRoom = useCallback(async () => {
+    if (!roomToDelete?.id) return;
+
+    setIsRoomDeleting(true);
+    try {
+      await deleteRoom(roomToDelete.id);
+      showToast('Salle supprimée avec succès', 'success');
+      setIsRoomDeleteModalVisible(false);
+      setRoomToDelete(null);
+    } catch (error: any) {
+      setIsRoomDeleteModalVisible(false);
+
+      let errorMessage = 'Erreur lors de la suppression de la salle';
+
+      if (error.response?.status === 409) {
+        errorMessage = 'Impossible de supprimer : cette salle a des commandes en cours';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsRoomDeleting(false);
+    }
+  }, [roomToDelete?.id, deleteRoom, showToast]);
+
+  const handleSaveRoomSettings = useCallback(async (roomData: Partial<Room>) => {
+    if (!roomToEdit?.id) return;
+    try {
+      await updateRoom(roomToEdit.id, roomData);
+      setRoomPanelMode('closed');
+      setRoomToEdit(null);
+      showToast('Salle mise à jour', 'success');
+    } catch (error: any) {
+      let errorMessage = 'Erreur lors de la mise à jour';
+
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      showToast(errorMessage, 'error');
+    }
+  }, [roomToEdit?.id, updateRoom, showToast]);
+
+  // Sync selection panel (dépend de rooms)
   useEffect(() => {
-    if (isRoomSettingsVisible && currentRoom) {
+    if (roomPanelMode !== 'selection') return;
+    renderPanel(
+      <SlidePanel visible={true} onClose={handleCloseRoomPanel} width={SLIDE_PANEL_WIDTH}>
+        <RoomModeSelection
+          rooms={rooms}
+          onSelectCreate={handleSelectCreateRoom}
+          onSelectEdit={handleSelectEditRoom}
+          onDelete={handleDeleteRoom}
+          onCancel={handleCloseRoomPanel}
+        />
+      </SlidePanel>
+    );
+  }, [roomPanelMode, rooms, renderPanel, handleCloseRoomPanel, handleSelectCreateRoom, handleSelectEditRoom, handleDeleteRoom]);
+
+  // Sync other panel modes (ne dépend pas de rooms)
+  useEffect(() => {
+    if (roomPanelMode === 'selection') return;
+    if (roomPanelMode === 'create') {
       renderPanel(
-        <SlidePanel visible={true} onClose={handleCloseRoomSettings} width={SLIDE_PANEL_WIDTH}>
+        <SlidePanel visible={true} onClose={handleCloseRoomPanel} width={SLIDE_PANEL_WIDTH}>
           <RoomFormContent
-            room={currentRoom}
+            room={null}
+            onSave={handleSaveNewRoom}
+            onCancel={handleCloseRoomPanel}
+            onBack={handleBackToSelection}
+          />
+        </SlidePanel>
+      );
+    } else if (roomPanelMode === 'edit' && roomToEdit) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseRoomPanel} width={SLIDE_PANEL_WIDTH}>
+          <RoomFormContent
+            room={roomToEdit}
             onSave={handleSaveRoomSettings}
-            onCancel={handleCloseRoomSettings}
+            onCancel={handleCloseRoomPanel}
+            onBack={handleBackToSelection}
           />
         </SlidePanel>
       );
@@ -233,17 +351,11 @@ export default function RoomEditionMode() {
     } else {
       clearPanel();
     }
-  }, [isRoomSettingsVisible, currentRoom, isEditPanelVisible, selectedTable, renderPanel, clearPanel, handleCloseRoomSettings, handleSaveRoomSettings, handleCloseEditPanel, handleSaveTable]);
+  }, [roomPanelMode, roomToEdit, isEditPanelVisible, selectedTable, renderPanel, clearPanel, handleCloseRoomPanel, handleBackToSelection, handleSaveNewRoom, handleSaveRoomSettings, handleCloseEditPanel, handleSaveTable]);
 
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
-        <Pressable
-          onPress={handleGoBack}
-          style={styles.backButton}
-        >
-          <ArrowLeftToLine size={20} color="#FFFFFF" />
-        </Pressable>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -257,33 +369,35 @@ export default function RoomEditionMode() {
               isActive={room.id === currentRoom?.id}
               enrichedTables={enrichedTables}
               onPress={handleChangeRoom}
+              showInactiveIndicator
             />
           ))}
         </ScrollView>
 
         {/* Boutons d'action */}
         <View style={styles.actionButtonsContainer}>
+          {currentRoom && (
+            <Pressable
+              onPress={handleAddTable}
+              disabled={isCreatingTable || isCreateOperationInProgress()}
+              style={styles.addButton}
+              android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
+            >
+              {({ pressed }) => (
+                <View style={[
+                  styles.addButtonInner,
+                  pressed && Platform.OS === 'ios' && { opacity: 0.8 }
+                ]}>
+                  <Text style={styles.addButtonText}>
+                    AJOUTER UNE TABLE
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          )}
           <Pressable
-            onPress={handleAddTable}
-            disabled={!currentRoom || isCreatingTable || isCreateOperationInProgress()}
-            style={styles.addButton}
-            android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
-          >
-            {({ pressed }) => (
-              <View style={[
-                styles.addButtonInner,
-                pressed && Platform.OS === 'ios' && { opacity: 0.8 }
-              ]}>
-                <Text style={styles.addButtonText}>
-                  AJOUTER UNE TABLE
-                </Text>
-              </View>
-            )}
-          </Pressable>
-          <Pressable
-            onPress={handleOpenRoomSettings}
-            disabled={!currentRoom}
-            style={[styles.settingsButton, currentRoom?.color && { backgroundColor: currentRoom.color }]}
+            onPress={handleOpenRoomPanel}
+            style={styles.settingsButton}
             android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
           >
             {({ pressed }) => (
@@ -291,12 +405,26 @@ export default function RoomEditionMode() {
                 styles.settingsButtonInner,
                 pressed && Platform.OS === 'ios' && { opacity: 0.8 }
               ]}>
-                <SlidersHorizontal size={20} color="#FBFBFB" />
+                <LayoutPanelLeft size={20} color="#FBFBFB" />
               </View>
             )}
           </Pressable>
         </View>
       </View>
+
+      {/* État vide : aucune room */}
+      {rooms.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <LayoutPanelLeft size={48} color="#D1D5DB" />
+          <Text style={styles.emptyTitle}>Aucune salle configurée</Text>
+          <Text style={styles.emptyDescription}>
+            Créez votre première salle pour commencer à ajouter des tables.
+          </Text>
+          <Pressable onPress={() => setRoomPanelMode('create')} style={styles.emptyButton}>
+            <Text style={styles.emptyButtonText}>Créer une salle</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Zone de la grille avec RoomComponent */}
       {currentRoom && (
@@ -309,7 +437,7 @@ export default function RoomEditionMode() {
             width={currentRoom.width}
             height={currentRoom.height}
             roomColor={currentRoom.color}
-            isLoading={roomsLoading}
+            isLoading={false}
             containerDimensions={roomContainerDimensions}
             fillContainer
             onTablePress={handleTablePress}
@@ -341,6 +469,15 @@ export default function RoomEditionMode() {
         entityName={`"${selectedTable?.name}"`}
         entityType="la table"
       />
+
+      <DeleteConfirmationModal
+        isVisible={isRoomDeleteModalVisible}
+        onClose={handleCloseRoomDeleteModal}
+        onConfirm={handleConfirmDeleteRoom}
+        entityName={`"${roomToDelete?.name}"`}
+        entityType="la salle"
+        isLoading={isRoomDeleting}
+      />
     </View>
   );
 }
@@ -362,16 +499,6 @@ const styles = StyleSheet.create({
     ...Platform.select({
       android: { shadowColor: 'transparent' },
     }),
-  },
-  backButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#2A2E33',
-    borderLeftColor: '#FFFFFF',
-    borderWidth: 1,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   badgeContainer: {
     marginLeft: 10,
@@ -426,6 +553,40 @@ const styles = StyleSheet.create({
     bottom: 30,
     right: 25,
     zIndex: 1000,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 48,
+    backgroundColor: '#F4F5F7',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2A2E33',
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  emptyDescription: {
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+    maxWidth: 320,
+  },
+  emptyButton: {
+    backgroundColor: '#2A2E33',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
   deleteButton: {
     width: 56,

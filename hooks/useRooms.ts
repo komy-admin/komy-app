@@ -20,9 +20,6 @@ export const useRooms = () => {
   const rooms = useSelector(selectRooms);
   const currentRoom = useSelector(selectCurrentRoom);
   const currentRoomId = useSelector(selectCurrentRoomId);
-  const loading = false; // Géré globalement maintenant
-  const error = null; // Géré globalement maintenant
-
   // Actions synchrones
   const setCurrentRoom = useCallback((roomId: string) => {
     dispatch(sessionActions.setCurrentRoom(roomId));
@@ -44,15 +41,11 @@ export const useRooms = () => {
       
       // Définir la première room comme room courante par défaut si aucune n'est sélectionnée
       if (rooms && rooms.length > 0 && !currentRoomId) {
-        const defaultRoom = rooms[0];
-        console.log('🏠 Définition de la salle par défaut:', defaultRoom.name);
-        dispatch(sessionActions.setCurrentRoom(defaultRoom.id));
+        dispatch(sessionActions.setCurrentRoom(rooms[0].id));
       }
-      
+
       return rooms;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des salles';
-      console.error('Erreur lors du chargement des salles:', errorMessage);
       throw error;
     }
   }, [dispatch, currentRoomId]);
@@ -63,8 +56,6 @@ export const useRooms = () => {
       dispatch(entitiesActions.createRoom({ room: newRoom }));
       return newRoom;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la création de la salle';
-      console.error('Erreur lors de la création de la salle:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -75,7 +66,6 @@ export const useRooms = () => {
       dispatch(entitiesActions.updateRoom({ room: updatedRoom }));
       return updatedRoom;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de la salle:', error);
       throw error;
     }
   }, [dispatch]);
@@ -94,7 +84,6 @@ export const useRooms = () => {
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la suppression de la salle:', error);
       throw error;
     }
   }, [dispatch, currentRoomId, rooms]);
@@ -109,20 +98,16 @@ export const useRooms = () => {
     rooms,
     currentRoom,
     currentRoomId,
-    
-    // État
-    loading,
-    error,
-    
+
     // Actions de navigation
     setCurrentRoom,
-    
+
     // Actions CRUD
     loadRooms,
     createRoom,
     updateRoom,
     deleteRoom,
-    
+
     // Utilitaires
     getRoomById,
   };

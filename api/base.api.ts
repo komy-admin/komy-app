@@ -136,7 +136,6 @@ export abstract class BaseApiService<T> {
       const response = await this.axiosInstance.post<T>(this.endpoint, data);
       return response.data;
     } catch (error) {
-      console.error(`Error in create for ${this.endpoint}:`, error);
       throw error;
     }
   }
@@ -146,7 +145,6 @@ export abstract class BaseApiService<T> {
       const response = await this.axiosInstance.put<T>(`${this.endpoint}/${id}`, data);
       return response.data;
     } catch (error) {
-      console.error(`Error in update for ${this.endpoint}/${id}:`, error);
       throw error;
     }
   }

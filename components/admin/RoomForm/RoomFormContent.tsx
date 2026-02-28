@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform, type ViewStyle, type TextStyle } from 'react-native';
 import Svg, { Rect, Defs, ClipPath } from 'react-native-svg';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, ArrowLeft } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
@@ -9,6 +9,7 @@ interface RoomFormContentProps {
   room: Room | null;
   onSave: (roomData: Partial<Room>) => void;
   onCancel: () => void;
+  onBack?: () => void;
 }
 
 const DEFAULT_ROOM_COLOR = '#6366F1';
@@ -108,12 +109,14 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
   room,
   onSave,
   onCancel,
+  onBack,
 }) => {
   const [formData, setFormData] = useState({
     name: '',
     width: 15,
     height: 15,
     color: DEFAULT_ROOM_COLOR,
+    isActive: true,
   });
 
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
@@ -139,9 +142,10 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         width: room.width || 15,
         height: room.height || 15,
         color: room.color ?? DEFAULT_ROOM_COLOR,
+        isActive: room.isActive ?? true,
       });
     } else {
-      setFormData({ name: '', width: 15, height: 15, color: DEFAULT_ROOM_COLOR });
+      setFormData({ name: '', width: 15, height: 15, color: DEFAULT_ROOM_COLOR, isActive: true });
     }
     setTouchedFields({});
   }, [room]);
@@ -181,6 +185,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
       width: formData.width,
       height: formData.height,
       color: formData.color,
+      isActive: formData.isActive,
     });
   };
 
@@ -194,8 +199,16 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
   return (
     <View style={styles.panelContent}>
       <View style={styles.panelHeader}>
+        {onBack && (
+          <>
+            <TouchableOpacity onPress={onBack} style={styles.backButton}>
+              <ArrowLeft size={20} color="#1E293B" strokeWidth={2} />
+            </TouchableOpacity>
+            <View style={styles.headerSeparator} />
+          </>
+        )}
         <Text style={styles.panelTitle}>
-          {room ? `Modifier : ${room.name}` : 'Créer une nouvelle salle'}
+          {room ? room.name : 'Créer une nouvelle salle'}
         </Text>
         <TouchableOpacity onPress={onCancel}>
           <X size={24} color="#64748B" strokeWidth={2} />
@@ -208,7 +221,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         bottomOffset={40}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
+        <Pressable style={styles.pressableContent} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Room Name */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Nom de la salle</Text>
@@ -234,6 +247,50 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                 </>
               );
             })()}
+          </View>
+
+          {/* Room Status */}
+          <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Statut</Text>
+              <Pressable
+                style={[styles.statusToggle, formData.isActive && styles.statusToggleActive]}
+                onPress={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
+              >
+                <View style={styles.statusIconContainer}>
+                  <View style={[styles.statusPulse, formData.isActive && styles.statusPulseActive]} />
+                  <View style={[styles.statusCore, formData.isActive && styles.statusCoreActive]} />
+                </View>
+                <View style={styles.statusTextContainer}>
+                  <Text
+                    style={[
+                      styles.statusLabel,
+                      formData.isActive && styles.statusLabelActive,
+                      Platform.OS === 'web' && {
+                        fontSize: 13,
+                        fontWeight: formData.isActive ? '700' : '600',
+                        color: formData.isActive ? '#047857' : '#6B7280',
+                        lineHeight: 18,
+                      } as TextStyle,
+                    ]}
+                  >
+                    {formData.isActive ? 'Actif' : 'Inactif'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statusSubtext,
+                      formData.isActive && styles.statusSubtextActive,
+                      Platform.OS === 'web' && {
+                        fontSize: 11,
+                        fontWeight: '500',
+                        color: formData.isActive ? '#059669' : '#9CA3AF',
+                        lineHeight: 14,
+                      } as TextStyle,
+                    ]}
+                  >
+                    {formData.isActive ? 'Visible en service' : 'Masquée en service'}
+                  </Text>
+                </View>
+              </Pressable>
           </View>
 
           {/* Room Color */}
@@ -357,6 +414,9 @@ const styles = StyleSheet.create({
   panelContent: {
     flex: 1,
   },
+  pressableContent: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -372,10 +432,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+  backButton: {
+    alignSelf: 'stretch',
+    marginVertical: -20,
+    marginLeft: -20,
+    marginRight: -12,
+    paddingHorizontal: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerSeparator: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: -20,
+    backgroundColor: '#E2E8F0',
+  },
   panelTitle: {
+    flex: 1,
+    paddingLeft: 8,
     fontSize: 18,
     fontWeight: '600',
     color: '#1E293B',
@@ -420,6 +498,117 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontStyle: 'italic',
   },
+
+  // Status toggle
+  statusToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    height: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
+  } as ViewStyle,
+  statusToggleActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#34D399',
+    shadowColor: '#10B981',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    ...Platform.select({
+      ios: { elevation: 3 },
+      android: { elevation: 0 },
+      web: {
+        elevation: 3,
+        boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
+      },
+    }),
+  } as ViewStyle,
+  statusIconContainer: {
+    width: 12,
+    height: 12,
+    marginRight: 12,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  statusPulse: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  } as ViewStyle,
+  statusPulseActive: {
+    borderColor: '#10B981',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  } as ViewStyle,
+  statusCore: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#9CA3AF',
+    zIndex: 1,
+  } as ViewStyle,
+  statusCoreActive: {
+    backgroundColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    ...Platform.select({
+      ios: { elevation: 2 },
+      android: { elevation: 0 },
+      web: { elevation: 2 },
+    }),
+  } as ViewStyle,
+  statusTextContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingVertical: 2,
+  } as ViewStyle,
+  statusLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    letterSpacing: 0.2,
+    lineHeight: 16,
+    ...(Platform.OS === 'web' ? {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    } : {}),
+  } as TextStyle,
+  statusLabelActive: {
+    color: '#047857',
+    fontWeight: '700',
+  } as TextStyle,
+  statusSubtext: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    letterSpacing: 0.1,
+    marginTop: 1,
+    lineHeight: 14,
+    ...(Platform.OS === 'web' ? {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    } : {}),
+  } as TextStyle,
+  statusSubtextActive: {
+    color: '#059669',
+  } as TextStyle,
 
   // Color picker
   colorsRow: {

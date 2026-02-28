@@ -245,8 +245,9 @@ export const useOrderStatusActions = ({
       await deleteOrder(selectedTableOrder.id);
       showToast('Commande supprimée avec succès', 'success');
       onCleanup();
-    } catch (error) {
-      showToast('Erreur lors de la suppression de la commande', 'error');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la suppression de la commande';
+      showToast(errorMessage, 'error');
     }
   }, [selectedTableOrder, deleteOrder, showToast, onCleanup]);
 

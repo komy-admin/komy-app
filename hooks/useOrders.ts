@@ -127,7 +127,6 @@ export const useOrders = () => {
         await orderApiService.delete(orderId);
         dispatch(entitiesActions.deleteOrder({ orderId }));
       } catch (error) {
-        console.error("Erreur lors de la suppression de la commande:", error);
         throw error;
       }
     },
