@@ -160,8 +160,8 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
             {editionMode ? (
               <View style={[styles.table, tableStyle]}>
                 <View style={styles.emptyTableContent}>
-                  <View style={[styles.emptyTableIcon]}>
-                    <MaterialCommunityIcons name="square-edit-outline" size={18} color={roomColor || '#6366F1'} />
+                  <View style={styles.emptyTableIcon}>
+                    <MaterialCommunityIcons name="table-furniture" size={18} color="#9CA3AF" />
                   </View>
                   <RNText style={styles.emptyTableText} numberOfLines={1}>{table.name}</RNText>
                 </View>
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   emptyTableIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 9999,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',

@@ -573,7 +573,7 @@ const RoomTable: React.FC<TableViewProps> = ({
               <View style={[styles.table, tableStyle]}>
                 <View style={styles.emptyTableContent}>
                   <View style={[styles.emptyTableIcon, isSelected && { backgroundColor: roomColor || '#6366F1' }]}>
-                    <MaterialCommunityIcons name="square-edit-outline" size={18} color={isSelected ? '#FFFFFF' : roomColor || '#6366F1'} />
+                    <MaterialCommunityIcons name="table-furniture" size={18} color={isSelected ? '#FFFFFF' : '#9CA3AF'} />
                   </View>
                   <RNText style={styles.emptyTableText} numberOfLines={1}>{table.name}</RNText>
                 </View>
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   emptyTableIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 9999,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
