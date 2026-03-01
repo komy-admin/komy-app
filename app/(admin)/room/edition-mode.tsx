@@ -65,10 +65,10 @@ export default function RoomEditionMode() {
 
   // Ouvrir le panel de création si demandé via paramètre URL
   useEffect(() => {
-    if (openCreate === '1' && rooms.length === 0) {
+    if (openCreate === '1') {
       setRoomPanelMode('create');
     }
-  }, [openCreate, rooms.length]);
+  }, [openCreate]);
 
   // Désélectionner la table lors de la navigation
   useFocusEffect(
