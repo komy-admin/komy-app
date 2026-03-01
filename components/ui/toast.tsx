@@ -19,7 +19,7 @@ export function Toast({
   onHide
 }: ToastProps) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
+  const translateY = useRef(new Animated.Value(-20)).current;
 
   useEffect(() => {
     if (visible) {
@@ -52,7 +52,7 @@ export function Toast({
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
-        toValue: 20,
+        toValue: -20,
         duration: 300,
         useNativeDriver: true,
       }),
@@ -83,9 +83,9 @@ export function Toast({
       style={[
         styles.container,
         {
-          opacity: 1,
+          opacity,
           backgroundColor: getBackgroundColor(),
-          transform: [{ translateY: 0 }],
+          transform: [{ translateY }],
         },
       ]}
     >
@@ -97,8 +97,8 @@ export function Toast({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: Platform.OS === 'web' ? 40 : 20,
-    right: Platform.OS === 'web' ? 40 : 20,
+    top: 20,
+    left: 20,
     minWidth: 200,
     maxWidth: 400,
     padding: 16,
@@ -107,6 +107,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 99999,
+    elevation: 99999,
   },
   message: {
     color: '#FFFFFF',
