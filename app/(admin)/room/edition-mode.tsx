@@ -355,6 +355,11 @@ export default function RoomEditionMode() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.editionBanner}>
+        <Text style={styles.editionBannerText}>
+          <Text style={styles.editionBannerBold}>Mode édition</Text> : Ajouter / Modifier vos salles et vos tables
+        </Text>
+      </View>
       <View style={styles.headerContainer}>
         <ScrollView
           horizontal
@@ -486,6 +491,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  editionBanner: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editionBannerText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '400',
+    letterSpacing: 0.5,
+  },
+  editionBannerBold: {
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   headerContainer: {
     backgroundColor: '#FBFBFB',
