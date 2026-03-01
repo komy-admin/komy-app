@@ -1,4 +1,4 @@
-import { Text, Animated, StyleSheet, Platform } from 'react-native';
+import { Text, Animated, StyleSheet } from 'react-native';
 import { useEffect, useRef } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';

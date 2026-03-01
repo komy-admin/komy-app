@@ -1,7 +1,7 @@
 // components/admin/Sidebar.tsx
 import { Href, router, usePathname } from 'expo-router';
 import { View, Pressable, Platform, StyleSheet } from 'react-native';
-import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, ReceiptEuro } from 'lucide-react-native';
+import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, CreditCard } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../ui';
 import { useSelector } from 'react-redux';
@@ -15,9 +15,9 @@ const ServiceIcon = ({ size, color, style }: { size: number; color: string; styl
 
 const NAV_ITEMS = [
   { href: '/service', icon: ServiceIcon, label: 'Service', configKey: null },
+  { href: '/payments', icon: CreditCard, label: 'Paiements', configKey: null },
   { href: '/room/edition-mode', icon: LayoutDashboard, label: 'Salles', configKey: null },
   { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null },
-  { href: '/payments', icon: ReceiptEuro, label: 'Paiements', configKey: null },
   { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const },
   { href: '/kitchen', icon: ChefHat, label: 'Cuisine', configKey: 'kitchenEnabled' as const },
   { href: '/barman', icon: GlassWater, label: 'Bar', configKey: 'barEnabled' as const }
