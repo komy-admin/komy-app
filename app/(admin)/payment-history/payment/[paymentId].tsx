@@ -6,16 +6,17 @@ import { GeneralInfo } from '~/components/Payment/PaymentDetailView/GeneralInfo'
 import { AllocationsList } from '~/components/Payment/PaymentDetailView/AllocationsList'
 import { TechnicalInfo } from '~/components/Payment/PaymentDetailView/TechnicalInfo'
 import { PaymentActions } from '~/components/Payment/PaymentDetailView/PaymentActions'
+import RefundModal from '~/components/Payment/RefundModal'
 import { Button } from '~/components/ui/button'
 import { usePayments } from '~/hooks/usePayments'
 import type { Payment } from '~/types/payment.types'
-
 export default function PaymentDetailScreen() {
   const { paymentId } = useLocalSearchParams<{ paymentId: string }>()
   const router = useRouter()
-  const { getPaymentById, getAuditLogs, loading } = usePayments()
+  const { getPaymentById, getAuditLogs, refundPayment, loading } = usePayments()
   const [payment, setPayment] = useState<Payment | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false)
 
   // Charge le paiement depuis l'API
   useEffect(() => {
@@ -58,7 +59,35 @@ export default function PaymentDetailScreen() {
   }
 
   const handleRefund = () => {
-    Alert.alert('Remboursement', 'Fonctionnalité à implémenter')
+    setIsRefundModalOpen(true)
+  }
+
+  const handleProcessRefund = async (amount: number, reason: string, method: 'original' | 'cash') => {
+    if (!payment) return
+
+    try {
+      const result = await refundPayment(payment.id, {
+        amount,
+        reason,
+        refundMethod: method,
+      })
+
+      // Afficher un message de succès
+      Alert.alert(
+        'Remboursement effectué',
+        `Le remboursement de ${(amount / 100).toFixed(2)}€ a été effectué avec succès`
+      )
+
+      // Recharger le paiement pour voir les mises à jour
+      const updatedPayment = await getPaymentById(payment.id)
+      setPayment(updatedPayment)
+
+      // Fermer le modal
+      setIsRefundModalOpen(false)
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Erreur lors du remboursement'
+      throw new Error(errorMessage)
+    }
   }
 
   const handleViewAudit = () => {
@@ -127,6 +156,16 @@ export default function PaymentDetailScreen() {
           onSendEmail={handleSendEmail}
         />
       </ScrollView>
+
+      {/* Modal de remboursement */}
+      {payment && (
+        <RefundModal
+          isOpen={isRefundModalOpen}
+          onClose={() => setIsRefundModalOpen(false)}
+          payment={payment}
+          onRefund={handleProcessRefund}
+        />
+      )}
     </View>
   )
 }

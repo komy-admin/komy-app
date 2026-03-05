@@ -276,6 +276,42 @@ export const usePayments = () => {
   );
 
   /**
+   * Effectue un remboursement total ou partiel
+   */
+  const refundPayment = useCallback(
+    async (
+      paymentId: string,
+      refundData: {
+        amount?: number; // Si non spécifié, remboursement total
+        reason: string;
+        refundMethod?: 'original' | 'cash';
+      },
+    ): Promise<{ refundPayment: Payment; originalPayment: Payment }> => {
+      try {
+        const result = await paymentApiService.refundPayment(paymentId, refundData);
+
+        // Mettre à jour les deux paiements dans Redux
+        if (result.refundPayment) {
+          dispatch(entitiesActions.createPayment({ payment: result.refundPayment }));
+        }
+        if (result.originalPayment) {
+          dispatch(entitiesActions.updatePayment({ payment: result.originalPayment }));
+        }
+
+        return result;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Erreur lors du remboursement";
+        console.error("Erreur lors du remboursement:", errorMessage);
+        throw err;
+      }
+    },
+    [dispatch],
+  );
+
+  /**
    * Imprime un ticket de paiement
    */
   const printTicket = useCallback(async (paymentId: string): Promise<void> => {
@@ -329,6 +365,7 @@ export const usePayments = () => {
     createPayment,
     updatePayment,
     deletePayment,
+    refundPayment,
 
     // Utilitaires (maintenant async depuis l'API)
     getPaymentById,

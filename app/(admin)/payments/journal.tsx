@@ -29,6 +29,8 @@ import { formatPrice } from '~/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { paymentApi } from '~/api/payment.api';
+import RefundModal from '~/components/Payment/RefundModal';
+import type { Payment } from '~/types/payment.types';
 
 // Types pour le journal
 interface Allocation {
@@ -135,6 +137,10 @@ export default function PaymentJournalScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'yesterday' | 'week' | 'month' | 'all'>('today');
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [selectedStatus] = useState<string>('completed');
+
+  // État pour le modal de remboursement
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [selectedPaymentForRefund, setSelectedPaymentForRefund] = useState<JournalEntry | null>(null);
 
   /**
    * Grouper les paiements par commande
@@ -319,33 +325,37 @@ export default function PaymentJournalScreen() {
   }, []);
 
   /**
-   * Action rembourser
+   * Action rembourser - ouvre le modal
    */
   const handleRefund = useCallback((payment: JournalEntry) => {
-    // Pour l'instant, utiliser une alerte simple
-    // TODO: Créer un modal custom pour saisir la raison
-    Alert.alert(
-      'Remboursement',
-      `Voulez-vous rembourser ${formatPrice(payment.amount)} ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Confirmer',
-          onPress: async () => {
-            try {
-              await paymentApi.refundPayment(payment.id, {
-                reason: 'Remboursement demandé' // Raison par défaut
-              });
-              Alert.alert('Succès', 'Remboursement effectué');
-              handleRefresh();
-            } catch (error) {
-              Alert.alert('Erreur', 'Impossible d\'effectuer le remboursement');
-            }
-          },
-        },
-      ]
-    );
-  }, [handleRefresh]);
+    setSelectedPaymentForRefund(payment);
+    setIsRefundModalOpen(true);
+  }, []);
+
+  /**
+   * Traiter le remboursement depuis le modal
+   */
+  const handleProcessRefund = useCallback(async (amount: number, reason: string, method: 'original' | 'cash') => {
+    if (!selectedPaymentForRefund) return;
+
+    try {
+      await paymentApi.refundPayment(selectedPaymentForRefund.id, {
+        amount,
+        reason,
+        refundMethod: method,
+      });
+
+      Alert.alert('Succès', `Remboursement de ${formatPrice(amount)} effectué avec succès`);
+
+      // Fermer le modal et rafraîchir la liste
+      setIsRefundModalOpen(false);
+      setSelectedPaymentForRefund(null);
+      handleRefresh();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Erreur lors du remboursement';
+      throw new Error(errorMessage);
+    }
+  }, [selectedPaymentForRefund, handleRefresh]);
 
   /**
    * Obtenir l'icône de la méthode de paiement
@@ -884,6 +894,19 @@ export default function PaymentJournalScreen() {
           onEndReachedThreshold={0.5}
           contentContainerStyle={{ flexGrow: 1 }}
         />
+
+        {/* Modal de remboursement */}
+        {selectedPaymentForRefund && (
+          <RefundModal
+            isOpen={isRefundModalOpen}
+            onClose={() => {
+              setIsRefundModalOpen(false);
+              setSelectedPaymentForRefund(null);
+            }}
+            payment={selectedPaymentForRefund as unknown as Payment}
+            onRefund={handleProcessRefund}
+          />
+        )}
       </View>
     );
   }
@@ -909,6 +932,19 @@ export default function PaymentJournalScreen() {
         onEndReachedThreshold={0.5}
         contentContainerStyle={{ flexGrow: 1 }}
       />
+
+      {/* Modal de remboursement */}
+      {selectedPaymentForRefund && (
+        <RefundModal
+          isOpen={isRefundModalOpen}
+          onClose={() => {
+            setIsRefundModalOpen(false);
+            setSelectedPaymentForRefund(null);
+          }}
+          payment={selectedPaymentForRefund as unknown as Payment}
+          onRefund={handleProcessRefund}
+        />
+      )}
     </View>
   );
 }

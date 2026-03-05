@@ -125,17 +125,18 @@ class PaymentApiService extends BaseApiService<Payment> {
 
   /**
    * Refund a payment
+   * @returns Object with refundPayment and originalPayment
    */
   async refundPayment(paymentId: string, data: {
     amount?: number
     reason: string
     refundMethod?: 'original' | 'cash' | 'voucher'
-  }) {
+  }): Promise<{ refundPayment: Payment; originalPayment: Payment }> {
     const response = await this.axiosInstance.post(
       `${this.endpoint}/${paymentId}/refund`,
       data
     )
-    return response.data
+    return response.data.data // L'API retourne { data: { refundPayment, originalPayment } }
   }
 }
 
