@@ -66,7 +66,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
         {/* Logo statique */}
         <View style={styles.logoContainer}>
           <Image
-            source={require('../assets/images/logo_komy_png/logo_name.png')}
+            source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
             style={styles.logoImage}
             resizeMode="contain"
           />

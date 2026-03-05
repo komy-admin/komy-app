@@ -62,7 +62,7 @@ export default function LoginScreen() {
         <View style={styles.fullWrapper}>
           <View style={styles.contentContainer}>
             <Image
-              source={require('../../assets/images/logo_komy_png/logo_name.png')}
+              source={require('../../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
               style={styles.logo}
               resizeMode="contain"
             />
