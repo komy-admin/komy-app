@@ -1,7 +1,8 @@
-import { memo, useMemo } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
-import { CustomModal } from '@/components/CustomModal';
-import { ItemNameRow } from './ItemNameRow';
+import { memo, useEffect, useCallback } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
+import { SlidePanel } from '~/components/ui/SlidePanel';
+import { usePanelPortal } from '~/hooks/usePanelPortal';
+import type { GroupedSection } from '~/hooks/order/useOrderStatusActions';
 
 interface ActionConfirmModalProps {
   isVisible: boolean;
@@ -11,6 +12,7 @@ interface ActionConfirmModalProps {
     itemTypeNames?: string[];
     count: number;
     itemNames: string[];
+    sections: GroupedSection[];
   } | null;
   onClose: () => void;
   onConfirm: () => void;
@@ -19,14 +21,16 @@ interface ActionConfirmModalProps {
 
 const VARIANT_CONFIG = {
   claim: {
-    title: 'Confirmation - Réclamer',
+    title: 'Réclamer',
+    subtitle: 'Confirmation de réclamation',
     confirmText: 'Confirmer la réclamation',
-    confirmColor: '#FB923C',
+    color: '#FB923C',
   },
   serve: {
-    title: 'Confirmation - Servir',
+    title: 'Servir',
+    subtitle: 'Confirmation de service',
     confirmText: 'Confirmer le service',
-    confirmColor: '#10B981',
+    color: '#10B981',
   },
 } as const;
 
@@ -37,69 +41,85 @@ export const ActionConfirmModal = memo<ActionConfirmModalProps>(({
   onConfirm,
   variant,
 }) => {
-  const windowDimensions = useWindowDimensions();
+  const { renderPanel, clearPanel } = usePanelPortal();
   const config = VARIANT_CONFIG[variant];
 
-  const modalDimensions = useMemo(() => ({
-    width: Math.min(windowDimensions.width * 0.45, 500),
-    height: Math.min(windowDimensions.height * 0.6, 450),
-  }), [windowDimensions.width, windowDimensions.height]);
+  const handleClose = useCallback(() => {
+    clearPanel();
+    onClose();
+  }, [clearPanel, onClose]);
 
-  const confirmButtonStyle = useMemo(() => ([
-    styles.confirmButton,
-    { backgroundColor: config.confirmColor },
-  ]), [config.confirmColor]);
+  const handleConfirm = useCallback(() => {
+    clearPanel();
+    onConfirm();
+  }, [clearPanel, onConfirm]);
 
-  if (!itemsData) return null;
+  useEffect(() => {
+    if (isVisible && itemsData) {
+      renderPanel(
+        <SlidePanel
+          visible={true}
+          onClose={handleClose}
+          width="35%"
+          minWidth={350}
+          maxWidth={500}
+        >
+          <View style={styles.container}>
+            {/* Banner coloré */}
+            <View style={[styles.banner, { backgroundColor: config.color }]}>
+              <Text style={styles.bannerText}>
+                <Text style={styles.bannerBold}>{config.title}</Text>
+                {' : ' + config.subtitle}
+              </Text>
+            </View>
 
-  return (
-    <CustomModal
-      isVisible={isVisible}
-      onClose={onClose}
-      width={modalDimensions.width}
-      height={modalDimensions.height}
-      title={config.title}
-    >
-      <View style={styles.container}>
-        {/* Description */}
-        {variant === 'claim' && itemsData.itemTypeNames ? (
-          <View style={styles.descriptionRow}>
-            <Text style={styles.descriptionText}>
-              Vous êtes sur le point de réclamer {itemsData.count} article{itemsData.count > 1 ? 's' : ''} de type{' '}
-            </Text>
-            <Text style={styles.itemTypeName}>
-              {itemsData.itemTypeNames.map(n => `"${n}"`).join(' + ')}
-            </Text>
-            <Text style={styles.descriptionText}>
-              {' '}:
-            </Text>
+            {/* Sections groupées par itemType */}
+            <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+              {itemsData.sections.map((section, sIdx) => (
+                <View key={sIdx} style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>
+                      {section.totalCount}x {section.itemTypeName}
+                    </Text>
+                  </View>
+                  <View style={styles.sectionBlock}>
+                    {section.items.map((item, iIdx) => (
+                      <View key={iIdx} style={styles.itemRow}>
+                        <Text style={styles.itemQty}>{item.quantity}x</Text>
+                        <Text style={styles.itemName} numberOfLines={1} ellipsizeMode="tail">
+                          {item.name}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Footer avec boutons */}
+            <View style={styles.footer}>
+              <Pressable onPress={handleClose} style={styles.cancelButton}>
+                <Text style={styles.cancelText}>Annuler</Text>
+              </Pressable>
+
+              <Pressable onPress={handleConfirm} style={[styles.confirmButton, { backgroundColor: config.color }]}>
+                <Text style={styles.confirmText}>Confirmer</Text>
+              </Pressable>
+            </View>
           </View>
-        ) : (
-          <Text style={styles.descriptionText}>
-            Vous êtes sur le point de servir {itemsData.count} article{itemsData.count > 1 ? 's' : ''} :
-          </Text>
-        )}
+        </SlidePanel>
+      );
+    } else {
+      clearPanel();
+    }
+  }, [isVisible, itemsData, variant, config, handleClose, handleConfirm, renderPanel, clearPanel]);
 
-        {/* Liste des items */}
-        <ScrollView style={styles.itemsList}>
-          {itemsData.itemNames.map((itemName, index) => (
-            <ItemNameRow key={index} itemName={itemName} index={index} />
-          ))}
-        </ScrollView>
+  // Cleanup au démontage
+  useEffect(() => {
+    return () => clearPanel();
+  }, [clearPanel]);
 
-        {/* Boutons d'action */}
-        <View style={styles.actionsRow}>
-          <Pressable onPress={onClose} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>Annuler</Text>
-          </Pressable>
-
-          <Pressable onPress={onConfirm} style={confirmButtonStyle}>
-            <Text style={styles.confirmText}>{config.confirmText}</Text>
-          </Pressable>
-        </View>
-      </View>
-    </CustomModal>
-  );
+  return null;
 });
 
 ActionConfirmModal.displayName = 'ActionConfirmModal';
@@ -107,58 +127,106 @@ ActionConfirmModal.displayName = 'ActionConfirmModal';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
   },
-  descriptionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
+  // Banner
+  banner: {
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  descriptionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 12,
+  bannerText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '400',
+    letterSpacing: 0.5,
   },
-  itemTypeName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#374151',
+  bannerBold: {
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  itemsList: {
+  // Scroll
+  scrollArea: {
     flex: 1,
-    marginBottom: 20,
+    backgroundColor: '#F9FAFB',
   },
-  actionsRow: {
+  // Section (like DraftReviewPanelContent)
+  section: {
+    marginBottom: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#F3F4F6',
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionBlock: {
+    backgroundColor: '#FFFFFF',
+  },
+  // Item row (receipt style)
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 20,
+    paddingRight: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  itemQty: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginRight: 6,
+    flexShrink: 0,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    flex: 1,
+  },
+  // Footer
+  footer: {
     flexDirection: 'row',
     gap: 12,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
-    ...Platform.select({
-      web: { cursor: 'pointer' as any },
-    }),
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   cancelText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#64748B',
   },
   confirmButton: {
-    flex: 1,
+    flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    ...Platform.select({
-      web: { cursor: 'pointer' as any },
-    }),
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   confirmText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },

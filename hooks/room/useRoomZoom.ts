@@ -42,6 +42,8 @@ export const useRoomZoom = ({
   containerWidth,
   containerHeight,
 }: UseRoomZoomProps) => {
+  // Permettre de dézoomer jusqu'au zoom initial si la room est très grande
+  const effectiveMinScale = Math.min(MIN_SCALE, initialZoom);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(initialZoom);
@@ -106,9 +108,9 @@ export const useRoomZoom = ({
       .onUpdate((event) => {
         'worklet';
         const newScale = savedScale.value * event.scale;
-        scale.value = Math.min(Math.max(newScale, MIN_SCALE), MAX_SCALE);
+        scale.value = Math.min(Math.max(newScale, effectiveMinScale), MAX_SCALE);
       }),
-  []);
+  [effectiveMinScale]);
 
   // Web : molette avec focal point vers le curseur
   // Re-run quand initialZoom change (= l'élément DOM est rendu après le loading)
@@ -121,7 +123,7 @@ export const useRoomZoom = ({
       event.preventDefault();
       const oldScale = scale.value;
       const delta = -event.deltaY * 0.001;
-      const newScale = Math.min(Math.max(oldScale + delta, MIN_SCALE), MAX_SCALE);
+      const newScale = Math.min(Math.max(oldScale + delta, effectiveMinScale), MAX_SCALE);
       if (newScale === oldScale) return;
 
       if (!element) return;

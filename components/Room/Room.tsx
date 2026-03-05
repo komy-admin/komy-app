@@ -34,6 +34,8 @@ interface RoomProps {
   fillContainer?: boolean;
   roomColor?: string | null;
   onTableEditTap?: (table: Table) => void;
+  selectedIcon?: 'play' | 'move';
+  disabledTableIds?: Set<string>;
 }
 
 const Room: React.FC<RoomProps> = ({
@@ -50,6 +52,8 @@ const Room: React.FC<RoomProps> = ({
   fillContainer,
   roomColor,
   onTableEditTap,
+  selectedIcon,
+  disabledTableIds,
 }) => {
   // Couleurs dérivées de la room (calculées une seule fois pour toutes les tables)
   const resolvedColor = roomColor || '#6366F1';
@@ -248,6 +252,8 @@ const Room: React.FC<RoomProps> = ({
                         tableBg={tableBg}
                         onPress={onTablePress}
                         onLongPress={onTableLongPress}
+                        selectedIcon={selectedIcon}
+                        disabled={disabledTableIds?.has(table.id)}
                       />
                     );
                   })}

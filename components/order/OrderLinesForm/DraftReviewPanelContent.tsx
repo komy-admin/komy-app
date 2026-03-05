@@ -39,6 +39,9 @@ interface DraftReviewPanelContentProps {
   cancelDeleteRef?: React.RefObject<(() => void) | null>;
   hideFooter?: boolean;
   itemTypes?: ItemType[];
+  allowEditAll?: boolean;
+  onEditGroup?: (indices: number[]) => void;
+  onDeleteGroup?: (indices: number[]) => void;
 }
 
 export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = ({
@@ -54,25 +57,36 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   cancelDeleteRef,
   hideFooter = false,
   itemTypes,
+  allowEditAll = false,
+  onEditGroup,
+  onDeleteGroup,
 }) => {
   const { isOrderLinePaid, getOrderLinePaymentFraction } = usePayments();
 
-  // Track which row is pending delete (by originalIndex)
+  // Track which row is pending delete (by originalIndex + all group indices)
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+  const [pendingDeleteIndices, setPendingDeleteIndices] = useState<number[]>([]);
 
-  const handleDeleteRequest = useCallback((index: number) => {
+  const handleDeleteRequest = useCallback((index: number, allIndices?: number[]) => {
     setPendingDeleteIndex(index);
+    setPendingDeleteIndices(allIndices || [index]);
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
     if (pendingDeleteIndex !== null) {
-      onDelete(pendingDeleteIndex);
+      if (onDeleteGroup && pendingDeleteIndices.length > 1) {
+        onDeleteGroup(pendingDeleteIndices);
+      } else {
+        onDelete(pendingDeleteIndex);
+      }
       setPendingDeleteIndex(null);
+      setPendingDeleteIndices([]);
     }
-  }, [pendingDeleteIndex, onDelete]);
+  }, [pendingDeleteIndex, pendingDeleteIndices, onDelete, onDeleteGroup]);
 
   const handleCancelDelete = useCallback(() => {
     setPendingDeleteIndex(null);
+    setPendingDeleteIndices([]);
   }, []);
 
 
@@ -93,6 +107,8 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   const isLineLocked = (line: OrderLine, hasAllocations: boolean): boolean => {
     // Si la ligne a des allocations de paiement, elle est toujours verrouillée
     if (hasAllocations) return true;
+    // En mode detail (allowEditAll), tout est éditable sauf les payés
+    if (allowEditAll) return false;
     // Sinon, vérifier le statut comme avant
     if (line.id.startsWith('draft-')) return false;
     const effectiveStatus = getOrderLineStatus(line);
@@ -222,11 +238,14 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         quantity={group.quantity}
                         totalPrice={group.totalPrice}
                         originalIndex={group.originalIndices[0]}
+                        originalIndices={group.originalIndices}
                         isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
                         hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={isLineLocked(group.line, hasAllocations)}
                         hasAllocations={hasAllocations}
+                        showStatusBadge={allowEditAll}
                         onEdit={onEdit}
+                        onEditGroup={onEditGroup}
                         onDeleteRequest={handleDeleteRequest}
                         onConfirmDelete={handleConfirmDelete}
                         onCancelDelete={handleCancelDelete}
@@ -258,6 +277,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={hasAllocations}
                         hasAllocations={hasAllocations}
+                        showStatusBadge={allowEditAll}
                         onEditMenu={onEditMenu}
                         onDeleteRequest={handleDeleteRequest}
                         onConfirmDelete={handleConfirmDelete}
@@ -330,6 +350,28 @@ const formatTagValue = (tag: any): string => {
 };
 
 // ========================================
+// STATUS BADGE INLINE (shared)
+// ========================================
+
+const StatusBadgeInline: React.FC<{
+  status: string | undefined;
+  hasAllocations: boolean;
+  showLock: boolean;
+}> = React.memo(({ status, hasAllocations, showLock }) => {
+  const s = (status || '') as Status;
+  const bg = hasAllocations ? '#FEF2F2' : getStatusColor(s);
+  const color = hasAllocations ? '#EF4444' : getStatusTextColor(s);
+  const label = hasAllocations ? 'Payé' : getStatusText(s);
+
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: bg }]}>
+      {showLock && <Lock size={11} color={color} strokeWidth={2.5} />}
+      <RNText style={[styles.statusBadgeText, { color }]}>{label}</RNText>
+    </View>
+  );
+});
+
+// ========================================
 // RECEIPT ITEM ROW
 // ========================================
 
@@ -338,12 +380,15 @@ interface ReceiptItemRowProps {
   quantity: number;
   totalPrice: number;
   originalIndex: number;
+  originalIndices: number[];
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
   isLocked: boolean;
   hasAllocations: boolean;
+  showStatusBadge?: boolean;
   onEdit: (index: number) => void;
-  onDeleteRequest: (index: number) => void;
+  onEditGroup?: (indices: number[]) => void;
+  onDeleteRequest: (index: number, allIndices?: number[]) => void;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
 }
@@ -353,11 +398,14 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   quantity,
   totalPrice,
   originalIndex,
+  originalIndices,
   isPendingDelete,
   hasPendingDelete,
   isLocked,
   hasAllocations,
+  showStatusBadge,
   onEdit,
+  onEditGroup,
   onDeleteRequest,
   onConfirmDelete,
   onCancelDelete,
@@ -370,6 +418,8 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
     if (isLocked) return;
     if (hasPendingDelete) {
       onCancelDelete();
+    } else if (onEditGroup && originalIndices.length > 1) {
+      onEditGroup(originalIndices);
     } else {
       onEdit(originalIndex);
     }
@@ -385,24 +435,24 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
           </RNText>
           <View style={styles.receiptDots} />
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(totalPrice)}</RNText>
-          {isLocked ? (
-            <View style={styles.lockIconWrap}>
-              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#FEF2F2' : getStatusColor(line.status) }]}>
-                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusTextColor(line.status)} strokeWidth={2.5} />
-                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusTextColor(line.status) }]}>
-                  {hasAllocations ? 'Payé' : getStatusText(line.status!)}
-                </RNText>
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
-              style={styles.trashButton}
-              hitSlop={6}
-            >
-              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-            </Pressable>
-          )}
+          <View style={styles.rowActions}>
+            {(isLocked || showStatusBadge) && (
+              <StatusBadgeInline
+                status={line.status}
+                hasAllocations={hasAllocations}
+                showLock={isLocked}
+              />
+            )}
+            {!isLocked && (
+              <Pressable
+                onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex, originalIndices); }}
+                style={styles.trashButton}
+                hitSlop={6}
+              >
+                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {hasTags && (
@@ -443,6 +493,7 @@ interface ReceiptMenuRowProps {
   hasPendingDelete: boolean;
   isLocked: boolean;
   hasAllocations: boolean;
+  showStatusBadge?: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
   onDeleteRequest: (index: number) => void;
   onConfirmDelete: () => void;
@@ -456,6 +507,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   hasPendingDelete,
   isLocked,
   hasAllocations,
+  showStatusBadge,
   onEditMenu,
   onDeleteRequest,
   onConfirmDelete,
@@ -489,24 +541,24 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
           </View>
           <View style={styles.receiptDots} />
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
-          {isLocked ? (
-            <View style={styles.lockIconWrap}>
-              <View style={[styles.statusBadge, { backgroundColor: hasAllocations ? '#FEF2F2' : getStatusColor(getOrderLineStatus(line) || '') }]}>
-                <Lock size={11} color={hasAllocations ? '#EF4444' : getStatusTextColor(getOrderLineStatus(line) || '')} strokeWidth={2.5} />
-                <RNText style={[styles.statusBadgeText, { color: hasAllocations ? '#EF4444' : getStatusTextColor(getOrderLineStatus(line) || '') }]}>
-                  {hasAllocations ? 'Payé' : getStatusText(getOrderLineStatus(line) || '')}
-                </RNText>
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
-              style={styles.trashButton}
-              hitSlop={6}
-            >
-              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-            </Pressable>
-          )}
+          <View style={styles.rowActions}>
+            {(isLocked || showStatusBadge) && (
+              <StatusBadgeInline
+                status={getOrderLineStatus(line) || ''}
+                hasAllocations={hasAllocations}
+                showLock={isLocked}
+              />
+            )}
+            {!isLocked && (
+              <Pressable
+                onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
+                style={styles.trashButton}
+                hitSlop={6}
+              >
+                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+              </Pressable>
+            )}
+          </View>
         </View>
 
         <View style={styles.menuItemsList}>
@@ -514,29 +566,31 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
             const itemHasTags = menuItem.tags && menuItem.tags.length > 0;
             const itemHasNote = menuItem.note && menuItem.note.trim().length > 0;
 
+            const details: string[] = [];
+            if (itemHasTags) {
+              menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).forEach((tag: SelectedTag) => {
+                let tagStr = `${tag.tagSnapshot.label}: ${formatTagValue(tag)}`;
+                if (tag.priceModifier != null && tag.priceModifier !== 0) {
+                  tagStr += ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`;
+                }
+                details.push(tagStr);
+              });
+            }
+            if (itemHasNote) {
+              details.push(`Note: ${menuItem.note}`);
+            }
+
             return (
-              <View key={idx} style={styles.menuSubItem}>
-                <RNText style={[styles.menuSubItemText, isLocked && styles.lockedText]}>
-                  <RNText style={[styles.menuSubCategory, isLocked && styles.lockedText]}>{menuItem.categoryName}: </RNText>
-                  {menuItem.item?.name || ''}
-                  {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
-                </RNText>
-
-                {itemHasTags && menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).map((tag: SelectedTag, tagIdx: number) => (
-                  <RNText key={tagIdx} style={[styles.receiptTag, isLocked && styles.lockedText]}>
-                    {tag.tagSnapshot.label}: {formatTagValue(tag)}
-                    {tag.priceModifier != null && tag.priceModifier !== 0
-                      ? ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`
-                      : ''}
-                  </RNText>
-                ))}
-
-                {itemHasNote && (
-                  <RNText style={[styles.receiptNote, isLocked && styles.lockedText]} numberOfLines={1}>
-                    Note: {menuItem.note}
+              <RNText key={idx} style={[styles.menuSubItemText, isLocked && styles.lockedText]}>
+                <RNText style={[styles.menuSubCategory, isLocked && styles.lockedText]}>{menuItem.categoryName}: </RNText>
+                {menuItem.item?.name || ''}
+                {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
+                {details.length > 0 && (
+                  <RNText style={[styles.menuSubItemDetail, isLocked && styles.lockedText]}>
+                    {' — '}{details.join(' · ')}
                   </RNText>
                 )}
-              </View>
+              </RNText>
             );
           })}
         </View>
@@ -666,6 +720,7 @@ const styles = StyleSheet.create({
   receiptMainLine: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 27,
   },
   receiptQty: {
     fontSize: 14,
@@ -691,7 +746,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   trashButton: {
-    marginLeft: 10,
     padding: 4,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
@@ -767,6 +821,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
+  rowActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 10,
+    flexShrink: 0,
+  },
 
   // Menu specific
   menuLabelWrap: {
@@ -789,11 +850,7 @@ const styles = StyleSheet.create({
   },
   menuItemsList: {
     marginTop: 6,
-    paddingLeft: 8,
-    gap: 4,
-  },
-  menuSubItem: {
-    gap: 1,
+    gap: 3,
   },
   menuSubItemText: {
     fontSize: 12,
@@ -803,6 +860,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#9CA3AF',
     fontSize: 11,
+  },
+  menuSubItemDetail: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
 
   // Footer

@@ -14,7 +14,7 @@ import {
   GestureDetector,
   Gesture,
 } from 'react-native-gesture-handler';
-import { Plus, Play } from 'lucide-react-native';
+import { Plus, Play, Repeat } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAppSelector } from "~/store/hooks";
 import { selectItemTypesRecord } from "~/store/selectors";
@@ -32,6 +32,8 @@ interface RoomTableServiceProps {
   tableBg?: string;
   onPress: (table: Table) => void;
   onLongPress: (table: Table) => void;
+  selectedIcon?: 'play' | 'move';
+  disabled?: boolean;
 }
 
 const RoomTableService: React.FC<RoomTableServiceProps> = ({
@@ -45,16 +47,19 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   tableBg = '#F5F4FA',
   onPress,
   onLongPress,
+  selectedIcon = 'play',
+  disabled = false,
 }) => {
   // Callbacks mémoïsés
   const handlePress = useCallback(() => {
+    if (disabled) return;
     onPress(table);
-  }, [onPress, table]);
+  }, [onPress, table, disabled]);
 
   const handleLongPress = useCallback(() => {
-    // Feedback haptique géré ailleurs, juste le callback
+    if (disabled) return;
     onLongPress(table);
-  }, [onLongPress, table]);
+  }, [onLongPress, table, disabled]);
 
   // Gestes simples : tap + longPress
   const tapGesture = useMemo(() =>
@@ -135,13 +140,13 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     width: table.width * CELL_SIZE,
     height: table.height * CELL_SIZE,
     zIndex: isSelected ? 10000 : 1000,
-    opacity: outOfBounds ? 0.6 : 1,
+    opacity: outOfBounds ? 0.6 : disabled ? 0.35 : 1,
     ...(Platform.OS === 'web' && {
       userSelect: 'none' as any,
       WebkitUserSelect: 'none' as any,
-      cursor: 'pointer' as any,
+      cursor: disabled ? 'not-allowed' as any : 'pointer' as any,
     }),
-  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected, outOfBounds]);
+  }), [table.xStart, table.yStart, table.width, table.height, CELL_SIZE, isSelected, outOfBounds, disabled]);
 
   return (
     <View style={containerStyle}>
@@ -173,7 +178,11 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
                     {hasOrder && priorityIcon ? (
                       <MaterialCommunityIcons name={priorityIcon as any} size={ICON_SIZE} color="#FFFFFF" />
                     ) : isSelected ? (
-                      <Play size={ICON_SIZE - 2} color="#FFFFFF" fill="#FFFFFF" />
+                      selectedIcon === 'move' ? (
+                        <Repeat size={ICON_SIZE} color="#FFFFFF" strokeWidth={2.5} />
+                      ) : (
+                        <Play size={ICON_SIZE - 2} color="#FFFFFF" fill="#FFFFFF" />
+                      )
                     ) : (
                       <Plus size={ICON_SIZE} color={roomColor || '#6366F1'} />
                     )}
@@ -218,7 +227,8 @@ const RoomTableServiceMemoized = React.memo(RoomTableService, (prevProps, nextPr
     prevProps.outOfBounds === nextProps.outOfBounds &&
     prevProps.roomColor === nextProps.roomColor &&
     prevProps.tableBg === nextProps.tableBg &&
-    prevProps.CELL_SIZE === nextProps.CELL_SIZE
+    prevProps.CELL_SIZE === nextProps.CELL_SIZE &&
+    prevProps.disabled === nextProps.disabled
   );
 });
 
