@@ -167,6 +167,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
                 border="#6EE7B7"
                 label="Paiement"
                 onPress={onPayment}
+                disabled={order.paymentStatus === 'paid'}
               />
             </View>
           </View>
