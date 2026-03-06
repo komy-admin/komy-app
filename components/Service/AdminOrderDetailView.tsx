@@ -290,8 +290,7 @@ const AdminMenuOrderGroup = ({
   onUpdateOrderLinesStatus,
   groupId,
   isMenuOpen,
-  onMenuOpenChange,
-  getOrderLinePaymentFraction
+  onMenuOpenChange
 }: {
   menuOrderGroup: any,
   menuInfo: any, // Info du menu depuis order.menus
@@ -303,15 +302,11 @@ const AdminMenuOrderGroup = ({
   onUpdateOrderLinesStatus?: (orderLines: any[], status: Status) => void,
   groupId: string,
   isMenuOpen: boolean,
-  onMenuOpenChange: (groupId: string | null) => void,
-  getOrderLinePaymentFraction: (orderLineId: string, totalPrice: number) => number
+  onMenuOpenChange: (groupId: string | null) => void
 }) => {
   const statuses = orderItems.map((orderLineItem: any) => orderLineItem.status);
   const itemStatus = getMostImportantStatus(statuses); // Utilisation de la fonction générique
   const hasMixed = hasMenuMixedStatuses(statuses);
-
-  // DEBUG: Vérifier que la fonction est bien reçue
-  console.log('AdminMenuOrderGroup - getOrderLinePaymentFraction exists:', typeof getOrderLinePaymentFraction);
 
   const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
   const [showGroupStatusSelector, setShowGroupStatusSelector] = useState(false);
@@ -512,15 +507,7 @@ const AdminMenuOrderGroup = ({
 
                   {/* Items de la catégorie */}
                   {(categoryItems as any[]).map((orderLineItem: any, index: number) => {
-                    // DEBUG: Log avant l'appel
-                    const price = orderLineItem.item?.price || 0;
-                    console.log('Calling getOrderLinePaymentFraction for menu item:', {
-                      orderLineItemId: orderLineItem.id,
-                      price,
-                      hasItem: !!orderLineItem.item
-                    });
-                    const fraction = getOrderLinePaymentFraction(orderLineItem.id, price);
-                    console.log('Result fraction:', fraction);
+                    const fraction = orderLineItem.paidFraction ?? 0;
 
                     return (
                       <AdminOrderLineItem
@@ -581,8 +568,7 @@ const AdminOrderItemsGroup = ({
   onDeleteGroup,
   groupId,
   isMenuOpen,
-  onMenuOpenChange,
-  getOrderLinePaymentFraction
+  onMenuOpenChange
 }: {
   itemType: ItemType;
   status: Status;
@@ -595,7 +581,6 @@ const AdminOrderItemsGroup = ({
   groupId: string;
   isMenuOpen: boolean;
   onMenuOpenChange: (groupId: string | null) => void;
-  getOrderLinePaymentFraction: (orderLineId: string, totalPrice: number) => number;
 }) => {
   const itemStatus = getMostImportantStatus(orderItems.map((orderLine: OrderLine) => orderLine.status || Status.PENDING));
   const [showGroupConfirmDialog, setShowGroupConfirmDialog] = useState(false);
@@ -753,13 +738,7 @@ const AdminOrderItemsGroup = ({
             backgroundColor: '#FAFBFC',
           }}>
             {orderItems.map((orderLine: any, index: number) => {
-              // DEBUG: Log avant l'appel
-              console.log('Calling getOrderLinePaymentFraction for individual item:', {
-                orderLineId: orderLine.id,
-                totalPrice: orderLine.totalPrice
-              });
-              const fraction = getOrderLinePaymentFraction(orderLine.id, orderLine.totalPrice);
-              console.log('Result fraction for individual item:', fraction);
+              const fraction = orderLine.paidFraction ?? 0;
 
               return (
                 <View key={orderLine.id} style={{
@@ -826,15 +805,6 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
   const { showToast } = useToast();
   const { activeMenus, loadAllMenus } = useMenus();
   const { updateOrderStatus } = useOrders();
-  const { getOrderLinePaymentFraction, payments, paymentAllocations } = usePayments();
-
-  // DEBUG: Vérifier l'état des paiements
-  console.log('AdminOrderDetailView - Payment state:', {
-    nbPayments: payments.length,
-    nbAllocations: paymentAllocations.length,
-    functionExists: typeof getOrderLinePaymentFraction,
-    orderId: order?.id
-  });
 
   // Si les menus ne sont pas chargés, les charger
   useEffect(() => {
@@ -1010,7 +980,6 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                       groupId={`menu-${menuLine.id}`}
                       isMenuOpen={openGroupMenuId === `menu-${menuLine.id}`}
                       onMenuOpenChange={setOpenGroupMenuId}
-                      getOrderLinePaymentFraction={getOrderLinePaymentFraction}
                     />
                   ))}
                 </>
@@ -1055,7 +1024,6 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                   groupId={group.id}
                   isMenuOpen={openGroupMenuId === group.id}
                   onMenuOpenChange={setOpenGroupMenuId}
-                  getOrderLinePaymentFraction={getOrderLinePaymentFraction}
                 />
               ))}
             </>

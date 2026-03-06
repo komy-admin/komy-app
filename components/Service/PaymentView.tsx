@@ -72,18 +72,13 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
     return { isPaid, isPartiallyPaid, paidFraction };
   };
 
-  // Calculer les montants depuis les paiements Redux
   const orderTotals = useMemo(() => {
-    const totalAmount = order.lines?.reduce((sum, line) => sum + line.totalPrice, 0) || 0;
-    const completedPayments = payments.filter(p => p.status === 'completed');
-    const paidAmount = completedPayments.reduce((sum, p) => sum + p.amount, 0);
-
     return {
-      totalAmount,
-      paidAmount,
-      remainingAmount: totalAmount - paidAmount
+      totalAmount: order.totalAmount || 0,
+      paidAmount: order.paidAmount || 0,
+      remainingAmount: Math.max(0, (order.totalAmount || 0) - (order.paidAmount || 0))
     };
-  }, [order.lines, payments]);
+  }, [order.totalAmount, order.paidAmount]);
 
   // Items disponibles (non complètement payés)
   const availableItems = useMemo(() => {
