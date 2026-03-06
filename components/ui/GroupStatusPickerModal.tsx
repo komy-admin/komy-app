@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   // Banner
   banner: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2A2E33',
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   statusText: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '700',
     flex: 1,
     textTransform: 'uppercase',

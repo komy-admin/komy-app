@@ -267,8 +267,10 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? '#D97706' : summary.remaining === 0 && summary.paidAmount > 0 ? '#059669' : '#9CA3AF'} strokeWidth={1.8} />
             {summary.paidAmount > 0 && summary.remaining > 0 ? (
               <>
-                <RNText style={styles.totalStrikethrough}>{formatPrice(summary.totalAmount)}</RNText>
-                <RNText style={styles.remainingValue}>{formatPrice(summary.remaining)}</RNText>
+                <View style={styles.remainingRow}>
+                  <RNText style={styles.remainingValue}>{formatPrice(summary.remaining)}</RNText>
+                  <RNText style={styles.totalStrikethrough}>{formatPrice(summary.totalAmount)}</RNText>
+                </View>
                 <RNText style={[styles.infoTileLabel, { color: '#D97706' }]}>À payer</RNText>
               </>
             ) : (
@@ -440,14 +442,19 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     gap: 10,
   },
+  remainingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
   totalStrikethrough: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
   },
   remainingValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: '#D97706',
   },
