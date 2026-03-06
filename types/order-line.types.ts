@@ -64,6 +64,11 @@ export type OrderLine = {
   // Tags sélectionnés pour cet item/menu
   tags?: SelectedTag[];
 
+  // Champs de paiement (maintenant fournis par le backend)
+  paidAmount?: number;
+  paidFraction?: number;
+  paymentStatus?: "unpaid" | "partial" | "paid";
+
   // Timestamps
   createdAt: string;
   updatedAt: string;

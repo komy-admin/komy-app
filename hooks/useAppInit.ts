@@ -64,7 +64,7 @@ export const useAppInit = () => {
   const { loadItemTypes, loadItems } = useMenu();
   const { loadAllMenus } = useMenus();
   const { loadUsers } = useUsers();
-  const { loadAllPayments } = usePayments();
+  // Note: Les paiements sont maintenant chargés via Redux automatiquement
 
   // Plus d'état local, tout est dans Redux maintenant
 
@@ -162,12 +162,11 @@ export const useAppInit = () => {
         loadAllOrders().then(result => {
           updateProgress('orders', true);
           return result;
-        }),
-        loadAllPayments().then(result => {
-          updateProgress('payments', true);
-          return result;
         })
       ]);
+
+      // Les paiements sont maintenant chargés automatiquement via Redux
+      updateProgress('payments', true);
 
       // Phase de finalisation si temps minimum pas écoulé
       const elapsedTime = Date.now() - startTime;
@@ -210,7 +209,7 @@ export const useAppInit = () => {
 
       throw error;
     }
-  }, [canInitialize, appInitialized, isAppInitializing, dispatch, user?.profil, loadRooms, loadItemTypes, loadUsers, loadItems, loadAllMenus, loadAllOrders, loadAllPayments]);
+  }, [canInitialize, appInitialized, isAppInitializing, dispatch, user?.profil, loadRooms, loadItemTypes, loadUsers, loadItems, loadAllMenus, loadAllOrders]);
 
   // Démarrage automatique de l'initialisation
   useEffect(() => {

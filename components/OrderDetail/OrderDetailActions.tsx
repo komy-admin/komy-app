@@ -106,7 +106,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
   const summary = useMemo(() => {
     const lines = order.lines || [];
     const totalItems = lines.reduce((count, l) => count + (l.type === 'MENU' && l.items ? l.items.length : 1), 0);
-    const totalAmount = lines.reduce((sum, l) => sum + (l.totalPrice || 0), 0);
+    const totalAmount = order.totalAmount || 0;
     const paidAmount = order.paidAmount || 0;
     const remaining = Math.max(0, totalAmount - paidAmount);
     return { totalItems, totalAmount, paidAmount, remaining };

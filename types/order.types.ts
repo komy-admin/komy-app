@@ -16,10 +16,10 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
 
-  // Champs de paiement
-  totalAmount?: number | null;
-  paidAmount?: number;
-  paymentStatus?: 'unpaid' | 'partial' | 'paid' | 'overpaid';
+  // Champs de paiement (maintenant fournis par le backend)
+  totalAmount: number;
+  paidAmount: number;
+  paymentStatus: 'unpaid' | 'partial' | 'paid' | 'overpaid';
 
   // Propriétés optionnelles pour compatibilité
   orderNumber?: string;

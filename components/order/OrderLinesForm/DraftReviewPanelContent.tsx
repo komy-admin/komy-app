@@ -61,7 +61,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   onEditGroup,
   onDeleteGroup,
 }) => {
-  const { isOrderLinePaid, getOrderLinePaymentFraction } = usePayments();
+  const { isOrderLinePaid } = usePayments();
 
   // Track which row is pending delete (by originalIndex + all group indices)
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
@@ -95,17 +95,17 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
     const itemId = line.item?.id || '';
     const note = line.note || '';
     const status = getOrderLineStatus(line);
-    const paymentFraction = getOrderLinePaymentFraction(line.id, line.totalPrice) > 0;
+    const hasPaiement = line.paymentStatus !== 'unpaid' && line.paymentStatus !== undefined;
     const tags = (line.tags || [])
       .filter(t => t && t.tagSnapshot)
       .sort((a, b) => a.tagId.localeCompare(b.tagId))
       .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
       .join('|');
-    return `${status}__${itemId}__${tags}__${note}__${paymentFraction}`;
+    return `${status}__${itemId}__${tags}__${note}__${hasPaiement}`;
   };
 
   const isLineLocked = (line: OrderLine, hasAllocations: boolean): boolean => {
-    // Si la ligne a des allocations de paiement, elle est toujours verrouillée
+    if (line.paymentStatus && line.paymentStatus !== 'unpaid') return true;
     if (hasAllocations) return true;
     // En mode detail (allowEditAll), tout est éditable sauf les payés
     if (allowEditAll) return false;
@@ -230,7 +230,8 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
 
                 <View style={styles.sectionBlock}>
                   {section.groupedLines.map((group) => {
-                    const hasAllocations = isOrderLinePaid(group.line.id);
+                    const paymentStatus = group.line.paymentStatus;
+                    const hasAllocations = paymentStatus ? paymentStatus !== 'unpaid' : isOrderLinePaid(group.line.id);
                     return (
                       <ReceiptItemRow
                         key={group.originalIndices.join('-')}
@@ -242,7 +243,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
                         hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={isLineLocked(group.line, hasAllocations)}
-                        hasAllocations={hasAllocations}
+                        paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
                         onEdit={onEdit}
                         onEditGroup={onEditGroup}
@@ -267,7 +268,8 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
 
                 <View style={styles.sectionBlock}>
                   {menuLines.map(({ line, originalIndex }) => {
-                    const hasAllocations = isOrderLinePaid(line.id);
+                    const paymentStatus = line.paymentStatus;
+                    const hasAllocations = paymentStatus ? paymentStatus !== 'unpaid' : isOrderLinePaid(line.id);
                     return (
                       <ReceiptMenuRow
                         key={line.id || `temp-${originalIndex}`}
@@ -276,7 +278,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         isPendingDelete={pendingDeleteIndex === originalIndex}
                         hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={hasAllocations}
-                        hasAllocations={hasAllocations}
+                        paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
                         onEditMenu={onEditMenu}
                         onDeleteRequest={handleDeleteRequest}
@@ -355,13 +357,28 @@ const formatTagValue = (tag: any): string => {
 
 const StatusBadgeInline: React.FC<{
   status: string | undefined;
-  hasAllocations: boolean;
+  paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showLock: boolean;
-}> = React.memo(({ status, hasAllocations, showLock }) => {
+}> = React.memo(({ status, paymentStatus, showLock }) => {
   const s = (status || '') as Status;
-  const bg = hasAllocations ? '#FEF2F2' : getStatusColor(s);
-  const color = hasAllocations ? '#EF4444' : getStatusTextColor(s);
-  const label = hasAllocations ? 'Payé' : getStatusText(s);
+
+  let bg: string;
+  let color: string;
+  let label: string;
+
+  if (paymentStatus === 'paid') {
+    bg = '#FEF2F2';
+    color = '#EF4444';
+    label = 'Payé';
+  } else if (paymentStatus === 'partial') {
+    bg = '#FFF7ED';
+    color = '#EA580C';
+    label = 'Partiel';
+  } else {
+    bg = getStatusColor(s);
+    color = getStatusTextColor(s);
+    label = getStatusText(s);
+  }
 
   return (
     <View style={[styles.statusBadge, { backgroundColor: bg }]}>
@@ -384,7 +401,7 @@ interface ReceiptItemRowProps {
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
   isLocked: boolean;
-  hasAllocations: boolean;
+  paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
   onEdit: (index: number) => void;
   onEditGroup?: (indices: number[]) => void;
@@ -402,7 +419,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   isPendingDelete,
   hasPendingDelete,
   isLocked,
-  hasAllocations,
+  paymentStatus,
   showStatusBadge,
   onEdit,
   onEditGroup,
@@ -439,7 +456,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
             {(isLocked || showStatusBadge) && (
               <StatusBadgeInline
                 status={line.status}
-                hasAllocations={hasAllocations}
+                paymentStatus={paymentStatus}
                 showLock={isLocked}
               />
             )}
@@ -492,7 +509,7 @@ interface ReceiptMenuRowProps {
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
   isLocked: boolean;
-  hasAllocations: boolean;
+  paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
   onDeleteRequest: (index: number) => void;
@@ -506,7 +523,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   isPendingDelete,
   hasPendingDelete,
   isLocked,
-  hasAllocations,
+  paymentStatus,
   showStatusBadge,
   onEditMenu,
   onDeleteRequest,
@@ -545,7 +562,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
             {(isLocked || showStatusBadge) && (
               <StatusBadgeInline
                 status={getOrderLineStatus(line) || ''}
-                hasAllocations={hasAllocations}
+                paymentStatus={paymentStatus}
                 showLock={isLocked}
               />
             )}

@@ -46,7 +46,7 @@ export default function CashRegisterScreen() {
     refreshSession,
   } = useCashRegister();
 
-  const { payments, loadAllPayments } = usePayments();
+  const { payments } = usePayments();
 
   // État local
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -82,7 +82,7 @@ export default function CashRegisterScreen() {
    */
   useEffect(() => {
     refreshSession();
-    loadAllPayments();
+    // Les paiements sont maintenant chargés automatiquement via Redux
   }, []);
 
   /**
@@ -515,14 +515,12 @@ export default function CashRegisterScreen() {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([
-        refreshSession(),
-        loadAllPayments()
-      ]);
+      await refreshSession();
+      // Les paiements sont maintenant chargés automatiquement via Redux
     } finally {
       setIsRefreshing(false);
     }
-  }, [refreshSession, loadAllPayments]);
+  }, [refreshSession]);
 
   if (isLoading && !currentSession) {
     return (

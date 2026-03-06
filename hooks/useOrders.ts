@@ -48,7 +48,7 @@ export const useOrders = () => {
 
   const loadAllOrders = useCallback(async () => {
     try {
-      const { data: orders } = await orderApiService.getAll();
+      const { data: orders } = await orderApiService.getAll("isClosed=false");
 
       dispatch(entitiesActions.setOrders({ orders }));
       return orders;
