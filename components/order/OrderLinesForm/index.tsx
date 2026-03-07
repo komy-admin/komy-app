@@ -110,7 +110,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     categoryId: string;
   } | null>(null);
 
-
   // ====================================================================
   // HANDLERS - ITEMS
   // ====================================================================
@@ -474,11 +473,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    *
    * Note: Le récapitulatif de commande est maintenant un side panel permanent (pas dans le portal)
    */
-  const confirmCustomizationRef = useRef(handleConfirmCustomization);
-  confirmCustomizationRef.current = handleConfirmCustomization;
-  const confirmMenuItemRef = useRef(handleConfirmMenuItemCustomization);
-  confirmMenuItemRef.current = handleConfirmMenuItemCustomization;
-
   useEffect(() => {
     if (customizationPanelVisible && itemToCustomize) {
       renderPanel(
@@ -487,7 +481,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             item={itemToCustomize.item}
             availableTags={itemToCustomize.item.tags || []}
             initialData={itemToCustomize.initialData}
-            onConfirm={(c) => confirmCustomizationRef.current(c)}
+            onConfirm={handleConfirmCustomization}
             onCancel={handleCancelCustomization}
           />
         </SlidePanel>
@@ -499,7 +493,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             item={menuItemToCustomize.item}
             availableTags={menuItemToCustomize.item.tags || []}
             initialData={undefined}
-            onConfirm={(c) => confirmMenuItemRef.current(c)}
+            onConfirm={handleConfirmMenuItemCustomization}
             onCancel={handleCancelMenuItemCustomization}
           />
         </SlidePanel>
@@ -512,7 +506,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     itemToCustomize,
     menuItemPanelVisible,
     menuItemToCustomize,
+    handleConfirmCustomization,
     handleCancelCustomization,
+    handleConfirmMenuItemCustomization,
     handleCancelMenuItemCustomization,
     renderPanel,
     clearPanel,

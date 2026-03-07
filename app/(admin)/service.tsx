@@ -671,9 +671,6 @@ export default function ServicePage() {
         </View>
       )}
 
-      {/* Modals */}
-
-
       {/* Modal de suppression groupée avec quantité */}
       {deleteGroupData && (
         <GroupDeletePickerModal
