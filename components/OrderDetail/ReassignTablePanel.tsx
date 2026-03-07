@@ -149,7 +149,7 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
           {isReassigning ? (
             <ActivityIndicator size="small" color="#3B82F6" />
           ) : (
-            <RNText style={[styles.confirmText, !selectedTable && styles.confirmTextDisabled]}>
+            <RNText style={styles.confirmText}>
               {selectedTable
                 ? `Déplacer vers ${selectedTable.name}`
                 : 'Sélectionner une table'}
@@ -231,9 +231,6 @@ const styles = StyleSheet.create({
   confirmText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  confirmTextDisabled: {
     color: '#FFFFFF',
   },
   cancelButton: {

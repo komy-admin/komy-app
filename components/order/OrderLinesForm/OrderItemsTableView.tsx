@@ -1,14 +1,14 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 import { View, Pressable, StyleSheet, SectionList, Text as RNText } from 'react-native';
 import { Text } from '~/components/ui';
-import { Plus } from 'lucide-react-native';
+import { Plus, ListFilter } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
 import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
 import { formatPrice, getContrastColor } from '~/lib/utils';
 import { getMenuPrice } from '~/lib/color-utils';
-import { TableFilterButton } from './TableFilterTooltip';
+
 
 const ITEM_HEIGHT = 58;
 const SECTION_HEADER_HEIGHT = 38;
@@ -354,7 +354,9 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
       {/* Header de la table */}
       <View style={styles.header}>
         <View style={styles.filterCell}>
-          <TableFilterButton activeFiltersCount={0} />
+          <View style={styles.filterIcon}>
+            <ListFilter size={17} color="#2A2E33" strokeWidth={2.5} />
+          </View>
         </View>
         <View style={styles.nameCell}>
           <Text style={styles.headerText}>Nom</Text>
@@ -476,6 +478,16 @@ const styles = StyleSheet.create({
     width: 64,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  filterIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   letterCell: {
     width: 64,

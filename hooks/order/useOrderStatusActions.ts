@@ -13,6 +13,27 @@ export interface GroupedSection {
   totalCount: number;
 }
 
+/** Groupe une liste d'items par itemType en sections avec décompte par nom */
+const buildGroupedSections = (
+  items: { itemName: string; itemTypeId: string }[],
+  allItemTypes: { id: string; name: string }[],
+): GroupedSection[] => {
+  const sectionsMap = new Map<string, { itemTypeName: string; itemCounts: Map<string, number> }>();
+  items.forEach(item => {
+    const typeName = allItemTypes.find(it => it.id === item.itemTypeId)?.name || 'Autre';
+    if (!sectionsMap.has(item.itemTypeId)) {
+      sectionsMap.set(item.itemTypeId, { itemTypeName: typeName, itemCounts: new Map() });
+    }
+    const section = sectionsMap.get(item.itemTypeId)!;
+    section.itemCounts.set(item.itemName, (section.itemCounts.get(item.itemName) || 0) + 1);
+  });
+  return Array.from(sectionsMap.values()).map(s => ({
+    itemTypeName: s.itemTypeName,
+    items: Array.from(s.itemCounts.entries()).map(([name, quantity]) => ({ name, quantity })),
+    totalCount: Array.from(s.itemCounts.values()).reduce((sum, q) => sum + q, 0),
+  }));
+};
+
 export interface ClaimData {
   orderLineIds: string[];
   orderLineItemIds: string[];
@@ -169,21 +190,7 @@ export const useOrderStatusActions = ({
     const minPriority = Math.min(...draftItems.map(item => item.priority));
     const itemsToClaim = draftItems.filter(item => item.priority === minPriority);
 
-    // Grouper par itemType puis par nom d'item
-    const sectionsMap = new Map<string, { itemTypeName: string; itemCounts: Map<string, number> }>();
-    itemsToClaim.forEach(item => {
-      const typeName = allItemTypes.find(it => it.id === item.itemTypeId)?.name || 'Autre';
-      if (!sectionsMap.has(item.itemTypeId)) {
-        sectionsMap.set(item.itemTypeId, { itemTypeName: typeName, itemCounts: new Map() });
-      }
-      const section = sectionsMap.get(item.itemTypeId)!;
-      section.itemCounts.set(item.itemName, (section.itemCounts.get(item.itemName) || 0) + 1);
-    });
-    const sections: GroupedSection[] = Array.from(sectionsMap.values()).map(s => ({
-      itemTypeName: s.itemTypeName,
-      items: Array.from(s.itemCounts.entries()).map(([name, quantity]) => ({ name, quantity })),
-      totalCount: Array.from(s.itemCounts.values()).reduce((sum, q) => sum + q, 0),
-    }));
+    const sections = buildGroupedSections(itemsToClaim, allItemTypes);
 
     setItemsToClaimData({
       orderLineIds: itemsToClaim.filter(item => item.orderLineId).map(item => item.orderLineId!),
@@ -244,21 +251,7 @@ export const useOrderStatusActions = ({
       return;
     }
 
-    // Grouper par itemType puis par nom d'item
-    const sectionsMap = new Map<string, { itemTypeName: string; itemCounts: Map<string, number> }>();
-    serveItems.forEach(item => {
-      const typeName = allItemTypes.find(it => it.id === item.itemTypeId)?.name || 'Autre';
-      if (!sectionsMap.has(item.itemTypeId)) {
-        sectionsMap.set(item.itemTypeId, { itemTypeName: typeName, itemCounts: new Map() });
-      }
-      const section = sectionsMap.get(item.itemTypeId)!;
-      section.itemCounts.set(item.itemName, (section.itemCounts.get(item.itemName) || 0) + 1);
-    });
-    const sections: GroupedSection[] = Array.from(sectionsMap.values()).map(s => ({
-      itemTypeName: s.itemTypeName,
-      items: Array.from(s.itemCounts.entries()).map(([name, quantity]) => ({ name, quantity })),
-      totalCount: Array.from(s.itemCounts.values()).reduce((sum, q) => sum + q, 0),
-    }));
+    const sections = buildGroupedSections(serveItems, allItemTypes);
 
     setItemsToServeData({ orderLineIds, orderLineItemIds, count: totalItems, itemNames, sections });
     setShowServeConfirmModal(true);

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, TouchableOpacity, Text as RNText, Platform, Animated } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Text as RNText, Platform, Animated } from 'react-native';
 import { Trash2, ShoppingBag, ArrowLeftToLine, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { ItemType } from '~/types/item-type.types';
@@ -8,6 +8,19 @@ import { formatPrice, getStatusText } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
 import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
 
+// Fingerprint: identical item + tags + note + status + paymentFraction = same line
+const getLineFingerprint = (line: OrderLine): string => {
+  const itemId = line.item?.id || '';
+  const note = line.note || '';
+  const status = getOrderLineStatus(line);
+  const hasPaiement = line.paymentStatus !== 'unpaid' && line.paymentStatus !== undefined;
+  const tags = (line.tags || [])
+    .filter(t => t && t.tagSnapshot)
+    .sort((a, b) => a.tagId.localeCompare(b.tagId))
+    .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
+    .join('|');
+  return `${status}__${itemId}__${tags}__${note}__${hasPaiement}`;
+};
 
 // A grouped row: identical lines merged with quantity
 interface GroupedLine {
@@ -89,20 +102,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
     setPendingDeleteIndices([]);
   }, []);
 
-
-  // Fingerprint: identical item + tags + note + status + paymentFraction = same line
-  const getLineFingerprint = (line: OrderLine): string => {
-    const itemId = line.item?.id || '';
-    const note = line.note || '';
-    const status = getOrderLineStatus(line);
-    const hasPaiement = line.paymentStatus !== 'unpaid' && line.paymentStatus !== undefined;
-    const tags = (line.tags || [])
-      .filter(t => t && t.tagSnapshot)
-      .sort((a, b) => a.tagId.localeCompare(b.tagId))
-      .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
-      .join('|');
-    return `${status}__${itemId}__${tags}__${note}__${hasPaiement}`;
-  };
 
   const isLineLocked = (line: OrderLine, hasAllocations: boolean): boolean => {
     if (line.paymentStatus && line.paymentStatus !== 'unpaid') return true;
@@ -297,10 +296,10 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
       {/* Footer */}
       {!hideFooter && (
         <View style={styles.panelFooter}>
-          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <Pressable style={styles.cancelButton} onPress={onCancel}>
             <RNText style={styles.cancelButtonText}>Annuler</RNText>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Pressable>
+          <Pressable
             style={[styles.saveButton, (!hasChanges || isProcessing) && styles.saveButtonDisabled]}
             onPress={onSave}
             disabled={!hasChanges || isProcessing}
@@ -308,7 +307,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
             <RNText style={styles.saveButtonText}>
               {isProcessing ? 'Sauvegarde...' : 'Enregistrer'}
             </RNText>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
@@ -819,10 +818,6 @@ const styles = StyleSheet.create({
   },
   lockedText: {
     opacity: 0.7,
-  },
-  lockIconWrap: {
-    marginLeft: 10,
-    flexShrink: 0,
   },
   statusBadge: {
     flexDirection: 'row',

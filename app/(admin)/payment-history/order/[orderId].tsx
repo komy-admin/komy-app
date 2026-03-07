@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, X, ChevronRight } from 'lucide-react-native'
