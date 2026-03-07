@@ -27,7 +27,8 @@ import { OrderDetailActions, ReassignTablePanel } from '~/components/OrderDetail
 import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
 import { OrderLine } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
-import { QuantityPickerModal } from '~/components/ui/QuantityPickerModal';
+
+import { GroupDeletePickerModal } from '~/components/ui/GroupDeletePickerModal';
 import { GroupStatusPickerModal } from '~/components/ui/GroupStatusPickerModal';
 import PaymentView from '~/components/Service/PaymentView';
 
@@ -232,23 +233,41 @@ export default function ServicePage() {
   const [deleteGroupData, setDeleteGroupData] = useState<{
     indices: number[];
     itemName: string;
+    status?: Status;
   } | null>(null);
 
   const handleDeleteLineByIndex = useCallback((index: number) => {
     if (!selectedTableOrder) return;
     const line = selectedTableOrder.lines[index];
     if (!line) return;
-    handleDeleteLine(line.id);
+    // Brouillon → suppression directe, sinon confirmation via SlidePanel
+    if (line.status === Status.DRAFT) {
+      handleDeleteLine(line.id);
+    } else {
+      setDeleteGroupData({
+        indices: [index],
+        itemName: line.item?.name || 'Article',
+        status: line.status,
+      });
+    }
   }, [selectedTableOrder, handleDeleteLine]);
 
   const handleDeleteGroupByIndices = useCallback((indices: number[]) => {
     if (!selectedTableOrder || indices.length === 0) return;
+    const firstLine = selectedTableOrder.lines[indices[0]];
     if (indices.length === 1) {
-      // Un seul item → suppression directe via overlay
-      handleDeleteLine(selectedTableOrder.lines[indices[0]].id);
+      // Un seul item brouillon → suppression directe, sinon confirmation
+      if (firstLine?.status === Status.DRAFT) {
+        handleDeleteLine(firstLine.id);
+      } else {
+        setDeleteGroupData({
+          indices,
+          itemName: firstLine?.item?.name || 'Article',
+          status: firstLine?.status,
+        });
+      }
       return;
     }
-    const firstLine = selectedTableOrder.lines[indices[0]];
     setDeleteGroupData({
       indices,
       itemName: firstLine?.item?.name || 'Article',
@@ -657,15 +676,13 @@ export default function ServicePage() {
 
       {/* Modal de suppression groupée avec quantité */}
       {deleteGroupData && (
-        <QuantityPickerModal
+        <GroupDeletePickerModal
           isVisible={!!deleteGroupData}
           onClose={handleCloseDeleteGroup}
           onConfirm={handleConfirmDeleteGroup}
-          title="Supprimer des articles"
-          message={`Combien de "${deleteGroupData.itemName}" supprimer ?`}
+          itemName={deleteGroupData.itemName}
           max={deleteGroupData.indices.length}
-          confirmText="Supprimer"
-          confirmVariant="destructive"
+          status={deleteGroupData.status}
         />
       )}
 

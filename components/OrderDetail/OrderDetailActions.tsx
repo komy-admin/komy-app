@@ -1,5 +1,5 @@
-import React, { memo, useMemo } from 'react';
-import { View, Text as RNText, Pressable, StyleSheet, Platform, ScrollView, TextInput } from 'react-native';
+import React, { memo, useMemo, useState, useCallback } from 'react';
+import { View, Text as RNText, Pressable, StyleSheet, Platform, TextInput, LayoutChangeEvent } from 'react-native';
 import {
   Send,
   Plus,
@@ -46,24 +46,30 @@ interface ActionButtonProps {
   bg: string;
   border: string;
   disabled?: boolean;
+  disabledReason?: string;
+  compact?: boolean;
 }
 
-const ActionButton = memo<ActionButtonProps>(({ icon: Icon, label, onPress, color, bg, border, disabled }) => (
+const ActionButton = memo<ActionButtonProps>(({ icon: Icon, label, onPress, color, bg, border, disabled, disabledReason, compact }) => (
   <Pressable
     onPress={disabled ? undefined : onPress}
     disabled={disabled}
     style={({ pressed }) => [
       styles.card,
+      compact && styles.cardCompact,
       { backgroundColor: bg, borderColor: border },
       disabled && { opacity: 0.5 },
       pressed && !disabled && { opacity: 0.7, transform: [{ scale: 0.97 }] },
     ]}
   >
-    <Icon size={22} color={color} strokeWidth={1.8} />
-    <RNText style={styles.cardLabel}>{label}</RNText>
+    <Icon size={compact ? 16 : 20} color={color} strokeWidth={1.8} />
+    <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact]} numberOfLines={1}>{label}</RNText>
     {disabled && (
-      <View style={styles.lockOverlay}>
-        <Lock size={24} color="#2A2E33" strokeWidth={2} />
+      <View style={[styles.lockOverlay, compact && styles.lockOverlayCompact]}>
+        <Lock size={compact ? 14 : 18} color="#2A2E33" strokeWidth={2} />
+        {disabledReason && (
+          <RNText style={[styles.disabledReason, compact && { fontSize: 8 }]} numberOfLines={1}>{disabledReason}</RNText>
+        )}
       </View>
     )}
   </Pressable>
@@ -112,7 +118,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
     return { totalItems, totalAmount, paidAmount, remaining };
   }, [order]);
 
-  const hasPayments = order.paymentStatus !== 'unpaid';
+  const hasPayments = !!order.paymentStatus && order.paymentStatus !== 'unpaid';
 
   const globalStatus = useMemo(() => getOrderGlobalStatus(order), [order]);
 
@@ -121,179 +127,182 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
     duration: formatDuration(order.createdAt),
   }), [order]);
 
+  const [rowH, setRowH] = useState(80);
+  const onRowLayout = useCallback((e: LayoutChangeEvent) => {
+    setRowH(e.nativeEvent.layout.height);
+  }, []);
+
+  // Seuils adaptatifs
+  const compactButtons = rowH < 55;
+  const compactTiles = rowH < 65;
+
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Actions */}
-        <View style={styles.section}>
-          <RNText style={styles.sectionLabel}>Actions</RNText>
-          <View style={styles.actionsStack}>
-            <View style={styles.actionsRow}>
-              {(hasDraftItems || hasReadyItems) && (
-                <ActionButton
-                  icon={Send}
-                  color={hasReadyItems ? '#059669' : '#D97706'}
-                  bg={hasReadyItems ? '#ECFDF5' : '#FFFBEB'}
-                  border={hasReadyItems ? '#6EE7B7' : '#FBBF24'}
-                  label={hasReadyItems ? 'Servir' : 'Réclamer'}
-                  onPress={hasReadyItems ? onServe : onClaim}
-                />
-              )}
+      {/* Actions */}
+      <RNText style={styles.sectionLabel}>Actions</RNText>
+      <View style={styles.row} onLayout={onRowLayout}>
+        {(hasDraftItems || hasReadyItems) && (
+          <ActionButton
+            icon={Send}
+            color={hasReadyItems ? '#059669' : '#D97706'}
+            bg={hasReadyItems ? '#ECFDF5' : '#FFFBEB'}
+            border={hasReadyItems ? '#6EE7B7' : '#FBBF24'}
+            label={hasReadyItems ? 'Servir' : 'Réclamer'}
+            onPress={hasReadyItems ? onServe : onClaim}
+            compact={compactButtons}
+          />
+        )}
+        <ActionButton
+          icon={Plus}
+          color="#4F46E5"
+          bg="#EEF2FF"
+          border="#A5B4FC"
+          label="Ajouter"
+          onPress={onAddItem}
+          compact={compactButtons}
+        />
+      </View>
+      <View style={styles.row}>
+        <ActionButton
+          icon={Repeat}
+          color="#2563EB"
+          bg="#EFF6FF"
+          border="#93C5FD"
+          label="Changer table"
+          onPress={onReassignTable}
+          compact={compactButtons}
+        />
+        <ActionButton
+          icon={Wallet}
+          color="#059669"
+          bg="#ECFDF5"
+          border="#6EE7B7"
+          label="Paiement"
+          onPress={onPayment}
+          disabled={order.paymentStatus === 'paid'}
+          disabledReason="Commande déjà payée"
+          compact={compactButtons}
+        />
+      </View>
 
-              <ActionButton
-                icon={Plus}
-                color="#4F46E5"
-                bg="#EEF2FF"
-                border="#A5B4FC"
-                label="Ajouter"
-                onPress={onAddItem}
-              />
-            </View>
+      {/* Clôture */}
+      <RNText style={styles.sectionLabel}>Clôture</RNText>
+      <View style={styles.row}>
+        {order.status !== Status.TERMINATED && (
+          <ActionButton
+            icon={CircleCheck}
+            color="#D97706"
+            bg="#FFFBEB"
+            border="#FBBF24"
+            label="Terminer"
+            onPress={onTerminate}
+            disabled={order.paymentStatus !== 'paid'}
+            disabledReason="Paiement requis"
+            compact={compactButtons}
+          />
+        )}
+        <ActionButton
+          icon={Trash2}
+          color="#DC2626"
+          bg="#FEF2F2"
+          border="#FCA5A5"
+          label="Supprimer"
+          onPress={onDelete}
+          disabled={hasPayments}
+          disabledReason="Paiement enregistré"
+          compact={compactButtons}
+        />
+      </View>
 
-            <View style={styles.actionsRow}>
-              <ActionButton
-                icon={Repeat}
-                color="#2563EB"
-                bg="#EFF6FF"
-                border="#93C5FD"
-                label="Changer table"
-                onPress={onReassignTable}
-              />
-
-              <ActionButton
-                icon={Wallet}
-                color="#059669"
-                bg="#ECFDF5"
-                border="#6EE7B7"
-                label="Paiement"
-                onPress={onPayment}
-                disabled={order.paymentStatus === 'paid'}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={[styles.section, { marginTop: 20 }]}>
-          <RNText style={styles.sectionLabel}>Clôture</RNText>
-          <View style={styles.actionsRow}>
-            {order.status !== Status.TERMINATED && (
-              <ActionButton
-                icon={CircleCheck}
-                color="#D97706"
-                bg="#FFFBEB"
-                border="#FBBF24"
-                label="Terminer"
-                onPress={onTerminate}
-                disabled={order.paymentStatus !== 'paid'}
-              />
-            )}
-
-            <ActionButton
-              icon={Trash2}
-              color="#DC2626"
-              bg="#FEF2F2"
-              border="#FCA5A5"
-              label="Supprimer"
-              onPress={onDelete}
-              disabled={hasPayments}
-            />
-          </View>
-        </View>
-
-        {/* Note */}
-        <View style={[styles.section, { marginTop: 20, flex: 1 }]}>
-          <RNText style={styles.sectionLabel}>Note</RNText>
-          <View style={styles.noteCard}>
-            <TextInput
-              style={styles.noteInput}
-              placeholder="Ajouter une note..."
-              placeholderTextColor="#C4C9D1"
-              multiline
-              textAlignVertical="top"
-              // TODO: wire to API when backend supports order.note
-            />
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Infos commande */}
-      <View style={styles.infoSection}>
-        <RNText style={styles.sectionLabel}>Informations</RNText>
-        <View style={styles.infoGrid}>
-          <View style={styles.infoTile}>
-            <MapPin size={16} color="#9CA3AF" strokeWidth={1.8} />
-            <RNText style={styles.infoTileValue}>{orderInfo.tableName}</RNText>
-            <RNText style={styles.infoTileLabel}>Table</RNText>
-          </View>
-          <View style={styles.infoTile}>
-            <ShoppingBag size={16} color="#9CA3AF" strokeWidth={1.8} />
-            <RNText style={styles.infoTileValue}>{summary.totalItems}</RNText>
-            <RNText style={styles.infoTileLabel}>Article{summary.totalItems > 1 ? 's' : ''}</RNText>
-          </View>
-          <View style={[styles.infoTile, { backgroundColor: getStatusColor(globalStatus), borderColor: darkenColor(getStatusColor(globalStatus), 0.2) }]}>
-            <View style={[styles.infoTileStatusDot, { backgroundColor: getStatusTextColor(globalStatus) }]} />
-            <RNText style={[styles.infoTileValue, { color: getStatusTextColor(globalStatus) }]}>
-              {getStatusText(globalStatus)}
-            </RNText>
-            <RNText style={[styles.infoTileLabel, { color: getStatusTextColor(globalStatus), opacity: 0.7 }]}>Statut</RNText>
-          </View>
+      {/* Note */}
+      <RNText style={styles.sectionLabel}>Note</RNText>
+      <View style={styles.noteWrapper}>
+        <View style={styles.noteCard}>
+          <TextInput
+            style={styles.noteInput}
+            placeholder="Ajouter une note..."
+            placeholderTextColor="#C4C9D1"
+            multiline
+            textAlignVertical="top"
+          />
         </View>
       </View>
 
-      {/* Récap en bas */}
-      <View style={styles.summary}>
-        <View style={styles.infoGrid}>
-          <View style={styles.infoTile}>
-            <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />
-            <RNText style={styles.infoTileValue}>{formatDate(order.createdAt, DateFormat.TIME)}</RNText>
-            <RNText style={styles.infoTileLabel}>Début</RNText>
-          </View>
-          <View style={styles.infoTile}>
-            <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />
-            <RNText style={styles.infoTileValue}>{orderInfo.duration}</RNText>
-            <RNText style={styles.infoTileLabel}>Durée</RNText>
-          </View>
-          <View style={[
-            styles.infoTile,
-            summary.remaining > 0 && summary.paidAmount > 0 && {
-              backgroundColor: '#FFFBEB',
-              borderColor: '#FBBF24',
-            },
-            summary.remaining === 0 && summary.paidAmount > 0 && {
-              backgroundColor: '#ECFDF5',
-              borderColor: '#6EE7B7',
-            },
-          ]}>
-            <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? '#D97706' : summary.remaining === 0 && summary.paidAmount > 0 ? '#059669' : '#9CA3AF'} strokeWidth={1.8} />
-            {summary.paidAmount > 0 && summary.remaining > 0 ? (
-              <>
-                <View style={styles.remainingRow}>
-                  <RNText style={styles.remainingValue}>{formatPrice(summary.remaining)}</RNText>
-                  <RNText style={styles.totalStrikethrough}>{formatPrice(summary.totalAmount)}</RNText>
-                </View>
-                <RNText style={[styles.infoTileLabel, { color: '#D97706' }]}>À payer</RNText>
-              </>
-            ) : (
-              <>
-                <RNText style={[
-                  styles.infoTileValue,
-                  summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
-                ]}>
-                  {formatPrice(summary.totalAmount)}
-                </RNText>
-                <RNText style={[
-                  styles.infoTileLabel,
-                  summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
-                ]}>
-                  {summary.remaining === 0 && summary.paidAmount > 0 ? 'Payé' : 'Total'}
-                </RNText>
-              </>
-            )}
-          </View>
+      {/* Informations */}
+      <RNText style={styles.sectionLabel}>Informations</RNText>
+      <View style={styles.row}>
+        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
+          <MapPin size={compactTiles ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
+          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{orderInfo.tableName}</RNText>
+          {!compactTiles && <RNText style={styles.infoTileLabel}>Table</RNText>}
         </View>
-
+        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
+          <ShoppingBag size={compactTiles ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
+          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{summary.totalItems}</RNText>
+          {!compactTiles && <RNText style={styles.infoTileLabel}>Article{summary.totalItems > 1 ? 's' : ''}</RNText>}
+        </View>
+        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact, { backgroundColor: getStatusColor(globalStatus), borderColor: darkenColor(getStatusColor(globalStatus), 0.2) }]}>
+          {!compactTiles && <View style={[styles.infoTileStatusDot, { backgroundColor: getStatusTextColor(globalStatus) }]} />}
+          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact, { color: getStatusTextColor(globalStatus) }]}>
+            {getStatusText(globalStatus)}
+          </RNText>
+          {!compactTiles && <RNText style={[styles.infoTileLabel, { color: getStatusTextColor(globalStatus), opacity: 0.7 }]}>Statut</RNText>}
+        </View>
       </View>
 
+      {/* Récap */}
+      <View style={styles.row}>
+        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
+          {!compactTiles && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
+          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{formatDate(order.createdAt, DateFormat.TIME)}</RNText>
+          <RNText style={[styles.infoTileLabel, compactTiles && styles.infoTileLabelCompact]}>Début</RNText>
+        </View>
+        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
+          {!compactTiles && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
+          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{orderInfo.duration}</RNText>
+          <RNText style={[styles.infoTileLabel, compactTiles && styles.infoTileLabelCompact]}>Durée</RNText>
+        </View>
+        <View style={[
+          styles.infoTile,
+          compactTiles && styles.infoTileCompact,
+          summary.remaining > 0 && summary.paidAmount > 0 && {
+            backgroundColor: '#FFFBEB',
+            borderColor: '#FBBF24',
+          },
+          summary.remaining === 0 && summary.paidAmount > 0 && {
+            backgroundColor: '#ECFDF5',
+            borderColor: '#6EE7B7',
+          },
+        ]}>
+          {!compactTiles && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? '#D97706' : summary.remaining === 0 && summary.paidAmount > 0 ? '#059669' : '#9CA3AF'} strokeWidth={1.8} />}
+          {summary.paidAmount > 0 && summary.remaining > 0 ? (
+            <>
+              <View style={styles.remainingRow}>
+                <RNText style={[styles.remainingValue, compactTiles && { fontSize: 13 }]}>{formatPrice(summary.remaining)}</RNText>
+                <RNText style={styles.totalStrikethrough}>{formatPrice(summary.totalAmount)}</RNText>
+              </View>
+              <RNText style={[styles.infoTileLabel, compactTiles && styles.infoTileLabelCompact, { color: '#D97706' }]}>À payer</RNText>
+            </>
+          ) : (
+            <>
+              <RNText style={[
+                styles.infoTileValue,
+                compactTiles && styles.infoTileValueCompact,
+                summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
+              ]}>
+                {formatPrice(summary.totalAmount)}
+              </RNText>
+              <RNText style={[
+                styles.infoTileLabel,
+                compactTiles && styles.infoTileLabelCompact,
+                summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
+              ]}>
+                {summary.remaining === 0 && summary.paidAmount > 0 ? 'Payé' : 'Total'}
+              </RNText>
+            </>
+          )}
+        </View>
+      </View>
     </View>
   );
 });
@@ -306,60 +315,70 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderLeftWidth: 1,
     borderLeftColor: '#E5E7EB',
-    padding: 20,
-    position: 'relative',
-    overflow: 'hidden',
+    padding: 16,
+    gap: 6,
   },
-  scrollArea: {
-    flex: 1,
-    marginBottom: 16,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  section: {},
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600',
     color: '#9CA3AF',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 10,
     paddingLeft: 2,
   },
-  actionsStack: {
-    gap: 10,
-  },
-  actionsRow: {
+
+  // Row — hauteur fixe, shrink si viewport trop petit
+  row: {
+    height: 105,
+    flexShrink: 1,
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
+
+  // Boutons — mode normal (vertical)
   card: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 18,
-    paddingHorizontal: 10,
+    gap: 4,
+    paddingHorizontal: 8,
+    overflow: 'hidden',
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
       transition: 'all 0.12s ease',
     } as any : {}),
   },
+  // Boutons — mode compact (horizontal)
+  cardCompact: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  cardLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  cardLabelCompact: {
+    fontSize: 11,
+  },
+
+  // Lock overlay
   lockOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: -1,
+    left: -1,
+    right: -1,
+    bottom: -1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
     ...Platform.select({
       web: {
         backdropFilter: 'blur(2px)',
@@ -367,35 +386,44 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cardLabel: {
-    fontSize: 13,
+  lockOverlayCompact: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  disabledReason: {
+    fontSize: 10,
     fontWeight: '600',
-    color: '#374151',
+    color: '#2A2E33',
     textAlign: 'center',
+    marginTop: 2,
   },
 
-  // Info tiles (top + bottom)
-  infoGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  // Info tiles — mode normal
   infoTile: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    gap: 3,
+    paddingHorizontal: 6,
+    overflow: 'hidden',
+  },
+  // Info tiles — mode compact (icône + valeur sur une ligne, pas de label)
+  infoTileCompact: {
+    flexDirection: 'row',
+    gap: 6,
   },
   infoTileValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#1E293B',
     textAlign: 'center',
+  },
+  infoTileValueCompact: {
+    fontSize: 12,
   },
   infoTileLabel: {
     fontSize: 10,
@@ -404,6 +432,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  infoTileLabelCompact: {
+    fontSize: 8,
+  },
   infoTileStatusDot: {
     width: 8,
     height: 8,
@@ -411,21 +442,26 @@ const styles = StyleSheet.create({
   },
 
   // Note
+  noteWrapper: {
+    flexGrow: 1,
+    flexShrink: 10,
+    minHeight: 40,
+  },
   noteCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    minHeight: 80,
+    overflow: 'hidden',
   },
   noteInput: {
     flex: 1,
     fontSize: 13,
     fontWeight: '500',
     color: '#374151',
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
     paddingLeft: 14,
     paddingRight: 14,
     lineHeight: 20,
@@ -434,14 +470,7 @@ const styles = StyleSheet.create({
     } as any : {}),
   },
 
-  // Info + Summary
-  infoSection: {
-    paddingBottom: 12,
-  },
-  summary: {
-    paddingTop: 10,
-    gap: 10,
-  },
+  // Payment
   remainingRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -458,5 +487,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#D97706',
   },
-
 });
