@@ -47,29 +47,14 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
     loadPayments();
   }, [order.id, getPaymentsByOrder]);
 
-  // Calculer le statut de paiement d'une ligne (complètement payée, partiellement, ou non payée)
-  const getLinePaymentStatus = (lineId: string, linePrice: number): { isPaid: boolean; isPartiallyPaid: boolean; paidFraction: number } => {
-    const allocations = getAllocationsByOrderLine(lineId);
-
-    // Filtrer uniquement les allocations des paiements complétés
-    const validAllocations = allocations.filter(allocation => {
-      const payment = allPayments.find(p => p.id === allocation.paymentId);
-      return payment && payment.status === 'completed';
-    });
-
-    if (validAllocations.length === 0 || !linePrice || linePrice <= 0) {
-      return { isPaid: false, isPartiallyPaid: false, paidFraction: 0 };
-    }
-
-    // Utiliser allocatedAmount au lieu de quantityFraction pour un calcul plus précis
-    const totalPaidAmount = validAllocations.reduce((sum, alloc) => sum + (alloc.allocatedAmount || 0), 0);
-    const paidFraction = Math.min(1, totalPaidAmount / linePrice);
-
-    // Considérer comme complètement payé si la fraction est >= 0.999 (pour gérer les arrondis)
-    const isPaid = paidFraction >= 0.999;
-    const isPartiallyPaid = paidFraction > 0 && paidFraction < 0.999;
-
-    return { isPaid, isPartiallyPaid, paidFraction };
+  // Utiliser directement les données de paiement du backend
+  const getLinePaymentStatus = (line: OrderLine): { isPaid: boolean; isPartiallyPaid: boolean; paidFraction: number } => {
+    // Les données du backend sont maintenant toujours disponibles avec des valeurs par défaut
+    return {
+      isPaid: line.paymentStatus === 'paid',
+      isPartiallyPaid: line.paymentStatus === 'partial',
+      paidFraction: line.paidFraction
+    };
   };
 
   const orderTotals = useMemo(() => {
@@ -83,7 +68,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
   // Items disponibles (non complètement payés)
   const availableItems = useMemo(() => {
     return order.lines?.filter(line => {
-      const status = getLinePaymentStatus(line.id, line.totalPrice);
+      const status = getLinePaymentStatus(line);
       return !status.isPaid; // Inclure les items non payés ET partiellement payés
     }) || [];
   }, [order.lines, getAllocationsByOrderLine, allPayments]);
@@ -94,7 +79,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
     return availableItems
       .filter(line => selectedItems.has(line.id))
       .reduce((sum, line) => {
-        const status = getLinePaymentStatus(line.id, line.totalPrice);
+        const status = getLinePaymentStatus(line);
         const remainingFraction = Math.max(0, 1.0 - status.paidFraction); // S'assurer que c'est jamais négatif
         // Pour les articles partiellement payés, utiliser le reste par défaut au lieu de 100%
         const defaultFraction = remainingFraction < 1.0 ? remainingFraction : 1.0;
@@ -163,7 +148,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
       }
 
       // Vérifier si la ligne est partiellement payée
-      const status = getLinePaymentStatus(lineId, line.totalPrice);
+      const status = getLinePaymentStatus(line);
       const remainingFraction = Math.max(0, 1.0 - status.paidFraction); // S'assurer que c'est jamais négatif
 
       // Pour les articles partiellement payés, utiliser le reste par défaut au lieu de 100%
@@ -219,7 +204,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
 
   // Render d'un item de la liste
   const renderOrderLine = (line: OrderLine) => {
-    const paymentStatus = getLinePaymentStatus(line.id, line.totalPrice);
+    const paymentStatus = getLinePaymentStatus(line);
     const { isPaid, isPartiallyPaid, paidFraction } = paymentStatus;
     const isSelected = selectedItems.has(line.id);
     const isSelectable = !isPaid; // On peut sélectionner si pas complètement payé
@@ -310,7 +295,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
 
   // Composant pour afficher un article sélectionné avec les boutons de fraction
   const renderSelectedItemCard = (line: OrderLine) => {
-    const status = getLinePaymentStatus(line.id, line.totalPrice);
+    const status = getLinePaymentStatus(line);
     const remainingFraction = Math.max(0, 1.0 - status.paidFraction);
     // Pour les articles partiellement payés, utiliser le reste par défaut au lieu de 100%
     const defaultFraction = remainingFraction < 1.0 ? remainingFraction : 1.0;
@@ -420,7 +405,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
     const line = availableItems.find(l => l.id === showCustomDialog);
     if (!line) return null;
 
-    const status = getLinePaymentStatus(showCustomDialog, line.totalPrice);
+    const status = getLinePaymentStatus(line);
     const maxPercentage = Math.round((1.0 - status.paidFraction) * 100);
 
     const handleCustomSubmit = () => {
