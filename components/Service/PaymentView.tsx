@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { View, ScrollView, Pressable, Alert, TextInput, Modal, StyleSheet, Platform } from 'react-native';
+import { useState, useMemo, useCallback } from 'react';
+import { View, ScrollView, Pressable, Alert, TextInput, Modal, Platform } from 'react-native';
 import { Button, Text } from '~/components/ui';
 import {
   ChevronLeft,
@@ -26,36 +26,22 @@ interface PaymentViewProps {
 
 type PaymentMethod = 'cash' | 'card' | 'check' | 'ticket_resto';
 
+/** Fonction pure extraite hors du composant */
+const getLinePaymentStatus = (line: OrderLine): { isPaid: boolean; isPartiallyPaid: boolean; paidFraction: number } => ({
+  isPaid: line.paymentStatus === 'paid',
+  isPartiallyPaid: line.paymentStatus === 'partial',
+  paidFraction: line.paidFraction,
+});
+
 export default function PaymentView({ order, tableName, onBack, onPaymentComplete, onTerminate }: PaymentViewProps) {
-  const { createPayment, getPaymentsByOrder, getAllocationsByOrderLine, payments: allPayments } = usePayments();
+  const { createPayment } = usePayments();
 
   // États principaux
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [itemFractions, setItemFractions] = useState<Map<string, number>>(new Map()); // Fraction personnalisée par item
+  const [itemFractions, setItemFractions] = useState<Map<string, number>>(new Map());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showCustomDialog, setShowCustomDialog] = useState<string | null>(null); // ID de l'item pour le dialog custom
-
-  // Récupérer les paiements depuis l'API
-  const [payments, setPayments] = useState<any[]>([]);
-
-  useEffect(() => {
-    const loadPayments = async () => {
-      const data = await getPaymentsByOrder(order.id);
-      setPayments(data);
-    };
-    loadPayments();
-  }, [order.id, getPaymentsByOrder]);
-
-  // Utiliser directement les données de paiement du backend
-  const getLinePaymentStatus = (line: OrderLine): { isPaid: boolean; isPartiallyPaid: boolean; paidFraction: number } => {
-    // Les données du backend sont maintenant toujours disponibles avec des valeurs par défaut
-    return {
-      isPaid: line.paymentStatus === 'paid',
-      isPartiallyPaid: line.paymentStatus === 'partial',
-      paidFraction: line.paidFraction
-    };
-  };
+  const [showCustomDialog, setShowCustomDialog] = useState<string | null>(null);
 
   const orderTotals = useMemo(() => {
     return {
@@ -71,7 +57,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
       const status = getLinePaymentStatus(line);
       return !status.isPaid; // Inclure les items non payés ET partiellement payés
     }) || [];
-  }, [order.lines, getAllocationsByOrderLine, allPayments]);
+  }, [order.lines]);
 
   // Calculer le montant total sélectionné (en tenant compte des fractions personnalisées et paiements partiels)
   const selectedAmount = useMemo(() => {
@@ -89,11 +75,10 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
         const lineAmount = Math.round(line.totalPrice * actualFraction);
         return sum + (isNaN(lineAmount) ? 0 : lineAmount);
       }, 0);
-  }, [selectedItems, availableItems, itemFractions, getAllocationsByOrderLine, allPayments]);
-
+  }, [selectedItems, availableItems, itemFractions]);
 
   // Toggle sélection d'un item
-  const handleItemToggle = (itemId: string) => {
+  const handleItemToggle = useCallback((itemId: string) => {
     setSelectedItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(itemId)) {
@@ -107,33 +92,30 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
       }
       return newSet;
     });
-  };
+  }, [itemFractions]);
 
   // Sélectionner/désélectionner tout
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback(() => {
     if (selectedItems.size === availableItems.length) {
-      // Tout est sélectionné, on désélectionne tout
       setSelectedItems(new Set());
       setItemFractions(new Map());
       setPaymentMethod(null);
     } else {
-      // Sélectionner tout
       const allIds = new Set(availableItems.map(item => item.id));
       setSelectedItems(allIds);
     }
-  };
+  }, [selectedItems.size, availableItems]);
 
   // Gérer le changement de fraction pour un item
-  const handleFractionChange = (itemId: string, fraction: number) => {
+  const handleFractionChange = useCallback((itemId: string, fraction: number) => {
     const newFractions = new Map(itemFractions);
     if (fraction === 1.0) {
-      // Si 100%, on peut supprimer de la map (valeur par défaut)
       newFractions.delete(itemId);
     } else {
       newFractions.set(itemId, fraction);
     }
     setItemFractions(newFractions);
-  };
+  }, [itemFractions]);
 
   // Créer les allocations en utilisant les fractions individuelles
   const buildAllocations = (): Array<{
@@ -168,7 +150,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
   };
 
   // Traiter le paiement
-  const handlePayment = async () => {
+  const handlePayment = useCallback(async () => {
     if (selectedAmount === 0) {
       Alert.alert('Erreur', 'Veuillez sélectionner au moins un article');
       return;
@@ -190,20 +172,17 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
       setSelectedItems(new Set());
       setItemFractions(new Map());
       setPaymentMethod(null);
-      const updatedPayments = await getPaymentsByOrder(order.id);
-      setPayments(updatedPayments);
       onPaymentComplete();
-
       setIsProcessing(false);
     } catch (error) {
       console.error('Erreur lors de la création du paiement:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors du paiement');
       setIsProcessing(false);
     }
-  };
+  }, [selectedAmount, paymentMethod, createPayment, order.id, buildAllocations, onPaymentComplete]);
 
   // Render d'un item de la liste
-  const renderOrderLine = (line: OrderLine) => {
+  const renderOrderLine = useCallback((line: OrderLine) => {
     const paymentStatus = getLinePaymentStatus(line);
     const { isPaid, isPartiallyPaid, paidFraction } = paymentStatus;
     const isSelected = selectedItems.has(line.id);
@@ -286,7 +265,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
         </View>
       </Pressable>
     );
-  };
+  }, [selectedItems, handleItemToggle]);
 
   // Vérifier si on peut passer au paiement
   const canProceedToPayment = useMemo(() => {
@@ -294,7 +273,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
   }, [selectedAmount, paymentMethod]);
 
   // Composant pour afficher un article sélectionné avec les boutons de fraction
-  const renderSelectedItemCard = (line: OrderLine) => {
+  const renderSelectedItemCard = useCallback((line: OrderLine) => {
     const status = getLinePaymentStatus(line);
     const remainingFraction = Math.max(0, 1.0 - status.paidFraction);
     // Pour les articles partiellement payés, utiliser le reste par défaut au lieu de 100%
@@ -394,7 +373,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
         )}
       </View>
     );
-  };
+  }, [itemFractions, handleFractionChange]);
 
   // Modal pour le pourcentage personnalisé
   const [customPercentage, setCustomPercentage] = useState('');
