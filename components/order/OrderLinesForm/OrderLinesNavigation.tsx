@@ -5,6 +5,9 @@ import { LayoutGrid, List, Menu } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 
+const ACTIVE_COLOR = '#3B82F6';
+const INACTIVE_COLOR = '#9CA3AF';
+
 /**
  * Props pour le composant OrderLinesNavigation
  */
@@ -50,7 +53,7 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
         >
           <LayoutGrid
             size={20}
-            color={viewMode === 'card' ? '#6366F1' : '#9CA3AF'}
+            color={viewMode === 'card' ? ACTIVE_COLOR : INACTIVE_COLOR}
             strokeWidth={2}
           />
         </Pressable>
@@ -63,7 +66,7 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
         >
           <List
             size={20}
-            color={viewMode === 'list' ? '#6366F1' : '#9CA3AF'}
+            color={viewMode === 'list' ? ACTIVE_COLOR : INACTIVE_COLOR}
             strokeWidth={2}
           />
         </Pressable>
@@ -89,7 +92,7 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
           <View style={styles.navIconWrapper}>
             <Menu
               size={22}
-              color={activeMainTab === 'MENUS' ? '#6366F1' : '#9CA3AF'}
+              color={activeMainTab === 'MENUS' ? ACTIVE_COLOR : INACTIVE_COLOR}
               strokeWidth={2}
             />
           </View>
@@ -131,7 +134,7 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
                 <MaterialCommunityIcons
                   name={iconName as any}
                   size={22}
-                  color={isActive ? '#6366F1' : '#9CA3AF'}
+                  color={isActive ? ACTIVE_COLOR : INACTIVE_COLOR}
                 />
               </View>
               <RNText
@@ -206,7 +209,7 @@ const styles = {
     } as any),
   },
   navItemActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
   },
   navIconWrapper: {
     width: 40,
@@ -219,7 +222,7 @@ const styles = {
   navLabel: {
     fontSize: 10,
     fontWeight: '600' as const,
-    color: '#9CA3AF',
+    color: INACTIVE_COLOR,
     textAlign: 'center' as const,
     marginTop: 2,
     letterSpacing: 0.3,
@@ -229,7 +232,7 @@ const styles = {
     } as any),
   },
   navLabelActive: {
-    color: '#6366F1',
+    color: ACTIVE_COLOR,
     fontWeight: '700' as const,
   },
 

@@ -9,7 +9,7 @@ import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/ord
 import { formatPrice, getContrastColor } from '~/lib/utils';
 import { getMenuPrice } from '~/lib/color-utils';
 
-
+const MENU_COLOR = '#10B981';
 const ITEM_HEIGHT = 58;
 const SECTION_HEADER_HEIGHT = 38;
 
@@ -140,7 +140,6 @@ const MenuRow = memo<MenuRowProps>(({
   menu,
   onMenuAdd
 }) => {
-  const menuColor = '#6366F1';
   const handleAdd = useCallback(() => {
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
@@ -151,7 +150,7 @@ const MenuRow = memo<MenuRowProps>(({
       onPress={handleAdd}
     >
       <View style={styles.letterCell}>
-        <View style={[styles.letterCircle, { backgroundColor: menuColor }]}>
+        <View style={[styles.letterCircle, { backgroundColor: MENU_COLOR }]}>
           <RNText style={styles.menuLetterText}>
             {menu.name.charAt(0).toUpperCase()}
           </RNText>
@@ -191,7 +190,7 @@ const MenuRow = memo<MenuRowProps>(({
       </View>
 
       <View style={styles.actionCell}>
-        <View style={[styles.addButton, { backgroundColor: menuColor }]}>
+        <View style={[styles.addButton, { backgroundColor: MENU_COLOR }]}>
           <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
         </View>
       </View>
