@@ -54,21 +54,25 @@ const ActionButton = memo<ActionButtonProps>(({ icon: Icon, label, onPress, colo
   <Pressable
     onPress={disabled ? undefined : onPress}
     disabled={disabled}
-    style={({ pressed }) => [
-      styles.card,
-      compact && styles.cardCompact,
-      { backgroundColor: bg, borderColor: border },
-      disabled && { opacity: 0.5 },
-      pressed && !disabled && { opacity: 0.7, transform: [{ scale: 0.97 }] },
-    ]}
+    style={{ flex: 1 }}
   >
-    <Icon size={compact ? 16 : 20} color={color} strokeWidth={1.8} />
-    <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact]} numberOfLines={1}>{label}</RNText>
-    {disabled && (
-      <View style={[styles.lockOverlay, compact && styles.lockOverlayCompact]}>
-        <Lock size={compact ? 14 : 18} color="#2A2E33" strokeWidth={2} />
-        {disabledReason && (
-          <RNText style={[styles.disabledReason, compact && { fontSize: 8 }]} numberOfLines={1}>{disabledReason}</RNText>
+    {({ pressed }) => (
+      <View style={[
+        styles.card,
+        compact && styles.cardCompact,
+        { backgroundColor: bg, borderColor: border },
+        disabled && { opacity: 0.5 },
+        pressed && !disabled && { opacity: 0.7, transform: [{ scale: 0.97 }] },
+      ]}>
+        <Icon size={compact ? 16 : 20} color={color} strokeWidth={1.8} />
+        <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact]} numberOfLines={1}>{label}</RNText>
+        {disabled && (
+          <View style={[styles.lockOverlay, compact && styles.lockOverlayCompact]}>
+            <Lock size={compact ? 14 : 18} color="#2A2E33" strokeWidth={2} />
+            {disabledReason && (
+              <RNText style={[styles.disabledReason, compact && { fontSize: 8 }]} numberOfLines={1}>{disabledReason}</RNText>
+            )}
+          </View>
         )}
       </View>
     )}
@@ -329,9 +333,12 @@ const styles = StyleSheet.create({
 
   // Row — hauteur fixe, shrink si viewport trop petit
   row: {
-    height: 105,
+    minHeight: 50,
+    maxHeight: 105,
+    flexGrow: 1,
     flexShrink: 1,
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: 8,
   },
 
@@ -376,13 +383,16 @@ const styles = StyleSheet.create({
     bottom: -1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderRadius: 8,
     overflow: 'hidden',
     ...Platform.select({
       web: {
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
         backdropFilter: 'blur(2px)',
         WebkitBackdropFilter: 'blur(2px)',
+      },
+      default: {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
       },
     }),
   },

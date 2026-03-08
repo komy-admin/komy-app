@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, Platform, Text as RNText } from "react-native";
+import { View, StyleSheet, Pressable, Platform, Text as RNText, useWindowDimensions } from "react-native";
 import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
@@ -21,11 +21,13 @@ import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/se
 import { OrderLinesForm } from '~/components/order/OrderLinesForm';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useOrderStatusActions } from '~/hooks/order/useOrderStatusActions';
+import { useOrderDetailLineActions } from '~/hooks/order/useOrderDetailLineActions';
+import { useReassignTable } from '~/hooks/order/useReassignTable';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { useOrderLines } from '~/hooks/useOrderLines';
 import { OrderDetailActions, ReassignTablePanel } from '~/components/OrderDetail';
+import { SidePanel } from '~/components/SidePanel';
 import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
-import { OrderLine } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 
 import { GroupDeletePickerModal } from '~/components/ui/GroupDeletePickerModal';
@@ -75,15 +77,13 @@ const ConfirmDeleteOverlay = ({ onConfirm, onCancel }: { onConfirm: () => void; 
 };
 
 export default function ServicePage() {
-  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showOrderForm, setShowOrderForm] = useState(false);
   const [orderCreatedFromStart, setOrderCreatedFromStart] = useState(false);
   const [orderModalTitle, setOrderModalTitle] = useState('');
   const [showOrderDetail, setShowOrderDetail] = useState(false);
-  const [showReassignInline, setShowReassignInline] = useState(false);
-  const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
-  const [isReassigning, setIsReassigning] = useState(false);
   const [showPaymentView, setShowPaymentView] = useState(false);
 
+  const { width } = useWindowDimensions();
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const activeRooms = useMemo(() => rooms.filter(room => room.isActive), [rooms]);
   const appInitialized = useAppSelector(selectAppInitialized);
@@ -157,141 +157,48 @@ export default function ServicePage() {
     }
   }, [showOrderDetail, showTerminateDialog, setShowTerminateDialog, showDeleteDialog, setShowDeleteDialog]);
 
-  // --- Changement de statut (unifié via GroupStatusPickerModal) ---
-  const [statusGroupData, setStatusGroupData] = useState<{
-    indices: number[];
-    itemName: string;
-    currentStatus: Status;
-  } | null>(null);
+  const {
+    statusGroupData,
+    handleOpenStatusSelector,
+    handleOpenStatusSelectorGroup,
+    handleConfirmGroupStatus,
+    handleCloseStatusGroup,
+    menuStatusData,
+    handleOpenMenuStatusSelector,
+    handleConfirmMenuStatus,
+    handleCloseMenuStatus,
+    deleteGroupData,
+    handleDeleteLineByIndex,
+    handleDeleteGroupByIndices,
+    handleConfirmDeleteGroup,
+    handleCloseDeleteGroup,
+  } = useOrderDetailLineActions({
+    selectedTableOrder,
+    handleBulkUpdateStatus,
+    handleDeleteLine,
+    deleteOrderLines,
+  });
 
-  const handleOpenStatusSelector = useCallback((index: number) => {
-    if (!selectedTableOrder) return;
-    const line = selectedTableOrder.lines[index];
-    if (!line) return;
-    setStatusGroupData({
-      indices: [index],
-      itemName: line.item?.name || 'Article',
-      currentStatus: line.status || Status.PENDING,
-    });
-  }, [selectedTableOrder]);
-
-  const handleOpenStatusSelectorGroup = useCallback((indices: number[]) => {
-    if (!selectedTableOrder || indices.length === 0) return;
-    const firstLine = selectedTableOrder.lines[indices[0]];
-    setStatusGroupData({
-      indices,
-      itemName: firstLine?.item?.name || 'Article',
-      currentStatus: firstLine?.status || Status.PENDING,
-    });
-  }, [selectedTableOrder]);
-
-  const handleConfirmGroupStatus = useCallback(async (quantity: number, newStatus: Status) => {
-    if (!statusGroupData || !selectedTableOrder) return;
-    const ids = statusGroupData.indices
-      .slice(0, quantity)
-      .map(idx => selectedTableOrder.lines[idx]?.id)
-      .filter(Boolean) as string[];
-    setStatusGroupData(null);
-    if (ids.length === 0) return;
-    await handleBulkUpdateStatus(ids, [], newStatus);
-  }, [statusGroupData, selectedTableOrder, handleBulkUpdateStatus]);
-
-  const handleCloseStatusGroup = useCallback(() => {
-    setStatusGroupData(null);
-  }, []);
-
-  // --- Menu status: stocke les orderLineItemIds pour bulk update ---
-  const [menuStatusData, setMenuStatusData] = useState<{
-    orderLineItemIds: string[];
-    itemName: string;
-    currentStatus: Status;
-  } | null>(null);
-
-  const handleOpenMenuStatusSelector = useCallback((menuLine: OrderLine) => {
-    if (!menuLine.items || menuLine.items.length === 0) return;
-    const currentStatus = menuLine.items[0]?.status || Status.PENDING;
-    setMenuStatusData({
-      orderLineItemIds: menuLine.items.map(item => item.id),
-      itemName: menuLine.menu?.name || 'Menu',
-      currentStatus,
-    });
-  }, []);
-
-  const handleConfirmMenuStatus = useCallback(async (quantity: number, newStatus: Status) => {
-    if (!menuStatusData) return;
-    const ids = menuStatusData.orderLineItemIds.slice(0, quantity);
-    setMenuStatusData(null);
-    if (ids.length === 0) return;
-    await handleBulkUpdateStatus([], ids, newStatus);
-  }, [menuStatusData, handleBulkUpdateStatus]);
-
-  const handleCloseMenuStatus = useCallback(() => {
-    setMenuStatusData(null);
-  }, []);
-
-  // --- Suppression groupée ---
-  const [deleteGroupData, setDeleteGroupData] = useState<{
-    indices: number[];
-    itemName: string;
-    status?: Status;
-  } | null>(null);
-
-  const handleDeleteLineByIndex = useCallback((index: number) => {
-    if (!selectedTableOrder) return;
-    const line = selectedTableOrder.lines[index];
-    if (!line) return;
-    // Brouillon → suppression directe, sinon confirmation via SlidePanel
-    if (line.status === Status.DRAFT) {
-      handleDeleteLine(line.id);
-    } else {
-      setDeleteGroupData({
-        indices: [index],
-        itemName: line.item?.name || 'Article',
-        status: line.status,
-      });
-    }
-  }, [selectedTableOrder, handleDeleteLine]);
-
-  const handleDeleteGroupByIndices = useCallback((indices: number[]) => {
-    if (!selectedTableOrder || indices.length === 0) return;
-    const firstLine = selectedTableOrder.lines[indices[0]];
-    if (indices.length === 1) {
-      // Un seul item brouillon → suppression directe, sinon confirmation
-      if (firstLine?.status === Status.DRAFT) {
-        handleDeleteLine(firstLine.id);
-      } else {
-        setDeleteGroupData({
-          indices,
-          itemName: firstLine?.item?.name || 'Article',
-          status: firstLine?.status,
-        });
-      }
-      return;
-    }
-    setDeleteGroupData({
-      indices,
-      itemName: firstLine?.item?.name || 'Article',
-    });
-  }, [selectedTableOrder, handleDeleteLine]);
-
-  const handleConfirmDeleteGroup = useCallback(async (quantity: number) => {
-    if (!deleteGroupData || !selectedTableOrder) return;
-    const ids = deleteGroupData.indices
-      .slice(0, quantity)
-      .map(idx => selectedTableOrder.lines[idx]?.id)
-      .filter(Boolean) as string[];
-    setDeleteGroupData(null);
-    if (ids.length === 1) {
-      await handleDeleteLine(ids[0]);
-    } else if (ids.length > 1) {
-      await deleteOrderLines(ids);
-    }
-  }, [deleteGroupData, selectedTableOrder, handleDeleteLine, deleteOrderLines]);
-
-  const handleCloseDeleteGroup = useCallback(() => {
-    setDeleteGroupData(null);
-  }, []);
-
+  const {
+    showReassignInline,
+    setShowReassignInline,
+    reassignRoomId,
+    reassignRoom,
+    reassignRoomTables,
+    isReassigning,
+    handleReassignTable,
+    handleReassignRoomChange,
+    handleTableReassign,
+  } = useReassignTable({
+    currentRoom,
+    rooms,
+    enrichedTables,
+    selectedTableOrder,
+    updateOrder,
+    setSelectedTable,
+    setCurrentRoom,
+    showToast,
+  });
 
   // Stabiliser la référence des initialLines pour éviter les re-renders inutiles
   const initialLines = useMemo(() => selectedTableOrder?.lines || [], [selectedTableOrder?.id, selectedTableOrder?.lines]);
@@ -308,7 +215,7 @@ export default function ServicePage() {
     onSuccess: (updatedOrder) => {
       isSavingOrderRef.current = { savedOrder: updatedOrder };
       showToast('Commande mise à jour avec succès', 'success');
-      setShowOrderModal(false);
+      setShowOrderForm(false);
 
       // Toujours afficher les détails après sauvegarde
       setShowOrderDetail(true);
@@ -338,7 +245,7 @@ export default function ServicePage() {
   useEffect(() => {
     return navigationEvents.on('/service', () => {
       resetOrderLines();
-      setShowOrderModal(false);
+      setShowOrderForm(false);
       setShowOrderDetail(false);
       setShowPaymentView(false);
       setOrderCreatedFromStart(false);
@@ -365,7 +272,7 @@ export default function ServicePage() {
     cameFromDetailViewRef.current = false;
     setOrderCreatedFromStart(true);
     setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTable?.name || 'Table'}`);
-    setShowOrderModal(true);
+    setShowOrderForm(true);
   }, [selectedTableId, currentRoomOrders, selectedTable, currentRoom, showToast]);
 
   const handleTablePress = useCallback((table: Table | null) => {
@@ -397,7 +304,7 @@ export default function ServicePage() {
     orderLinesManager.reset();
     const cameFromDetail = cameFromDetailViewRef.current;
 
-    setShowOrderModal(false);
+    setShowOrderForm(false);
     setOrderCreatedFromStart(false);
 
     if (cameFromDetail) {
@@ -415,50 +322,8 @@ export default function ServicePage() {
     setShowOrderDetail(false);
     setOrderCreatedFromStart(false);
     setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTableOrder?.table?.name || selectedTable?.name || 'Table'}`);
-    setShowOrderModal(true);
+    setShowOrderForm(true);
   }, [selectedTableOrder, selectedTable, currentRoom]);
-
-  const handleReassignTable = useCallback(() => {
-    setReassignRoomId(currentRoom?.id || null);
-    setShowReassignInline(true);
-  }, [currentRoom]);
-
-  const reassignRoom = useMemo(() => {
-    if (!reassignRoomId) return null;
-    return rooms.find(room => room.id === reassignRoomId) || null;
-  }, [reassignRoomId, rooms]);
-
-  const reassignRoomTables = useMemo(() => {
-    if (!reassignRoomId) return [];
-    return enrichedTables.filter(table => table.roomId === reassignRoomId);
-  }, [reassignRoomId, enrichedTables]);
-
-  const handleReassignRoomChange = useCallback((room: any) => {
-    setReassignRoomId(room.id);
-  }, []);
-
-  const handleTableReassign = useCallback(async (table: Table | null) => {
-    if (!table || !selectedTableOrder || isReassigning) return;
-
-    setIsReassigning(true);
-    try {
-      await updateOrder(selectedTableOrder.id, { tableId: table.id });
-      // Changer de room si la table cible est dans une autre room
-      if (table.roomId && table.roomId !== currentRoom?.id) {
-        setCurrentRoom(table.roomId);
-      }
-      setSelectedTable(table.id);
-      setShowReassignInline(false);
-      showToast('Table réassignée avec succès', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la réassignation', 'error');
-    } finally {
-      // Délai pour laisser le WebSocket mettre à jour le store
-      setTimeout(() => {
-        setIsReassigning(false);
-      }, 500);
-    }
-  }, [selectedTableOrder, updateOrder, setSelectedTable, setCurrentRoom, currentRoom, showToast, isReassigning]);
 
   const handlePayment = useCallback(() => {
     setShowPaymentView(true);
@@ -523,7 +388,7 @@ export default function ServicePage() {
           onTerminate={handleTerminateFromPayment}
         />
       ) : /* OrderLinesForm en pleine page - remplace tout le layout */
-      showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
+      showOrderForm && (selectedTableOrder || orderCreatedFromStart) ? (
         <View style={styles.columnLayout}>
           {/* OrderLinesForm */}
           <View style={styles.flex1}>
@@ -550,7 +415,7 @@ export default function ServicePage() {
         <View style={styles.flex1}>
           <View style={styles.mainContentContainer}>
             {/* Header avec tabs des rooms */}
-            {activeRooms.length > 0 && !showOrderDetail && !showOrderModal && (
+            {activeRooms.length > 0 && !showOrderDetail && !showOrderForm && (
               <RoomTabsHeader
                 rooms={activeRooms}
                 currentRoomId={currentRoom?.id}
@@ -570,7 +435,12 @@ export default function ServicePage() {
               <View style={styles.normalLayoutContainer}>
                 {showOrderDetail && selectedTableOrder ? (
                   <View style={styles.orderDetailLayout}>
-                    <View style={styles.orderDetailRecap}>
+                    <SidePanel
+                      title=""
+                      hideCloseButton={true}
+                      hideHeader={true}
+                      width={width / 3}
+                    >
                       <DraftReviewPanelContent
                         title={`Commande - ${selectedTableOrder.table?.name || 'Table'}`}
                         draftLines={selectedTableOrder.lines}
@@ -584,7 +454,7 @@ export default function ServicePage() {
                         onDeleteGroup={handleDeleteGroupByIndices}
                         onCancel={showReassignInline ? () => setShowReassignInline(false) : handleCloseOrderDetail}
                       />
-                    </View>
+                    </SidePanel>
                     {showReassignInline ? (
                       <ReassignTablePanel
                         rooms={activeRooms}
@@ -727,10 +597,6 @@ const styles = StyleSheet.create({
   orderDetailLayout: {
     flex: 1,
     flexDirection: 'row',
-  },
-  orderDetailRecap: {
-    flex: 1,
-    maxWidth: 399,
   },
   mainContentContainer: {
     flex: 1,

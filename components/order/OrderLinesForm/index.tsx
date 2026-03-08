@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
 import { OrderItemsCardView } from '~/components/order/OrderLinesForm/OrderItemsCardView';
@@ -49,6 +49,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // ====================================================================
   // ÉTAT UI UNIQUEMENT (pas de données métier)
   // ====================================================================
+
+  // Layout
+  const { width } = useWindowDimensions();
 
   // Panel Portal
   const { renderPanel, clearPanel } = usePanelPortal();
@@ -547,7 +550,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           title=""
           hideCloseButton={true}
           hideHeader={true}
-          width={400}
+          width={width / 3}
         >
           <View style={styles.sidePanelContent}>
             <DraftReviewPanelContent

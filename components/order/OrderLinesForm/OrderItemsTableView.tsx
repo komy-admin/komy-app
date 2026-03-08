@@ -359,16 +359,16 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
           </View>
         </View>
         <View style={styles.nameCell}>
-          <Text style={styles.headerText}>Nom</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Nom</Text>
         </View>
         <View style={styles.priceCell}>
-          <Text style={styles.headerText}>Prix</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Prix</Text>
         </View>
         <View style={styles.tagsCell}>
-          <Text style={styles.headerText}>Tags</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Tags</Text>
         </View>
         <View style={styles.actionCell}>
-          <Text style={styles.headerText}>Action</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Action</Text>
         </View>
       </View>
 
@@ -516,6 +516,7 @@ const styles = StyleSheet.create({
   nameCell: {
     flex: 3,
     padding: 16,
+    overflow: 'hidden',
   },
   nameText: {
     fontSize: 15,
@@ -532,6 +533,7 @@ const styles = StyleSheet.create({
   priceCell: {
     flex: 2,
     padding: 16,
+    overflow: 'hidden',
   },
   menuPriceCell: {
     paddingVertical: 8,
@@ -583,6 +585,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     alignItems: 'flex-end',
+    overflow: 'hidden',
   },
   addButton: {
     width: 38,
