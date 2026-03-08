@@ -5,7 +5,7 @@ import { RoomBadgeItem } from './RoomBadgeItem';
 interface RoomTabsHeaderProps {
   rooms: any[];
   currentRoomId: string | undefined;
-  enrichedTables: any[];
+  orderCountByRoom: Record<string, number>;
   onRoomChange: (room: any) => void;
   onEditModePress: () => void;
 }
@@ -13,7 +13,7 @@ interface RoomTabsHeaderProps {
 export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
   rooms,
   currentRoomId,
-  enrichedTables,
+  orderCountByRoom,
   onRoomChange,
   onEditModePress
 }) => {
@@ -29,7 +29,7 @@ export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
             key={room.id}
             room={room}
             isActive={room.id === currentRoomId}
-            enrichedTables={enrichedTables}
+            orderCount={orderCountByRoom[room.id] || 0}
             onPress={onRoomChange}
           />
         ))}
@@ -53,19 +53,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-between',
-    backgroundColor: '#FBFBFB',
-    height: 60,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
     zIndex: 10,
   },
   scrollContent: {
-    alignItems: 'center',
-    height: '100%',
-    paddingHorizontal: 8,
+    alignItems: 'flex-end',
   },
   editButton: {
     backgroundColor: '#2A2E33',
-    height: 60,
-    width: 200,
+    paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -74,10 +72,11 @@ const styles = StyleSheet.create({
     }),
   },
   editButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#FBFBFB',
     fontWeight: '600',
     textAlign: 'center',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });

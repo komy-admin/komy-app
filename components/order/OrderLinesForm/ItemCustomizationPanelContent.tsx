@@ -5,7 +5,6 @@ import {
   Pressable,
   Keyboard,
   Switch,
-  TouchableOpacity,
   Platform,
   Text as RNText,
 } from 'react-native';
@@ -107,6 +106,15 @@ const getFieldTypeLightBgColor = (fieldType: string): string => {
   }
 };
 
+/** Convertir la couleur hex en rgba avec opacité */
+const getColorWithOpacity = (hexColor: string, opacity: number): string => {
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
 export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelContentProps> = ({
   item,
   availableTags,
@@ -116,16 +124,6 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
 }) => {
   const [note, setNote] = useState(initialData?.note || '');
   const [tagValues, setTagValues] = useState<TagValuesRecord>({});
-  const [isValid, setIsValid] = useState(false);
-
-  // Convertir la couleur hex en rgba avec opacité
-  const getColorWithOpacity = useCallback((hexColor: string, opacity: number): string => {
-    const hex = hexColor.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  }, []);
 
   // Couleurs de l'article
   const itemColor = item.color || '#3B82F6';
@@ -204,28 +202,15 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
     return item.price + tagsPrice;
   }, [item.price, selectedTags]);
 
-  const optionsPrice = useMemo(() => {
-    return selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
-  }, [selectedTags]);
-
   // Validation : vérifier que tous les tags requis ont une valeur
-  useEffect(() => {
-    const canConfirm = availableTags.every(tag => {
+  const isValid = useMemo(() => {
+    return availableTags.every(tag => {
       if (!tag.isRequired) return true;
       const value = tagValues[tag.id];
-
-      if (value === undefined || value === null || value === '') {
-        return false;
-      }
-
-      if (Array.isArray(value) && value.length === 0) {
-        return false;
-      }
-
+      if (value === undefined || value === null || value === '') return false;
+      if (Array.isArray(value) && value.length === 0) return false;
       return true;
     });
-
-    setIsValid(canConfirm);
   }, [tagValues, availableTags]);
 
   const handleConfirm = useCallback(() => {
@@ -248,9 +233,9 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
             Ajoutez vos préférences et options
           </RNText>
         </View>
-        <TouchableOpacity onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Pressable onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <X size={24} color="#64748B" strokeWidth={2} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
@@ -340,23 +325,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
 
       {/* Footer - FIXED at bottom */}
       <View style={styles.panelFooter}>
-        {/* Résumé des prix à gauche */}
-        <View style={styles.footerPriceContainer}>
-          {optionsPrice !== 0 && (
-            <View style={styles.footerPriceRow}>
-              <RNText style={[styles.footerPriceLabel, { fontWeight: '500' }]}>Options</RNText>
-              <RNText style={[styles.footerPriceModifier, { fontWeight: '600' }]}>
-                {optionsPrice > 0 ? '+' : ''}{formatPrice(optionsPrice)}
-              </RNText>
-            </View>
-          )}
-          <View style={styles.footerPriceTotalRow}>
-            <RNText style={[styles.footerPriceTotalLabel, { fontWeight: '700' }]}>Total</RNText>
-            <RNText style={[styles.footerPriceTotalValue, { fontWeight: '700' }]}>{formatPrice(totalPrice)}</RNText>
-          </View>
-        </View>
-
-        {/* Boutons à droite */}
+        {/* Boutons */}
         <View style={styles.footerActions}>
           <Pressable style={styles.cancelButton} onPress={onCancel}>
             <RNText style={[styles.cancelButtonText, { fontWeight: '600' }]}>Annuler</RNText>
@@ -367,9 +336,8 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
             onPress={handleConfirm}
             disabled={!isValid}
           >
-            <Check size={20} color="#FFFFFF" strokeWidth={2} />
             <RNText style={[styles.saveButtonText, { fontWeight: '600' }]}>
-              {initialData ? 'Modifier' : 'Ajouter'}
+              {initialData ? 'Modifier' : 'Ajouter'} : {formatPrice(totalPrice)}
             </RNText>
           </Pressable>
         </View>
@@ -483,14 +451,14 @@ const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
         {options.map(option => {
           const isSelected = value === option.value;
           return (
-            <TouchableOpacity
+            <Pressable
               key={option.id}
               style={[
                 styles.radioOption,
                 isSelected && styles.radioOptionActive
               ]}
               onPress={() => onChange(isSelected ? undefined : option.value)}
-              activeOpacity={1}
+
             >
               <View style={styles.radio}>
                 {isSelected && <View style={styles.radioInner} />}
@@ -513,7 +481,7 @@ const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
                   </RNText>
                 )}
               </View>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
@@ -542,14 +510,14 @@ const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => 
         {options.map(option => {
           const isSelected = selectedValues.includes(option.value);
           return (
-            <TouchableOpacity
+            <Pressable
               key={option.id}
               style={[
                 styles.radioOption,
                 isSelected && styles.radioOptionActive
               ]}
               onPress={() => toggleOption(option.value)}
-              activeOpacity={1}
+
             >
               <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
                 {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
@@ -572,7 +540,7 @@ const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => 
                   </RNText>
                 )}
               </View>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
@@ -763,18 +731,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 6,
   },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    color: '#1E293B',
-    marginBottom: 10,
-  },
-  required: {
-    color: '#EF4444',
-    fontSize: 14,
-  },
   // ========================================
   // TAG CARD STYLES - Compact & Pro avec fond coloré
   // ========================================
@@ -932,13 +888,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  toggleLabel: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  toggleLabelActive: {
-    color: '#1E293B',
-  },
   toggleStatusText: {
     fontSize: 12,
     color: '#64748B',
@@ -955,71 +904,15 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
   },
   panelFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    gap: 16,
-    ...Platform.select({
-      web: {
-        flexWrap: 'nowrap',
-      },
-    }),
-  },
-  // Résumé des prix dans le footer
-  footerPriceContainer: {
-    ...Platform.select({
-      web: {
-        minWidth: 100,
-        maxWidth: 140,
-      },
-      default: {
-        flex: 0.6,
-      },
-    }),
-  },
-  footerPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  footerPriceLabel: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  footerPriceModifier: {
-    fontSize: 12,
-    color: '#059669',
-  },
-  footerPriceTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  footerPriceTotalLabel: {
-    fontSize: 14,
-    color: '#1E293B',
-  },
-  footerPriceTotalValue: {
-    fontSize: 16,
-    color: '#059669',
+    gap: 12,
   },
   // Actions (boutons) dans le footer
   footerActions: {
     flexDirection: 'row',
     gap: 12,
-    ...Platform.select({
-      web: {
-        minWidth: 280,
-        flex: 1,
-      },
-      default: {
-        flex: 1.4,
-      },
-    }),
   },
   cancelButton: {
     flex: 1,

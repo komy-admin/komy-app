@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
 import { OrderItemsCardView } from '~/components/order/OrderLinesForm/OrderItemsCardView';
@@ -49,6 +49,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // ====================================================================
   // ÉTAT UI UNIQUEMENT (pas de données métier)
   // ====================================================================
+
+  // Layout
+  const { width } = useWindowDimensions();
 
   // Panel Portal
   const { renderPanel, clearPanel } = usePanelPortal();
@@ -109,7 +112,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     item: Item;
     categoryId: string;
   } | null>(null);
-
 
   // ====================================================================
   // HANDLERS - ITEMS
@@ -474,11 +476,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    *
    * Note: Le récapitulatif de commande est maintenant un side panel permanent (pas dans le portal)
    */
-  const confirmCustomizationRef = useRef(handleConfirmCustomization);
-  confirmCustomizationRef.current = handleConfirmCustomization;
-  const confirmMenuItemRef = useRef(handleConfirmMenuItemCustomization);
-  confirmMenuItemRef.current = handleConfirmMenuItemCustomization;
-
   useEffect(() => {
     if (customizationPanelVisible && itemToCustomize) {
       renderPanel(
@@ -487,7 +484,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             item={itemToCustomize.item}
             availableTags={itemToCustomize.item.tags || []}
             initialData={itemToCustomize.initialData}
-            onConfirm={(c) => confirmCustomizationRef.current(c)}
+            onConfirm={handleConfirmCustomization}
             onCancel={handleCancelCustomization}
           />
         </SlidePanel>
@@ -499,7 +496,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
             item={menuItemToCustomize.item}
             availableTags={menuItemToCustomize.item.tags || []}
             initialData={undefined}
-            onConfirm={(c) => confirmMenuItemRef.current(c)}
+            onConfirm={handleConfirmMenuItemCustomization}
             onCancel={handleCancelMenuItemCustomization}
           />
         </SlidePanel>
@@ -512,7 +509,9 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     itemToCustomize,
     menuItemPanelVisible,
     menuItemToCustomize,
+    handleConfirmCustomization,
     handleCancelCustomization,
+    handleConfirmMenuItemCustomization,
     handleCancelMenuItemCustomization,
     renderPanel,
     clearPanel,
@@ -551,7 +550,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           title=""
           hideCloseButton={true}
           hideHeader={true}
-          width={400}
+          width={width / 3}
         >
           <View style={styles.sidePanelContent}>
             <DraftReviewPanelContent

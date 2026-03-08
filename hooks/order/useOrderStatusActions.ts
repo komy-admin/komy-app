@@ -2,12 +2,45 @@ import { useState, useMemo, useCallback } from 'react';
 import { Status } from '~/types/status.enum';
 import { OrderLineType } from '~/types/order-line.types';
 
+export interface GroupedItem {
+  name: string;
+  quantity: number;
+}
+
+export interface GroupedSection {
+  itemTypeName: string;
+  items: GroupedItem[];
+  totalCount: number;
+}
+
+/** Groupe une liste d'items par itemType en sections avec décompte par nom */
+const buildGroupedSections = (
+  items: { itemName: string; itemTypeId: string }[],
+  allItemTypes: { id: string; name: string }[],
+): GroupedSection[] => {
+  const sectionsMap = new Map<string, { itemTypeName: string; itemCounts: Map<string, number> }>();
+  items.forEach(item => {
+    const typeName = allItemTypes.find(it => it.id === item.itemTypeId)?.name || 'Autre';
+    if (!sectionsMap.has(item.itemTypeId)) {
+      sectionsMap.set(item.itemTypeId, { itemTypeName: typeName, itemCounts: new Map() });
+    }
+    const section = sectionsMap.get(item.itemTypeId)!;
+    section.itemCounts.set(item.itemName, (section.itemCounts.get(item.itemName) || 0) + 1);
+  });
+  return Array.from(sectionsMap.values()).map(s => ({
+    itemTypeName: s.itemTypeName,
+    items: Array.from(s.itemCounts.entries()).map(([name, quantity]) => ({ name, quantity })),
+    totalCount: Array.from(s.itemCounts.values()).reduce((sum, q) => sum + q, 0),
+  }));
+};
+
 export interface ClaimData {
   orderLineIds: string[];
   orderLineItemIds: string[];
   itemTypeNames: string[];
   count: number;
   itemNames: string[];
+  sections: GroupedSection[];
 }
 
 export interface ServeData {
@@ -15,6 +48,7 @@ export interface ServeData {
   orderLineItemIds: string[];
   count: number;
   itemNames: string[];
+  sections: GroupedSection[];
 }
 
 interface UseOrderStatusActionsProps {
@@ -156,12 +190,15 @@ export const useOrderStatusActions = ({
     const minPriority = Math.min(...draftItems.map(item => item.priority));
     const itemsToClaim = draftItems.filter(item => item.priority === minPriority);
 
+    const sections = buildGroupedSections(itemsToClaim, allItemTypes);
+
     setItemsToClaimData({
       orderLineIds: itemsToClaim.filter(item => item.orderLineId).map(item => item.orderLineId!),
       orderLineItemIds: itemsToClaim.filter(item => item.orderLineItemId).map(item => item.orderLineItemId!),
       itemTypeNames: allItemTypes.filter(it => it.priorityOrder === minPriority).map(it => it.name).sort(),
       count: itemsToClaim.length,
       itemNames: itemsToClaim.map(item => item.itemName),
+      sections,
     });
     setShowClaimConfirmModal(true);
   }, [selectedTableOrder, allItemTypes, showToast]);
@@ -187,17 +224,22 @@ export const useOrderStatusActions = ({
     const orderLineIds: string[] = [];
     const orderLineItemIds: string[] = [];
     const itemNames: string[] = [];
+    const serveItems: { itemName: string; itemTypeId: string }[] = [];
 
     selectedTableOrder.lines?.forEach((line: any) => {
       if (line.type === OrderLineType.ITEM && line.status === Status.READY) {
         orderLineIds.push(line.id);
-        itemNames.push(line.item?.name || 'Article inconnu');
+        const itemName = line.item?.name || 'Article inconnu';
+        itemNames.push(itemName);
+        serveItems.push({ itemName, itemTypeId: line.item?.itemType?.id || '' });
       }
       if (line.type === OrderLineType.MENU && line.items) {
         line.items.forEach((menuItem: any) => {
           if (menuItem.status === Status.READY) {
             orderLineItemIds.push(menuItem.id);
-            itemNames.push(menuItem.item?.name || 'Article inconnu');
+            const itemName = menuItem.item?.name || 'Article inconnu';
+            itemNames.push(itemName);
+            serveItems.push({ itemName, itemTypeId: menuItem.item?.itemType?.id || '' });
           }
         });
       }
@@ -209,9 +251,11 @@ export const useOrderStatusActions = ({
       return;
     }
 
-    setItemsToServeData({ orderLineIds, orderLineItemIds, count: totalItems, itemNames });
+    const sections = buildGroupedSections(serveItems, allItemTypes);
+
+    setItemsToServeData({ orderLineIds, orderLineItemIds, count: totalItems, itemNames, sections });
     setShowServeConfirmModal(true);
-  }, [selectedTableOrder, showToast]);
+  }, [selectedTableOrder, allItemTypes, showToast]);
 
   const confirmServe = useCallback(async () => {
     if (!itemsToServeData) return;

@@ -1,15 +1,19 @@
 import { memo, useCallback, useMemo, useState, useRef } from 'react';
-import { View, Pressable, StyleSheet, LayoutChangeEvent } from 'react-native';
+import { View, Pressable, StyleSheet, LayoutChangeEvent, Platform, Text as RNText } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Text } from '~/components/ui';
-import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
 import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
-import { getContrastColor, formatPrice } from '~/lib/utils';
-import { getColorWithOpacity, getMenuPrice } from '~/lib/color-utils';
+import { formatPrice } from '~/lib/utils';
+import { getColorWithOpacity, getMenuPrice, darkenColor } from '~/lib/color-utils';
 import { calculateOptimalCardWidth } from '~/lib/card-layout-utils';
+
+// Constantes de couleurs
+const MENU_COLOR = '#10B981';
+const MENU_TEXT_COLOR = darkenColor(MENU_COLOR, 0.35);
+const MENU_BG_COLOR = getColorWithOpacity(MENU_COLOR, 0.08);
 
 /**
  * Props pour le composant OrderItemsCardView
@@ -29,13 +33,13 @@ export interface OrderItemsCardViewProps {
 /**
  * Composant pour afficher un item individuel
  */
-interface OrderItemRowProps {
+interface OrderItemCardProps {
   item: Item;
   onOpenCustomization: (item: Item) => void;
   cardWidth: number;
 }
 
-const OrderItemCard = memo<OrderItemRowProps>(({
+const OrderItemCard = memo<OrderItemCardProps>(({
   item,
   onOpenCustomization,
   cardWidth,
@@ -47,9 +51,9 @@ const OrderItemCard = memo<OrderItemRowProps>(({
   const colors = useMemo(() => {
     const itemColor = item.color || '#6B7280';
     return {
-      itemColor,
-      headerBgColor: getColorWithOpacity(itemColor, 0.12),
-      buttonIconColor: getContrastColor(itemColor)
+      bgColor: getColorWithOpacity(itemColor, 0.1),
+      borderColor: itemColor,
+      textColor: darkenColor(itemColor, 0.35),
     };
   }, [item.color]);
 
@@ -57,43 +61,33 @@ const OrderItemCard = memo<OrderItemRowProps>(({
     width: cardWidth,
     minWidth: cardWidth,
     maxWidth: cardWidth,
-    flexShrink: 0,
-    flexGrow: 0,
-    borderColor: colors.itemColor
-  }), [cardWidth, colors.itemColor]);
+    backgroundColor: colors.bgColor,
+    borderColor: colors.borderColor,
+  }), [cardWidth, colors]);
 
   return (
     <Pressable
-      style={[styles.itemCard, dynamicStyle]}
+      style={({ pressed }) => [
+        styles.card,
+        dynamicStyle,
+        pressed && styles.cardPressed,
+      ]}
       onPress={handleAdd}
     >
-      <View style={[
-        styles.coloredHeader,
-        { backgroundColor: colors.headerBgColor }
-      ]}>
-        <Text
-          style={[
-            styles.itemName,
-            { color: colors.itemColor }
-          ]}
-          numberOfLines={2}
-        >
-          {item.name}
-        </Text>
-      </View>
+      <View style={styles.glassOverlay}>
+        <View style={styles.cardContent}>
+          <View style={styles.cardNameArea}>
+            <RNText
+              style={[styles.cardName, { color: colors.textColor }]}
+              numberOfLines={2}
+            >
+              {item.name}
+            </RNText>
+          </View>
 
-      <View style={styles.priceContainer}>
-        <Text style={styles.itemPrice}>
-          {formatPrice(item.price)}
-        </Text>
-      </View>
-
-      <View style={styles.addButtonContainer}>
-        <View style={[
-          styles.addButton,
-          { backgroundColor: colors.itemColor }
-        ]}>
-          <Plus size={22} color={colors.buttonIconColor} strokeWidth={3} />
+          <RNText style={styles.itemPriceLabel}>
+            {formatPrice(item.price)}
+          </RNText>
         </View>
       </View>
     </Pressable>
@@ -124,42 +118,40 @@ const MenuCard = memo<MenuCardProps>(({
     width: cardWidth,
     minWidth: cardWidth,
     maxWidth: cardWidth,
-    flexShrink: 0,
-    flexGrow: 0,
-    borderColor: '#6366F1'
   }), [cardWidth]);
 
   return (
     <Pressable
-      style={[styles.menuCard, dynamicStyle]}
+      style={({ pressed }) => [
+        styles.card,
+        styles.menuCard,
+        dynamicStyle,
+        pressed && styles.cardPressed,
+      ]}
       onPress={handleAdd}
     >
-      <View style={[styles.menuHeader, MENU_COLORS.headerBg]}>
-        <Text
-          style={[styles.itemName, MENU_COLORS.text]}
-          numberOfLines={2}
-        >
-          {menu.name}
-        </Text>
-        {menu.description && (
-          <Text
-            style={styles.menuDescription}
-            numberOfLines={2}
-          >
-            {menu.description}
-          </Text>
-        )}
-      </View>
+      <View style={styles.glassOverlay}>
+        <View style={styles.cardContent}>
+          <View style={styles.cardNameArea}>
+            <RNText
+              style={[styles.cardName, styles.menuNameColor]}
+              numberOfLines={2}
+            >
+              {menu.name}
+            </RNText>
+            {menu.description && (
+              <RNText
+                style={styles.menuDescription}
+                numberOfLines={2}
+              >
+                {menu.description}
+              </RNText>
+            )}
+          </View>
 
-      <View style={styles.menuPriceContainer}>
-        <Text style={styles.menuPriceText}>
-          À partir de {formatPrice(getMenuPrice(menu))}
-        </Text>
-      </View>
-
-      <View style={styles.addButtonContainer}>
-        <View style={[styles.addButton, MENU_COLORS.button]}>
-          <Plus size={22} color="#FFFFFF" strokeWidth={3} />
+          <RNText style={styles.menuPriceLabel}>
+            À partir de {formatPrice(getMenuPrice(menu))}
+          </RNText>
         </View>
       </View>
     </Pressable>
@@ -189,9 +181,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   const sectionPositions = useRef<Record<string, number>>({});
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    // ScrollView width minus horizontal padding (16 * 2 = 32)
     const contentWidth = event.nativeEvent.layout.width - 32;
-    // Seuil de 2px pour éviter les boucles de re-render
     if (contentWidth > 0 && Math.abs(contentWidth - lastMeasuredWidth.current) > 2) {
       lastMeasuredWidth.current = contentWidth;
       setContainerWidth(contentWidth);
@@ -199,11 +189,9 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   }, []);
 
   const handleSectionLayout = useCallback((sectionKey: string, event: LayoutChangeEvent) => {
-    const { y } = event.nativeEvent.layout;
-    sectionPositions.current[sectionKey] = y;
+    sectionPositions.current[sectionKey] = event.nativeEvent.layout.y;
   }, []);
 
-  // Scroll sync bidirectionnel via hook partagé
   const getSections = useCallback((): ScrollSyncSection[] => {
     return Object.entries(sectionPositions.current)
       .map(([key, offset]) => ({ key, offset }))
@@ -257,7 +245,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   return (
     <ScrollView
       ref={scrollViewRef}
-      style={[styles.container, styles.scrollView]}
+      style={styles.scrollContainer}
       contentContainerStyle={styles.gridContainer}
       showsVerticalScrollIndicator={false}
       onScroll={handleScroll}
@@ -272,9 +260,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionHeaderText}>Menus</Text>
             </View>
-            <View
-              style={styles.itemsGrid}
-            >
+            <View style={styles.itemsGrid}>
               {filteredMenus.map((menu) => (
                 <MenuCard
                   key={menu.id}
@@ -296,9 +282,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionHeaderText}>{group.itemType.name}</Text>
             </View>
-            <View
-              style={styles.itemsGrid}
-            >
+            <View style={styles.itemsGrid}>
               {group.items.map((item) => (
                 <OrderItemCard
                   key={item.id}
@@ -318,25 +302,11 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
 
 OrderItemsCardView.displayName = 'OrderItemsCardView';
 
-const MENU_COLORS = {
-  headerBg: { backgroundColor: 'rgba(99, 102, 241, 0.08)' },
-  text: { color: '#6366F1' },
-  button: { backgroundColor: '#6366F1' },
-};
-
-const COLORS = {
-  background: '#FFFFFF',
-  textSecondary: '#6B7280',
-};
-
 const styles = StyleSheet.create({
   // Containers
-  container: {
+  scrollContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   gridContainer: {
     paddingVertical: 16,
@@ -359,7 +329,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: '#6B7280',
     fontStyle: 'italic',
     textAlign: 'center',
   },
@@ -378,108 +348,86 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
 
-  // Item Card styles
-  itemCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
+  // Card base
+  card: {
+    borderRadius: 12,
+    borderWidth: 2.5,
+    minHeight: 130,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 3,
-    minHeight: 160,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'all 0.15s ease',
+    } as any : {}),
+  },
+  cardPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.97 }],
   },
 
-  // Menu Card styles
+  // Menu Card overrides
   menuCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 16,
-    borderWidth: 2,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    minHeight: 180,
-  },
-  menuHeader: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    height: 90,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuDescription: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    lineHeight: 16,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  menuPriceContainer: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 8,
-    height: 50,
-    justifyContent: 'center',
-  },
-  menuPriceText: {
-    fontSize: 14,
-    color: '#1F2937',
-    fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 18,
+    backgroundColor: MENU_BG_COLOR,
+    borderColor: MENU_COLOR,
   },
 
-  // Header styles
-  coloredHeader: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    height: 64,
+  // Glass overlay
+  glassOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: 9,
+  },
+
+  // Card content
+  cardContent: {
+    flex: 1,
+    padding: 14,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cardNameArea: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  itemName: {
-    fontSize: 15,
+  cardName: {
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  menuNameColor: {
+    color: MENU_TEXT_COLOR,
+  },
+  menuDescription: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    letterSpacing: 0.8,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 2,
   },
 
-  // Prix
-  priceContainer: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  itemPrice: {
-    fontSize: 18,
-    color: '#1F2937',
-    fontWeight: '800',
+  // Prix article : gris foncé
+  itemPriceLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    letterSpacing: 0.8,
     textAlign: 'center',
   },
-
-  // Bouton Ajouter
-  addButtonContainer: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 4,
-  },
-  addButton: {
-    width: '100%',
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+  // Prix menu "À partir de" : gris clair
+  menuPriceLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 0.8,
+    textAlign: 'center',
   },
 });

@@ -6,7 +6,7 @@
  * Hooks : useRooms, useTables, useTableEditor, usePanelPortal
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -36,6 +36,16 @@ export default function RoomEditionMode() {
   // Utilisation des hooks Redux
   const { rooms, currentRoom, setCurrentRoom, updateRoom, createRoom, deleteRoom } = useRooms();
   const { currentRoomTables, enrichedTables, selectedTable, setSelectedTable } = useTables();
+
+  const orderCountByRoom = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of enrichedTables) {
+      if (t.orders && t.orders.length > 0) {
+        map[t.roomId] = (map[t.roomId] || 0) + 1;
+      }
+    }
+    return map;
+  }, [enrichedTables]);
 
   // Hook spécialisé pour l'édition haute performance
   const { createTableFast, updateTableFast, deleteTableFast, isCreateOperationInProgress } = useTableEditor();
@@ -372,7 +382,7 @@ export default function RoomEditionMode() {
               key={room.id}
               room={room}
               isActive={room.id === currentRoom?.id}
-              enrichedTables={enrichedTables}
+              orderCount={orderCountByRoom[room.id] || 0}
               onPress={handleChangeRoom}
               showInactiveIndicator
             />
@@ -510,12 +520,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   headerContainer: {
-    backgroundColor: '#FBFBFB',
-    height: 60,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     borderBottomWidth: 1,
-    borderBottomColor: '#EFEFEF',
+    borderBottomColor: '#E5E7EB',
     zIndex: 10,
     elevation: 5,
     ...Platform.select({
@@ -523,12 +532,10 @@ const styles = StyleSheet.create({
     }),
   },
   badgeContainer: {
-    marginLeft: 10,
     flex: 1,
   },
   badgeContent: {
-    alignItems: 'center',
-    height: '100%',
+    alignItems: 'flex-end',
   },
   roomContainer: {
     flex: 1,

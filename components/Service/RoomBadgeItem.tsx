@@ -1,11 +1,10 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback } from 'react';
 import { Pressable, View, Text as RNText, StyleSheet, Platform } from 'react-native';
-import { Utensils, ConciergeBell } from 'lucide-react-native';
 
 interface RoomBadgeItemProps {
   room: any;
   isActive: boolean;
-  enrichedTables: any[];
+  orderCount: number;
   onPress: (room: any) => void;
   showInactiveIndicator?: boolean;
 }
@@ -13,7 +12,7 @@ interface RoomBadgeItemProps {
 export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
   room,
   isActive,
-  enrichedTables,
+  orderCount,
   onPress,
   showInactiveIndicator = false,
 }) => {
@@ -21,53 +20,38 @@ export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
     onPress(room);
   }, [room, onPress]);
 
-  const stats = useMemo(() => {
-    const roomTables = enrichedTables.filter((t: any) => t.roomId === room.id);
-    const totalTables = roomTables.length;
-    const activeOrders = roomTables.filter((t: any) => t.orders && t.orders.length > 0).length;
-    return { totalTables, activeOrders };
-  }, [enrichedTables, room.id]);
+  const roomColor = room.color || '#6366F1';
+  const isInactive = showInactiveIndicator && !room.isActive;
 
   return (
-    <Pressable
-      onPress={handlePress}
-      style={[
-        styles.card,
-        showInactiveIndicator && !room.isActive && styles.cardInactive,
-        isActive && styles.cardActive,
-      ]}
-    >
-      <View style={styles.cardContent}>
-        <View style={styles.nameRow}>
+    <Pressable onPress={handlePress}>
+      {({ pressed }) => (
+        <View style={[styles.tab, pressed && { opacity: 0.6 }]}>
           <RNText
             style={[
               styles.name,
-              showInactiveIndicator && !room.isActive && styles.nameInactive,
+              isActive && styles.nameActive,
+              isInactive && styles.nameInactive,
             ]}
             numberOfLines={1}
           >
             {room.name}
           </RNText>
+          <RNText style={[
+            styles.stats,
+            isActive && styles.statsActive,
+            isInactive && styles.statsInactive,
+          ]}>
+            {orderCount} commande{orderCount !== 1 ? 's' : ''}
+          </RNText>
+          <View
+            style={[
+              styles.indicator,
+              isActive && { backgroundColor: roomColor },
+            ]}
+          />
         </View>
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Utensils size={12} color="rgba(42,46,51,0.4)" />
-            <RNText style={styles.statText}>
-              {stats.totalTables}
-            </RNText>
-          </View>
-          <View style={styles.stat}>
-            <ConciergeBell size={12} color="rgba(42,46,51,0.4)" />
-            <RNText style={styles.statText}>
-              {stats.activeOrders}
-            </RNText>
-          </View>
-        </View>
-      </View>
-      <View style={[
-        styles.halfCircle,
-        { backgroundColor: showInactiveIndicator && !room.isActive ? '#D1D5DB' : (room.color || '#6366F1') }
-      ]} />
+      )}
     </Pressable>
   );
 });
@@ -75,66 +59,47 @@ export const RoomBadgeItem = memo<RoomBadgeItemProps>(({
 RoomBadgeItem.displayName = 'RoomBadgeItem';
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 6,
-    marginHorizontal: 4,
-    backgroundColor: '#E5E5EA',
-    flexDirection: 'row',
+  tab: {
     alignItems: 'center',
-    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 0,
+    justifyContent: 'flex-end',
     ...Platform.select({
       web: { cursor: 'pointer' as any },
     }),
   },
-  cardActive: {
-    borderWidth: 2,
-    borderColor: '#2A2E33',
-  },
-  cardContent: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  halfCircle: {
-    width: 14,
-    height: 28,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
   name: {
     fontSize: 13,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  nameActive: {
     fontWeight: '700',
     color: '#2A2E33',
   },
   nameInactive: {
-    color: '#9CA3AF',
+    color: '#C7C7CC',
     textDecorationLine: 'line-through' as const,
   },
-  cardInactive: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1.5,
-    borderStyle: 'dashed' as const,
-    borderColor: '#C7C7CC',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  stats: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#C4C9D1',
     marginTop: 2,
   },
-  stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
+  statsActive: {
+    color: '#9CA3AF',
   },
-  statText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(42,46,51,0.4)',
+  statsInactive: {
+    color: '#D1D5DB',
+  },
+  indicator: {
+    height: 3,
+    alignSelf: 'stretch',
+    borderRadius: 1.5,
+    marginTop: 8,
+    marginHorizontal: -16,
+    backgroundColor: 'transparent',
   },
 });

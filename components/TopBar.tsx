@@ -125,9 +125,9 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
       )}
 
       <View onLayout={handleLayout} style={containerZStyle}>
-        <View>
+        <View style={styles.containerLogo}>
           <Image
-            source={require('../assets/images/logo_komy_png/logo_name_v1.png')}
+            source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
             style={styles.logo}
           />
         </View>
@@ -204,9 +204,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingRight: 20,
   },
-  logo: {
+  containerLogo: {
     width: 100,
     height: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  logo: {
+    width: 90,
+    height: 90,
     resizeMode: 'contain',
   },
   rightSection: {

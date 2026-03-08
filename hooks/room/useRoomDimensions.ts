@@ -68,7 +68,10 @@ export const useRoomDimensions = ({
       }
     }
 
-    const initialZoom = Math.min(Math.max(optimalZoom, MIN_SCALE), MAX_SCALE);
+    // Pour les très grandes rooms, permettre un zoom plus petit que MIN_SCALE
+    // afin que la room tienne dans le container
+    const effectiveMinScale = Math.min(MIN_SCALE, optimalZoom);
+    const initialZoom = Math.min(Math.max(optimalZoom, effectiveMinScale), MAX_SCALE);
 
     return { gridWidth: extendedWidth, gridHeight: extendedHeight, initialZoom };
   }, [roomWidth, roomHeight, isLoading, containerDimensions, fillContainer, screenWidth, screenHeight]);

@@ -1,4 +1,4 @@
-import { ScrollView, View, useWindowDimensions, StyleSheet } from "react-native";
+import { View, StyleSheet, Pressable, Platform, Text as RNText, useWindowDimensions } from "react-native";
 import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
@@ -10,7 +10,6 @@ import { useToast } from '~/components/ToastProvider';
 import { RoomTabsHeader } from '~/components/Service/RoomTabsHeader';
 import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
 import { ActionConfirmModal } from '~/components/Service/ActionConfirmModal';
-import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
 import {
   useRestaurant,
   useMenu,
@@ -22,26 +21,69 @@ import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/se
 import { OrderLinesForm } from '~/components/order/OrderLinesForm';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useOrderStatusActions } from '~/hooks/order/useOrderStatusActions';
+import { useOrderDetailLineActions } from '~/hooks/order/useOrderDetailLineActions';
+import { useReassignTable } from '~/hooks/order/useReassignTable';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { useOrderLines } from '~/hooks/useOrderLines';
-import { OrderDetailView, OrderDetailHeader } from '~/components/OrderDetail';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
-import { ConfirmationModal } from '~/components/ui/ConfirmationModal';
-import { CustomModal } from '@/components/CustomModal';
+import { OrderDetailActions, ReassignTablePanel } from '~/components/OrderDetail';
+import { SidePanel } from '~/components/SidePanel';
+import { DraftReviewPanelContent } from '~/components/order/OrderLinesForm/DraftReviewPanelContent';
+import { Status } from '~/types/status.enum';
+
+import { GroupDeletePickerModal } from '~/components/ui/GroupDeletePickerModal';
+import { GroupStatusPickerModal } from '~/components/ui/GroupStatusPickerModal';
 import PaymentView from '~/components/Service/PaymentView';
 
 const NOOP = () => {};
 
+const ConfirmDeleteOverlay = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) => {
+  const [countdown, setCountdown] = useState(3);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  return (
+    <View style={styles.confirmOverlay}>
+      <View style={styles.overlayMessage}>
+        <RNText style={styles.overlayMessageText}>Supprimer cette commande ?</RNText>
+      </View>
+      <Pressable
+        onPress={countdown === 0 ? onConfirm : undefined}
+        disabled={countdown > 0}
+        style={[styles.deleteConfirmBtn, countdown > 0 && styles.confirmBtnDisabled]}
+      >
+        <RNText style={styles.confirmBtnText}>
+          {countdown > 0 ? `${countdown}` : 'SUPPRIMER'}
+        </RNText>
+      </Pressable>
+      <Pressable onPress={onCancel} style={styles.cancelBtn}>
+        <RNText style={styles.cancelBtnText}>ANNULER</RNText>
+      </Pressable>
+    </View>
+  );
+};
+
 export default function ServicePage() {
-  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showOrderForm, setShowOrderForm] = useState(false);
   const [orderCreatedFromStart, setOrderCreatedFromStart] = useState(false);
   const [orderModalTitle, setOrderModalTitle] = useState('');
   const [showOrderDetail, setShowOrderDetail] = useState(false);
-  const [showReassignModal, setShowReassignModal] = useState(false);
-  const [reassignRoomId, setReassignRoomId] = useState<string | null>(null);
-  const [isReassigning, setIsReassigning] = useState(false);
   const [showPaymentView, setShowPaymentView] = useState(false);
 
+  const { width } = useWindowDimensions();
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const activeRooms = useMemo(() => rooms.filter(room => room.isActive), [rooms]);
   const appInitialized = useAppSelector(selectAppInitialized);
@@ -56,8 +98,18 @@ export default function ServicePage() {
   } = useOrders();
   const { items: allItems, itemTypes: allItemTypes } = useMenu();
   const activeItems = useMemo(() => allItems.filter(item => item.isActive), [allItems]);
-  const { deleteOrderLine } = useOrderLines();
+  const { deleteOrderLine, deleteOrderLines } = useOrderLines();
   const { showToast } = useToast();
+
+  const orderCountByRoom = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of enrichedTables) {
+      if (t.orders && t.orders.length > 0) {
+        map[t.roomId] = (map[t.roomId] || 0) + 1;
+      }
+    }
+    return map;
+  }, [enrichedTables]);
 
   // S'assurer que la currentRoom est active, sinon basculer sur la première active
   useEffect(() => {
@@ -74,8 +126,6 @@ export default function ServicePage() {
   const {
     hasDraftItems,
     hasReadyItems,
-    handleUpdateItemStatus,
-    handleUpdateMenuItemStatus,
     handleBulkUpdateStatus,
     handleClaim,
     confirmClaim,
@@ -109,6 +159,57 @@ export default function ServicePage() {
     onCleanup: handleOrderCleanup,
   });
 
+  // Reset les dialogs Terminer/Supprimer quand on quitte le détail de commande
+  useEffect(() => {
+    if (!showOrderDetail) {
+      if (showTerminateDialog) setShowTerminateDialog(false);
+      if (showDeleteDialog) setShowDeleteDialog(false);
+    }
+  }, [showOrderDetail, showTerminateDialog, setShowTerminateDialog, showDeleteDialog, setShowDeleteDialog]);
+
+  const {
+    statusGroupData,
+    handleOpenStatusSelector,
+    handleOpenStatusSelectorGroup,
+    handleConfirmGroupStatus,
+    handleCloseStatusGroup,
+    menuStatusData,
+    handleOpenMenuStatusSelector,
+    handleConfirmMenuStatus,
+    handleCloseMenuStatus,
+    deleteGroupData,
+    handleDeleteLineByIndex,
+    handleDeleteGroupByIndices,
+    handleConfirmDeleteGroup,
+    handleCloseDeleteGroup,
+  } = useOrderDetailLineActions({
+    selectedTableOrder,
+    handleBulkUpdateStatus,
+    handleDeleteLine,
+    deleteOrderLines,
+  });
+
+  const {
+    showReassignInline,
+    setShowReassignInline,
+    reassignRoomId,
+    reassignRoom,
+    reassignRoomTables,
+    isReassigning,
+    handleReassignTable,
+    handleReassignRoomChange,
+    handleTableReassign,
+  } = useReassignTable({
+    currentRoom,
+    rooms,
+    enrichedTables,
+    selectedTableOrder,
+    updateOrder,
+    setSelectedTable,
+    setCurrentRoom,
+    showToast,
+  });
+
   // Stabiliser la référence des initialLines pour éviter les re-renders inutiles
   const initialLines = useMemo(() => selectedTableOrder?.lines || [], [selectedTableOrder?.id, selectedTableOrder?.lines]);
 
@@ -124,7 +225,7 @@ export default function ServicePage() {
     onSuccess: (updatedOrder) => {
       isSavingOrderRef.current = { savedOrder: updatedOrder };
       showToast('Commande mise à jour avec succès', 'success');
-      setShowOrderModal(false);
+      setShowOrderForm(false);
 
       // Toujours afficher les détails après sauvegarde
       setShowOrderDetail(true);
@@ -154,7 +255,7 @@ export default function ServicePage() {
   useEffect(() => {
     return navigationEvents.on('/service', () => {
       resetOrderLines();
-      setShowOrderModal(false);
+      setShowOrderForm(false);
       setShowOrderDetail(false);
       setShowPaymentView(false);
       setOrderCreatedFromStart(false);
@@ -181,7 +282,7 @@ export default function ServicePage() {
     cameFromDetailViewRef.current = false;
     setOrderCreatedFromStart(true);
     setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTable?.name || 'Table'}`);
-    setShowOrderModal(true);
+    setShowOrderForm(true);
   }, [selectedTableId, currentRoomOrders, selectedTable, currentRoom, showToast]);
 
   const handleTablePress = useCallback((table: Table | null) => {
@@ -203,17 +304,17 @@ export default function ServicePage() {
 
   // Reset quand l'ordre disparaît (ex: backend supprime l'ordre vide après suppression du dernier article)
   useEffect(() => {
-    if (showOrderDetail && !selectedTableOrder && !isSavingOrderRef.current) {
+    if (showOrderDetail && !selectedTableOrder && !isSavingOrderRef.current && !isReassigning) {
       setShowOrderDetail(false);
       setSelectedTable(null);
     }
-  }, [showOrderDetail, selectedTableOrder, setSelectedTable]);
+  }, [showOrderDetail, selectedTableOrder, setSelectedTable, isReassigning]);
 
   const handleSmartCloseOrderModal = useCallback(() => {
     orderLinesManager.reset();
     const cameFromDetail = cameFromDetailViewRef.current;
 
-    setShowOrderModal(false);
+    setShowOrderForm(false);
     setOrderCreatedFromStart(false);
 
     if (cameFromDetail) {
@@ -231,47 +332,8 @@ export default function ServicePage() {
     setShowOrderDetail(false);
     setOrderCreatedFromStart(false);
     setOrderModalTitle(`${currentRoom?.name || 'Salle'} - ${selectedTableOrder?.table?.name || selectedTable?.name || 'Table'}`);
-    setShowOrderModal(true);
+    setShowOrderForm(true);
   }, [selectedTableOrder, selectedTable, currentRoom]);
-
-  const handleReassignTable = useCallback(() => {
-    setReassignRoomId(currentRoom?.id || null);
-    setShowReassignModal(true);
-  }, [currentRoom]);
-
-  const reassignRoom = useMemo(() => {
-    if (!reassignRoomId) return null;
-    return rooms.find(room => room.id === reassignRoomId) || null;
-  }, [reassignRoomId, rooms]);
-
-  const reassignRoomTables = useMemo(() => {
-    if (!reassignRoomId) return [];
-    return enrichedTables.filter(table => {
-      if (table.roomId !== reassignRoomId) return false;
-      const hasOrder = table.orders && table.orders.length > 0;
-      return !hasOrder;
-    });
-  }, [reassignRoomId, enrichedTables]);
-
-  const handleReassignRoomChange = useCallback((room: any) => {
-    setReassignRoomId(room.id);
-  }, []);
-
-  const handleTableReassign = useCallback(async (table: Table | null) => {
-    if (!table || !selectedTableOrder || isReassigning) return;
-
-    setIsReassigning(true);
-    try {
-      await updateOrder(selectedTableOrder.id, { tableId: table.id });
-      setSelectedTable(table.id);
-      setShowReassignModal(false);
-      showToast('Table réassignée avec succès', 'success');
-    } catch (error) {
-      showToast('Erreur lors de la réassignation', 'error');
-    } finally {
-      setIsReassigning(false);
-    }
-  }, [selectedTableOrder, updateOrder, setSelectedTable, showToast, isReassigning]);
 
   const handlePayment = useCallback(() => {
     setShowPaymentView(true);
@@ -297,7 +359,8 @@ export default function ServicePage() {
   const handleCloseOrderDetail = useCallback(() => {
     setShowOrderDetail(false);
     setSelectedTable(null);
-  }, [setSelectedTable]);
+    setShowTerminateDialog(false);
+  }, [setSelectedTable, setShowTerminateDialog]);
 
   const navigateToRoomEdit = useCallback(() => {
     if (!currentRoom) return;
@@ -305,7 +368,6 @@ export default function ServicePage() {
   }, [currentRoom]);
 
   // Callbacks stabilisés pour les modals
-  const handleCloseReassignModal = useCallback(() => setShowReassignModal(false), []);
   const handleCloseDeleteDialog = useCallback(() => setShowDeleteDialog(false), [setShowDeleteDialog]);
   const handleCloseTerminateDialog = useCallback(() => setShowTerminateDialog(false), [setShowTerminateDialog]);
   const handleCloseClaimModal = useCallback(() => {
@@ -317,20 +379,8 @@ export default function ServicePage() {
     setItemsToServeData(null);
   }, [setShowServeConfirmModal, setItemsToServeData]);
 
-  const windowDimensions = useWindowDimensions();
-
   // Mesure du conteneur de la room pour le zoom auto-fill
   const { dimensions: roomContainerDimensions, onLayout: handleRoomContainerLayout } = useContainerLayout();
-
-  const reassignModalDimensions = useMemo(() => ({
-    width: Math.min(windowDimensions.width * 0.55, 600),
-    height: Math.min(windowDimensions.height * 0.7, 600),
-  }), [windowDimensions.width, windowDimensions.height]);
-
-  const reassignRoomContainerDimensions = useMemo(() => ({
-    width: Math.min(windowDimensions.width * 0.65, 660),
-    height: Math.min(windowDimensions.height * 0.55, 500),
-  }), [windowDimensions.width, windowDimensions.height]);
 
   const handleCreateFirstRoom = useCallback(() => {
     router.push('/(admin)/room/edition-mode?openCreate=1');
@@ -348,7 +398,7 @@ export default function ServicePage() {
           onTerminate={handleTerminateFromPayment}
         />
       ) : /* OrderLinesForm en pleine page - remplace tout le layout */
-      showOrderModal && (selectedTableOrder || orderCreatedFromStart) ? (
+      showOrderForm && (selectedTableOrder || orderCreatedFromStart) ? (
         <View style={styles.columnLayout}>
           {/* OrderLinesForm */}
           <View style={styles.flex1}>
@@ -375,11 +425,11 @@ export default function ServicePage() {
         <View style={styles.flex1}>
           <View style={styles.mainContentContainer}>
             {/* Header avec tabs des rooms */}
-            {activeRooms.length > 0 && !showOrderDetail && !showOrderModal && (
+            {activeRooms.length > 0 && !showOrderDetail && !showOrderForm && (
               <RoomTabsHeader
                 rooms={activeRooms}
                 currentRoomId={currentRoom?.id}
-                enrichedTables={enrichedTables}
+                orderCountByRoom={orderCountByRoom}
                 onRoomChange={handleChangeRoom}
                 onEditModePress={navigateToRoomEdit}
               />
@@ -394,30 +444,86 @@ export default function ServicePage() {
             ) : (
               <View style={styles.normalLayoutContainer}>
                 {showOrderDetail && selectedTableOrder ? (
-                  <View style={styles.columnLayout}>
-                    <OrderDetailHeader
-                      title={`Commande - ${selectedTableOrder.table?.name || 'Table'}`}
-                      onBack={handleCloseOrderDetail}
-                      onAddItem={handleEditOrder}
-                      onClaim={handleClaim}
-                      onServe={handleServe}
-                      hasDraftItems={hasDraftItems}
-                      hasReadyItems={hasReadyItems}
-                      onReassignTable={handleReassignTable}
-                      onPayment={handlePayment}
-                      onTerminate={handleTerminate}
-                      onDelete={handleDelete}
-                      orderStatus={selectedTableOrder.status}
-                    />
+                  <View style={styles.orderDetailLayout}>
+                    <SidePanel
+                      title=""
+                      hideCloseButton={true}
+                      hideHeader={true}
+                      width={width / 3}
+                    >
+                      <DraftReviewPanelContent
+                        title={`Commande - ${selectedTableOrder.table?.name || 'Table'}`}
+                        draftLines={selectedTableOrder.lines}
+                        itemTypes={allItemTypes}
+                        hideFooter={true}
+                        allowEditAll={true}
+                        onEdit={handleOpenStatusSelector}
+                        onEditGroup={handleOpenStatusSelectorGroup}
+                        onEditMenu={handleOpenMenuStatusSelector}
+                        onDelete={handleDeleteLineByIndex}
+                        onDeleteGroup={handleDeleteGroupByIndices}
+                        onCancel={showReassignInline ? () => setShowReassignInline(false) : handleCloseOrderDetail}
+                      />
+                    </SidePanel>
+                    {showReassignInline ? (
+                      <ReassignTablePanel
+                        rooms={activeRooms}
+                        reassignRoomId={reassignRoomId}
+                        enrichedTables={enrichedTables}
+                        reassignRoom={reassignRoom}
+                        reassignRoomTables={reassignRoomTables}
+                        currentTableId={selectedTableOrder?.tableId}
+                        isReassigning={isReassigning}
+                        onRoomChange={handleReassignRoomChange}
+                        onConfirm={handleTableReassign}
+                        onBack={() => setShowReassignInline(false)}
+                      />
+                    ) : (
+                      <OrderDetailActions
+                        onAddItem={handleEditOrder}
+                        onClaim={handleClaim}
+                        onServe={handleServe}
+                        hasDraftItems={hasDraftItems}
+                        hasReadyItems={hasReadyItems}
+                        onReassignTable={handleReassignTable}
+                        onPayment={handlePayment}
+                        onTerminate={handleTerminate}
+                        onDelete={handleDelete}
+                        order={selectedTableOrder}
+                      />
+                    )}
 
-                    <OrderDetailView
-                      order={selectedTableOrder}
-                      itemTypes={allItemTypes}
-                      onUpdateItemStatus={handleUpdateItemStatus}
-                      onUpdateMenuItemStatus={handleUpdateMenuItemStatus}
-                      onBulkUpdateStatus={handleBulkUpdateStatus}
-                      onDeleteOrderLine={handleDeleteLine}
-                      onDeleteMenuLine={handleDeleteLine}
+                    {/* Overlay Terminer */}
+                    {showTerminateDialog && (
+                      <View style={styles.confirmOverlay}>
+                        <View style={styles.overlayMessage}>
+                          <RNText style={styles.overlayMessageText}>Terminer cette commande ?</RNText>
+                        </View>
+                        <Pressable onPress={handleConfirmTerminate} style={styles.terminateConfirmBtn}>
+                          <RNText style={styles.confirmBtnText}>TERMINER</RNText>
+                        </Pressable>
+                        <Pressable onPress={handleCloseTerminateDialog} style={styles.cancelBtn}>
+                          <RNText style={styles.cancelBtnText}>ANNULER</RNText>
+                        </Pressable>
+                      </View>
+                    )}
+
+                    {/* Overlay Supprimer */}
+                    {showDeleteDialog && (
+                      <ConfirmDeleteOverlay
+                        onConfirm={handleConfirmDelete}
+                        onCancel={handleCloseDeleteDialog}
+                      />
+                    )}
+
+                    {/* Menu status modal */}
+                    <GroupStatusPickerModal
+                      isVisible={!!menuStatusData}
+                      onClose={handleCloseMenuStatus}
+                      onConfirm={handleConfirmMenuStatus}
+                      itemName={menuStatusData?.itemName || ''}
+                      max={menuStatusData?.orderLineItemIds.length || 1}
+                      currentStatus={menuStatusData?.currentStatus || Status.DRAFT}
                     />
                   </View>
                 ) : (
@@ -445,75 +551,27 @@ export default function ServicePage() {
         </View>
       )}
 
-      {/* Modals */}
-      <CustomModal
-        isVisible={showReassignModal}
-        onClose={handleCloseReassignModal}
-        width={reassignModalDimensions.width}
-        height={reassignModalDimensions.height}
-        title={isReassigning ? 'Assignation en cours...' : 'Sélectionner une table'}
-      >
-        <View style={styles.reassignModalContainer}>
-          <View style={styles.reassignTabsContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.reassignScrollContent}
-              nestedScrollEnabled={true}
-            >
-              {activeRooms.length === 0 ? (
-                <Text style={styles.emptyText}>Aucune room disponible</Text>
-              ) : (
-                activeRooms.map((room) => (
-                  <RoomBadgeItem
-                    key={room.id}
-                    room={room}
-                    isActive={room.id === reassignRoomId}
-                    enrichedTables={enrichedTables}
-                    onPress={handleReassignRoomChange}
-                  />
-                ))
-              )}
-            </ScrollView>
-          </View>
-
-          <View style={styles.reassignRoomContainer}>
-            <RoomComponent
-              tables={reassignRoomTables}
-              editionMode={false}
-              isLoading={isReassigning}
-              width={reassignRoom?.width}
-              height={reassignRoom?.height}
-              roomColor={reassignRoom?.color}
-              containerDimensions={reassignRoomContainerDimensions}
-              onTablePress={handleTableReassign}
-              onTableLongPress={handleTableReassign}
-              onTableUpdate={NOOP}
-            />
-          </View>
-        </View>
-      </CustomModal>
-
-      {selectedTableOrder && showDeleteDialog && (
-        <DeleteConfirmationModal
-          isVisible={showDeleteDialog}
-          onClose={handleCloseDeleteDialog}
-          onConfirm={handleConfirmDelete}
-          entityName={`de la table ${selectedTableOrder.table?.name || selectedTableOrder.table?.id || 'N/A'}`}
-          entityType="la commande"
+      {/* Modal de suppression groupée avec quantité */}
+      {deleteGroupData && (
+        <GroupDeletePickerModal
+          isVisible={!!deleteGroupData}
+          onClose={handleCloseDeleteGroup}
+          onConfirm={handleConfirmDeleteGroup}
+          itemName={deleteGroupData.itemName}
+          max={deleteGroupData.indices.length}
+          status={deleteGroupData.status}
         />
       )}
 
-      {selectedTableOrder && showTerminateDialog && (
-        <ConfirmationModal
-          isVisible={showTerminateDialog}
-          onClose={handleCloseTerminateDialog}
-          onConfirm={handleConfirmTerminate}
-          title="Terminer la commande"
-          message={`Voulez-vous vraiment terminer la commande de la table ${selectedTableOrder.table?.name || 'N/A'} ?`}
-          description="Cette action marquera tous les articles de la commande comme terminés. La commande disparaîtra de la vue service."
-          confirmText="Confirmer"
-          confirmVariant="default"
+      {/* Modal de statut groupé : quantité + statut en une seule modale */}
+      {statusGroupData && (
+        <GroupStatusPickerModal
+          isVisible={!!statusGroupData}
+          onClose={handleCloseStatusGroup}
+          onConfirm={handleConfirmGroupStatus}
+          itemName={statusGroupData.itemName}
+          max={statusGroupData.indices.length}
+          currentStatus={statusGroupData.currentStatus}
         />
       )}
 
@@ -546,6 +604,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'column',
   },
+  orderDetailLayout: {
+    flex: 1,
+    flexDirection: 'row',
+  },
   mainContentContainer: {
     flex: 1,
     height: '100%',
@@ -561,34 +623,102 @@ const styles = StyleSheet.create({
     zIndex: 1,
     elevation: 0,
   },
-  reassignModalContainer: {
-    flex: 1,
-    flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
-  },
-  reassignTabsContainer: {
-    height: 54,
-    backgroundColor: '#F9FAFB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    paddingVertical: 6,
-    zIndex: 10,
-    elevation: 2,
-    shadowColor: 'transparent',
-  },
-  reassignScrollContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-    flexDirection: 'row',
+  confirmOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
-    height: '100%',
+    justifyContent: 'center',
+    gap: 16,
+    zIndex: 50,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(1px)',
+        WebkitBackdropFilter: 'blur(1px)',
+      },
+    }),
+  } as any,
+  overlayMessage: {
+    marginBottom: 8,
   },
-  reassignRoomContainer: {
-    flex: 1,
-    zIndex: 1,
-    backgroundColor: '#FFFFFF',
+  overlayMessageText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2A2E33',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  } as any,
+  terminateConfirmBtn: {
+    minWidth: 200,
+    paddingVertical: 18,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    backgroundColor: '#2A2E33',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        boxShadow: '0 4px 20px -4px rgba(0, 0, 0, 0.2)',
+      },
+      android: { elevation: 8 },
+    }),
+  } as any,
+  deleteConfirmBtn: {
+    minWidth: 200,
+    paddingVertical: 18,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        boxShadow: '0 4px 20px -4px rgba(0, 0, 0, 0.2)',
+      },
+      android: { elevation: 8 },
+    }),
+  } as any,
+  confirmBtnDisabled: {
+    opacity: 0.4,
   },
-  emptyText: {
-    color: '#999',
+  confirmBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 1.5,
   },
+  cancelBtn: {
+    minWidth: 200,
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+    }),
+  } as any,
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  } as any,
 });

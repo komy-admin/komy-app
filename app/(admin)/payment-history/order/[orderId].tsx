@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, X, ChevronRight } from 'lucide-react-native'
@@ -11,7 +11,7 @@ import type { Payment } from '~/types/payment.types'
 export default function PaymentListScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>()
   const router = useRouter()
-  const { getPaymentsByOrder, loading } = usePayments()
+  const { getPaymentsByOrder } = usePayments()
   const [payments, setPayments] = useState<Payment[]>([])
 
   useEffect(() => {
@@ -66,15 +66,6 @@ export default function PaymentListScreen() {
 
   const handleViewPaymentDetail = (paymentId: string) => {
     router.push(`/payment-history/payment/${paymentId}`)
-  }
-
-  if (loading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-600">Chargement...</Text>
-      </View>
-    )
   }
 
   return (

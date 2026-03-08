@@ -81,6 +81,7 @@ export {
   getStatusText,
   getStatusColor,
   getStatusBackgroundColor,
+  getStatusTextColor,
   getBorderStyle,
   getPriorityItemTypeDetailsForStatus,
 } from './status.utils';

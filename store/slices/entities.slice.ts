@@ -3,6 +3,7 @@ import { Room } from '~/types/room.types';
 import { Table } from '~/types/table.types';
 import { Order } from '~/types/order.types';
 import { OrderLine, OrderLineItem } from '~/types/order-line.types';
+import { normalizeOrderLine } from '~/lib/order-line-utils';
 import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
@@ -152,15 +153,15 @@ const entitiesSlice = createSlice({
     // === ORDERS ===
     setOrders: (state, action: PayloadAction<{ orders: Order[]; roomId?: string }>) => {
       const { orders, roomId } = action.payload;
-      
+
       if (roomId) {
         // Filtrer par room si spécifié
         orders.forEach(order => {
           if (order.table?.roomId === roomId) {
             state.orders[order.id] = order;
-            // Normaliser les OrderLines
+            // Normaliser les OrderLines avec valeurs par défaut
             order.lines?.forEach(line => {
-              state.orderLines[line.id] = line;
+              state.orderLines[line.id] = normalizeOrderLine(line);
             });
           }
         });
@@ -169,36 +170,36 @@ const entitiesSlice = createSlice({
         state.orders = normalizeArray(orders);
         orders.forEach(order => {
           order.lines?.forEach(line => {
-            state.orderLines[line.id] = line;
+            state.orderLines[line.id] = normalizeOrderLine(line);
           });
         });
       }
     },
     setAllOrders: (state, action: PayloadAction<{ orders: Order[] }>) => {
       state.orders = normalizeArray(action.payload.orders);
-      // Normaliser les OrderLines
+      // Normaliser les OrderLines avec valeurs par défaut
       action.payload.orders.forEach(order => {
         order.lines?.forEach(line => {
-          state.orderLines[line.id] = line;
+          state.orderLines[line.id] = normalizeOrderLine(line);
         });
       });
     },
     createOrder: (state, action: PayloadAction<{ order: Order }>) => {
       const { order } = action.payload;
       state.orders[order.id] = order;
-      // Normaliser les OrderLines si présentes
+      // Normaliser les OrderLines si présentes avec valeurs par défaut pour les champs de paiement
       order.lines?.forEach(line => {
-        state.orderLines[line.id] = line;
+        state.orderLines[line.id] = normalizeOrderLine(line);
       });
     },
     updateOrder: (state, action: PayloadAction<{ order: Partial<Order> & { id: string } }>) => {
       const { order } = action.payload;
       if (state.orders[order.id]) {
         state.orders[order.id] = { ...state.orders[order.id], ...order };
-        // Mettre à jour les OrderLines si présentes
+        // Mettre à jour les OrderLines si présentes avec normalisation
         if (order.lines) {
           order.lines.forEach(line => {
-            state.orderLines[line.id] = line;
+            state.orderLines[line.id] = normalizeOrderLine(line);
           });
         }
       }
@@ -218,17 +219,21 @@ const entitiesSlice = createSlice({
     // === ORDER LINES ===
     createOrderLine: (state, action: PayloadAction<{ orderLine: OrderLine }>) => {
       const { orderLine } = action.payload;
-      state.orderLines[orderLine.id] = orderLine;
+      // Normalize to ensure payment fields have default values
+      state.orderLines[orderLine.id] = normalizeOrderLine(orderLine);
     },
     createOrderLinesBatch: (state, action: PayloadAction<{ orderLines: OrderLine[] }>) => {
       action.payload.orderLines.forEach(line => {
-        state.orderLines[line.id] = line;
+        // Normalize each line to ensure payment fields have default values
+        state.orderLines[line.id] = normalizeOrderLine(line);
       });
     },
     updateOrderLine: (state, action: PayloadAction<{ orderLine: Partial<OrderLine> & { id: string } }>) => {
       const { orderLine } = action.payload;
       if (state.orderLines[orderLine.id]) {
-        state.orderLines[orderLine.id] = { ...state.orderLines[orderLine.id], ...orderLine };
+        // Merge with existing data and normalize
+        const updated = { ...state.orderLines[orderLine.id], ...orderLine };
+        state.orderLines[orderLine.id] = normalizeOrderLine(updated);
       }
     },
     deleteOrderLine: (state, action: PayloadAction<{ orderLineId: string }>) => {

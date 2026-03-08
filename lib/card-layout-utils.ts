@@ -11,18 +11,12 @@ interface CardLayoutConfig {
 }
 
 /**
- * Calcule la largeur optimale des cartes pour remplir parfaitement l'espace disponible
+ * Calcule la largeur optimale des cartes pour remplir parfaitement l'espace disponible.
+ * Maximise le nombre de colonnes en acceptant de réduire la largeur jusqu'à 75% du min
+ * pour éviter les zones mortes (1 card trop large avec espace vide à droite).
  *
  * @param config - Configuration du layout
- * @returns Largeur calculée pour chaque carte
- *
- * @example
- * const cardWidth = calculateOptimalCardWidth({
- *   containerWidth: 1195,
- *   gap: 12,
- *   minCardWidth: 180,
- *   maxCardWidth: 240
- * });
+ * @returns Largeur calculée pour chaque carte (arrondie au pixel inférieur)
  */
 export const calculateOptimalCardWidth = ({
   containerWidth,
@@ -31,40 +25,33 @@ export const calculateOptimalCardWidth = ({
   minCardWidth = 180,
   maxCardWidth = 240,
 }: CardLayoutConfig): number => {
-  // Valeur par défaut si container pas encore mesuré
   if (containerWidth === 0) return 225;
 
-  // Largeur disponible après padding
   const availableWidth = containerWidth - padding;
+  const absoluteMin = minCardWidth * 0.75;
 
-  // Trouver le nombre optimal de colonnes
-  // On cherche le MAXIMUM de colonnes qui respecte MIN_CARD_WIDTH
-  let bestColumns = 1;
-  let foundValidConfig = false;
-
+  // Phase 1 : trouver le max de colonnes qui respecte le minimum absolu
+  let maxColumns = 1;
   for (let cols = 1; cols <= 10; cols++) {
-    const totalGaps = gap * (cols - 1);
-    const width = (availableWidth - totalGaps) / cols;
-
-    // Accepter si >= MIN et <= MAX
-    if (width >= minCardWidth && width <= maxCardWidth) {
-      bestColumns = cols;
-      foundValidConfig = true;
-    }
-    // Si on descend sous MIN, on arrête (on a trouvé le max)
-    else if (width < minCardWidth) {
+    const width = (availableWidth - gap * (cols - 1)) / cols;
+    if (width >= absoluteMin) {
+      maxColumns = cols;
+    } else {
       break;
     }
   }
 
-  // Si aucune configuration valide trouvée (zone morte entre 241-371px)
-  // et que la largeur dépasse maxCardWidth, forcer au moins 2 colonnes
-  if (!foundValidConfig && availableWidth > maxCardWidth) {
-    bestColumns = Math.max(2, Math.floor(availableWidth / minCardWidth));
+  // Phase 2 : parmi [1..maxColumns], préférer celui dans [minCardWidth, maxCardWidth]
+  // en partant du plus grand nombre de colonnes (meilleur remplissage)
+  let bestColumns = maxColumns;
+  for (let cols = maxColumns; cols >= 1; cols--) {
+    const width = (availableWidth - gap * (cols - 1)) / cols;
+    if (width >= minCardWidth && width <= maxCardWidth) {
+      bestColumns = cols;
+      break;
+    }
   }
 
-  // Calculer la largeur exacte pour remplir l'espace
-  // Note: borderWidth est inclus dans width en React Native (pas ajouté)
   const totalGaps = gap * (bestColumns - 1);
-  return (availableWidth - totalGaps) / bestColumns;
+  return Math.floor((availableWidth - totalGaps) / bestColumns);
 };

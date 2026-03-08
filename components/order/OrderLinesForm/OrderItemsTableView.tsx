@@ -1,15 +1,15 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 import { View, Pressable, StyleSheet, SectionList, Text as RNText } from 'react-native';
 import { Text } from '~/components/ui';
-import { Plus } from 'lucide-react-native';
+import { Plus, ListFilter } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
 import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
 import { formatPrice, getContrastColor } from '~/lib/utils';
 import { getMenuPrice } from '~/lib/color-utils';
-import { TableFilterButton } from './TableFilterTooltip';
 
+const MENU_COLOR = '#10B981';
 const ITEM_HEIGHT = 58;
 const SECTION_HEADER_HEIGHT = 38;
 
@@ -140,7 +140,6 @@ const MenuRow = memo<MenuRowProps>(({
   menu,
   onMenuAdd
 }) => {
-  const menuColor = '#6366F1';
   const handleAdd = useCallback(() => {
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
@@ -151,7 +150,7 @@ const MenuRow = memo<MenuRowProps>(({
       onPress={handleAdd}
     >
       <View style={styles.letterCell}>
-        <View style={[styles.letterCircle, { backgroundColor: menuColor }]}>
+        <View style={[styles.letterCircle, { backgroundColor: MENU_COLOR }]}>
           <RNText style={styles.menuLetterText}>
             {menu.name.charAt(0).toUpperCase()}
           </RNText>
@@ -191,7 +190,7 @@ const MenuRow = memo<MenuRowProps>(({
       </View>
 
       <View style={styles.actionCell}>
-        <View style={[styles.addButton, { backgroundColor: menuColor }]}>
+        <View style={[styles.addButton, { backgroundColor: MENU_COLOR }]}>
           <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
         </View>
       </View>
@@ -354,19 +353,21 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
       {/* Header de la table */}
       <View style={styles.header}>
         <View style={styles.filterCell}>
-          <TableFilterButton activeFiltersCount={0} />
+          <View style={styles.filterIcon}>
+            <ListFilter size={17} color="#2A2E33" strokeWidth={2.5} />
+          </View>
         </View>
         <View style={styles.nameCell}>
-          <Text style={styles.headerText}>Nom</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Nom</Text>
         </View>
         <View style={styles.priceCell}>
-          <Text style={styles.headerText}>Prix</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Prix</Text>
         </View>
         <View style={styles.tagsCell}>
-          <Text style={styles.headerText}>Tags</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Tags</Text>
         </View>
         <View style={styles.actionCell}>
-          <Text style={styles.headerText}>Action</Text>
+          <Text style={styles.headerText} numberOfLines={1}>Action</Text>
         </View>
       </View>
 
@@ -477,6 +478,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  filterIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   letterCell: {
     width: 64,
     padding: 16,
@@ -504,6 +515,7 @@ const styles = StyleSheet.create({
   nameCell: {
     flex: 3,
     padding: 16,
+    overflow: 'hidden',
   },
   nameText: {
     fontSize: 15,
@@ -520,6 +532,7 @@ const styles = StyleSheet.create({
   priceCell: {
     flex: 2,
     padding: 16,
+    overflow: 'hidden',
   },
   menuPriceCell: {
     paddingVertical: 8,
@@ -571,6 +584,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     alignItems: 'flex-end',
+    overflow: 'hidden',
   },
   addButton: {
     width: 38,
