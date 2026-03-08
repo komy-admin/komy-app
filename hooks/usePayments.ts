@@ -224,34 +224,6 @@ export const usePayments = () => {
   );
 
   /**
-   * Traite un remboursement
-   */
-  const processRefund = useCallback(
-    async (paymentId: string, amount?: number) => {
-      try {
-        const result = await paymentApi.refundPayment(paymentId, {
-          amount,
-          reason: "Remboursement demandé",
-        });
-
-        // Mettre à jour les deux paiements dans Redux
-        if (result.refundPayment) {
-          dispatch(entitiesActions.createPayment({ payment: result.refundPayment }));
-        }
-        if (result.originalPayment) {
-          dispatch(entitiesActions.updatePayment({ payment: result.originalPayment }));
-        }
-
-        return result;
-      } catch (error) {
-        console.error("Erreur lors du traitement du remboursement:", error);
-        throw error;
-      }
-    },
-    [dispatch],
-  );
-
-  /**
    * Effectue un remboursement total ou partiel
    */
   const refundPayment = useCallback(
@@ -315,7 +287,6 @@ export const usePayments = () => {
     updatePayment,
     deletePayment,
     refundPayment,
-    processRefund,
 
     // Query Operations
     getPaymentById,
