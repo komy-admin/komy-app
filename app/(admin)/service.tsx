@@ -101,6 +101,16 @@ export default function ServicePage() {
   const { deleteOrderLine, deleteOrderLines } = useOrderLines();
   const { showToast } = useToast();
 
+  const orderCountByRoom = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of enrichedTables) {
+      if (t.orders && t.orders.length > 0) {
+        map[t.roomId] = (map[t.roomId] || 0) + 1;
+      }
+    }
+    return map;
+  }, [enrichedTables]);
+
   // S'assurer que la currentRoom est active, sinon basculer sur la première active
   useEffect(() => {
     if (activeRooms.length > 0 && (!currentRoom || !currentRoom.isActive)) {
@@ -419,7 +429,7 @@ export default function ServicePage() {
               <RoomTabsHeader
                 rooms={activeRooms}
                 currentRoomId={currentRoom?.id}
-                enrichedTables={enrichedTables}
+                orderCountByRoom={orderCountByRoom}
                 onRoomChange={handleChangeRoom}
                 onEditModePress={navigateToRoomEdit}
               />

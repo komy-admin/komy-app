@@ -41,6 +41,16 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
     setContainerDimensions({ width, height });
   }, []);
 
+  const orderCountByRoom = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of enrichedTables) {
+      if (t.orders && t.orders.length > 0) {
+        map[t.roomId] = (map[t.roomId] || 0) + 1;
+      }
+    }
+    return map;
+  }, [enrichedTables]);
+
   // Tables occupées (avec commande) = disabled
   const disabledTableIds = useMemo(() => {
     const ids = new Set<string>();
@@ -94,7 +104,7 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
                 key={room.id}
                 room={room}
                 isActive={room.id === reassignRoomId}
-                enrichedTables={enrichedTables}
+                orderCount={orderCountByRoom[room.id] || 0}
                 onPress={handleRoomChange}
               />
             ))
@@ -188,15 +198,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   tabsContainer: {
-    height: 63.5,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   tabsScrollContent: {
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    height: '100%',
+    alignItems: 'flex-end',
   },
   roomContainer: {
     flex: 1,
