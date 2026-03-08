@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   menuBadge: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#10B981',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
