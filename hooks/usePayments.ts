@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { entitiesActions } from "~/store";
 import { selectAllPayments, selectAllPaymentAllocations } from "~/store/slices/entities.slice";
 import { Payment, PaymentAllocation } from "~/types/payment.types";
-import { OrderWithPayments } from "~/types/payment-history.types";
 import { paymentApi } from "~/api/payment.api";
 
 /**
@@ -230,24 +229,20 @@ export const usePayments = () => {
   const processRefund = useCallback(
     async (paymentId: string, amount?: number) => {
       try {
-        const refundPayment = await paymentApi.refundPayment(paymentId, {
+        const result = await paymentApi.refundPayment(paymentId, {
           amount,
           reason: "Remboursement demandé",
         });
 
-        // Ajouter le nouveau paiement de remboursement
-        dispatch(entitiesActions.createPayment({ payment: refundPayment }));
-
-        // Mise à jour des allocations si présentes
-        if (refundPayment.allocations) {
-          refundPayment.allocations.forEach(
-            (allocation: PaymentAllocation) => {
-              dispatch(entitiesActions.createPaymentAllocation({ paymentAllocation: allocation }));
-            },
-          );
+        // Mettre à jour les deux paiements dans Redux
+        if (result.refundPayment) {
+          dispatch(entitiesActions.createPayment({ payment: result.refundPayment }));
+        }
+        if (result.originalPayment) {
+          dispatch(entitiesActions.updatePayment({ payment: result.originalPayment }));
         }
 
-        return refundPayment;
+        return result;
       } catch (error) {
         console.error("Erreur lors du traitement du remboursement:", error);
         throw error;
