@@ -504,7 +504,17 @@ export default function ServicePage() {
                       />
                     )}
 
-                    {/* Overlay Terminer */}
+                    {/* Menu status modal */}
+                    <GroupStatusPickerModal
+                      isVisible={!!menuStatusData}
+                      onClose={handleCloseMenuStatus}
+                      onConfirm={handleConfirmMenuStatus}
+                      itemName={menuStatusData?.itemName || ''}
+                      max={menuStatusData?.orderLineItemIds.length || 1}
+                      currentStatus={menuStatusData?.currentStatus || Status.DRAFT}
+                    />
+
+                    {/* Overlays au niveau orderDetailLayout pour couvrir le SidePanel */}
                     {showTerminateDialog && (
                       <View style={styles.confirmOverlay}>
                         <View style={styles.overlayMessage}>
@@ -518,24 +528,12 @@ export default function ServicePage() {
                         </Pressable>
                       </View>
                     )}
-
-                    {/* Overlay Supprimer */}
                     {showDeleteDialog && (
                       <ConfirmDeleteOverlay
                         onConfirm={handleConfirmDelete}
                         onCancel={handleCloseDeleteDialog}
                       />
                     )}
-
-                    {/* Menu status modal */}
-                    <GroupStatusPickerModal
-                      isVisible={!!menuStatusData}
-                      onClose={handleCloseMenuStatus}
-                      onConfirm={handleConfirmMenuStatus}
-                      itemName={menuStatusData?.itemName || ''}
-                      max={menuStatusData?.orderLineItemIds.length || 1}
-                      currentStatus={menuStatusData?.currentStatus || Status.DRAFT}
-                    />
                   </View>
                 ) : (
                   <View style={styles.flex1} onLayout={handleRoomContainerLayout}>
@@ -644,7 +642,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    zIndex: 50,
+    zIndex: 200,
     ...Platform.select({
       web: {
         backdropFilter: 'blur(1px)',
