@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState, useCallback } from 'react';
+import React, { memo, useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text as RNText, Pressable, StyleSheet, Platform, TextInput, LayoutChangeEvent } from 'react-native';
 import {
   Send,
@@ -35,6 +35,7 @@ export interface OrderDetailActionsProps {
   onPayment: () => void;
   onTerminate: () => void;
   onDelete: () => void;
+  onNoteChange?: (note: string) => void;
   order: Order;
 }
 
@@ -111,8 +112,28 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
   onPayment,
   onTerminate,
   onDelete,
+  onNoteChange,
   order,
 }) => {
+  const [noteText, setNoteText] = useState(order.note ?? '');
+  const lastSavedNote = useRef(order.note ?? '');
+
+  useEffect(() => {
+    const incoming = order.note ?? '';
+    if (incoming !== lastSavedNote.current) {
+      setNoteText(incoming);
+      lastSavedNote.current = incoming;
+    }
+  }, [order.note]);
+
+  const handleNoteBlur = useCallback(() => {
+    const trimmed = noteText.trim();
+    const current = order.note ?? '';
+    if (trimmed !== current) {
+      lastSavedNote.current = trimmed;
+      onNoteChange?.(trimmed);
+    }
+  }, [noteText, order.note, onNoteChange]);
   const summary = useMemo(() => {
     const lines = order.lines || [];
     const totalItems = lines.reduce((count, l) => count + (l.type === 'MENU' && l.items ? l.items.length : 1), 0);
@@ -228,6 +249,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             placeholderTextColor="#C4C9D1"
             multiline
             textAlignVertical="top"
+            value={noteText}
+            onChangeText={setNoteText}
+            onBlur={handleNoteBlur}
           />
         </View>
       </View>

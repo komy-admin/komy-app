@@ -335,6 +335,16 @@ export default function ServicePage() {
     setShowOrderForm(true);
   }, [selectedTableOrder, selectedTable, currentRoom]);
 
+  const selectedOrderId = selectedTableOrder?.id;
+  const handleNoteChange = useCallback(async (note: string) => {
+    if (!selectedOrderId) return;
+    try {
+      await updateOrder(selectedOrderId, { note });
+    } catch (error) {
+      showToast('Erreur lors de la sauvegarde de la note', 'error');
+    }
+  }, [selectedOrderId, updateOrder, showToast]);
+
   const handlePayment = useCallback(() => {
     setShowPaymentView(true);
   }, []);
@@ -489,6 +499,7 @@ export default function ServicePage() {
                         onPayment={handlePayment}
                         onTerminate={handleTerminate}
                         onDelete={handleDelete}
+                        onNoteChange={handleNoteChange}
                         order={selectedTableOrder}
                       />
                     )}

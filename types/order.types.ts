@@ -13,6 +13,7 @@ export type Order = {
   status: Status;
   account: string;
   isClosed: boolean;
+  note?: string;
   createdAt: string;
   updatedAt: string;
 
