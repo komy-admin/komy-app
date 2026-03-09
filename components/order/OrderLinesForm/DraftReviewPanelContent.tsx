@@ -103,16 +103,23 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   }, []);
 
 
-  const isLineLocked = (line: OrderLine, hasAllocations: boolean): boolean => {
+  const isLineLocked = useCallback((line: OrderLine, hasAllocations: boolean): boolean => {
+    // En mode detail (allowEditAll), on permet l'édition de statut même pour les payés
+    if (allowEditAll) return false;
+    // Hors mode detail, les lignes payées/allouées sont verrouillées
     if (line.paymentStatus && line.paymentStatus !== 'unpaid') return true;
     if (hasAllocations) return true;
-    // En mode detail (allowEditAll), tout est éditable sauf les payés
-    if (allowEditAll) return false;
     // Sinon, vérifier le statut comme avant
     if (line.id.startsWith('draft-')) return false;
     const effectiveStatus = getOrderLineStatus(line);
     return effectiveStatus !== Status.DRAFT;
-  };
+  }, [allowEditAll]);
+
+  const isLineDeleteLocked = useCallback((line: OrderLine, hasAllocations: boolean): boolean => {
+    if (line.paymentStatus && line.paymentStatus !== 'unpaid') return true;
+    if (hasAllocations) return true;
+    return false;
+  }, []);
 
   // Expose cancel to parent via ref
   useEffect(() => {
@@ -242,6 +249,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
                         hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={isLineLocked(group.line, hasAllocations)}
+                        isDeleteLocked={isLineDeleteLocked(group.line, hasAllocations)}
                         paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
                         onEdit={onEdit}
@@ -276,7 +284,8 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         originalIndex={originalIndex}
                         isPendingDelete={pendingDeleteIndex === originalIndex}
                         hasPendingDelete={pendingDeleteIndex !== null}
-                        isLocked={hasAllocations}
+                        isLocked={isLineLocked(line, hasAllocations)}
+                        isDeleteLocked={isLineDeleteLocked(line, hasAllocations)}
                         paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
                         onEditMenu={onEditMenu}
@@ -360,29 +369,26 @@ const StatusBadgeInline: React.FC<{
   showLock: boolean;
 }> = React.memo(({ status, paymentStatus, showLock }) => {
   const s = (status || '') as Status;
+  const statusBg = getStatusColor(s);
+  const statusColor = getStatusTextColor(s);
+  const statusLabel = getStatusText(s);
 
-  let bg: string;
-  let color: string;
-  let label: string;
-
-  if (paymentStatus === 'paid') {
-    bg = '#FEF2F2';
-    color = '#EF4444';
-    label = 'Payé';
-  } else if (paymentStatus === 'partial') {
-    bg = '#FFF7ED';
-    color = '#EA580C';
-    label = 'Partiel';
-  } else {
-    bg = getStatusColor(s);
-    color = getStatusTextColor(s);
-    label = getStatusText(s);
-  }
+  const hasPaidBadge = paymentStatus === 'paid' || paymentStatus === 'partial';
+  const paidBg = paymentStatus === 'paid' ? '#FEF2F2' : '#FFF7ED';
+  const paidColor = paymentStatus === 'paid' ? '#EF4444' : '#EA580C';
+  const paidLabel = paymentStatus === 'paid' ? 'Payé' : 'Partiel';
 
   return (
-    <View style={[styles.statusBadge, { backgroundColor: bg }]}>
-      {showLock && <Lock size={11} color={color} strokeWidth={2.5} />}
-      <RNText style={[styles.statusBadgeText, { color }]}>{label}</RNText>
+    <View style={styles.statusBadgeRow}>
+      <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
+        <RNText style={[styles.statusBadgeText, { color: statusColor }]}>{statusLabel}</RNText>
+      </View>
+      {hasPaidBadge && (
+        <View style={[styles.statusBadge, { backgroundColor: paidBg }]}>
+          {showLock && <Lock size={11} color={paidColor} strokeWidth={2.5} />}
+          <RNText style={[styles.statusBadgeText, { color: paidColor }]}>{paidLabel}</RNText>
+        </View>
+      )}
     </View>
   );
 });
@@ -400,6 +406,7 @@ interface ReceiptItemRowProps {
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
   isLocked: boolean;
+  isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
   onEdit: (index: number) => void;
@@ -418,6 +425,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   isPendingDelete,
   hasPendingDelete,
   isLocked,
+  isDeleteLocked,
   paymentStatus,
   showStatusBadge,
   onEdit,
@@ -429,6 +437,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   const hasNote = line.note && line.note.trim().length > 0;
   const hasTags = line.tags && line.tags.length > 0;
   const itemName = line.item?.name || 'Article';
+  const canDelete = !isLocked && !isDeleteLocked;
 
   const handlePress = () => {
     if (isLocked) return;
@@ -452,14 +461,14 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
           <View style={styles.receiptDots} />
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(totalPrice)}</RNText>
           <View style={styles.rowActions}>
-            {(isLocked || showStatusBadge) && (
+            {(isLocked || isDeleteLocked || showStatusBadge) && (
               <StatusBadgeInline
                 status={line.status}
                 paymentStatus={paymentStatus}
-                showLock={isLocked}
+                showLock={isLocked || !!isDeleteLocked}
               />
             )}
-            {!isLocked && (
+            {canDelete && (
               <Pressable
                 onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex, originalIndices); }}
                 style={styles.trashButton}
@@ -508,6 +517,7 @@ interface ReceiptMenuRowProps {
   isPendingDelete: boolean;
   hasPendingDelete: boolean;
   isLocked: boolean;
+  isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
@@ -522,6 +532,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   isPendingDelete,
   hasPendingDelete,
   isLocked,
+  isDeleteLocked,
   paymentStatus,
   showStatusBadge,
   onEditMenu,
@@ -533,6 +544,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
 
   const hasNote = line.note && line.note.trim().length > 0;
   const menuName = line.menu.name || 'Menu';
+  const canDelete = !isLocked && !isDeleteLocked;
 
   const handlePress = () => {
     if (isLocked) return;
@@ -558,14 +570,14 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
           <View style={styles.receiptDots} />
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
           <View style={styles.rowActions}>
-            {(isLocked || showStatusBadge) && (
+            {(isLocked || isDeleteLocked || showStatusBadge) && (
               <StatusBadgeInline
                 status={getOrderLineStatus(line) || ''}
                 paymentStatus={paymentStatus}
-                showLock={isLocked}
+                showLock={isLocked || !!isDeleteLocked}
               />
             )}
-            {!isLocked && (
+            {canDelete && (
               <Pressable
                 onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
                 style={styles.trashButton}
@@ -818,6 +830,11 @@ const styles = StyleSheet.create({
   },
   lockedText: {
     opacity: 0.7,
+  },
+  statusBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   statusBadge: {
     flexDirection: 'row',
