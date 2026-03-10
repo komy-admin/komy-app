@@ -270,6 +270,14 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
+  async changePin(oldPin: string, newPin: string): Promise<{ message: string }> {
+    const { data } = await this.axiosInstance.post<{ message: string }>(
+      `${this.endpoint}/change-pin`,
+      { oldPin, newPin }
+    );
+    return data;
+  }
+
   logout(): void {
     this.removeToken();
     this.removeUserProfile()
@@ -285,7 +293,8 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         // Don't try to refresh on PIN-related endpoints or PIN errors
         const isPinEndpoint = originalRequest.url?.includes('/verify-pin') ||
                               originalRequest.url?.includes('/set-pin') ||
-                              originalRequest.url?.includes('/change-password');
+                              originalRequest.url?.includes('/change-password') ||
+                              originalRequest.url?.includes('/change-pin');
 
         // Don't refresh on PIN errors (401 with attemptsRemaining or PIN in message)
         const isPinError = error.response?.status === 401 &&

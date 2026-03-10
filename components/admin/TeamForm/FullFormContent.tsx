@@ -359,7 +359,7 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
               <Text style={styles.formLabel}>Téléphone</Text>
               <TextInput
                 value={formData.phone}
-                onChangeText={(text: string) => setFormData(prev => ({ ...prev, phone: text }))}
+                onChangeText={(text: string) => setFormData(prev => ({ ...prev, phone: text.replace(/[^+\d\s]/g, '') }))}
                 onBlur={() => markFieldAsTouched('phone')}
                 placeholder="Téléphone (optionnel)"
                 placeholderTextColor="#A0A0A0"

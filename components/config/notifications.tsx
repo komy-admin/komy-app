@@ -1,26 +1,95 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, TextInput, ScrollView, Switch, TouchableOpacity } from 'react-native';
-import { Clock, AlertTriangle, Save } from 'lucide-react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TextInput, ScrollView, Switch, TouchableOpacity, Pressable } from 'react-native';
+import { Clock, Check, Bell } from 'lucide-react-native';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
 
+type TabType = 'alerts';
+
 export default function NotificationsPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('alerts');
+  const [isCompactSidebar, setIsCompactSidebar] = useState(false);
+
   const {
     isAlertEnabled,
     alertValue,
     isLoading,
     error,
     updateConfig,
-    clearError
   } = useAccountConfig();
-  
+
   const { showToast } = useToast();
-  
+
+  const handleLayoutChange = useCallback((event: any) => {
+    const { width } = event.nativeEvent.layout;
+    setIsCompactSidebar(width < 700);
+  }, []);
+
+  return (
+    <View style={styles.container} onLayout={handleLayoutChange}>
+      <View style={styles.content}>
+        {/* Sidebar Navigation */}
+        <View style={[styles.sidebar, isCompactSidebar && styles.sidebarCompact]}>
+          <TouchableOpacity
+            style={[
+              styles.sidebarTab,
+              isCompactSidebar && styles.sidebarTabCompact,
+              activeTab === 'alerts' && styles.sidebarTabActive
+            ]}
+            onPress={() => setActiveTab('alerts')}
+            activeOpacity={1}
+          >
+            <Bell size={20} color={activeTab === 'alerts' ? '#6366F1' : '#64748B'} strokeWidth={2} />
+            {!isCompactSidebar && (
+              <Text style={[styles.sidebarTabText, activeTab === 'alerts' && styles.sidebarTabTextActive]}>
+                Alerte visuelle
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {activeTab === 'alerts' && (
+            <AlertsTab
+              isAlertEnabled={isAlertEnabled}
+              alertValue={alertValue}
+              isLoading={isLoading}
+              error={error}
+              updateConfig={updateConfig}
+            />
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// Alerts Tab
+interface AlertsTabProps {
+  isAlertEnabled: boolean;
+  alertValue: number;
+  isLoading: boolean;
+  error: string | null;
+  updateConfig: (updates: {
+    reminderNotificationsEnabled?: boolean;
+    reminderMinutes?: number;
+  }) => Promise<any>;
+}
+
+const AlertsTab: React.FC<AlertsTabProps> = ({
+  isAlertEnabled,
+  alertValue,
+  isLoading,
+  error,
+  updateConfig,
+}) => {
+  const { showToast } = useToast();
+
   const [localTimeValue, setLocalTimeValue] = useState<string>(alertValue.toString());
   const [localEnabled, setLocalEnabled] = useState<boolean>(isAlertEnabled);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
-  // Synchroniser l'état local avec la config
   useEffect(() => {
     setLocalTimeValue(alertValue.toString());
     setLocalEnabled(isAlertEnabled);
@@ -30,14 +99,11 @@ export default function NotificationsPage() {
   const handleTimeChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, '');
     setLocalTimeValue(numericValue);
-    
-    // Marquer comme ayant des changements
     const newTimeValue = parseInt(numericValue) || 0;
     setHasChanges(newTimeValue !== alertValue || localEnabled !== isAlertEnabled);
   };
 
   const handleToggleEnabled = (enabled: boolean) => {
-    
     setLocalEnabled(enabled);
     const newTimeValue = parseInt(localTimeValue) || 0;
     setHasChanges(enabled !== isAlertEnabled || newTimeValue !== alertValue);
@@ -45,9 +111,8 @@ export default function NotificationsPage() {
 
   const handleSaveChanges = async () => {
     if (!hasChanges) return;
-    
+
     try {
-      // Utiliser updateConfig directement au lieu de updateAlertTime
       await updateConfig({
         reminderNotificationsEnabled: localEnabled,
         reminderMinutes: parseInt(localTimeValue) || 15
@@ -60,249 +125,257 @@ export default function NotificationsPage() {
     }
   };
 
+  const timeValue = parseInt(localTimeValue) || 0;
+  const isValidTime = timeValue >= 2 && timeValue <= 60;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.blurOverlay}>
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Première rangée */}
-          <View style={styles.row}>
-            {/* Section Temps d'alerte - Fonctionnelle */}
-            <View style={styles.activeCard}>
-              {/* Header avec switch intégré */}
-              <View style={styles.cardHeader}>
-                <View style={styles.iconContainer}>
-                  <Clock size={20} color="#6366F1" strokeWidth={1.5} />
-                </View>
-                <View style={styles.headerContent}>
-                  <Text style={styles.cardTitle}>Alertes temporelles</Text>
-                  <Text style={styles.cardSubtitle}>Surveillance automatique</Text>
-                </View>
-                
-                {/* Switch pour activer/désactiver les alertes */}
-                <View style={styles.switchContainer}>
-                  <Switch
-                    value={localEnabled}
-                    onValueChange={handleToggleEnabled}
-                    trackColor={{ false: '#E2E8F0', true: '#6366F1' }}
-                    thumbColor={localEnabled ? '#FFFFFF' : '#94A3B8'}
-                    disabled={isLoading}
-                  />
-                </View>
-              </View>
-              
-              {/* Contenu conditionnel selon l'état du switch */}
-              {localEnabled ? (
-                <>
-                  {/* Description quand activé */}
-                  <View style={styles.infoContainer}>
-                    <View style={styles.infoIconContainer}>
-                      <AlertTriangle size={12} color="#6366F1" strokeWidth={1.5} />
-                    </View>
-                    <Text style={styles.infoText}>
-                      Déclenche une notification visuel lorsqu'une commande reste sans mise à jour 
-                      pendant une durée déterminée.
-                    </Text>
-                  </View>
-                  
-                  {/* Configuration */}
-                  <View style={styles.inputSection}>
-                    <Text style={styles.inputLabel}>Délai d'alerte</Text>
-                    <View style={styles.inputWrapper}>
-                      <TextInput
-                        style={[styles.timeInput, isLoading && styles.timeInputDisabled]}
-                        value={localTimeValue}
-                        onChangeText={handleTimeChange}
-                        placeholder="15"
-                        keyboardType="numeric"
-                        editable={!isLoading}
-                      />
-                      <Text style={styles.inputSuffix}>min</Text>
-                    </View>
-                    {localTimeValue && parseInt(localTimeValue) >= 2 && parseInt(localTimeValue) <= 60 && (
-                      <Text style={styles.previewText}>
-                        → Alerte déclenchée après {localTimeValue} minute{parseInt(localTimeValue) > 1 ? 's' : ''}
-                      </Text>
-                    )}
-                    {localTimeValue && (parseInt(localTimeValue) < 2 || parseInt(localTimeValue) > 60) && (
-                      <Text style={styles.errorText}>
-                        ⚠️ La valeur doit être entre 2 et 60 minutes
-                      </Text>
-                    )}
-                  </View>
-                  
-                </>
-              ) : (
-                /* Affichage quand désactivé */
-                <View style={styles.disabledContainer}>
-                  <Text style={styles.disabledText}>
-                    Les alertes temporelles sont désactivées
-                  </Text>
-                </View>
-              )}
-              
-              {/* Affichage d'erreur */}
-              {error && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-              
-              {/* Indicateur de chargement */}
-              {isLoading && (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Sauvegarde en cours...</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Espace pour future modale */}
-            {/* <View style={styles.activeCard}>
-              // Future config 2
-            </View> */}
-          </View>
-
-          {/* Futures rangées pour d'autres configurations */}
-          {/* <View style={styles.row}>
-            <View style={styles.activeCard}>
-              // Future config 3
-            </View>
-            <View style={styles.activeCard}>
-              // Future config 4
-            </View>
-          </View> */}
-          
-        </ScrollView>
-        
-        {/* Bouton de sauvegarde global en sticky */}
+    <View style={styles.tabContent}>
+      <View style={styles.tabHeader}>
+        <View>
+          <Text style={styles.tabTitle}>Alertes</Text>
+          <Text style={styles.tabSubtitle}>Configurer les alertes et rappels</Text>
+        </View>
         {hasChanges && (
-          <View style={styles.stickyButtonContainer}>
-            <TouchableOpacity
-              style={styles.globalSaveButton}
-              onPress={handleSaveChanges}
-              disabled={isLoading}
-            >
-              <Save size={18} color="#FFFFFF" strokeWidth={2} />
-              <Text style={styles.globalSaveButtonText}>
-                Enregistrer les modifications
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.createButton, { backgroundColor: '#10B981' }]}
+            onPress={handleSaveChanges}
+            disabled={isLoading}
+          >
+            <Check size={20} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.createButtonText}>Enregistrer</Text>
+          </TouchableOpacity>
         )}
       </View>
+
+      <ScrollView
+        style={styles.viewsScrollContainer}
+        contentContainerStyle={styles.viewsContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable style={styles.viewsCardsWrapper}>
+          {/* Alertes temporelles */}
+          <View style={styles.viewCard}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                <Clock size={24} color="#6366F1" strokeWidth={2} />
+              </View>
+              <View style={styles.viewCardContent}>
+                <Text style={styles.viewCardTitle}>Alerte Cuisine/Bar</Text>
+                <Text style={styles.viewCardDescription}>Surveillance automatique des commandes</Text>
+              </View>
+              <Switch
+                value={localEnabled}
+                onValueChange={handleToggleEnabled}
+                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                thumbColor={localEnabled ? '#FFFFFF' : '#F3F4F6'}
+                disabled={isLoading}
+              />
+            </View>
+
+            {/* Submenu - affiché seulement si activé */}
+            {localEnabled && (
+              <View style={styles.viewModeSection}>
+                <Text style={styles.helpText}>
+                  Notification visuelle lorsqu'une commande reste sans mise à jour pendant la durée configurée.
+                </Text>
+
+                {/* Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.viewModeTitle}>Délai d'alerte</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={[styles.textInput, isLoading && { opacity: 0.6 }]}
+                      value={localTimeValue}
+                      onChangeText={handleTimeChange}
+                      placeholder="15"
+                      keyboardType="numeric"
+                      editable={!isLoading}
+                    />
+                    <Text style={styles.inputSuffix}>min</Text>
+                  </View>
+                  {localTimeValue && isValidTime && (
+                    <Text style={styles.previewText}>
+                      Alerte après {localTimeValue} minute{timeValue > 1 ? 's' : ''} d'inactivité
+                    </Text>
+                  )}
+                  {localTimeValue && !isValidTime && timeValue > 0 && (
+                    <Text style={styles.errorText}>
+                      La valeur doit être entre 2 et 60 minutes
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {error && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+          </View>
+        </Pressable>
+      </ScrollView>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
-  },
-  blurOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(248, 250, 252, 0.9)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      },
-    }),
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-    paddingBottom: 100, // Espace pour le bouton sticky
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
-    gap: 20,
-    marginBottom: 20,
-    flexWrap: 'wrap',
-  },
-  activeCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    width: 400,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  cardSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#F8FAFC',
+  },
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+
+  // Sidebar
+  sidebar: {
+    width: 240,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+    padding: 16,
+    gap: 8,
+  },
+  sidebarCompact: {
+    width: 72,
+    padding: 8,
+  },
+  sidebarTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#6366F1',
+    gap: 12,
   },
-  infoIconContainer: {
-    width: 16,
-    height: 16,
+  sidebarTabCompact: {
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
+    padding: 14,
+    gap: 0,
   },
-  infoText: {
-    fontSize: 12,
-    color: '#475569',
-    lineHeight: 16,
+  sidebarTabActive: {
+    backgroundColor: '#F1F5F9',
+  },
+  sidebarTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  sidebarTabTextActive: {
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+
+  // Main content
+  mainContent: {
     flex: 1,
   },
-  inputSection: {
+  tabContent: {
+    flex: 1,
+    padding: 24,
+  },
+  tabHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  tabTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1E293B',
     marginBottom: 4,
   },
-  inputLabel: {
-    fontSize: 13,
+  tabSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  createButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
+    color: '#FFFFFF',
+  },
+
+  // ScrollView
+  viewsScrollContainer: {
+    flex: 1,
+  },
+  viewsContainer: {
+    paddingBottom: 24,
+  },
+  viewsCardsWrapper: {
+    gap: 16,
+  },
+
+  // Cards - même style que viewCard dans configuration.tsx
+  viewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  viewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  viewIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewCardContent: {
+    flex: 1,
+  },
+  viewCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  viewCardDescription: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+
+  // Submenu section (quand activé) - même pattern que viewModeSection
+  viewModeSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    gap: 16,
+  },
+  viewModeTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+
+  // Help text
+  helpText: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+
+  // Input
+  inputGroup: {
+    gap: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -314,149 +387,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  timeInput: {
+  textInput: {
     flex: 1,
     fontSize: 14,
     color: '#1F2937',
     padding: 0,
   },
   inputSuffix: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748B',
     fontWeight: '500',
     marginLeft: 8,
   },
   previewText: {
-    fontSize: 10,
-    color: '#6366F1',
-    marginTop: 6,
-    fontWeight: '500',
-    fontStyle: 'italic',
-  },
-  switchSection: {
-    marginBottom: 16,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  switchLabel: {
-    flex: 1,
-    marginRight: 12,
-  },
-  switchTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 2,
-  },
-  switchSubtitle: {
     fontSize: 12,
-    color: '#64748B',
-  },
-  timeInputDisabled: {
-    opacity: 0.6,
+    color: '#6366F1',
+    fontWeight: '500',
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#DC2626',
-    marginTop: 6,
     fontWeight: '500',
   },
-  errorContainer: {
-    backgroundColor: '#FEE2E2',
-    padding: 8,
-    borderRadius: 6,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  loadingContainer: {
-    backgroundColor: '#F3F4F6',
-    padding: 8,
-    borderRadius: 6,
-    marginTop: 8,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontStyle: 'italic',
-  },
-  disabledContainer: {
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-  },
-  disabledText: {
-    fontSize: 13,
-    color: '#64748B',
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  switchContainer: {
-    alignItems: 'center',
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6366F1',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    padding: 12,
     borderRadius: 8,
     marginTop: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  stickyButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 16, // Safe area pour iOS
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.8)',
-  },
-  globalSaveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6366F1',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  globalSaveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 10,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
 });

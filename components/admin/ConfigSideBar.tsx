@@ -34,9 +34,9 @@ const ProfileAvatar = memo(({
 
 const CONFIG_ITEMS = [
   { id: 'dashboard', Icon: Database, label: 'Dashboard', color: '#3B82F6' },
-  { id: 'profile', Icon: User, label: 'Profil', color: '#10B981' },
+  { id: 'profile', Icon: User, label: 'Mon compte', color: '#10B981' },
   { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
-  { id: 'configuration', Icon: Settings, label: 'Paramètre du restaurant', color: '#A855F7' },
+  { id: 'configuration', Icon: Settings, label: 'Configuration', color: '#A855F7' },
 ];
 
 // Configuration des breakpoints de hauteur - Extraite pour performance
