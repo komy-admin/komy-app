@@ -347,9 +347,15 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
-  logout(): void {
-    this.removeToken();
-    this.removeUserProfile()
+  async logout(): Promise<void> {
+    try {
+      await this.axiosInstance.post(`${this.endpoint}/logout`);
+    } catch {
+      // Server-side cleanup failed — proceed with local cleanup
+    } finally {
+      await this.removeToken();
+      await this.removeUserProfile();
+    }
   }
 
   private setupAuthInterceptor(): void {
@@ -365,7 +371,8 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
                               originalRequest.url?.includes('/change-password') ||
                               originalRequest.url?.includes('/change-pin') ||
                               originalRequest.url?.includes('/verify-login-2fa') ||
-                              originalRequest.url?.includes('/send-login-2fa-email');
+                              originalRequest.url?.includes('/send-login-2fa-email') ||
+                              originalRequest.url?.includes('/auth/logout');
 
         // Don't refresh on PIN errors (401 with attemptsRemaining or PIN in message)
         const isPinError = error.response?.status === 401 &&
@@ -397,7 +404,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
           if (errorCode === 'DEVICE_REVOKED') {
             const { store } = await import('~/store');
             const { logout: logoutAction } = await import('~/store/slices/session.slice');
-            this.logout();
+            await this.logout();
             store.dispatch(logoutAction());
             return Promise.reject(error);
           }
@@ -414,7 +421,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
             return this.axiosInstance(originalRequest);
           } catch (refreshError) {
             // Let the UI handle logout
-            this.logout();
+            await this.logout();
             return Promise.reject(refreshError);
           }
         }
