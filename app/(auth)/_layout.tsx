@@ -18,6 +18,13 @@ export default function AuthLayout() {
           }}
         />
         <Stack.Screen
+          name="device-verification"
+          options={{
+            title: 'Device Verification',
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
           name="pin-verification"
           options={{
             title: 'PIN Verification',

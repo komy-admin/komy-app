@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo, memo } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform, Alert, Dimensions, ImageSourcePropType } from 'react-native';
-import { User, Bell, LogOut, PenTool, Database, Settings } from 'lucide-react-native';
+import { User, Bell, LogOut, PenTool, Database, Settings, ShieldCheck } from 'lucide-react-native';
 import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
 
-type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration';
+type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
 
 // Composant Avatar mémorisé pour éviter les reloads d'image sur resize
 const ProfileAvatar = memo(({
@@ -36,6 +36,7 @@ const CONFIG_ITEMS = [
   { id: 'dashboard', Icon: Database, label: 'Dashboard', color: '#3B82F6' },
   { id: 'profile', Icon: User, label: 'Mon compte', color: '#10B981' },
   { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
+  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: '#06B6D4' },
   { id: 'configuration', Icon: Settings, label: 'Configuration', color: '#A855F7' },
 ];
 

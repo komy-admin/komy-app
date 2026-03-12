@@ -11,6 +11,9 @@ import type {
   LoginResponse,
   PinVerificationResponse,
   PinErrorResponse,
+  Setup2FAResponse,
+  Enable2FAResponse,
+  TrustedDevice,
 } from '~/types/auth.types';
 import { User, UserProfile } from '~/types/user.types';
 
@@ -278,6 +281,72 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
+  // Login 2FA methods (unauthenticated, use loginToken)
+  async verifyLogin2FA(code: string, loginToken: string, via?: 'totp' | 'email'): Promise<LoginResponse> {
+    const { data } = await this.axiosInstance.post<LoginResponse>(
+      `${this.endpoint}/verify-login-2fa`,
+      { code, via },
+      { headers: { 'X-Login-Token': loginToken } }
+    );
+    return data;
+  }
+
+  async sendLogin2FAEmail(loginToken: string): Promise<{ message: string }> {
+    const { data } = await this.axiosInstance.post<{ message: string }>(
+      `${this.endpoint}/send-login-2fa-email`,
+      {},
+      { headers: { 'X-Login-Token': loginToken } }
+    );
+    return data;
+  }
+
+  // Trusted devices methods
+  async getDevices(): Promise<TrustedDevice[]> {
+    const { data } = await this.axiosInstance.get<TrustedDevice[]>(
+      `${this.endpoint}/devices`
+    );
+    return data;
+  }
+
+  async revokeDevice(id: string): Promise<{ message: string }> {
+    const { data } = await this.axiosInstance.delete<{ message: string }>(
+      `${this.endpoint}/devices/${id}`
+    );
+    return data;
+  }
+
+  // Device trust (account-level) methods
+  async setupDeviceTrust(method: 'totp' | 'email'): Promise<Setup2FAResponse> {
+    const { data } = await this.axiosInstance.post<Setup2FAResponse>(
+      '/account-config/device-trust/setup',
+      { method }
+    );
+    return data;
+  }
+
+  async verifyAndEnableDeviceTrust(method: 'totp' | 'email', code: string): Promise<Enable2FAResponse> {
+    const { data } = await this.axiosInstance.post<Enable2FAResponse>(
+      '/account-config/device-trust/verify-setup',
+      { method, code }
+    );
+    return data;
+  }
+
+  async disableDeviceTrust(method: 'totp' | 'email', code: string, verifyVia?: 'totp' | 'email'): Promise<{ message: string; enabled: boolean; totp: boolean; email: boolean }> {
+    const { data } = await this.axiosInstance.post<{ message: string; enabled: boolean; totp: boolean; email: boolean }>(
+      '/account-config/device-trust/disable',
+      { method, code, verifyVia }
+    );
+    return data;
+  }
+
+  async sendDeviceTrustEmailCode(): Promise<{ message: string }> {
+    const { data } = await this.axiosInstance.post<{ message: string }>(
+      '/account-config/device-trust/send-email'
+    );
+    return data;
+  }
+
   logout(): void {
     this.removeToken();
     this.removeUserProfile()
@@ -290,11 +359,13 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         const originalRequest = error.config;
         const errorCode = error.response?.data?.code;
 
-        // Don't try to refresh on PIN-related endpoints or PIN errors
+        // Don't try to refresh on PIN-related or login 2FA endpoints
         const isPinEndpoint = originalRequest.url?.includes('/verify-pin') ||
                               originalRequest.url?.includes('/set-pin') ||
                               originalRequest.url?.includes('/change-password') ||
-                              originalRequest.url?.includes('/change-pin');
+                              originalRequest.url?.includes('/change-pin') ||
+                              originalRequest.url?.includes('/verify-login-2fa') ||
+                              originalRequest.url?.includes('/send-login-2fa-email');
 
         // Don't refresh on PIN errors (401 with attemptsRemaining or PIN in message)
         const isPinError = error.response?.status === 401 &&
@@ -319,6 +390,15 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
           // Auth token invalid - need full re-login
           if (errorCode === 'AUTH_TOKEN_INVALID' || errorCode === 'AUTH_TOKEN_MISSING') {
             // The UI will handle redirecting to login
+            return Promise.reject(error);
+          }
+
+          // Device revoked - force full logout (clear authToken + Redux state)
+          if (errorCode === 'DEVICE_REVOKED') {
+            const { store } = await import('~/store');
+            const { logout: logoutAction } = await import('~/store/slices/session.slice');
+            this.logout();
+            store.dispatch(logoutAction());
             return Promise.reject(error);
           }
 

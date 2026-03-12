@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import { Platform } from "react-native";
 import { StorageInterface, storageService } from "~/lib/storageService";
+import { getDeviceId } from "~/lib/deviceId";
 import { store } from "~/store";
 import { logout } from "~/store";
 
@@ -26,6 +27,12 @@ export abstract class BaseApiService<T> {
 
     this.axiosInstance.interceptors.request.use(
       async (config) => {
+        // Add device ID to all requests
+        const deviceId = await getDeviceId();
+        if (config.headers) {
+          config.headers['X-Device-Id'] = deviceId;
+        }
+
         // Define endpoint whitelists for robust matching
         const AUTH_ENDPOINTS = [
           '/auth/login',
@@ -33,7 +40,9 @@ export abstract class BaseApiService<T> {
           '/auth/forgot-password',
           '/auth/reset-password',
           '/auth/qr-login',
-          '/auth/setup-account'
+          '/auth/setup-account',
+          '/auth/verify-login-2fa',
+          '/auth/send-login-2fa-email',
         ];
 
         const PIN_ENDPOINTS = [

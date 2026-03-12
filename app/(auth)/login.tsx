@@ -20,16 +20,18 @@ export default function LoginScreen() {
       // Use SessionService to handle login with dual token system
       const response = await sessionService.login(loginId, password);
 
+      // If 2FA is required, navigate to device verification screen
+      if (response.requiresTwoFactor) {
+        router.push('/device-verification');
+        return;
+      }
+
       // New dual token system: login returns authToken and requirePin or requirePinSetup
       if (response.requirePin || response.requirePinSetup) {
-        // authToken is already stored by SessionService
-        // Navigate to PIN screen (will handle both verification and setup)
         router.push('/pin-verification');
         return;
       }
 
-      // This shouldn't happen according to the new spec
-      // All users should have PIN requirement
       showToast('Erreur de configuration. Contactez un administrateur.', 'error');
     } catch (error: any) {
       showToast(`Échec de connexion: ${error.message || error}`, 'error');
@@ -132,6 +134,7 @@ export default function LoginScreen() {
           onCancel={() => setShowQrScanner(false)}
         />
       </Modal>
+
     </>
   );
 }

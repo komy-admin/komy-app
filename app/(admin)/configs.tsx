@@ -5,11 +5,12 @@ import ProfilePage from '~/components/config/profile';
 import NotificationsPage from '~/components/config/notifications';
 import DashboardPage from '~/components/config/dashboard';
 import ConfigurationRestoPage from '@/components/config/configuration';
+import SecurityPage from '~/components/config/security';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
 
-type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration';
+type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
 
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
@@ -42,6 +43,8 @@ export default function ConfigPage() {
         return <NotificationsPage/>;
       case 'dashboard':
         return <DashboardPage/>;
+      case 'security':
+        return <SecurityPage/>;
       case 'configuration':
         return <ConfigurationRestoPage/>;
       default:

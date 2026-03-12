@@ -157,6 +157,11 @@ function AuthenticationGate() {
       return;
     }
 
+    // Device verification: loginToken required (no authToken yet)
+    if (fullPath === '/(auth)/device-verification') {
+      return;
+    }
+
     // PIN verification: authToken required, AppInitializer handles redirect after init
     if (fullPath === '/(auth)/pin-verification') {
       if (!authToken) {

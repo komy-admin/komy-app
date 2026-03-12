@@ -43,10 +43,20 @@ class SessionService {
   /**
    * Handle login with email/password
    * Stores authToken and sets up for PIN verification
+   * If 2FA required on new device, dispatches login2FA state
    */
   async login(loginId: string, password: string): Promise<LoginResponse> {
     try {
       const response = await authApiService.login({ loginId, password });
+
+      // Check if 2FA is required for this device
+      if (response.requiresTwoFactor && response.loginToken) {
+        store.dispatch(sessionActions.setLogin2FARequired({
+          loginToken: response.loginToken,
+          methods: response.twoFactorMethods || { totp: false, email: false },
+        }));
+        return response;
+      }
 
       // Store the long-lived authToken
       if (response.authToken) {
@@ -67,7 +77,48 @@ class SessionService {
         }
       }
 
-      return response as LoginResponse;
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Verify 2FA code during login flow
+   * Called after login returns requiresTwoFactor
+   */
+  async verifyLogin2FA(code: string, via?: 'totp' | 'email'): Promise<LoginResponse> {
+    try {
+      const state = store.getState();
+      const loginToken = state.session.loginToken;
+
+      if (!loginToken) {
+        throw new Error('No login token available');
+      }
+
+      const response = await authApiService.verifyLogin2FA(code, loginToken, via);
+
+      // Clear 2FA state
+      store.dispatch(sessionActions.clearLogin2FAState());
+
+      // Continue normal login flow (same as login success)
+      if (response.authToken) {
+        await storageService.setItem('authToken', response.authToken);
+
+        store.dispatch(sessionActions.setAuthToken({
+          authToken: response.authToken,
+          requirePin: response.requirePin || false
+        }));
+
+        if (response.requirePinSetup) {
+          store.dispatch(sessionActions.setPinRequired({
+            requirePin: false,
+            requirePinSetup: true
+          }));
+        }
+      }
+
+      return response;
     } catch (error) {
       throw error;
     }

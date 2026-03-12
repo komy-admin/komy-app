@@ -102,7 +102,9 @@ export const useAppInit = () => {
           kitchenEnabled: accountConfig.kitchenEnabled,
           barEnabled: accountConfig.barEnabled,
           kitchenViewMode: accountConfig.kitchenViewMode,
-          barViewMode: accountConfig.barViewMode
+          barViewMode: accountConfig.barViewMode,
+          deviceTrustEnabled: accountConfig.deviceTrustEnabled ?? false,
+          deviceTrustMethod: accountConfig.deviceTrustMethod ?? null
         }));
         updateProgress('accountConfig', true);
       } catch (error) {

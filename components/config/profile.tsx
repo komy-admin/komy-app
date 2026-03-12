@@ -38,7 +38,7 @@ export default function ProfilePage() {
             onPress={() => setActiveTab('info')}
             activeOpacity={1}
           >
-            <User size={20} color={activeTab === 'info' ? '#10B981' : '#64748B'} strokeWidth={2} />
+            <User size={20} color={activeTab === 'info' ? '#11B981' : '#64748B'} strokeWidth={2} />
             {!isCompactSidebar && (
               <Text style={[styles.sidebarTabText, activeTab === 'info' && styles.sidebarTabTextActive]}>
                 Informations
@@ -79,6 +79,7 @@ export default function ProfilePage() {
               </Text>
             )}
           </TouchableOpacity>
+
         </View>
 
         {/* Main Content */}
@@ -205,7 +206,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: '#10B981' },
+            { backgroundColor: '#11B981' },
             (!hasChanges || isSaving || hasValidationErrors()) && styles.createButtonDisabled
           ]}
           onPress={handleSave}
@@ -226,7 +227,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                <User size={24} color="#10B981" strokeWidth={2} />
+                <User size={24} color="#11B981" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Identité</Text>

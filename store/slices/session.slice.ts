@@ -16,6 +16,9 @@ interface AccountConfigPayload {
   // View modes
   kitchenViewMode: ViewMode;
   barViewMode: ViewMode;
+  // Device trust
+  deviceTrustEnabled: boolean;
+  deviceTrustMethod: string | null;
 }
 
 // Utilitaire pour les timestamps
@@ -40,6 +43,11 @@ export interface SessionState {
   requiresPinSetup: boolean;
   temporaryToken: string | null;
   isPinVerified: boolean;
+
+  // Login 2FA
+  requiresLogin2FA: boolean;
+  loginToken: string | null;
+  login2FAMethods: { totp: boolean; email: boolean } | null;
 
   // Navigation
   currentRoomId: string | null;
@@ -73,6 +81,8 @@ export interface SessionState {
     barEnabled: boolean;
     kitchenViewMode: ViewMode;
     barViewMode: ViewMode;
+    deviceTrustEnabled: boolean;
+    deviceTrustMethod: string | null;
   } | null;
   overdueOrderIds: string[];
   overdueOrderItemIds: string[];
@@ -116,6 +126,11 @@ const initialState: SessionState = {
   requiresPinSetup: false,
   temporaryToken: null,
   isPinVerified: false,
+
+  // Login 2FA
+  requiresLogin2FA: false,
+  loginToken: null,
+  login2FAMethods: null,
 
   // Navigation
   currentRoomId: null,
@@ -273,6 +288,23 @@ const sessionSlice = createSlice({
       state.requiresPinSetup = false;
       state.temporaryToken = null;
       state.isPinVerified = false;
+    },
+
+    // === LOGIN 2FA ===
+    setLogin2FARequired: (state, action: PayloadAction<{
+      loginToken: string;
+      methods: { totp: boolean; email: boolean };
+    }>) => {
+      state.requiresLogin2FA = true;
+      state.loginToken = action.payload.loginToken;
+      state.login2FAMethods = action.payload.methods;
+      state.isLoggingIn = false;
+    },
+
+    clearLogin2FAState: (state) => {
+      state.requiresLogin2FA = false;
+      state.loginToken = null;
+      state.login2FAMethods = null;
     },
 
     // === NAVIGATION ===
@@ -466,6 +498,11 @@ export const selectRequiresPin = (state: RootState) => state.session.requiresPin
 export const selectRequiresPinSetup = (state: RootState) => state.session.requiresPinSetup;
 export const selectTemporaryToken = (state: RootState) => state.session.temporaryToken;
 export const selectIsPinVerified = (state: RootState) => state.session.isPinVerified;
+
+// Login 2FA selectors
+export const selectRequiresLogin2FA = (state: RootState) => state.session.requiresLogin2FA;
+export const selectLoginToken = (state: RootState) => state.session.loginToken;
+export const selectLogin2FAMethods = (state: RootState) => state.session.login2FAMethods;
 
 // Alias pour compatibilité
 export const selectIsConnected = selectIsWebSocketConnected;
