@@ -11,9 +11,9 @@ export type AccountConfig = {
   // View modes
   kitchenViewMode: ViewMode;
   barViewMode: ViewMode;
-  // Device trust
-  deviceTrustEnabled: boolean;
-  deviceTrustMethod: string | null;
+  // 2FA
+  twoFactorEnabled: boolean;
+  twoFactorMethod: string | null;
   createdAt: string;
   updatedAt: string;
 };

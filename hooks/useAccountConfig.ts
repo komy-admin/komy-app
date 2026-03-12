@@ -31,8 +31,8 @@ export const useAccountConfig = () => {
         // View modes avec valeurs par défaut si absents
         kitchenViewMode: accountConfig.kitchenViewMode || 'tickets',
         barViewMode: accountConfig.barViewMode || 'tickets',
-        deviceTrustEnabled: accountConfig.deviceTrustEnabled ?? false,
-        deviceTrustMethod: accountConfig.deviceTrustMethod ?? null,
+        twoFactorEnabled: accountConfig.twoFactorEnabled ?? false,
+        twoFactorMethod: accountConfig.twoFactorMethod ?? null,
       }));
       return accountConfig;
     } catch (err) {
@@ -74,8 +74,8 @@ export const useAccountConfig = () => {
         barEnabled: updatedConfig.barEnabled,
         kitchenViewMode: updatedConfig.kitchenViewMode || 'tickets',
         barViewMode: updatedConfig.barViewMode || 'tickets',
-        deviceTrustEnabled: updatedConfig.deviceTrustEnabled ?? false,
-        deviceTrustMethod: updatedConfig.deviceTrustMethod ?? null,
+        twoFactorEnabled: updatedConfig.twoFactorEnabled ?? false,
+        twoFactorMethod: updatedConfig.twoFactorMethod ?? null,
       }));
       return updatedConfig;
     } catch (err) {

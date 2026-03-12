@@ -16,9 +16,9 @@ interface AccountConfigPayload {
   // View modes
   kitchenViewMode: ViewMode;
   barViewMode: ViewMode;
-  // Device trust
-  deviceTrustEnabled: boolean;
-  deviceTrustMethod: string | null;
+  // 2FA
+  twoFactorEnabled: boolean;
+  twoFactorMethod: string | null;
 }
 
 // Utilitaire pour les timestamps
@@ -81,8 +81,8 @@ export interface SessionState {
     barEnabled: boolean;
     kitchenViewMode: ViewMode;
     barViewMode: ViewMode;
-    deviceTrustEnabled: boolean;
-    deviceTrustMethod: string | null;
+    twoFactorEnabled: boolean;
+    twoFactorMethod: string | null;
   } | null;
   overdueOrderIds: string[];
   overdueOrderItemIds: string[];

@@ -50,7 +50,7 @@ export function TwoFactorModal({
       if (onSendEmail) {
         await onSendEmail();
       } else {
-        await authApiService.sendDeviceTrustEmailCode();
+        await authApiService.sendTwoFactorEmailCode();
       }
       setEmailCooldown(60);
     } catch {

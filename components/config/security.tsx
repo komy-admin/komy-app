@@ -67,7 +67,7 @@ export default function SecurityPage() {
         {/* Main Content */}
         <View style={styles.mainContent}>
           {activeTab === '2fa-account' && (
-            <DeviceTrustTab showToast={showToast} />
+            <TwoFactorTab showToast={showToast} />
           )}
           {activeTab === 'devices' && (
             <AccountDevicesTab showToast={showToast} />
@@ -79,29 +79,29 @@ export default function SecurityPage() {
 }
 
 // ====================================================================
-// Device Trust 2FA Tab (account-level)
+// Two-Factor Authentication Tab (account-level)
 // ====================================================================
 
-interface DeviceTrustTabProps {
+interface TwoFactorTabProps {
   showToast: (message: string, type?: ToastType) => void;
 }
 
-type DeviceTrustSetup = { method: 'totp' | 'email'; qrCodeUrl?: string; secret?: string } | null;
+type TwoFactorSetup = { method: 'totp' | 'email'; qrCodeUrl?: string; secret?: string } | null;
 type DisablingMethod = 'totp' | 'email' | null;
 
-const DeviceTrustTab: React.FC<DeviceTrustTabProps> = ({ showToast }) => {
+const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
   const { config, loadConfig } = useAccountConfig();
 
-  // Derive totp/email status from accountConfig.deviceTrustMethod in Redux
-  const deviceTrustMethod = config?.deviceTrustMethod ?? null;
+  // Derive totp/email status from accountConfig.twoFactorMethod in Redux
+  const twoFactorMethod = config?.twoFactorMethod ?? null;
   const status = {
-    enabled: config?.deviceTrustEnabled ?? false,
-    totp: deviceTrustMethod === 'totp' || deviceTrustMethod === 'both',
-    email: deviceTrustMethod === 'email' || deviceTrustMethod === 'both',
+    enabled: config?.twoFactorEnabled ?? false,
+    totp: twoFactorMethod === 'totp' || twoFactorMethod === 'both',
+    email: twoFactorMethod === 'email' || twoFactorMethod === 'both',
   };
 
   const [isLoading, setIsLoading] = useState(false);
-  const [setup, setSetup] = useState<DeviceTrustSetup>(null);
+  const [setup, setSetup] = useState<TwoFactorSetup>(null);
   const [verifyCode, setVerifyCode] = useState('');
   const [disablingMethod, setDisablingMethod] = useState<DisablingMethod>(null);
   const [disableVia, setDisableVia] = useState<'totp' | 'email'>('totp');
@@ -113,7 +113,7 @@ const DeviceTrustTab: React.FC<DeviceTrustTabProps> = ({ showToast }) => {
   const handleSetup = async (method: 'totp' | 'email') => {
     setIsLoading(true);
     try {
-      const res = await authApiService.setupDeviceTrust(method);
+      const res = await authApiService.setupTwoFactor(method);
       if (method === 'totp') {
         setSetup({ method: 'totp', qrCodeUrl: res.qrCodeUrl, secret: res.secret });
       } else {
@@ -131,11 +131,11 @@ const DeviceTrustTab: React.FC<DeviceTrustTabProps> = ({ showToast }) => {
     if (!setup || verifyCode.length !== 6) return;
     setIsLoading(true);
     try {
-      await authApiService.verifyAndEnableDeviceTrust(setup.method, verifyCode);
+      await authApiService.verifyAndEnableTwoFactor(setup.method, verifyCode);
       await loadConfig();
       setSetup(null);
       setVerifyCode('');
-      showToast(`${setup.method === 'totp' ? 'TOTP' : 'Email'} activé pour la protection appareils`, 'success');
+      showToast(`${setup.method === 'totp' ? 'TOTP' : 'Email'} activé pour la 2FA`, 'success');
     } catch (error: any) {
       showToast(error?.response?.data?.message || 'Code invalide', 'error');
       setVerifyCode('');
@@ -148,11 +148,11 @@ const DeviceTrustTab: React.FC<DeviceTrustTabProps> = ({ showToast }) => {
     if (!disablingMethod || disableCode.length !== 6) return;
     setIsDisabling(true);
     try {
-      await authApiService.disableDeviceTrust(disablingMethod, disableCode, disableVia);
+      await authApiService.disableTwoFactor(disablingMethod, disableCode, disableVia);
       setDisableCode('');
       setDisablingMethod(null);
       await loadConfig();
-      showToast(`${disablingMethod === 'totp' ? 'TOTP' : 'Email'} désactivé pour la protection appareils`, 'success');
+      showToast(`${disablingMethod === 'totp' ? 'TOTP' : 'Email'} désactivé pour la 2FA`, 'success');
     } catch (error: any) {
       showToast(error?.response?.data?.message || 'Code invalide', 'error');
       setDisableCode('');
@@ -170,7 +170,7 @@ const DeviceTrustTab: React.FC<DeviceTrustTabProps> = ({ showToast }) => {
   const handleSendEmailCode = async () => {
     setIsSendingEmail(true);
     try {
-      await authApiService.sendDeviceTrustEmailCode();
+      await authApiService.sendTwoFactorEmailCode();
       setEmailCooldown(30);
       showToast('Code envoyé par email', 'success');
     } catch {

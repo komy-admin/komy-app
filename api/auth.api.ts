@@ -315,34 +315,34 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
-  // Device trust (account-level) methods
-  async setupDeviceTrust(method: 'totp' | 'email'): Promise<Setup2FAResponse> {
+  // Two-Factor Authentication (account-level) methods
+  async setupTwoFactor(method: 'totp' | 'email'): Promise<Setup2FAResponse> {
     const { data } = await this.axiosInstance.post<Setup2FAResponse>(
-      '/account-config/device-trust/setup',
+      '/account-config/two-factor/setup',
       { method }
     );
     return data;
   }
 
-  async verifyAndEnableDeviceTrust(method: 'totp' | 'email', code: string): Promise<Enable2FAResponse> {
+  async verifyAndEnableTwoFactor(method: 'totp' | 'email', code: string): Promise<Enable2FAResponse> {
     const { data } = await this.axiosInstance.post<Enable2FAResponse>(
-      '/account-config/device-trust/verify-setup',
+      '/account-config/two-factor/verify-setup',
       { method, code }
     );
     return data;
   }
 
-  async disableDeviceTrust(method: 'totp' | 'email', code: string, verifyVia?: 'totp' | 'email'): Promise<{ message: string; enabled: boolean; totp: boolean; email: boolean }> {
+  async disableTwoFactor(method: 'totp' | 'email', code: string, verifyVia?: 'totp' | 'email'): Promise<{ message: string; enabled: boolean; totp: boolean; email: boolean }> {
     const { data } = await this.axiosInstance.post<{ message: string; enabled: boolean; totp: boolean; email: boolean }>(
-      '/account-config/device-trust/disable',
+      '/account-config/two-factor/disable',
       { method, code, verifyVia }
     );
     return data;
   }
 
-  async sendDeviceTrustEmailCode(): Promise<{ message: string }> {
+  async sendTwoFactorEmailCode(): Promise<{ message: string }> {
     const { data } = await this.axiosInstance.post<{ message: string }>(
-      '/account-config/device-trust/send-email'
+      '/account-config/two-factor/send-email'
     );
     return data;
   }
