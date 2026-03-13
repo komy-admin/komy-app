@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from "axios";
 import { Platform } from "react-native";
 import { StorageInterface, storageService } from "~/lib/storageService";
 import { getDeviceId } from "~/lib/deviceId";
+import { getDeviceInfoJson } from "~/lib/deviceInfo";
 import { store } from "~/store";
 import { logout } from "~/store";
 
@@ -27,10 +28,11 @@ export abstract class BaseApiService<T> {
 
     this.axiosInstance.interceptors.request.use(
       async (config) => {
-        // Add device ID to all requests
+        // Add device ID and device info to all requests
         const deviceId = await getDeviceId();
         if (config.headers) {
           config.headers['X-Device-Id'] = deviceId;
+          config.headers['X-Device-Info'] = getDeviceInfoJson();
         }
 
         // Define endpoint whitelists for robust matching
