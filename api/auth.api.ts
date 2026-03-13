@@ -363,6 +363,12 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
+
+        // No config = network error (no request was sent) — bail out immediately
+        if (!originalRequest) {
+          return Promise.reject(error);
+        }
+
         const errorCode = error.response?.data?.code;
 
         // Don't try to refresh on PIN-related or login 2FA endpoints

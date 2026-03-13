@@ -34,7 +34,8 @@ export default function LoginScreen() {
 
       showToast('Erreur de configuration. Contactez un administrateur.', 'error');
     } catch (error: any) {
-      showToast(`Échec de connexion: ${error.message || error}`, 'error');
+      const message = error.response?.data?.message || 'Erreur serveur, veuillez réessayer.';
+      showToast(`Échec de connexion : ${message}`, 'error');
     }
   };
 
