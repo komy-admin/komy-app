@@ -809,14 +809,13 @@ const devicesStyles = StyleSheet.create({
   },
   currentTag: {
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderWidth: 1,
-    borderColor: '#10B981',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    width: 100,
+    alignItems: 'center' as const,
   },
   currentTagText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: '#10B981',
   },
@@ -827,9 +826,10 @@ const devicesStyles = StyleSheet.create({
   },
   revokeButton: {
     backgroundColor: '#FEE2E2',
-    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
+    width: 100,
+    alignItems: 'center' as const,
   },
   revokeButtonDisabled: {
     opacity: 0.5,
