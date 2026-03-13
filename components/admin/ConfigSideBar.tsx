@@ -36,7 +36,7 @@ const CONFIG_ITEMS = [
   { id: 'dashboard', Icon: Database, label: 'Dashboard', color: '#3B82F6' },
   { id: 'profile', Icon: User, label: 'Mon compte', color: '#10B981' },
   { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
-  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: '#06B6D4' },
+  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: '#475569' },
   { id: 'configuration', Icon: Settings, label: 'Configuration', color: '#A855F7' },
 ];
 

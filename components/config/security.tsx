@@ -38,10 +38,10 @@ export default function SecurityPage() {
             onPress={() => setActiveTab('2fa-account')}
             activeOpacity={1}
           >
-            <ShieldCheck size={20} color={activeTab === '2fa-account' ? '#06B6D4' : '#64748B'} strokeWidth={2} />
+            <ShieldCheck size={20} color={activeTab === '2fa-account' ? '#475569' : '#64748B'} strokeWidth={2} />
             {!isCompactSidebar && (
               <Text style={[styles.sidebarTabText, activeTab === '2fa-account' && styles.sidebarTabTextActive]}>
-                2FA Compte
+                2FA
               </Text>
             )}
           </TouchableOpacity>
@@ -55,7 +55,7 @@ export default function SecurityPage() {
             onPress={() => setActiveTab('devices')}
             activeOpacity={1}
           >
-            <Monitor size={20} color={activeTab === 'devices' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
+            <Monitor size={20} color={activeTab === 'devices' ? '#475569' : '#64748B'} strokeWidth={2} />
             {!isCompactSidebar && (
               <Text style={[styles.sidebarTabText, activeTab === 'devices' && styles.sidebarTabTextActive]}>
                 Appareils
@@ -346,8 +346,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* TOTP Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(6, 182, 212, 0.1)' }]}>
-                <Smartphone size={24} color="#06B6D4" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(71, 85, 105, 0.08)' }]}>
+                <Smartphone size={24} color="#475569" strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -394,8 +394,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* Email Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(6, 182, 212, 0.1)' }]}>
-                <Mail size={24} color="#06B6D4" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(71, 85, 105, 0.08)' }]}>
+                <Mail size={24} color="#475569" strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -492,9 +492,9 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
     switch (platform) {
       case 'ios':
       case 'android':
-        return <Smartphone size={20} color="#3B82F6" strokeWidth={2} />;
+        return <Smartphone size={20} color="#475569" strokeWidth={2} />;
       default:
-        return <Monitor size={20} color="#3B82F6" strokeWidth={2} />;
+        return <Monitor size={20} color="#475569" strokeWidth={2} />;
     }
   };
 
@@ -535,10 +535,10 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
 
       <ScrollView
         style={styles.viewsScrollContainer}
-        contentContainerStyle={styles.viewsContainer}
+        contentContainerStyle={[styles.viewsContainer, devices.length === 0 && { flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.viewsCardsWrapper}>
+        <View style={[styles.viewsCardsWrapper, devices.length === 0 && { flex: 1 }]}>
           {isLoading ? (
             <View style={devicesStyles.emptyState}>
               <Text style={devicesStyles.emptyText}>Chargement...</Text>
@@ -546,9 +546,9 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
           ) : devices.length === 0 ? (
             <View style={devicesStyles.emptyState}>
               <Monitor size={40} color="#CBD5E1" strokeWidth={1.5} />
-              <Text style={devicesStyles.emptyText}>Aucun appareil de confiance</Text>
+              <Text style={devicesStyles.emptyText}>Aucun appareil de confiance enregistré</Text>
               <Text style={devicesStyles.emptySubtext}>
-                Les appareils seront ajoutés après vérification 2FA
+                Les appareils seront ajoutés automatiquement{'\n'}après <Text style={devicesStyles.emptyBold}>vérification 2FA</Text>
               </Text>
             </View>
           ) : (
@@ -562,16 +562,9 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
                       {getPlatformIcon(device.devicePlatform)}
                     </View>
                     <View style={devicesStyles.deviceInfo}>
-                      <View style={devicesStyles.deviceNameRow}>
-                        <Text style={devicesStyles.deviceName}>
-                          {device.deviceName || 'Appareil inconnu'}
-                        </Text>
-                        {isCurrentDevice && (
-                          <View style={devicesStyles.currentBadge}>
-                            <Text style={devicesStyles.currentBadgeText}>Cet appareil</Text>
-                          </View>
-                        )}
-                      </View>
+                      <Text style={devicesStyles.deviceName}>
+                        {device.deviceName || 'Appareil inconnu'}
+                      </Text>
                       {userLabel && (
                         <Text style={devicesStyles.deviceUser}>{userLabel}</Text>
                       )}
@@ -580,7 +573,11 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
                         {formatDate(device.lastUsedAt)}
                       </Text>
                     </View>
-                    {!isCurrentDevice && (
+                    {isCurrentDevice ? (
+                      <View style={devicesStyles.currentTag}>
+                        <Text style={devicesStyles.currentTagText}>Cet appareil</Text>
+                      </View>
+                    ) : (
                       <TouchableOpacity
                         style={[devicesStyles.revokeButton, revokingId === device.id && devicesStyles.revokeButtonDisabled]}
                         onPress={() => handleRevoke(device.id)}
@@ -644,7 +641,7 @@ const twoFaStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: '#06B6D4',
+    borderColor: '#10B981',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -653,11 +650,11 @@ const twoFaStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#06B6D4',
+    backgroundColor: '#10B981',
   },
   activeBadgeText: {
     fontSize: 12,
-    color: '#06B6D4',
+    color: '#10B981',
     fontWeight: '600',
   },
   inactiveBadge: {
@@ -682,7 +679,7 @@ const twoFaStyles = StyleSheet.create({
     fontWeight: '600',
   },
   enableButton: {
-    backgroundColor: '#06B6D4',
+    backgroundColor: '#475569',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -695,7 +692,7 @@ const twoFaStyles = StyleSheet.create({
     fontWeight: '600',
   },
   verifyButton: {
-    backgroundColor: '#06B6D4',
+    backgroundColor: '#475569',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -734,7 +731,7 @@ const twoFaStyles = StyleSheet.create({
   },
   sendEmailLinkText: {
     fontSize: 13,
-    color: '#06B6D4',
+    color: '#475569',
     fontWeight: '500',
   },
   switchMethodLink: {
@@ -752,9 +749,9 @@ const twoFaStyles = StyleSheet.create({
 
 const devicesStyles = StyleSheet.create({
   emptyState: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
     gap: 8,
   },
   emptyText: {
@@ -766,6 +763,11 @@ const devicesStyles = StyleSheet.create({
     fontSize: 13,
     color: '#CBD5E1',
     textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyBold: {
+    fontWeight: '700',
+    color: '#94A3B8',
   },
   deviceCard: {
     backgroundColor: '#FFFFFF',
@@ -775,8 +777,8 @@ const devicesStyles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   deviceCardCurrent: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#F0F9FF',
+    borderColor: '#475569',
+    backgroundColor: '#F3F4F6',
   },
   deviceRow: {
     flexDirection: 'row',
@@ -787,17 +789,12 @@ const devicesStyles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
   deviceInfo: {
     flex: 1,
-  },
-  deviceNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   deviceName: {
     fontSize: 15,
@@ -806,20 +803,22 @@ const devicesStyles = StyleSheet.create({
   },
   deviceUser: {
     fontSize: 13,
-    color: '#06B6D4',
+    color: '#64748B',
     fontWeight: '500',
     marginTop: 2,
   },
-  currentBadge: {
-    backgroundColor: '#3B82F6',
+  currentTag: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: '#10B981',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  currentBadgeText: {
+  currentTagText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#10B981',
   },
   deviceMeta: {
     fontSize: 13,
