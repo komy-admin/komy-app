@@ -6,7 +6,7 @@ import {
   Text as RNText,
   Pressable,
 } from 'react-native';
-import { Button, Text, PinInput } from '~/components/ui';
+import { PinInput } from '~/components/ui';
 import type { PinInputRef } from '~/components/ui';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions, selectRequiresPin, selectRequiresPinSetup, selectCurrentUser, selectAuthToken } from '~/store';
@@ -200,27 +200,27 @@ export default function PinVerificationScreen() {
             <RNText style={styles.title}>
               {isSetupMode ? 'Créer votre code PIN' : 'Entrez votre code PIN'}
             </RNText>
-            <Text style={styles.subtitle}>
+            <RNText style={styles.subtitle}>
               {isSetupMode
                 ? 'Créez un code PIN à 4 chiffres pour sécuriser votre compte'
                 : 'Entrez votre code PIN pour continuer'}
-            </Text>
+            </RNText>
           </View>
 
           {/* Lock indicator when account is locked */}
           {isLocked && (
             <View style={styles.lockedContainer}>
               <Lock size={48} color="#DC2626" />
-              <Text style={styles.lockedTitle}>
+              <RNText style={styles.lockedTitle}>
                 Compte temporairement verrouillé
-              </Text>
-              <Text style={styles.lockedCountdown}>
+              </RNText>
+              <RNText style={styles.lockedCountdown}>
                 Réessayez dans: {formatCountdown(countdown)}
-              </Text>
-              <Text style={styles.lockedHint}>
+              </RNText>
+              <RNText style={styles.lockedHint}>
                 Trop de tentatives incorrectes.
                 Le délai augmente après chaque série d'échecs.
-              </Text>
+              </RNText>
             </View>
           )}
 
@@ -240,31 +240,30 @@ export default function PinVerificationScreen() {
           {/* Error message with attempts */}
           {error && !isLocked && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
+              <RNText style={styles.errorText}>
                 {attemptsRemaining !== null && attemptsRemaining >= 0
                   ? `Code PIN incorrect\n${attemptsRemaining} essai${attemptsRemaining > 1 ? 's' : ''} restant${attemptsRemaining > 1 ? 's' : ''}`
                   : 'Code PIN incorrect'}
-              </Text>
+              </RNText>
             </View>
           )}
 
           <View style={styles.buttonContainer}>
-            <Button
-              variant="outline"
+            <Pressable
               onPress={handleCancel}
               disabled={isLoading}
-              style={styles.cancelButton}
+              style={[styles.cancelButton, isLoading && { opacity: 0.5 }]}
             >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </Button>
+              <RNText style={styles.cancelButtonText}>Annuler</RNText>
+            </Pressable>
 
             {!isSetupMode && !isLocked && (
               <View style={styles.forgotPinContainer}>
                 <Link href="/forgot-credentials?type=pin" asChild>
                   <Pressable>
-                    <Text style={styles.forgotPinText}>
+                    <RNText style={styles.forgotPinText}>
                       PIN oublié ?
-                    </Text>
+                    </RNText>
                   </Pressable>
                 </Link>
               </View>
@@ -273,9 +272,9 @@ export default function PinVerificationScreen() {
 
           {isSetupMode && (
             <View style={styles.infoContainer}>
-              <Text style={styles.infoText}>
+              <RNText style={styles.infoText}>
                 ℹ️ Mémorisez bien ce code PIN. Il vous sera demandé à chaque connexion.
-              </Text>
+              </RNText>
             </View>
           )}
         </View>

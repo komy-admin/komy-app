@@ -1,5 +1,4 @@
-import { View, StyleSheet, Modal, Image, Platform } from 'react-native';
-import { Button, Text, TextInput } from '~/components/ui';
+import { View, StyleSheet, Modal, Image, Platform, Text as RNText, TextInput as RNTextInput, Pressable } from 'react-native';
 import { useState } from 'react';
 import { sessionService } from '~/services/SessionService';
 import { Link, useRouter } from 'expo-router';
@@ -71,19 +70,18 @@ export default function LoginScreen() {
             />
 
             <View style={styles.qrButtonContainer}>
-              <Button
-                variant="outline"
+              <Pressable
                 style={styles.qrButton}
                 onPress={() => setShowQrScanner(true)}
               >
                 <View style={styles.qrButtonContent}>
                   <QrCode size={20} color="#1F2937" strokeWidth={2} />
-                  <Text style={styles.qrButtonText}>Connexion via QR code</Text>
+                  <RNText style={styles.qrButtonText}>Connexion via QR code</RNText>
                 </View>
-              </Button>
+              </Pressable>
             </View>
 
-            <TextInput
+            <RNTextInput
               id="LoginId"
               value={loginId}
               onChangeText={setLoginId}
@@ -95,7 +93,7 @@ export default function LoginScreen() {
               returnKeyType="next"
             />
 
-            <TextInput
+            <RNTextInput
               id="LoginPassword"
               value={password}
               onChangeText={setPassword}
@@ -111,15 +109,15 @@ export default function LoginScreen() {
 
             <View style={styles.forgotPasswordContainer}>
               <Link href="/forgot-credentials?type=password" asChild>
-                <Text style={styles.forgotPasswordText}>
+                <RNText style={styles.forgotPasswordText}>
                   Mot de passe oublié ?
-                </Text>
+                </RNText>
               </Link>
             </View>
 
-            <Button variant="default" onPress={handleLogin} style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>Se connecter</Text>
-            </Button>
+            <Pressable onPress={handleLogin} style={styles.loginButton}>
+              <RNText style={styles.loginButtonText}>Se connecter</RNText>
+            </Pressable>
           </View>
         </View>
       </AuthScreenLayout>
@@ -203,9 +201,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#1F2937',
     ...Platform.select({
-      web: {
-        fontSize: 18,
-      },
       default: {
         textAlignVertical: 'center',
       },

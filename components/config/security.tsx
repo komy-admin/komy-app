@@ -558,7 +558,7 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
               return (
                 <View key={device.id} style={[devicesStyles.deviceCard, isCurrentDevice && devicesStyles.deviceCardCurrent]}>
                   <View style={devicesStyles.deviceRow}>
-                    <View style={devicesStyles.deviceIconWrapper}>
+                    <View style={[devicesStyles.deviceIconWrapper, isCurrentDevice && devicesStyles.deviceIconWrapperCurrent]}>
                       {getPlatformIcon(device.devicePlatform)}
                     </View>
                     <View style={devicesStyles.deviceInfo}>
@@ -792,6 +792,9 @@ const devicesStyles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  deviceIconWrapperCurrent: {
+    backgroundColor: '#FFFFFF',
   },
   deviceInfo: {
     flex: 1,

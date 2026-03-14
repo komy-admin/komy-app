@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
   Text as RNText,
+  Pressable,
 } from 'react-native';
-import { Text, PinInput } from '~/components/ui';
+import { PinInput } from '~/components/ui';
 import { useSelector } from 'react-redux';
 import { RootState, store } from '~/store';
 import { sessionActions } from '~/store/slices/session.slice';
@@ -13,7 +13,7 @@ import { sessionService } from '~/services/SessionService';
 import { authApiService } from '~/api/auth.api';
 import { useRouter } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
-import { ShieldCheck } from 'lucide-react-native';
+import { ShieldAlert } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 export default function DeviceVerificationScreen() {
@@ -121,47 +121,47 @@ export default function DeviceVerificationScreen() {
       <View style={styles.fullWrapper}>
         <View style={styles.contentContainer}>
           <View style={styles.iconContainer}>
-            <ShieldCheck size={48} color="#1F2937" strokeWidth={1.5} />
+            <ShieldAlert size={60} color="#1F2937" strokeWidth={1.5} />
           </View>
 
           <View style={styles.headerContainer}>
             <RNText style={styles.title}>Nouvel appareil détecté</RNText>
-            <Text style={styles.subtitle}>
+            <RNText style={styles.subtitle}>
               {activeMethod === 'totp'
                 ? 'Entrez le code à 6 chiffres depuis l\'application d\'authentification de l\'administrateur.'
                 : 'Demandez le code à 6 chiffres envoyé par email à l\'administrateur.'}
-            </Text>
+            </RNText>
           </View>
 
           {/* Method selector when both are active */}
           {hasBoth && (
             <View style={styles.methodSelector}>
-              <TouchableOpacity
+              <Pressable
                 style={[styles.methodTab, activeMethod === 'totp' && styles.methodTabActive]}
                 onPress={() => { setActiveMethod('totp'); setCode(''); setError(false); }}
               >
-                <Text style={[styles.methodTabText, activeMethod === 'totp' && styles.methodTabTextActive]}>Application</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                <RNText style={[styles.methodTabText, activeMethod === 'totp' && styles.methodTabTextActive]}>Application</RNText>
+              </Pressable>
+              <Pressable
                 style={[styles.methodTab, activeMethod === 'email' && styles.methodTabActive]}
                 onPress={() => { setActiveMethod('email'); setCode(''); setError(false); }}
               >
-                <Text style={[styles.methodTabText, activeMethod === 'email' && styles.methodTabTextActive]}>Email</Text>
-              </TouchableOpacity>
+                <RNText style={[styles.methodTabText, activeMethod === 'email' && styles.methodTabTextActive]}>Email</RNText>
+              </Pressable>
             </View>
           )}
 
           {/* Send email button */}
           {activeMethod === 'email' && (
-            <TouchableOpacity
-              style={[styles.sendEmailButton, (emailCooldown > 0 || isSendingEmail) && styles.sendEmailButtonDisabled]}
+            <Pressable
+              style={[styles.sendEmailButton, (emailCooldown > 0 || isSendingEmail) && styles.buttonDisabled]}
               onPress={handleSendEmailCode}
               disabled={emailCooldown > 0 || isSendingEmail}
             >
               <RNText style={styles.sendEmailButtonText}>
                 {isSendingEmail ? 'Envoi...' : emailCooldown > 0 ? `Renvoyer (${emailCooldown}s)` : 'Envoyer le code'}
               </RNText>
-            </TouchableOpacity>
+            </Pressable>
           )}
 
           {/* PIN Input */}
@@ -181,29 +181,29 @@ export default function DeviceVerificationScreen() {
           {/* Error message */}
           {error && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>Code invalide. Veuillez réessayer.</Text>
+              <RNText style={styles.errorText}>Code invalide. Veuillez réessayer.</RNText>
             </View>
           )}
 
           {/* Verify button */}
-          <TouchableOpacity
-            style={[styles.verifyButton, (code.length !== 6 || isLoading) && styles.verifyButtonDisabled]}
+          <Pressable
+            style={[styles.primaryButton, (code.length !== 6 || isLoading) && styles.primaryButtonDisabled]}
             onPress={() => handleVerify(code)}
             disabled={code.length !== 6 || isLoading}
           >
-            <RNText style={styles.verifyButtonText}>
-              {isLoading ? 'Vérification...' : 'Vérifier'}
+            <RNText style={styles.primaryButtonText}>
+              {isLoading ? 'Vérification...' : 'Confirmer'}
             </RNText>
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Cancel button */}
-          <TouchableOpacity
-            style={styles.cancelButton}
+          <Pressable
+            style={[styles.cancelButton, isLoading && styles.buttonDisabled]}
             onPress={handleCancel}
             disabled={isLoading}
           >
             <RNText style={styles.cancelButtonText}>Annuler</RNText>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </AuthScreenLayout>
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 18,
   },
   title: {
     fontSize: 28,
@@ -249,16 +249,17 @@ const styles = StyleSheet.create({
   methodSelector: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 4,
     width: '100%',
+    height: 48,
     marginBottom: 24,
   },
   methodTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    height: 40,
     borderRadius: 8,
   },
   methodTabActive: {
@@ -273,26 +274,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   methodTabTextActive: {
     color: '#1F2937',
     fontWeight: '600',
   },
   sendEmailButton: {
-    backgroundColor: '#000000',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    width: '100%',
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     borderRadius: 8,
-    marginBottom: 24,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-  },
-  sendEmailButtonDisabled: {
-    opacity: 0.5,
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sendEmailButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
   },
   pinContainer: {
     marginBottom: 24,
@@ -311,21 +319,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  verifyButton: {
-    backgroundColor: '#000000',
+  primaryButton: {
+    width: '100%',
     height: 56,
+    backgroundColor: '#000000',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  verifyButtonDisabled: {
-    opacity: 0.4,
-  },
-  verifyButtonText: {
+  primaryButtonText: {
     fontSize: 18,
-    color: '#FFFFFF',
     fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  primaryButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   cancelButton: {
     width: '100%',
@@ -339,7 +355,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   cancelButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '500',
     color: '#6B7280',
   },
