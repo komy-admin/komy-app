@@ -7,7 +7,8 @@ import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { Text } from '~/components/ui';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
-import { LogOut, User as UserIcon } from 'lucide-react-native';
+import { Lock, LogOut, User as UserIcon } from 'lucide-react-native';
+import { sessionService } from '~/services/SessionService';
 
 function Header() {
   const dispatch = useAppDispatch();
@@ -24,6 +25,11 @@ function Header() {
       label: userName,
       icon: <UserIcon size={16} color="#6B7280" />,
       onPress: () => {}, // No action, just display
+    },
+    {
+      label: 'Verrouiller',
+      icon: <Lock size={16} color="#6B7280" />,
+      onPress: () => sessionService.clearSession(),
     },
     {
       label: 'Se déconnecter',

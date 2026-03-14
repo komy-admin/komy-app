@@ -7,7 +7,7 @@ export default function CookLayout() {
   return (
     <ToastProvider>
       <View style={styles.container}>
-        <Topbar showAdditions={false} enableConfigClick={false} />
+        <Topbar enableConfigClick={false} />
         <View style={styles.content}>
           <Slot />
         </View>

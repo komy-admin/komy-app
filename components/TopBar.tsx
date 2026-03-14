@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { View, Image, Text, Pressable, Platform, StyleSheet } from 'react-native'
-import { FileText, Calendar, LogOut } from 'lucide-react-native'
+import { Calendar, LogOut, Lock } from 'lucide-react-native'
 import { Href, Link, useRouter } from 'expo-router'
 import { useAppSelector } from '~/store/hooks';
 import { sessionService } from '~/services/SessionService';
@@ -10,11 +10,10 @@ const capitalize = (str: string) =>
   str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
 interface TopBarProps {
-  showAdditions?: boolean;
   enableConfigClick?: boolean;
 }
 
-export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBarProps) {
+export function Topbar({ enableConfigClick = true }: TopBarProps) {
   const user = useAppSelector((state) => state.session.user);
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState('')
@@ -67,6 +66,11 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
     capitalize(user?.profil ?? ''),
     [user?.profil]
   );
+
+  const handleLock = useCallback(() => {
+    setShowProfileMenu(false);
+    sessionService.clearSession();
+  }, []);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -134,12 +138,10 @@ export function Topbar({ showAdditions = true, enableConfigClick = true }: TopBa
 
         <View style={styles.rightSection}>
           <View style={styles.badgesRow}>
-            {showAdditions && (
-              <View style={styles.badge}>
-                <FileText size={24} color="#2A2E33" strokeWidth={1} />
-                <Text style={styles.badgeText}>Additions</Text>
-              </View>
-            )}
+            <Pressable onPress={handleLock} style={styles.badge}>
+              <Lock size={24} color="#2A2E33" strokeWidth={1} />
+              <Text style={styles.badgeText}>Verrouiller</Text>
+            </Pressable>
             <View style={styles.badge}>
               <Calendar size={24} color="#2A2E33" strokeWidth={1} />
               <Text style={styles.badgeText}>{currentDate}</Text>
@@ -219,12 +221,12 @@ const styles = StyleSheet.create({
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
   },
   badge: {
     flexDirection: 'row',
