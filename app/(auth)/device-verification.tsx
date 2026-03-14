@@ -30,19 +30,18 @@ export default function DeviceVerificationScreen() {
     (state: RootState) => state.session
   );
 
-  const totp = login2FAMethods?.totp ?? false;
-  const email = login2FAMethods?.email ?? false;
+  // Snapshot 2FA methods at mount so Redux clearing doesn't cause re-renders
+  const methodsRef = React.useRef(login2FAMethods);
+  const totp = methodsRef.current?.totp ?? false;
+  const email = methodsRef.current?.email ?? false;
   const hasBoth = totp && email;
 
   const [activeMethod, setActiveMethod] = useState<'totp' | 'email'>(totp ? 'totp' : 'email');
 
+  // Track verification success to prevent redirect to login when Redux state clears
+  const hasVerified = React.useRef(false);
   useEffect(() => {
-    setActiveMethod(totp ? 'totp' : 'email');
-  }, [totp]);
-
-  // Redirect if no loginToken (direct access)
-  useEffect(() => {
-    if (!loginToken) {
+    if (!loginToken && !hasVerified.current) {
       router.replace('/login');
     }
   }, [loginToken]);
@@ -88,10 +87,11 @@ export default function DeviceVerificationScreen() {
     setError(false);
 
     try {
+      hasVerified.current = true;
       const response = await sessionService.verifyLogin2FA(codeValue, activeMethod);
 
       if (response.requirePin || response.requirePinSetup) {
-        router.replace('/pin-verification');
+        router.push('/pin-verification');
         return;
       }
 
@@ -103,11 +103,11 @@ export default function DeviceVerificationScreen() {
         router.replace('/login');
         return;
       }
+      hasVerified.current = false;
       setError(true);
       setCode('');
-      showToast(err?.response?.data?.message || 'Code invalide', 'error');
-    } finally {
       setIsLoading(false);
+      showToast(err?.response?.data?.message || 'Code invalide', 'error');
     }
   }, [isLoading, loginToken, activeMethod]);
 
@@ -172,7 +172,6 @@ export default function DeviceVerificationScreen() {
               onChange={setCode}
               onComplete={handleVerify}
               secure={false}
-              disabled={isLoading}
               autoFocus
               error={error}
             />
