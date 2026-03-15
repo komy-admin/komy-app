@@ -7,9 +7,9 @@ import { validateForm, ValidationRules } from '~/components/lib/formValidation';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { SelectButton } from '~/components/ui';
 
-// Profils affichables (exclure superadmin et admin)
+// Profils affichables (exclure seulement superadmin)
 const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
-  profile => !['superadmin', 'admin'].includes(profile)
+  profile => profile !== 'superadmin'
 );
 
 interface TeamFormPanelContentProps {
@@ -66,8 +66,14 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
         return null;
 
       case 'email':
-        if (!formData.email.trim()) return 'L\'email est obligatoire';
-        if (!formData.email.includes('@')) return 'L\'email doit être valide';
+        // Email obligatoire uniquement pour admin
+        if (selectedProfileId === 'admin') {
+          if (!formData.email.trim()) return 'L\'email est obligatoire pour les admins';
+          if (!formData.email.includes('@')) return 'L\'email doit être valide';
+        } else if (formData.email.trim()) {
+          // Si rempli, doit être valide
+          if (!formData.email.includes('@')) return 'L\'email doit être valide';
+        }
         if (formData.email.trim().length > 100) return 'L\'email ne peut pas dépasser 100 caractères';
         return null;
 
@@ -87,10 +93,15 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
 
       case 'password':
         if (!user) {
-          // Création : obligatoire
-          if (!formData.password.trim()) return 'Le mot de passe est obligatoire';
-          if (formData.password.trim().length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
-          if (formData.password.trim().length > 100) return 'Le mot de passe ne peut pas dépasser 100 caractères';
+          // Création : obligatoire uniquement pour admin
+          if (selectedProfileId === 'admin') {
+            if (!formData.password.trim()) return 'Le mot de passe est obligatoire pour les admins';
+            if (formData.password.trim().length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
+          }
+          // Pour les autres profils, si mot de passe fourni, il doit être valide
+          else if (formData.password.trim()) {
+            if (formData.password.trim().length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
+          }
         } else if (isPasswordModified) {
           // Édition : si modifié, doit être valide
           if (formData.password.trim() && formData.password !== '********') {
@@ -222,18 +233,28 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
     // Nom obligatoire (min 3 caractères)
     if (!formData.lastName.trim() || formData.lastName.trim().length < 3) return false;
 
-    // Email obligatoire (validation basique)
-    if (!formData.email.trim() || !formData.email.includes('@')) return false;
+    // Pour les admins uniquement : email et mot de passe obligatoires
+    if (selectedProfileId === 'admin') {
+      // Email obligatoire pour admin
+      if (!formData.email.trim() || !formData.email.includes('@')) return false;
 
-    // Identifiant obligatoire (min 3 caractères)
-    if (!formData.loginId.trim() || formData.loginId.trim().length < 3) return false;
+      // Mot de passe obligatoire pour admin en création
+      if (!user && (!formData.password.trim() || formData.password.trim().length < 8)) return false;
+    } else {
+      // Pour non-admin : email optionnel mais si rempli doit être valide
+      if (formData.email.trim() && !formData.email.includes('@')) return false;
+    }
 
-    // Mot de passe obligatoire pour création OU si modifié pour édition
-    if (!user) {
-      // Création : mot de passe obligatoire (min 8 caractères)
-      if (!formData.password.trim() || formData.password.trim().length < 8) return false;
-    } else if (isPasswordModified) {
-      // Édition : si modifié, min 8 caractères
+    // Identifiant : obligatoire pour admin, optionnel pour autres (sera généré)
+    if (selectedProfileId === 'admin') {
+      if (!formData.loginId.trim() || formData.loginId.trim().length < 3) return false;
+    } else {
+      // Si fourni, doit être valide
+      if (formData.loginId.trim() && formData.loginId.trim().length < 3) return false;
+    }
+
+    // Mot de passe en édition : si modifié, min 8 caractères
+    if (user && isPasswordModified) {
       if (!formData.password.trim() || formData.password.trim().length < 8) return false;
     }
 
@@ -244,7 +265,7 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
     <View style={styles.panelContent}>
       <View style={styles.panelHeader}>
         <Text style={styles.panelTitle}>
-          {user ? 'Modifier le membre' : 'Création personnalisée'}
+          {user ? 'Modifier le membre' : 'Créer un membre'}
         </Text>
         <TouchableOpacity onPress={onCancel}>
           <X size={24} color="#64748B" strokeWidth={2} />
@@ -259,6 +280,17 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
         scrollEventThrottle={16}
       >
         <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
+          {/* Note d'information pour la création */}
+          {!user && selectedProfileId && (
+            <View style={[styles.infoBox, { marginBottom: 20 }]}>
+              <Text style={styles.infoText}>
+                {selectedProfileId === 'admin'
+                  ? '🔐 Les administrateurs se connectent avec email et mot de passe'
+                  : '🚀 Un QR code sera généré automatiquement pour une connexion rapide'}
+              </Text>
+            </View>
+          )}
+
           {/* Section Rôle */}
           <View style={styles.formGroup}>
             <View style={styles.sectionHeader}>
@@ -328,7 +360,9 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
           {/* Email + Téléphone */}
           <View style={styles.formRow}>
             <View style={styles.formGroupInRow}>
-              <Text style={styles.formLabel}>Email *</Text>
+              <Text style={styles.formLabel}>
+                Email {selectedProfileId === 'admin' ? '*' : '(optionnel)'}
+              </Text>
               <TextInput
                 value={formData.email}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, email: text }))}
@@ -382,7 +416,9 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
           {/* Identifiant + Mot de passe */}
           <View style={styles.formRow}>
             <View style={styles.formGroupInRow}>
-              <Text style={styles.formLabel}>Identifiant *</Text>
+              <Text style={styles.formLabel}>
+                Identifiant {selectedProfileId !== 'admin' ? '(sera généré si vide)' : '*'}
+              </Text>
               <TextInput
                 value={formData.loginId}
                 onChangeText={(text: string) => setFormData(prev => ({ ...prev, loginId: text }))}
@@ -409,7 +445,9 @@ export const TeamFormPanelContent: React.FC<TeamFormPanelContentProps> = ({
             </View>
 
             <View style={styles.formGroupInRow}>
-              <Text style={styles.formLabel}>Mot de passe {!user && '*'}</Text>
+              <Text style={styles.formLabel}>
+                Mot de passe {!user ? (selectedProfileId === 'admin' ? '*' : '(sera généré si vide)') : ''}
+              </Text>
               <TextInput
                 value={formData.password}
                 onChangeText={handlePasswordChange}
@@ -581,5 +619,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  infoBox: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#4B5563',
+    flex: 1,
   },
 });

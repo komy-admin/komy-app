@@ -94,7 +94,7 @@ function AuthenticationGate() {
     const handleDeepLink = (event: { url: string }) => {
       const { hostname, path, queryParams } = Linking.parse(event.url);
 
-      // Handle forkit://auth/qr-login?token=xxx
+      // Handle komy://auth/qr-login?token=xxx
       if (hostname === 'auth' && path === 'qr-login' && queryParams?.token) {
         const token = queryParams.token as string;
         // Navigate to QR login with token

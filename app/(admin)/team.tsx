@@ -7,7 +7,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
-import { ModeSelection, QuickFormContent, FullFormContent } from "~/components/admin/TeamForm";
+import { QuickFormContent, FullFormContent } from "~/components/admin/TeamForm";
 import { UserQrModal } from "~/components/admin/UserQrModal";
 import { useToast } from '~/components/ToastProvider';
 import { CreditCard as Edit2, QrCode, Trash, ListFilter } from 'lucide-react-native';
@@ -68,15 +68,14 @@ const TEAM_TABLE_COLUMNS = [
   { label: 'Téléphone', key: 'phone', width: '18%' },
 ];
 
-// Filtrer les profils affichables (exclure superadmin et admin)
+// Filtrer les profils affichables (exclure seulement superadmin)
 const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
-  profile => !['superadmin', 'admin'].includes(profile)
+  profile => profile !== 'superadmin'
 );
 
 // États consolidés via unions discriminantes
 type FormPanel =
   | null
-  | { mode: 'selection' }
   | { mode: 'quick' }
   | { mode: 'full'; user: User | null };
 
@@ -153,7 +152,8 @@ export default function TeamPage() {
 
   const handleCreateUser = useCallback(() => {
     if (isManager) return;
-    setFormPanel({ mode: 'selection' });
+    // Aller directement sur la création rapide
+    setFormPanel({ mode: 'quick' });
   }, [isManager]);
 
   const handleEditUser = useCallback((id: string) => {
@@ -225,15 +225,7 @@ export default function TeamPage() {
     }
 
     let panelContent;
-    if (formPanel.mode === 'selection') {
-      panelContent = (
-        <ModeSelection
-          onSelectQuick={() => setFormPanel({ mode: 'quick' })}
-          onSelectFull={() => setFormPanel({ mode: 'full', user: null })}
-          onCancel={handleCloseFormPanel}
-        />
-      );
-    } else if (formPanel.mode === 'quick') {
+    if (formPanel.mode === 'quick') {
       panelContent = (
         <QuickFormContent
           onSave={handleQuickSave}
@@ -242,6 +234,7 @@ export default function TeamPage() {
         />
       );
     } else {
+      // Mode 'full' est maintenant le mode par défaut pour la création et l'édition
       panelContent = (
         <FullFormContent
           user={formPanel.user}
