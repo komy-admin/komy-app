@@ -193,6 +193,15 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     }
   }
 
+  // Confirm PIN for sensitive actions (uses session token, no new session created)
+  async confirmPin(pin: string): Promise<{ confirmed: boolean }> {
+    const { data } = await this.axiosInstance.post<{ confirmed: boolean }>(
+      `${this.endpoint}/confirm-pin`,
+      { pin }
+    );
+    return data;
+  }
+
   // New method for dual token system - verify PIN with authToken
   async verifyPinWithAuthToken(pin: string, authToken: string): Promise<PinVerificationResponse> {
     try {

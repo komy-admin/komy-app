@@ -11,13 +11,14 @@ import type { PinInputRef } from '~/components/ui';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions, selectRequiresPin, selectRequiresPinSetup, selectCurrentUser, selectAuthToken } from '~/store';
 import { sessionService } from '~/services/SessionService';
-import { useRouter, Link } from 'expo-router';
+import { useRouter, Link, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 export default function PinVerificationScreen() {
+  const { noAutoFocus } = useLocalSearchParams<{ noAutoFocus?: string }>();
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -43,7 +44,7 @@ export default function PinVerificationScreen() {
     // Reset error state ONLY when user starts typing a new PIN
     // Don't reset when PIN is cleared (length = 0) to keep error visible
     // Don't reset when PIN is complete (length = 4) as it will be handled by handlePinComplete
-    if (error && pin.length > 0 && pin.length < 4) {
+    if (error && pin.length === 4) {
       setError(false);
     }
   }, [pin]);
@@ -232,20 +233,24 @@ export default function PinVerificationScreen() {
               onComplete={handlePinComplete}
               error={error}
               disabled={isLoading || isLocked}
-              autoFocus
+              autoFocus={!noAutoFocus}
               secure={!isSetupMode} // Show digits when setting up, hide when verifying
             />
           </View>
 
           {/* Error message with attempts */}
           {error && !isLocked && (
-            <View style={styles.errorContainer}>
-              <RNText style={styles.errorText}>
-                {attemptsRemaining !== null && attemptsRemaining >= 0
-                  ? `Code PIN incorrect\n${attemptsRemaining} essai${attemptsRemaining > 1 ? 's' : ''} restant${attemptsRemaining > 1 ? 's' : ''}`
-                  : 'Code PIN incorrect'}
-              </RNText>
-            </View>
+            <RNText style={styles.errorText}>
+              Code PIN incorrect
+              {attemptsRemaining !== null && attemptsRemaining >= 0 && (
+                <>
+                  {' — '}
+                  <RNText style={styles.errorTextBold}>
+                    {attemptsRemaining} essai{attemptsRemaining > 1 ? 's' : ''} restant{attemptsRemaining > 1 ? 's' : ''}
+                  </RNText>
+                </>
+              )}
+            </RNText>
           )}
 
           <View style={styles.buttonContainer}>
@@ -299,7 +304,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
@@ -316,25 +321,23 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   pinContainer: {
-    marginBottom: 32,
-    width: '100%',
-  },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 24,
+    marginBottom: 28,
     width: '100%',
   },
   errorText: {
     color: '#DC2626',
     fontSize: 14,
+    fontWeight: '400',
     textAlign: 'center',
+    marginBottom: 12,
+    width: '100%',
+  },
+  errorTextBold: {
+    fontWeight: '700',
   },
   buttonContainer: {
-    width: '100%',
-    marginTop: 24,
+    width: 280,
+    marginTop: 12,
   },
   cancelButton: {
     width: '100%',
@@ -354,7 +357,7 @@ const styles = StyleSheet.create({
   forgotPinContainer: {
     width: '100%',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 28,
   },
   forgotPinText: {
     fontSize: 14,

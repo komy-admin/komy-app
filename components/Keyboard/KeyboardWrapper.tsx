@@ -9,8 +9,9 @@
  * cause React hooks dependency array issues.
  */
 
-import React from 'react';
-import { View, ScrollView, Platform, StyleProp, ViewStyle, ScrollViewProps } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, ScrollView, Platform, Keyboard, ScrollViewProps } from 'react-native';
+import { usePathname } from 'expo-router';
 import { isWeb, logKeyboardEvent } from '~/utils/keyboard.utils';
 import type {
   KeyboardProviderProps,
@@ -69,6 +70,22 @@ export interface KeyboardAwareScrollViewWrapperProps extends Omit<ScrollViewProp
  * On Web: Pass-through component (no provider needed)
  * On Native: Uses react-native-keyboard-controller KeyboardProvider
  */
+/**
+ * Auto-dismiss keyboard on route change.
+ * Renderless component — no children, no re-render propagation.
+ */
+const KeyboardRouteGuard = () => {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isWeb()) {
+      Keyboard.dismiss();
+    }
+  }, [pathname]);
+
+  return null;
+};
+
 export const KeyboardProviderWrapper: React.FC<KeyboardProviderProps> = ({
   children,
   statusBarTranslucent = true,
@@ -78,7 +95,12 @@ export const KeyboardProviderWrapper: React.FC<KeyboardProviderProps> = ({
 }) => {
   // Web fallback: just render children
   if (!NativeKeyboardProvider) {
-    return <>{children}</>;
+    return (
+      <>
+        <KeyboardRouteGuard />
+        {children}
+      </>
+    );
   }
 
   return (
@@ -88,6 +110,7 @@ export const KeyboardProviderWrapper: React.FC<KeyboardProviderProps> = ({
       preload={preload}
       enabled={enabled}
     >
+      <KeyboardRouteGuard />
       {children}
     </NativeKeyboardProvider>
   );

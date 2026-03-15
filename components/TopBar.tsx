@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { View, Image, Text, Pressable, Platform, StyleSheet } from 'react-native'
 import { Calendar, LogOut, Lock } from 'lucide-react-native'
-import { Href, Link, useRouter } from 'expo-router'
+import { Href, useRouter, usePathname } from 'expo-router'
 import { useAppSelector } from '~/store/hooks';
 import { sessionService } from '~/services/SessionService';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
@@ -16,6 +16,7 @@ interface TopBarProps {
 export function Topbar({ enableConfigClick = true }: TopBarProps) {
   const user = useAppSelector((state) => state.session.user);
   const router = useRouter();
+  const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const { setTopBarHeight } = usePanelPortal();
@@ -70,7 +71,8 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
   const handleLock = useCallback(() => {
     setShowProfileMenu(false);
     sessionService.clearSession();
-  }, []);
+    router.replace('/pin-verification?noAutoFocus=1' as Href);
+  }, [router]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -150,13 +152,15 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
 
           <View style={styles.profileContainer}>
             {shouldEnableConfigClick ? (
-              <Link href={'/(admin)/configs' as Href} asChild>
-                <Pressable onPress={closeMenu}>
-                  <View style={styles.profileRow}>
-                    {profileContent}
-                  </View>
-                </Pressable>
-              </Link>
+              <Pressable onPress={() => {
+                if (!pathname.startsWith('/configs')) {
+                  router.push('/(admin)/configs' as Href);
+                }
+              }}>
+                <View style={styles.profileRow}>
+                  {profileContent}
+                </View>
+              </Pressable>
             ) : (
               <Pressable onPress={toggleProfileMenu}>
                 <View style={profileMenuBgStyle}>
@@ -184,6 +188,7 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
           </View>
         </View>
       </View>
+
     </>
   )
 }

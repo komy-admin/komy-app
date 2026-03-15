@@ -6,6 +6,7 @@ import NotificationsPage from '~/components/config/notifications';
 import DashboardPage from '~/components/config/dashboard';
 import ConfigurationRestoPage from '@/components/config/configuration';
 import SecurityPage from '~/components/config/security';
+import { PinConfirmationModal } from '~/components/ui/PinConfirmationModal';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
@@ -14,9 +15,10 @@ type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration'
 
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const { user } = useSelector((state: RootState) => state.session);
   const router = useRouter();
-  
+
   // Bloquer l'accès aux managers
   useEffect(() => {
     if (user?.profil === 'manager') {
@@ -69,6 +71,13 @@ export default function ConfigPage() {
           </View>
         </ScrollView>
       )}
+
+      <PinConfirmationModal
+        isVisible={!isUnlocked}
+        onClose={() => router.back()}
+        onConfirm={() => setIsUnlocked(true)}
+        title="Accès configuration"
+      />
     </View>
   );
 }
