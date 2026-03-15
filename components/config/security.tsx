@@ -183,6 +183,10 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
   const handleCopySecret = async (secret: string) => {
     await Clipboard.setStringAsync(secret);
     showToast('Clé copiée', 'success');
+    // Auto-clear clipboard after 30s for security
+    setTimeout(() => {
+      Clipboard.setStringAsync('');
+    }, 30000);
   };
 
   // Setup flow
