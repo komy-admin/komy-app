@@ -213,25 +213,6 @@ const sessionSlice = createSlice({
       state.requiresPin = true;  // Need PIN again
     },
 
-    // Legacy - kept for compatibility, will be removed
-    loginSuccess: (state, action: PayloadAction<{
-      user: User;
-      token: string;
-      refreshToken?: string;
-    }>) => {
-      // For now, map to sessionToken for backward compatibility
-      const { user, token } = action.payload;
-      state.user = user;
-      state.sessionToken = token;
-      state.isAuthenticated = true;
-      state.isLoggingIn = false;
-      state.authError = null;
-      state.requiresPin = false;
-      state.requiresPinSetup = false;
-      state.isPinVerified = true;
-      state.temporaryToken = null;
-    },
-
     // Called when app starts with stored authToken
     setStoredAuthToken: (state, action: PayloadAction<{
       authToken: string;
@@ -281,13 +262,6 @@ const sessionSlice = createSlice({
         // Mark as authenticated when PIN is verified and we have a sessionToken
         state.isAuthenticated = !!state.sessionToken && !!state.user;
       }
-    },
-
-    clearPinState: (state) => {
-      state.requiresPin = false;
-      state.requiresPinSetup = false;
-      state.temporaryToken = null;
-      state.isPinVerified = false;
     },
 
     // === LOGIN 2FA ===
@@ -467,8 +441,6 @@ import { createSelector } from '@reduxjs/toolkit';
 // Auth selectors
 export const selectCurrentUser = (state: RootState) => state.session.user;
 export const selectAuthToken = (state: RootState) => state.session.authToken;
-export const selectSessionToken = (state: RootState) => state.session.sessionToken;
-export const selectSessionExpiresAt = (state: RootState) => state.session.sessionExpiresAt;
 export const selectIsAuthenticated = (state: RootState) => state.session.isAuthenticated;
 export const selectIsLoggingIn = (state: RootState) => state.session.isLoggingIn;
 export const selectAuthError = (state: RootState) => state.session.authError;
@@ -498,11 +470,6 @@ export const selectRequiresPin = (state: RootState) => state.session.requiresPin
 export const selectRequiresPinSetup = (state: RootState) => state.session.requiresPinSetup;
 export const selectTemporaryToken = (state: RootState) => state.session.temporaryToken;
 export const selectIsPinVerified = (state: RootState) => state.session.isPinVerified;
-
-// Login 2FA selectors
-export const selectRequiresLogin2FA = (state: RootState) => state.session.requiresLogin2FA;
-export const selectLoginToken = (state: RootState) => state.session.loginToken;
-export const selectLogin2FAMethods = (state: RootState) => state.session.login2FAMethods;
 
 // Alias pour compatibilité
 export const selectIsConnected = selectIsWebSocketConnected;

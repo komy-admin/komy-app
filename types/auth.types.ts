@@ -25,15 +25,6 @@ export interface SetupAccountCredentials {
   pin: string;
 }
 
-export interface SetPinCredentials {
-  pin: string;
-}
-
-export interface VerifyPinCredentials {
-  pin: string;
-  // userId removed - now extracted from authToken
-}
-
 // Updated for new dual token system
 export interface LoginResponse {
   requirePin?: boolean;
@@ -50,24 +41,6 @@ export interface PinVerificationResponse {
   sessionToken: string;  // Short-lived token (4h) for API access
   expiresIn: number;     // Seconds until expiration (14400 = 4h)
   user: User;
-}
-
-export interface PinErrorResponse {
-  message: string;
-  attemptsRemaining?: number;
-  error?: string;
-  code?: 'ACCOUNT_LOCKED' | 'INVALID_PIN' | 'SESSION_TOKEN_INVALID' | 'AUTH_TOKEN_INVALID';
-  remainingMinutes?: number;
-}
-
-// Keep for backward compatibility
-export interface PinLoginResponse {
-  requirePin?: boolean;
-  requirePinSetup?: boolean;
-  temporaryToken?: { token: string; expiresIn?: number };
-  userId?: string;
-  message?: string;
-  authToken?: string;  // New field
 }
 
 // Single, clear interface for authentication responses
@@ -106,16 +79,3 @@ export interface TrustedDevice {
   user?: { id: string; firstName: string | null; lastName: string | null; profil: string };
 }
 
-export interface currentUser {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: number;
-  createdAt: string;
-  updatedAt: string;
-  profil?: string;
-  accountId?: string;
-  loginId?: string;
-  hasPinConfigured?: boolean;
-}

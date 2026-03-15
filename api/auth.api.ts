@@ -39,23 +39,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     await this.storage.removeItem('userProfile');
   }
 
-  public async getUserProfile(): Promise<UserProfile | null> {
-    return this.storage.getItem('userProfile') as Promise<UserProfile | null>;
-  }
-
-  public async getToken(): Promise<string | null> {
-    return this.storage.getItem('token');
-  }
-
-  public async getUserWithToken(): Promise<User> {
-    try {
-      const { data } = await this.axiosInstance.get<User>(`${this.endpoint}/me`);
-      return data;
-    } catch (err) {
-      throw err;
-    }
-  }
-
   async qrLogin(token: string): Promise<QRLoginResponse> {
     const { data } = await this.axiosInstance.post<QRLoginResponse>(
       `${this.endpoint}/qr-login`,
