@@ -53,15 +53,15 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
     }
   }), []);
 
-  // Auto-focus on mount
+  // Auto-focus on mount and when re-enabled
   useEffect(() => {
-    if (autoFocus) {
+    if (autoFocus && !disabled) {
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [autoFocus]);
+  }, [autoFocus, disabled]);
 
   // Handle completion
   useEffect(() => {

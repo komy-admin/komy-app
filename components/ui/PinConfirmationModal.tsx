@@ -33,6 +33,7 @@ export function PinConfirmationModal({
   const [isVerifying, setIsVerifying] = useState(false);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const [isPermanentlyLocked, setIsPermanentlyLocked] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const pinInputRef = useRef<PinInputRef>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
@@ -46,6 +47,7 @@ export function PinConfirmationModal({
       setIsVerifying(false);
       setAttemptsRemaining(null);
       setIsLocked(false);
+      setIsPermanentlyLocked(false);
       setCountdown(0);
       if (countdownInterval.current) {
         clearInterval(countdownInterval.current);
@@ -90,6 +92,10 @@ export function PinConfirmationModal({
         setAttemptsRemaining(null);
         setError(false);
         setErrorMessage('');
+        // Focus PIN input after unlock
+        setTimeout(() => {
+          pinInputRef.current?.focus();
+        }, 100);
       }
     }, 1000) as unknown as NodeJS.Timeout;
   }, []);
@@ -120,7 +126,12 @@ export function PinConfirmationModal({
 
       const { status, data } = err?.response || {};
 
-      if (status === 429 || data?.code === 'ACCOUNT_LOCKED' || data?.code === 'TOO_MANY_ATTEMPTS') {
+      if (data?.code === 'PIN_PERMANENTLY_LOCKED') {
+        setIsPermanentlyLocked(true);
+        setIsLocked(true);
+        setAttemptsRemaining(0);
+        setErrorMessage('PIN verrouill\u00e9. R\u00e9initialisez par email.');
+      } else if (status === 429 || data?.code === 'ACCOUNT_LOCKED' || data?.code === 'TOO_MANY_ATTEMPTS') {
         setAttemptsRemaining(0);
         const remainingSeconds = data?.remainingSeconds;
         if (remainingSeconds) {
@@ -175,8 +186,14 @@ export function PinConfirmationModal({
 
             {isLocked ? (
               <View style={styles.lockedContainer}>
-                <Text style={styles.lockedTitle}>Compte verrouill{'\u00e9'} —</Text>
-                <Text style={styles.lockedCountdown}>{formatCountdown(countdown)}</Text>
+                {isPermanentlyLocked ? (
+                  <Text style={styles.lockedTitle}>PIN verrouill{'\u00e9'} — R{'\u00e9'}initialisez par email</Text>
+                ) : (
+                  <>
+                    <Text style={styles.lockedTitle}>Compte verrouill{'\u00e9'} —</Text>
+                    <Text style={styles.lockedCountdown}>{formatCountdown(countdown)}</Text>
+                  </>
+                )}
               </View>
             ) : (
               <View style={styles.pinContainer}>
@@ -187,7 +204,7 @@ export function PinConfirmationModal({
                   onChange={setPin}
                   onComplete={handlePinComplete}
                   error={error}
-                  disabled={isVerifying || isLocked}
+                  disabled={isVerifying}
                   autoFocus
                   secure
                 />
@@ -292,6 +309,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     width: 280,
   },

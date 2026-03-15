@@ -7,10 +7,8 @@ import type {
   ResetCredentials,
   AuthResponse,
   SetupAccountCredentials,
-  VerifyPinCredentials,
   LoginResponse,
   PinVerificationResponse,
-  PinErrorResponse,
   Setup2FAResponse,
   Enable2FAResponse,
   TrustedDevice,
@@ -159,47 +157,16 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     }
   }
 
-  async setPin(pin: string, temporaryToken: string): Promise<AuthResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
-        `${this.endpoint}/set-pin`,
-        { pin },
-        {
-          headers: {
-            Authorization: `Bearer ${temporaryToken}`
-          }
-        }
-      );
-      await this.setToken(data.token.token);
-      await this.setUserProfile(data.profil);
-      return data;
-    } catch (err) {
-      throw err;
-    }
-  }
-
-  // Legacy method - kept for compatibility
-  async verifyPin(credentials: VerifyPinCredentials): Promise<AuthResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
-        `${this.endpoint}/verify-pin`,
-        credentials
-      );
-      await this.setToken(data.token.token);
-      await this.setUserProfile(data.profil);
-      return data;
-    } catch (err) {
-      throw err;
-    }
-  }
-
-  // Confirm PIN for sensitive actions (uses session token, no new session created)
   async confirmPin(pin: string): Promise<{ confirmed: boolean }> {
-    const { data } = await this.axiosInstance.post<{ confirmed: boolean }>(
-      `${this.endpoint}/confirm-pin`,
-      { pin }
-    );
-    return data;
+    try {
+      const { data } = await this.axiosInstance.post<{ confirmed: boolean }>(
+        `${this.endpoint}/confirm-pin`,
+        { pin }
+      );
+      return data;
+    } catch (err) {
+      throw err;
+    }
   }
 
   // New method for dual token system - verify PIN with authToken
