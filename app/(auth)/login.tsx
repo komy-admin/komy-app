@@ -1,7 +1,7 @@
 import { View, StyleSheet, Modal, Image, Platform, Text as RNText, TextInput as RNTextInput, Pressable } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { sessionService } from '~/services/SessionService';
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
@@ -13,6 +13,15 @@ export default function LoginScreen() {
   const [showQrScanner, setShowQrScanner] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
+  const params = useLocalSearchParams();
+
+  // Gérer le QR token passé en paramètre URL
+  useEffect(() => {
+    if (params.qrToken && typeof params.qrToken === 'string') {
+      // Auto-login avec le QR token
+      handleQrScan(params.qrToken);
+    }
+  }, [params.qrToken]);
 
   const handleLogin = async () => {
     try {

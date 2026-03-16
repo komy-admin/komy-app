@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
 import { X, Check, Users } from 'lucide-react-native';
-import { UserProfile } from '~/types/user.types';
+import { User, UserProfile } from '~/types/user.types';
 import { getUserProfileText } from '~/lib/utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { SelectButton } from '~/components/ui';
@@ -12,12 +12,14 @@ const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
 );
 
 interface QuickTeamFormPanelContentProps {
-  onSave: (profil: UserProfile, displayName: string) => void;
+  user?: User | null;  // Utilisateur à éditer (optionnel)
+  onSave: (profil: UserProfile, displayName: string, userId?: string) => void;
   onCancel: () => void;
   activeTab?: UserProfile | 'all';
 }
 
 export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps> = ({
+  user,
   onSave,
   onCancel,
   activeTab = 'all',
@@ -26,11 +28,15 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
   const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
-    // Only pre-fill if user hasn't made a selection yet
-    if (activeTab !== 'all' && !selectedProfileId) {
+    if (user) {
+      // Mode édition : pré-remplir avec les données de l'utilisateur
+      setSelectedProfileId(user.profil);
+      setDisplayName(user.firstName || '');
+    } else if (activeTab !== 'all' && !selectedProfileId) {
+      // Mode création : pré-remplir avec l'onglet actif
       setSelectedProfileId(activeTab);
     }
-  }, [activeTab, selectedProfileId]);
+  }, [user, activeTab]);
 
   const handleProfileSelect = (profile: UserProfile) => {
     setSelectedProfileId(profile);
@@ -41,13 +47,15 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
       alert('Veuillez sélectionner un rôle');
       return;
     }
-    onSave(selectedProfileId as UserProfile, displayName.trim() || '');
+    onSave(selectedProfileId as UserProfile, displayName.trim() || '', user?.id);
   };
+
+  const isEditMode = !!user;
 
   return (
     <View style={styles.panelContent}>
       <View style={styles.panelHeader}>
-        <Text style={styles.panelTitle}>Création rapide</Text>
+        <Text style={styles.panelTitle}>{isEditMode ? 'Modification utilisateur' : 'Création utilisateur'}</Text>
         <TouchableOpacity onPress={onCancel}>
           <X size={24} color="#64748B" strokeWidth={2} />
         </TouchableOpacity>
@@ -60,14 +68,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
         bottomOffset={40}
         scrollEventThrottle={16}
       >
-        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
-          {/* Info Badge */}
-          <View style={styles.infoBadge}>
-            <Text style={styles.infoBadgeText}>
-              Le mot de passe sera généré automatiquement et pourra être modifié ultérieurement.
-            </Text>
-          </View>
-
+        <Pressable style={{ flex: 1, paddingTop: 20 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Section Rôle */}
           <View style={styles.formGroup}>
             <View style={styles.sectionHeader}>
@@ -102,16 +103,6 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
               autoComplete="off"
             />
           </View>
-
-          {/* Info complémentaire */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>Informations complémentaires</Text>
-            <Text style={styles.infoCardText}>
-              • Un identifiant unique sera généré automatiquement{'\n'}
-              • Un mot de passe temporaire sera créé{'\n'}
-              • Vous pourrez compléter les informations plus tard
-            </Text>
-          </View>
         </Pressable>
       </KeyboardAwareScrollViewWrapper>
 
@@ -125,7 +116,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
           disabled={!selectedProfileId}
         >
           <Check size={20} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.saveButtonText}>Créer rapidement</Text>
+          <Text style={styles.saveButtonText}>{isEditMode ? 'Modifier' : 'Créer'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -199,38 +190,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  infoBadge: {
-    backgroundColor: '#DBEAFE',
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 20,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-  },
-  infoBadgeText: {
-    fontSize: 13,
-    color: '#1E40AF',
-    lineHeight: 18,
-  },
-  infoCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginTop: 8,
-  },
-  infoCardTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
-  },
-  infoCardText: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 18,
   },
   panelFooter: {
     flexDirection: 'row',

@@ -7,7 +7,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
-import { ModeSelection, QuickFormContent, FullFormContent } from "~/components/admin/TeamForm";
+import { QuickFormContent } from "~/components/admin/TeamForm";
 import { UserQrModal } from "~/components/admin/UserQrModal";
 import { useToast } from '~/components/ToastProvider';
 import { CreditCard as Edit2, QrCode, Trash, ListFilter } from 'lucide-react-native';
@@ -68,17 +68,15 @@ const TEAM_TABLE_COLUMNS = [
   { label: 'Téléphone', key: 'phone', width: '18%' },
 ];
 
-// Filtrer les profils affichables (exclure superadmin et admin)
+// Filtrer les profils affichables (exclure seulement superadmin)
 const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
-  profile => !['superadmin', 'admin'].includes(profile)
+  profile => profile !== 'superadmin'
 );
 
 // États consolidés via unions discriminantes
 type FormPanel =
   | null
-  | { mode: 'selection' }
-  | { mode: 'quick' }
-  | { mode: 'full'; user: User | null };
+  | { mode: 'quick'; user?: User | null };
 
 type DeleteModal =
   | null
@@ -115,7 +113,7 @@ export default function TeamPage() {
   const isManager = user?.profil === 'manager';
 
   // Utilisation des hooks Redux (seulement si autorisé)
-  const { users, loading, error, createUser, createQuickUser, updateUser, deleteUser, getUsersByProfile } = useUsers();
+  const { users, loading, error, createQuickUser, updateUser, deleteUser, getUsersByProfile } = useUsers();
 
   // Filtrer les utilisateurs avec les filtres appliqués
   const filteredUsers = useMemo(() => {
@@ -153,45 +151,38 @@ export default function TeamPage() {
 
   const handleCreateUser = useCallback(() => {
     if (isManager) return;
-    setFormPanel({ mode: 'selection' });
+    // Aller directement sur la création rapide
+    setFormPanel({ mode: 'quick' });
   }, [isManager]);
 
   const handleEditUser = useCallback((id: string) => {
     if (isManager) return;
     const found = users.find(u => u.id === id);
     if (!found) return;
-    setFormPanel({ mode: 'full', user: found });
+    setFormPanel({ mode: 'quick', user: found });
   }, [isManager, users]);
 
-  const handleQuickSave = useCallback(async (profil: UserProfile, displayName: string) => {
+  const handleQuickSave = useCallback(async (profil: UserProfile, displayName: string, userId?: string) => {
     try {
-      await createQuickUser(profil, displayName);
-      showToast('Utilisateur créé avec succès', 'success');
-      handleCloseFormPanel();
-    } catch (err: any) {
-      console.error('Error creating quick user:', err);
-      const errorMessage = err?.message || 'Erreur lors de la création de l\'utilisateur';
-      showToast(errorMessage, 'error');
-    }
-  }, [createQuickUser, showToast, handleCloseFormPanel]);
-
-  const handleSaveUser = useCallback(async (userData: Partial<User>) => {
-    try {
-      const editingUser = formPanel?.mode === 'full' ? formPanel.user : null;
-      if (editingUser?.id) {
-        await updateUser(editingUser.id, userData);
+      if (userId) {
+        // Mode édition
+        await updateUser(userId, {
+          profil,
+          firstName: displayName || undefined
+        });
         showToast('Utilisateur modifié avec succès', 'success');
       } else {
-        await createUser(userData as User);
+        // Mode création
+        await createQuickUser(profil, displayName);
         showToast('Utilisateur créé avec succès', 'success');
       }
       handleCloseFormPanel();
     } catch (err: any) {
       console.error('Error saving user:', err);
-      const errorMessage = err?.message || 'Erreur lors de la sauvegarde de l\'utilisateur';
+      const errorMessage = err?.message || (userId ? 'Erreur lors de la modification de l\'utilisateur' : 'Erreur lors de la création de l\'utilisateur');
       showToast(errorMessage, 'error');
     }
-  }, [formPanel, updateUser, createUser, showToast, handleCloseFormPanel]);
+  }, [createQuickUser, updateUser, showToast, handleCloseFormPanel]);
 
   const handleDeleteUser = useCallback((id: string) => {
     const found = users.find(u => u.id === id);
@@ -224,40 +215,21 @@ export default function TeamPage() {
       return;
     }
 
-    let panelContent;
-    if (formPanel.mode === 'selection') {
-      panelContent = (
-        <ModeSelection
-          onSelectQuick={() => setFormPanel({ mode: 'quick' })}
-          onSelectFull={() => setFormPanel({ mode: 'full', user: null })}
-          onCancel={handleCloseFormPanel}
-        />
-      );
-    } else if (formPanel.mode === 'quick') {
-      panelContent = (
-        <QuickFormContent
-          onSave={handleQuickSave}
-          onCancel={handleCloseFormPanel}
-          activeTab={activeTab}
-        />
-      );
-    } else {
-      panelContent = (
-        <FullFormContent
-          user={formPanel.user}
-          onSave={handleSaveUser}
-          onCancel={handleCloseFormPanel}
-          activeTab={activeTab}
-        />
-      );
-    }
+    const panelContent = (
+      <QuickFormContent
+        user={formPanel.user}
+        onSave={handleQuickSave}
+        onCancel={handleCloseFormPanel}
+        activeTab={activeTab}
+      />
+    );
 
     renderPanel(
       <SlidePanel visible={true} onClose={handleCloseFormPanel} width={500}>
         {panelContent}
       </SlidePanel>
     );
-  }, [formPanel, activeTab, handleCloseFormPanel, handleQuickSave, handleSaveUser, renderPanel, clearPanel]);
+  }, [formPanel, activeTab, handleCloseFormPanel, handleQuickSave, renderPanel, clearPanel]);
 
   const getUserActions = useCallback((user: User): ActionItem[] => {
     const actions: ActionItem[] = [];

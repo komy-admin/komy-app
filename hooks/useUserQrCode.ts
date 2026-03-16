@@ -83,7 +83,14 @@ export const useUserQrCode = (): UseUserQrCodeReturn => {
       const qrToken = res.qrData.token;
 
       setToken(qrToken);
-      setMagicLink(`forkit://auth/qr-login?token=${qrToken}`);
+      // Utiliser le webLink retourné par le backend (landing page) au lieu du deepLink
+      // Si les links ne sont pas disponibles, fallback sur l'ancienne méthode
+      if ((res as any).links?.webLink) {
+        setMagicLink((res as any).links.webLink);
+      } else {
+        // Fallback pour compatibilité
+        setMagicLink(`komy://auth/qr-login?token=${qrToken}`);
+      }
     } catch (error) {
       showToast('Erreur lors de la récupération du QR code', 'error');
       throw error;
@@ -103,8 +110,8 @@ export const useUserQrCode = (): UseUserQrCodeReturn => {
 
     try {
       await Share.share({
-        message: `Lien de connexion Fork'it pour ${user.firstName} ${user.lastName}: ${magicLink}`,
-        title: "Connexion Fork'it",
+        message: `Lien de connexion Komy pour ${user.firstName} ${user.lastName}: ${magicLink}`,
+        title: "Connexion Komy",
       });
     } catch (error) {
       console.error('Error sharing QR link:', error);
