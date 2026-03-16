@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Switch } from 'react-native';
-import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye } from 'lucide-react-native';
+import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye, LayoutDashboard } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 import { useItemTypes } from '~/hooks/useItemTypes';
@@ -45,6 +45,7 @@ export default function ConfigurationRestoPage() {
     teamEnabled,
     kitchenEnabled,
     barEnabled,
+    roomEnabled,
     kitchenViewMode,
     barViewMode,
     updateConfig,
@@ -272,6 +273,7 @@ export default function ConfigurationRestoPage() {
           )}
           {activeTab === 'views' && (
             <ViewsTab
+              roomEnabled={roomEnabled}
               teamEnabled={teamEnabled}
               kitchenEnabled={kitchenEnabled}
               barEnabled={barEnabled}
@@ -417,12 +419,14 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
 
 // Views Tab
 interface ViewsTabProps {
+  roomEnabled: boolean;
   teamEnabled: boolean;
   kitchenEnabled: boolean;
   barEnabled: boolean;
   kitchenViewMode: 'columns' | 'tickets';
   barViewMode: 'columns' | 'tickets';
   updateConfig: (config: {
+    roomEnabled?: boolean;
     teamEnabled?: boolean;
     kitchenEnabled?: boolean;
     barEnabled?: boolean;
@@ -433,6 +437,7 @@ interface ViewsTabProps {
 }
 
 const ViewsTab: React.FC<ViewsTabProps> = ({
+  roomEnabled,
   teamEnabled,
   kitchenEnabled,
   barEnabled,
@@ -442,6 +447,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
   configLoading
 }) => {
   const { showToast } = useToast();
+  const [localRoomEnabled, setLocalRoomEnabled] = useState(roomEnabled);
   const [localTeamEnabled, setLocalTeamEnabled] = useState(teamEnabled);
   const [localKitchenEnabled, setLocalKitchenEnabled] = useState(kitchenEnabled);
   const [localBarEnabled, setLocalBarEnabled] = useState(barEnabled);
@@ -450,28 +456,31 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
+    setLocalRoomEnabled(roomEnabled);
     setLocalTeamEnabled(teamEnabled);
     setLocalKitchenEnabled(kitchenEnabled);
     setLocalBarEnabled(barEnabled);
     setLocalKitchenViewMode(kitchenViewMode);
     setLocalBarViewMode(barViewMode);
-  }, [teamEnabled, kitchenEnabled, barEnabled, kitchenViewMode, barViewMode]);
+  }, [roomEnabled, teamEnabled, kitchenEnabled, barEnabled, kitchenViewMode, barViewMode]);
 
   useEffect(() => {
     const changed =
+      localRoomEnabled !== roomEnabled ||
       localTeamEnabled !== teamEnabled ||
       localKitchenEnabled !== kitchenEnabled ||
       localBarEnabled !== barEnabled ||
       localKitchenViewMode !== kitchenViewMode ||
       localBarViewMode !== barViewMode;
     setHasChanges(changed);
-  }, [localTeamEnabled, localKitchenEnabled, localBarEnabled, localKitchenViewMode, localBarViewMode, teamEnabled, kitchenEnabled, barEnabled, kitchenViewMode, barViewMode]);
+  }, [localRoomEnabled, localTeamEnabled, localKitchenEnabled, localBarEnabled, localKitchenViewMode, localBarViewMode, roomEnabled, teamEnabled, kitchenEnabled, barEnabled, kitchenViewMode, barViewMode]);
 
   const handleSaveChanges = async () => {
     if (!hasChanges) return;
 
     try {
       await updateConfig({
+        roomEnabled: localRoomEnabled,
         teamEnabled: localTeamEnabled,
         kitchenEnabled: localKitchenEnabled,
         barEnabled: localBarEnabled,
@@ -480,9 +489,21 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
       });
       setHasChanges(false);
       showToast('Configuration des vues sauvegardée avec succès', 'success');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde de la configuration:', error);
-      showToast('Erreur lors de la sauvegarde de la configuration', 'error');
+      const apiMessage = error?.response?.data?.message;
+      if (error?.response?.status === 409 && apiMessage) {
+        // Revert all local state on conflict (active orders exist)
+        setLocalRoomEnabled(roomEnabled);
+        setLocalTeamEnabled(teamEnabled);
+        setLocalKitchenEnabled(kitchenEnabled);
+        setLocalBarEnabled(barEnabled);
+        setLocalKitchenViewMode(kitchenViewMode);
+        setLocalBarViewMode(barViewMode);
+        showToast(apiMessage, 'error');
+      } else {
+        showToast('Erreur lors de la sauvegarde de la configuration', 'error');
+      }
     }
   };
 
@@ -511,6 +532,26 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <Pressable style={styles.viewsCardsWrapper}>
+        {/* Vue Salles */}
+          <View style={styles.viewCard}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                <LayoutDashboard size={24} color="#F59E0B" strokeWidth={2} />
+              </View>
+              <View style={styles.viewCardContent}>
+                <Text style={styles.viewCardTitle}>Salles</Text>
+                <Text style={styles.viewCardDescription}>Gestion des salles et plan de table</Text>
+              </View>
+              <Switch
+                value={localRoomEnabled}
+                onValueChange={setLocalRoomEnabled}
+                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                thumbColor={localRoomEnabled ? '#FFFFFF' : '#F3F4F6'}
+                disabled={configLoading}
+              />
+            </View>
+          </View>
+
         {/* Vue Équipe */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>

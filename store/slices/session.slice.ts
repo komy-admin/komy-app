@@ -13,6 +13,7 @@ interface AccountConfigPayload {
   teamEnabled: boolean;
   kitchenEnabled: boolean;
   barEnabled: boolean;
+  roomEnabled: boolean;
   // View modes
   kitchenViewMode: ViewMode;
   barViewMode: ViewMode;
@@ -79,6 +80,7 @@ export interface SessionState {
     teamEnabled: boolean;
     kitchenEnabled: boolean;
     barEnabled: boolean;
+    roomEnabled: boolean;
     kitchenViewMode: ViewMode;
     barViewMode: ViewMode;
     twoFactorEnabled: boolean;

@@ -49,7 +49,7 @@ export default function OrderFormPage() {
       {/* Formulaire */}
       <View style={{ flex: 1 }}>
         <OrderLinesForm
-          title={`${room?.name || 'Salle'} - ${table?.name || 'Table'}`}
+          title={table ? `${room?.name || 'Salle'} - ${table.name}` : 'Nouvelle commande'}
           lines={manager.orderLines}
           items={items.filter((item) => item.isActive)}
           itemTypes={itemTypes}

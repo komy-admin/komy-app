@@ -4,8 +4,8 @@ import { Table } from '~/types/table.types';
 
 export type Order = {
   id: string;
-  tableId: string;
-  table: Table;
+  tableId: string | null;
+  table: Table | null;
 
   // 🆕 Structure unifiée OrderLine
   lines: OrderLine[];

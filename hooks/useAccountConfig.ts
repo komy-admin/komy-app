@@ -28,6 +28,7 @@ export const useAccountConfig = () => {
         teamEnabled: accountConfig.teamEnabled,
         kitchenEnabled: accountConfig.kitchenEnabled,
         barEnabled: accountConfig.barEnabled,
+        roomEnabled: accountConfig.roomEnabled ?? true,
         // View modes avec valeurs par défaut si absents
         kitchenViewMode: accountConfig.kitchenViewMode || 'tickets',
         barViewMode: accountConfig.barViewMode || 'tickets',
@@ -53,6 +54,7 @@ export const useAccountConfig = () => {
     teamEnabled?: boolean;
     kitchenEnabled?: boolean;
     barEnabled?: boolean;
+    roomEnabled?: boolean;
     kitchenViewMode?: 'columns' | 'tickets';
     barViewMode?: 'columns' | 'tickets';
   }) => {
@@ -72,6 +74,7 @@ export const useAccountConfig = () => {
         teamEnabled: updatedConfig.teamEnabled,
         kitchenEnabled: updatedConfig.kitchenEnabled,
         barEnabled: updatedConfig.barEnabled,
+        roomEnabled: updatedConfig.roomEnabled ?? true,
         kitchenViewMode: updatedConfig.kitchenViewMode || 'tickets',
         barViewMode: updatedConfig.barViewMode || 'tickets',
         twoFactorEnabled: updatedConfig.twoFactorEnabled ?? false,
@@ -119,6 +122,7 @@ export const useAccountConfig = () => {
     teamEnabled: config?.teamEnabled ?? true,
     kitchenEnabled: config?.kitchenEnabled ?? true,
     barEnabled: config?.barEnabled ?? true,
+    roomEnabled: config?.roomEnabled ?? true,
 
     // View modes simplifiés
     kitchenViewMode: config?.kitchenViewMode ?? 'tickets',

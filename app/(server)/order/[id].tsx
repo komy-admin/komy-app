@@ -181,7 +181,7 @@ export default function OrderDetailPage() {
       pathname: '/(server)/order/form',
       params: {
         orderId: order.id,
-        tableId: order.tableId,
+        ...(order.tableId ? { tableId: order.tableId } : {}),
         mode: 'add'
       }
     });

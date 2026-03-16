@@ -81,7 +81,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={[styles.tableTag, { backgroundColor: '#6366F1' }]}>
-              <Text style={styles.tableTagText}>{order.table.name}</Text>
+              <Text style={styles.tableTagText}>{order.table?.name || 'Sans table'}</Text>
             </View>
             <Text style={styles.orderNumber}>#{order.id.substring(0, 8).toUpperCase()}</Text>
           </View>

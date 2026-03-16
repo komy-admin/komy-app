@@ -8,6 +8,7 @@ export type AccountConfig = {
   teamEnabled: boolean;
   kitchenEnabled: boolean;
   barEnabled: boolean;
+  roomEnabled: boolean;
   // View modes
   kitchenViewMode: ViewMode;
   barViewMode: ViewMode;

@@ -22,7 +22,7 @@ export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
   mode: "create" | "edit";
   orderId?: string;
-  tableId: string;
+  tableId?: string | null;
   onSuccess?: (order: any) => void;
   onError?: (error: Error) => void;
 }

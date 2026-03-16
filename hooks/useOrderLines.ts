@@ -18,20 +18,20 @@ export const useOrderLines = () => {
    * CETTE FONCTION EST UTILISÉE QUAND LE SERVEUR VALIDE LA COMMANDE POUR LA PREMIÈRE FOIS
    */
   const createOrderWithLines = useCallback(async (
-    tableId: string,
+    tableId: string | null | undefined,
     linesData: CreateOrderLineRequest[],
     status: Status = Status.DRAFT
   ): Promise<Order> => {
     try {
       const newOrder = await orderApiService.createWithLines({
-        tableId,
+        ...(tableId ? { tableId } : {}),
         lines: linesData,
         status
       });
 
       const enrichedOrder = {
         ...newOrder,
-        table: newOrder.table || { id: tableId, name: `Table ${tableId}` }
+        table: newOrder.table || (tableId ? { id: tableId, name: `Table ${tableId}` } : null)
       };
 
       dispatch(entitiesActions.createOrder({ order: enrichedOrder }));

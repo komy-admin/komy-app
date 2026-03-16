@@ -18,6 +18,7 @@ import {
 } from '~/hooks/useRestaurant';
 import { useAppSelector } from '~/store/hooks';
 import { selectAppInitialized, selectIsAppInitializing } from '~/store/slices/session.slice';
+import RoomlessServiceView from '~/components/Service/RoomlessServiceView';
 import { OrderLinesForm } from '~/components/order/OrderLinesForm';
 import { useOrderLinesManager } from '~/hooks/order/useOrderLinesManager';
 import { useOrderStatusActions } from '~/hooks/order/useOrderStatusActions';
@@ -82,12 +83,14 @@ export default function ServicePage() {
   const [orderModalTitle, setOrderModalTitle] = useState('');
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [showPaymentView, setShowPaymentView] = useState(false);
+  const [serviceViewMode, setServiceViewMode] = useState<'rooms' | 'orders'>('rooms');
 
   const { width } = useWindowDimensions();
   const { rooms, currentRoom, setCurrentRoom } = useRestaurant();
   const activeRooms = useMemo(() => rooms.filter(room => room.isActive), [rooms]);
   const appInitialized = useAppSelector(selectAppInitialized);
   const appLoading = useAppSelector(selectIsAppInitializing);
+  const roomEnabled = useAppSelector(state => state.session.accountConfig?.roomEnabled ?? true);
   const { enrichedTables, currentRoomTables, selectedTableId, selectedTable, setSelectedTable } = useTables();
   const {
     currentRoomOrders,
@@ -435,17 +438,24 @@ export default function ServicePage() {
         <View style={styles.flex1}>
           <View style={styles.mainContentContainer}>
             {/* Header avec tabs des rooms */}
-            {activeRooms.length > 0 && !showOrderDetail && !showOrderForm && (
+            {roomEnabled && activeRooms.length > 0 && !showOrderDetail && !showOrderForm && serviceViewMode === 'rooms' && (
               <RoomTabsHeader
                 rooms={activeRooms}
                 currentRoomId={currentRoom?.id}
                 orderCountByRoom={orderCountByRoom}
                 onRoomChange={handleChangeRoom}
                 onEditModePress={navigateToRoomEdit}
+                viewMode={serviceViewMode}
+                onViewModeChange={setServiceViewMode}
               />
             )}
 
-            {appInitialized && !appLoading && activeRooms.length === 0 ? (
+            {!roomEnabled || serviceViewMode === 'orders' ? (
+              <RoomlessServiceView
+                viewModeToggle={roomEnabled ? { viewMode: serviceViewMode, onViewModeChange: setServiceViewMode } : undefined}
+                onEditModePress={roomEnabled ? navigateToRoomEdit : undefined}
+              />
+            ) : appInitialized && !appLoading && activeRooms.length === 0 ? (
               <EmptyRoomsState onCreateFirstRoom={handleCreateFirstRoom} />
             ) : appLoading || !appInitialized ? (
               <View style={styles.loadingContainer}>
@@ -482,7 +492,7 @@ export default function ServicePage() {
                         enrichedTables={enrichedTables}
                         reassignRoom={reassignRoom}
                         reassignRoomTables={reassignRoomTables}
-                        currentTableId={selectedTableOrder?.tableId}
+                        currentTableId={selectedTableOrder?.tableId ?? undefined}
                         isReassigning={isReassigning}
                         onRoomChange={handleReassignRoomChange}
                         onConfirm={handleTableReassign}
@@ -627,6 +637,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  roomDisabledContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  roomDisabledTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 8,
+  } as any,
+  roomDisabledSubtitle: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+  } as any,
   normalLayoutContainer: {
     flex: 1,
     zIndex: 1,

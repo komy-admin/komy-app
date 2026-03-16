@@ -31,7 +31,7 @@ export interface OrderDetailActionsProps {
   onServe: () => void;
   hasDraftItems: boolean;
   hasReadyItems: boolean;
-  onReassignTable: () => void;
+  onReassignTable?: () => void;
   onPayment: () => void;
   onTerminate: () => void;
   onDelete: () => void;
@@ -188,15 +188,17 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         />
       </View>
       <View style={styles.row}>
-        <ActionButton
-          icon={Repeat}
-          color="#2563EB"
-          bg="#EFF6FF"
-          border="#93C5FD"
-          label="Changer table"
-          onPress={onReassignTable}
-          compact={compactButtons}
-        />
+        {onReassignTable && (
+          <ActionButton
+            icon={Repeat}
+            color="#2563EB"
+            bg="#EFF6FF"
+            border="#93C5FD"
+            label="Changer table"
+            onPress={onReassignTable}
+            compact={compactButtons}
+          />
+        )}
         <ActionButton
           icon={Wallet}
           color="#059669"

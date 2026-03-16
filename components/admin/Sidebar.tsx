@@ -16,7 +16,7 @@ const ServiceIcon = ({ size, color, style }: { size: number; color: string; styl
 const NAV_ITEMS = [
   { href: '/service', icon: ServiceIcon, label: 'Service', configKey: null },
   { href: '/payments', icon: CreditCard, label: 'Paiements', configKey: null },
-  { href: '/room/edition-mode', icon: LayoutDashboard, label: 'Salles', configKey: null },
+  { href: '/room/edition-mode', icon: LayoutDashboard, label: 'Salles', configKey: 'roomEnabled' as const },
   { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null },
   { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const },
   { href: '/kitchen', icon: ChefHat, label: 'Cuisine', configKey: 'kitchenEnabled' as const },

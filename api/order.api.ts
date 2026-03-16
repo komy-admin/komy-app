@@ -27,7 +27,7 @@ export interface BulkUpdateOrderPayload {
 }
 
 export interface CreateOrderPayload {
-  tableId: string;
+  tableId?: string;
   lines: CreateOrderLineRequest[];
   status?: Status;
 }
