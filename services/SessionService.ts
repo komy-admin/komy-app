@@ -318,6 +318,7 @@ class SessionService {
    */
   clearSession(): void {
     store.dispatch(sessionActions.clearSessionToken());
+    store.dispatch(sessionActions.setAppInitialized(false));
   }
 
   /**

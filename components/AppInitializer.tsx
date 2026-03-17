@@ -54,42 +54,39 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
     }
   }, [isFullyAuthenticated, appInitialized, isAppInitializing, user?.profil, segments, router]);
 
-  // Si pas authentifié, passer directement au contenu (pages de login)
+  // Si pas authentifié, passer directement au contenu (pages de login/pin)
   if (!isFullyAuthenticated) {
     return <>{children}</>;
   }
 
-  // Si authentifié mais app pas encore initialisée ou en cours d'initialisation → afficher loader
-  if (!appInitialized || isAppInitializing) {
-    return fallback || (
-      <View style={styles.container}>
-        {/* Logo statique */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-        </View>
+  const showLoader = !appInitialized || isAppInitializing;
 
-        {/* Barre de progression */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
-          </View>
-          <Text style={styles.progressText}>
-            {progressPercentage >= 90 ? 'Finalisation...' : getCurrentStepLabel(progress)} ({Math.round(progressPercentage)}%)
-          </Text>
-        </View>
-
-      </View>
-    );
-  }
-
-  // App initialisée, afficher le contenu principal avec les listeners WebSocket
+  // Toujours rendre les children (Stack) pour que Expo Router conserve la route.
+  // Le loader est affiché en overlay par-dessus quand l'init est en cours.
   return (
     <WebSocketListener>
       {children}
+      {showLoader && (
+        fallback || (
+          <View style={styles.loaderOverlay}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+              </View>
+              <Text style={styles.progressText}>
+                {progressPercentage >= 90 ? 'Finalisation...' : getCurrentStepLabel(progress)} ({Math.round(progressPercentage)}%)
+              </Text>
+            </View>
+          </View>
+        )
+      )}
     </WebSocketListener>
   );
 };
@@ -120,11 +117,12 @@ function getCurrentStepLabel(progress: InitializationProgress): string {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 9999,
   },
   logoContainer: {
     justifyContent: 'center',
