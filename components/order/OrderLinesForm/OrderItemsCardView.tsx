@@ -57,37 +57,35 @@ const OrderItemCard = memo<OrderItemCardProps>(({
     };
   }, [item.color]);
 
-  const dynamicStyle = useMemo(() => ({
-    width: cardWidth,
-    minWidth: cardWidth,
-    maxWidth: cardWidth,
-    backgroundColor: colors.bgColor,
-    borderColor: colors.borderColor,
-  }), [cardWidth, colors]);
-
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        dynamicStyle,
-        pressed && styles.cardPressed,
-      ]}
-      onPress={handleAdd}
-    >
-      <View style={styles.glassOverlay}>
-        <View style={styles.cardContent}>
-          <View style={styles.cardNameArea}>
-            <RNText
-              style={[styles.cardName, { color: colors.textColor }]}
-              numberOfLines={2}
-            >
-              {item.name}
+    <Pressable onPress={handleAdd}>
+      <View
+        style={[
+          styles.card,
+          {
+            width: cardWidth,
+            minWidth: cardWidth,
+            maxWidth: cardWidth,
+            backgroundColor: colors.bgColor,
+            borderColor: colors.borderColor,
+          },
+        ]}
+      >
+        <View style={styles.glassOverlay}>
+          <View style={styles.cardContent}>
+            <View style={styles.cardNameArea}>
+              <RNText
+                style={[styles.cardName, { color: colors.textColor }]}
+                numberOfLines={2}
+              >
+                {item.name}
+              </RNText>
+            </View>
+
+            <RNText style={styles.itemPriceLabel}>
+              {formatPrice(item.price)}
             </RNText>
           </View>
-
-          <RNText style={styles.itemPriceLabel}>
-            {formatPrice(item.price)}
-          </RNText>
         </View>
       </View>
     </Pressable>
@@ -114,44 +112,42 @@ const MenuCard = memo<MenuCardProps>(({
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
 
-  const dynamicStyle = useMemo(() => ({
-    width: cardWidth,
-    minWidth: cardWidth,
-    maxWidth: cardWidth,
-  }), [cardWidth]);
-
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        styles.menuCard,
-        dynamicStyle,
-        pressed && styles.cardPressed,
-      ]}
-      onPress={handleAdd}
-    >
-      <View style={styles.glassOverlay}>
-        <View style={styles.cardContent}>
-          <View style={styles.cardNameArea}>
-            <RNText
-              style={[styles.cardName, styles.menuNameColor]}
-              numberOfLines={2}
-            >
-              {menu.name}
-            </RNText>
-            {menu.description && (
+    <Pressable onPress={handleAdd}>
+      <View
+        style={[
+          styles.card,
+          styles.menuCard,
+          {
+            width: cardWidth,
+            minWidth: cardWidth,
+            maxWidth: cardWidth,
+          },
+        ]}
+      >
+        <View style={styles.glassOverlay}>
+          <View style={styles.cardContent}>
+            <View style={styles.cardNameArea}>
               <RNText
-                style={styles.menuDescription}
+                style={[styles.cardName, styles.menuNameColor]}
                 numberOfLines={2}
               >
-                {menu.description}
+                {menu.name}
               </RNText>
-            )}
-          </View>
+              {menu.description && (
+                <RNText
+                  style={styles.menuDescription}
+                  numberOfLines={2}
+                >
+                  {menu.description}
+                </RNText>
+              )}
+            </View>
 
-          <RNText style={styles.menuPriceLabel}>
-            À partir de {formatPrice(getMenuPrice(menu))}
-          </RNText>
+            <RNText style={styles.menuPriceLabel}>
+              À partir de {formatPrice(getMenuPrice(menu))}
+            </RNText>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -253,7 +249,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
       onLayout={handleLayout}
     >
       {isMeasured && (
-      <Pressable>
+      <View>
         {/* Section Menus */}
         {filteredMenus.length > 0 && (
           <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
@@ -294,7 +290,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             </View>
           </View>
         ))}
-      </Pressable>
+      </View>
       )}
     </ScrollView>
   );
@@ -353,6 +349,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2.5,
     minHeight: 130,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden' as const,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -363,11 +361,6 @@ const styles = StyleSheet.create({
       transition: 'all 0.15s ease',
     } as any : {}),
   },
-  cardPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.97 }],
-  },
-
   // Menu Card overrides
   menuCard: {
     backgroundColor: MENU_BG_COLOR,

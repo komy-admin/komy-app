@@ -114,7 +114,7 @@ export function SidePanel({
                     style={{
                       fontSize: 14,
                       fontWeight: '600',
-                      color: '#718096',
+                      color: '#2A2E33',
                       letterSpacing: 1.2,
                       textAlign: 'center',
                     }}
@@ -266,7 +266,9 @@ const styles = StyleSheet.create({
   fullWidthIconSection: {
     width: 50,
     height: 50,
-    backgroundColor: '#718096',
+    backgroundColor: '#2A2E33',
+    borderLeftWidth: 1,
+    borderLeftColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },

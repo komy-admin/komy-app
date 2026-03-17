@@ -1,13 +1,13 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 import { View, Pressable, StyleSheet, SectionList, Text as RNText } from 'react-native';
-import { Text } from '~/components/ui';
-import { Plus, ListFilter } from 'lucide-react-native';
+import { ForkTable } from '~/components/ui/table';
+import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
 import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
 import { formatPrice, getContrastColor } from '~/lib/utils';
-import { getMenuPrice } from '~/lib/color-utils';
+import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
 
 const MENU_COLOR = '#10B981';
 const ITEM_HEIGHT = 58;
@@ -61,26 +61,26 @@ const OrderItemRow = memo<OrderItemRowProps>(({
       onPress={handleAdd}
     >
       <View style={styles.letterCell}>
-        <View style={[styles.letterCircle, { backgroundColor: itemColor }]}>
-          <Text style={[styles.letterText, { color: buttonIconColor }]}>
+        <View style={[styles.letterCircle, { backgroundColor: getColorWithOpacity(itemColor, 0.12), borderWidth: 1.5, borderColor: itemColor }]}>
+          <RNText style={[styles.letterText, { color: itemColor }]}>
             {item.name.charAt(0).toUpperCase()}
-          </Text>
+          </RNText>
         </View>
       </View>
 
       <View style={styles.nameCell}>
-        <Text
+        <RNText
           style={styles.nameText}
           numberOfLines={1}
         >
           {item.name}
-        </Text>
+        </RNText>
       </View>
 
       <View style={styles.priceCell}>
-        <Text style={styles.priceText} numberOfLines={1}>
+        <RNText style={styles.priceText} numberOfLines={1}>
           {formatPrice(item.price)}
-        </Text>
+        </RNText>
       </View>
 
       <View style={styles.tagsCell}>
@@ -106,7 +106,7 @@ const OrderItemRow = memo<OrderItemRowProps>(({
               );
             })}
             {item.tags.length > 2 && (
-              <Text style={styles.moreTagsText}>+{item.tags.length - 2}</Text>
+              <RNText style={styles.moreTagsText}>+{item.tags.length - 2}</RNText>
             )}
           </View>
         )}
@@ -116,10 +116,10 @@ const OrderItemRow = memo<OrderItemRowProps>(({
         <View
           style={[
             styles.addButton,
-            { backgroundColor: buttonBgColor }
+            { backgroundColor: '#2A2E33' }
           ]}
         >
-          <Plus size={20} color={buttonIconColor} strokeWidth={2.5} />
+          <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
         </View>
       </View>
     </Pressable>
@@ -150,8 +150,8 @@ const MenuRow = memo<MenuRowProps>(({
       onPress={handleAdd}
     >
       <View style={styles.letterCell}>
-        <View style={[styles.letterCircle, { backgroundColor: MENU_COLOR }]}>
-          <RNText style={styles.menuLetterText}>
+        <View style={[styles.letterCircle, { backgroundColor: getColorWithOpacity(MENU_COLOR, 0.12), borderWidth: 1.5, borderColor: MENU_COLOR }]}>
+          <RNText style={[styles.menuLetterText, { color: MENU_COLOR }]}>
             {menu.name.charAt(0).toUpperCase()}
           </RNText>
         </View>
@@ -190,7 +190,7 @@ const MenuRow = memo<MenuRowProps>(({
       </View>
 
       <View style={styles.actionCell}>
-        <View style={[styles.addButton, { backgroundColor: MENU_COLOR }]}>
+        <View style={[styles.addButton, { backgroundColor: '#2A2E33' }]}>
           <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
         </View>
       </View>
@@ -199,6 +199,13 @@ const MenuRow = memo<MenuRowProps>(({
 });
 
 MenuRow.displayName = 'MenuRow';
+
+const ORDER_ITEMS_COLUMNS = [
+  { label: '', key: 'profil', width: 64 },
+  { label: 'Nom', key: 'name', width: '30%' },
+  { label: 'Prix', key: 'price', width: '20%' },
+  { label: 'Tags', key: 'tags', width: '20%' },
+];
 
 /**
  * Vue liste unifiée : menus + articles dans un seul scroll (SectionList virtualisée)
@@ -214,7 +221,7 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
   activeMainTab,
   onMainTabChange,
 }) => {
-  const sectionListRef = useRef<SectionList<Item | Menu, TableSection>>(null);
+  const sectionListRef = useRef<SectionList>(null);
 
   const filteredMenus = useMemo(() => {
     return activeMenus.filter(menu => menu.isActive);
@@ -330,132 +337,31 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
     );
   }, [handleMenuAdd, onOpenCustomization]);
 
-  const renderSectionHeader = useCallback(({ section }: { section: TableSection }) => (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderText}>{section.title}</Text>
-    </View>
-  ), []);
-
-  const keyExtractor = useCallback((item: Item | Menu) => item.id.toString(), []);
-
-  if (items.length === 0 && filteredMenus.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>
-          Aucun article disponible
-        </Text>
-      </View>
-    );
-  }
+  const hasData = items.length > 0 || filteredMenus.length > 0;
 
   return (
-    <View style={styles.container}>
-      {/* Header de la table */}
-      <View style={styles.header}>
-        <View style={styles.filterCell}>
-          <View style={styles.filterIcon}>
-            <ListFilter size={17} color="#2A2E33" strokeWidth={2.5} />
-          </View>
-        </View>
-        <View style={styles.nameCell}>
-          <Text style={styles.headerText} numberOfLines={1}>Nom</Text>
-        </View>
-        <View style={styles.priceCell}>
-          <Text style={styles.headerText} numberOfLines={1}>Prix</Text>
-        </View>
-        <View style={styles.tagsCell}>
-          <Text style={styles.headerText} numberOfLines={1}>Tags</Text>
-        </View>
-        <View style={styles.actionCell}>
-          <Text style={styles.headerText} numberOfLines={1}>Action</Text>
-        </View>
-      </View>
-
-      {/* Contenu de la table */}
-      <SectionList
-        ref={sectionListRef}
-        sections={sections}
-        renderItem={renderItem}
-        renderSectionHeader={renderSectionHeader}
-        keyExtractor={keyExtractor}
-        getItemLayout={getItemLayout}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        stickySectionHeadersEnabled={false}
-        removeClippedSubviews={true}
-        initialNumToRender={30}
-        maxToRenderPerBatch={15}
-        windowSize={7}
-      />
-    </View>
+    <ForkTable
+      data={[]}
+      sections={hasData ? sections : undefined}
+      columns={ORDER_ITEMS_COLUMNS}
+      showActionColumn
+      renderItem={renderItem}
+      sectionListRef={sectionListRef}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+      getItemLayout={getItemLayout}
+      emptyMessage="Aucun article disponible"
+    />
   );
 });
 
 OrderItemsTableView.displayName = 'OrderItemsTableView';
 
 const COLORS = {
-  background: '#FFFFFF',
   textSecondary: '#6B7280',
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-
-  // Section header
-  sectionHeader: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingLeft: 24,
-    height: SECTION_HEADER_HEIGHT,
-    justifyContent: 'center' as const,
-  },
-  sectionHeaderText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#374151',
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F8F8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F4F5F5',
-    minHeight: 52,
-    alignItems: 'center',
-    paddingHorizontal: 0,
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '300',
-    color: '#2A2E33',
-    textDecorationLine: 'underline',
-  },
-
   // Row
   row: {
     flexDirection: 'row',
@@ -473,21 +379,6 @@ const styles = StyleSheet.create({
   },
 
   // Cells
-  filterCell: {
-    width: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   letterCell: {
     width: 64,
     padding: 16,
@@ -495,9 +386,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   letterCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -509,7 +400,6 @@ const styles = StyleSheet.create({
   menuLetterText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
     letterSpacing: 0,
   },
   nameCell: {
@@ -543,7 +433,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   priceText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '400',
     color: '#2A2E33',
   },
@@ -581,10 +471,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionCell: {
-    flex: 1,
-    padding: 16,
-    alignItems: 'flex-end',
-    overflow: 'hidden',
+    width: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
     width: 38,
@@ -592,10 +481,5 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
   },
 });

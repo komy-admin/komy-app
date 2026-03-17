@@ -1,5 +1,6 @@
 import { View, ScrollView, useWindowDimensions, Text } from "react-native";
-import { Tabs, TabsContent, TabsList, TabsTrigger, Button, ForkTable } from "~/components/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from "~/components/ui";
+import { ForkTable } from "~/components/ui/table";
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
 
@@ -10,7 +11,7 @@ import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal
 import { QuickFormContent } from "~/components/admin/TeamForm";
 import { UserQrModal } from "~/components/admin/UserQrModal";
 import { useToast } from '~/components/ToastProvider';
-import { CreditCard as Edit2, QrCode, Trash, ListFilter } from 'lucide-react-native';
+import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
@@ -19,58 +20,56 @@ import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
 import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
-
-// Couleurs par profil
-const PROFILE_COLORS: Record<string, string> = {
-  [UserProfile.MANAGER]: '#3B82F6',
-  [UserProfile.SERVER]: '#10B981',
-  [UserProfile.CHEF]: '#F59E0B',
-  [UserProfile.BARMAN]: '#8B5CF6',
-  [UserProfile.ADMIN]: '#4F46E5',
-  [UserProfile.SUPERADMIN]: '#EF4444',
-};
-
-// Constantes en dehors du composant pour éviter les re-créations
-const HEADER_FILTER_ICON = () => (
-  <View style={{
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB',
-    justifyContent: 'center', alignItems: 'center',
-  }}>
-    <ListFilter size={17} color="#2A2E33" strokeWidth={2.5} />
-  </View>
-);
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { tabsBarStyle } from '~/lib/styles.utils';
 
 const TEAM_TABLE_COLUMNS = [
   {
     label: '',
     key: 'profil',
     width: 64,
-    headerRender: HEADER_FILTER_ICON,
     render: (user: User) => (
       <View style={{
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: PROFILE_COLORS[user.profil] || '#9CA3AF',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: getColorWithOpacity('#2A2E33', 0.12),
+        borderWidth: 1.5,
+        borderColor: '#2A2E33',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+        <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '600' }}>
           {user.firstName?.charAt(0)?.toUpperCase() || '?'}
         </Text>
       </View>
     ),
   },
-  { label: 'Prénom', key: 'firstName', width: '23%' },
-  { label: 'Nom', key: 'lastName', width: '23%' },
-  { label: 'Email', key: 'email', width: '29%' },
-  { label: 'Téléphone', key: 'phone', width: '18%' },
+  {
+    label: 'Nom',
+    key: 'name',
+    width: '60%',
+    render: (user: User) => (
+      <Text style={{ fontSize: 15, color: '#2A2E33' }}>
+        {[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}
+      </Text>
+    ),
+  },
+  {
+    label: 'Date de création',
+    key: 'createdAt',
+    width: '33%',
+    render: (user: any) => (
+      <Text style={{ fontSize: 15, color: '#2A2E33' }}>
+        {user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR') : '—'}
+      </Text>
+    ),
+  },
 ];
 
-// Filtrer les profils affichables (exclure seulement superadmin)
+// Filtrer les profils affichables (exclure superadmin et admin)
 const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
-  profile => profile !== 'superadmin'
+  profile => profile !== 'superadmin' && profile !== 'admin'
 );
 
 // États consolidés via unions discriminantes
@@ -290,13 +289,7 @@ export default function TeamPage() {
             setActiveTab(newTab);
           }}
         >
-          <View
-            style={{
-              backgroundColor: '#FBFBFB',
-              height: 50,
-              flexDirection: 'row'
-            }}
-          >
+          <View style={tabsBarStyle}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}

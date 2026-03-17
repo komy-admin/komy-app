@@ -9,10 +9,10 @@ import { useTags } from '~/hooks/useTags';
 import { MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, filterMenus, createEmptyMenuFilters } from '~/utils/menuFilters';
 import { useAdminFormView } from '@/components/admin/AdminForm/AdminFormView';
-import { CreditCard as Edit2, Trash, Power, ListFilter } from 'lucide-react-native';
+import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
 import { formatPrice, getContrastColor, sortActiveFirst } from '~/lib/utils';
-import { getMenuPrice } from '~/lib/color-utils';
+import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
 
 // ============================================================
 // Hook principal — logique métier de la page Menu admin
@@ -326,19 +326,14 @@ export function useMenuPage() {
   // Colonnes
   // ============================================================
 
-  const headerFilterIcon = useCallback(() => (
+  const renderColorCircle = useCallback((bgColor: string, name: string | undefined) => (
     <View style={{
-      width: 34, height: 34, borderRadius: 17,
-      backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB',
-      justifyContent: 'center', alignItems: 'center',
+      width: 36, height: 36, borderRadius: 18,
+      backgroundColor: getColorWithOpacity(bgColor, 0.12),
+      borderWidth: 1.5, borderColor: bgColor,
+      alignItems: 'center', justifyContent: 'center',
     }}>
-      <ListFilter size={17} color="#2A2E33" strokeWidth={2.5} />
-    </View>
-  ), []);
-
-  const renderColorCircle = useCallback((bgColor: string, name: string | undefined, textColor?: string) => (
-    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: bgColor, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: textColor || getContrastColor(bgColor), fontSize: 14, fontWeight: '600' }}>
+      <Text style={{ color: bgColor, fontSize: 14, fontWeight: '600' }}>
         {name?.charAt(0)?.toUpperCase() || ''}
       </Text>
     </View>
@@ -351,14 +346,14 @@ export function useMenuPage() {
   ), []);
 
   const itemTableColumns = useMemo(() => [
-    { label: '', key: 'color', width: 64, headerRender: headerFilterIcon, render: (item: Item) => renderColorCircle(item.color || '#6B7280', item.name) },
+    { label: '', key: 'color', width: 64, render: (item: Item) => renderColorCircle(item.color || '#6B7280', item.name) },
     { label: 'Nom', key: 'name', width: '46%' },
     { label: 'Prix', key: 'price', width: '23%', render: (item: Item) => <Text>{formatPrice(item.price)}</Text> },
     { label: 'Statut', key: 'statut', width: '24%', render: (item: Item) => renderStatus(item.isActive) },
-  ], [renderColorCircle, renderStatus, headerFilterIcon]);
+  ], [renderColorCircle, renderStatus]);
 
   const menuTableColumns = useMemo(() => [
-    { label: '', key: 'color', width: 64, headerRender: headerFilterIcon, render: (menu: Menu) => renderColorCircle('#7C3AED', menu.name, '#FFFFFF') },
+    { label: '', key: 'color', width: 64, render: (menu: Menu) => renderColorCircle('#10B981', menu.name) },
     { label: 'Nom', key: 'name', width: '34%' },
     { label: 'Prix', key: 'basePrice', width: '17%', render: (menu: Menu) => <Text>{formatPrice(getMenuPrice(menu))}</Text> },
     { label: 'Catégories', key: 'categories', width: '28%', render: (menu: Menu) => (
@@ -367,19 +362,19 @@ export function useMenuPage() {
       </Text>
     ) },
     { label: 'Statut', key: 'statut', width: '14%', render: (menu: Menu) => renderStatus(menu.isActive) },
-  ], [renderColorCircle, renderStatus, headerFilterIcon]);
+  ], [renderColorCircle, renderStatus]);
 
   const tousColumns = useMemo(() => [
-    { label: '', key: 'color', width: 64, headerRender: headerFilterIcon, render: (entry: any) => {
+    { label: '', key: 'color', width: 64, render: (entry: any) => {
       const isMenu = entry._type === 'menu';
-      return renderColorCircle(isMenu ? '#7C3AED' : (entry.color || '#6B7280'), entry.name, isMenu ? '#FFFFFF' : undefined);
+      return renderColorCircle(isMenu ? '#10B981' : (entry.color || '#6B7280'), entry.name);
     } },
     { label: 'Nom', key: 'name', width: '46%' },
     { label: 'Prix', key: 'price', width: '23%', render: (entry: any) => (
       <Text>{formatPrice(entry._type === 'menu' ? getMenuPrice(entry) : entry.price)}</Text>
     ) },
     { label: 'Statut', key: 'statut', width: '24%', render: (entry: any) => renderStatus(entry.isActive) },
-  ], [renderColorCircle, renderStatus, headerFilterIcon]);
+  ], [renderColorCircle, renderStatus]);
 
   // ============================================================
   // Return public API

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { cn } from '~/lib/utils';
-import { Text } from '~/components/ui/text';
 import {
   Pressable,
   View,
@@ -8,9 +7,10 @@ import {
   FlatList,
   SectionList,
   LayoutAnimation,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Text as RNText
 } from 'react-native';
-import { Trash2 } from 'lucide-react-native';
+import { Trash2, ListFilter } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { TableLoader } from '~/components/TableLoader';
 
@@ -25,6 +25,8 @@ interface ColumnData {
 interface SectionData {
   title: string;
   data: any[];
+  key?: string;
+  type?: string;
 }
 
 interface ForkTableProps {
@@ -35,13 +37,20 @@ interface ForkTableProps {
   onRowDelete?: (id: string) => void;
   useActionMenu?: boolean;
   getActions?: (item: any) => ActionItem[];
+  showActionColumn?: boolean;
   isLoading?: boolean;
   loadingMessage?: string;
   emptyMessage?: string;
+  renderItem?: (info: any) => React.ReactElement;
+  renderHeader?: () => React.ReactElement;
+  sectionListRef?: React.RefObject<SectionList | null>;
+  onScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
+  getItemLayout?: (data: any, index: number) => { length: number; offset: number; index: number };
 }
 
 const Table = React.forwardRef<
-  React.ElementRef<typeof View>,
+  React.ComponentRef<typeof View>,
   React.ComponentPropsWithoutRef<typeof View>
 >(({ className, ...props }, ref) => (
   <View ref={ref} className={cn('w-full caption-bottom', className)} {...props} />
@@ -49,23 +58,15 @@ const Table = React.forwardRef<
 Table.displayName = 'Table';
 
 const TableHeader = React.forwardRef<
-  React.ElementRef<typeof View>,
+  React.ComponentRef<typeof View>,
   React.ComponentPropsWithoutRef<typeof View>
 >(({ className, ...props }, ref) => (
   <View ref={ref} className={cn('[&_tr]:border-b', className)} {...props} />
 ));
 TableHeader.displayName = 'TableHeader';
 
-const TableBody = React.forwardRef<
-  React.ElementRef<typeof View>,
-  React.ComponentPropsWithoutRef<typeof View>
->(({ className, ...props }, ref) => (
-  <View ref={ref} className={cn('[&_tr:last-child]:border-0', className)} {...props} />
-));
-TableBody.displayName = 'TableBody';
-
 const TableRow = React.forwardRef<
-  React.ElementRef<typeof View>,
+  React.ComponentRef<typeof View>,
   React.ComponentPropsWithoutRef<typeof View>
 >(({ className, ...props }, ref) => (
   <View
@@ -80,39 +81,30 @@ const TableRow = React.forwardRef<
 TableRow.displayName = 'TableRow';
 
 const TableHead = React.forwardRef<
-  React.ElementRef<typeof View>,
+  React.ComponentRef<typeof View>,
   React.ComponentPropsWithoutRef<typeof View>
 >(({ className, ...props }, ref) => (
   <View
     ref={ref}
-    className={cn(
-      'h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
-      className
-    )}
+    className={className}
     {...props}
   />
 ));
 TableHead.displayName = 'TableHead';
 
-const TableCell = React.forwardRef<
-  React.ElementRef<typeof View>,
-  React.ComponentPropsWithoutRef<typeof View>
->(({ className, ...props }, ref) => (
-  <View
-    ref={ref}
-    className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)}
-    {...props}
-  />
-));
-TableCell.displayName = 'TableCell';
-
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
   <View style={styles.emptyState}>
-    <Text style={styles.emptyMessage}>{message}</Text>
+    <RNText style={styles.emptyMessage}>{message}</RNText>
   </View>
 );
 
-const ForkTable = ({
+const HeaderFilterIcon = () => (
+  <View style={styles.filterIcon}>
+    <ListFilter size={18} color="#2A2E33" strokeWidth={2.5} />
+  </View>
+);
+
+const ForkTable = React.memo(({
   data,
   columns,
   sections,
@@ -120,19 +112,25 @@ const ForkTable = ({
   onRowDelete,
   useActionMenu = false,
   getActions,
+  showActionColumn = false,
   isLoading = false,
   loadingMessage = "Chargement des données...",
-  emptyMessage = "Aucune donnée disponible"
+  emptyMessage = "Aucune donnée disponible",
+  renderItem: customRenderItem,
+  renderHeader: customRenderHeader,
+  sectionListRef,
+  onScroll,
+  scrollEventThrottle,
+  getItemLayout,
 }: ForkTableProps) => {
-  const hasActionColumn = (useActionMenu && !!getActions) || !!onRowDelete;
+  const hasActionColumn = showActionColumn || (useActionMenu && !!getActions) || !!onRowDelete;
 
-  // number → largeur fixe en px, string "23%" → flex proportionnel
   const getColumnSizeStyle = React.useCallback((width: number | string) => {
     if (typeof width === 'number') return { width };
     return { flex: parseFloat(width) || 1 };
   }, []);
 
-  const renderItem = React.useCallback(({ item, index }: { item: any; index: number }) => {
+  const defaultRenderItem = React.useCallback(({ item, index }: { item: any; index: number }) => {
     return (
       <TableRow
         style={[
@@ -154,13 +152,13 @@ const ForkTable = ({
                   column.render(item)
                 ) : (
                   <View style={styles.textContainer}>
-                    <Text
+                    <RNText
                       style={styles.cellText}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
                       {item[column.key]}
-                    </Text>
+                    </RNText>
                   </View>
                 )}
               </View>
@@ -188,20 +186,19 @@ const ForkTable = ({
     );
   }, [columns, onRowPress, onRowDelete, useActionMenu, getActions, hasActionColumn]);
 
-  const renderSectionHeader = React.useCallback(({ section }: { section: SectionData }) => (
+  const renderSectionHeader = React.useCallback(({ section }: { section: any }) => (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderText}>{section.title}</Text>
+      <RNText style={styles.sectionHeaderText}>{section.title}</RNText>
     </View>
   ), []);
 
-  const headerContent = (
+  const headerContent = customRenderHeader ? customRenderHeader() : (
     <TableHeader style={styles.header}>
       <TableRow style={styles.headerRow}>
         <View style={styles.headerColumns}>
           {columns.map((column) => (
             <TableHead
               key={column.key}
-              className={column.label ? undefined : 'px-0'}
               style={[
                 column.label ? styles.headerCell : styles.headerCellCompact,
                 getColumnSizeStyle(column.width)
@@ -211,21 +208,23 @@ const ForkTable = ({
                 column.headerRender()
               ) : column.label ? (
                 <View style={styles.headerTextContainer}>
-                  <Text
+                  <RNText
                     style={styles.headerText}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
                     {column.label}
-                  </Text>
+                  </RNText>
                 </View>
-              ) : null}
+              ) : (
+                <HeaderFilterIcon />
+              )}
             </TableHead>
           ))}
         </View>
         {hasActionColumn && (
           <View style={styles.actionHeaderCell}>
-            <Text style={styles.headerText}>Action</Text>
+            <RNText style={styles.headerText}>Action</RNText>
           </View>
         )}
       </TableRow>
@@ -265,8 +264,9 @@ const ForkTable = ({
 
         {sections ? (
           <SectionList
+            ref={sectionListRef}
             sections={sections}
-            renderItem={renderItem}
+            renderItem={customRenderItem || defaultRenderItem}
             renderSectionHeader={renderSectionHeader}
             keyExtractor={(item) => item.id.toString()}
             style={styles.list}
@@ -277,11 +277,14 @@ const ForkTable = ({
             initialNumToRender={30}
             maxToRenderPerBatch={15}
             windowSize={7}
+            onScroll={onScroll}
+            scrollEventThrottle={scrollEventThrottle}
+            getItemLayout={getItemLayout}
           />
         ) : (
           <FlatList
             data={data}
-            renderItem={renderItem}
+            renderItem={customRenderItem || defaultRenderItem}
             keyExtractor={(item) => item.id.toString()}
             style={styles.list}
             contentContainerStyle={styles.listContent}
@@ -290,7 +293,7 @@ const ForkTable = ({
             initialNumToRender={20}
             maxToRenderPerBatch={8}
             windowSize={5}
-            getItemLayout={(data, index) => ({
+            getItemLayout={(_data, index) => ({
               length: 58,
               offset: 58 * index,
               index,
@@ -300,7 +303,9 @@ const ForkTable = ({
       </Table>
     </View>
   );
-};
+});
+
+ForkTable.displayName = 'ForkTable';
 
 const styles = StyleSheet.create({
   container: {
@@ -317,8 +322,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: '#F1F1F1',
-    opacity: 0.5,
+    backgroundColor: '#F8F8F8',
     minHeight: 52,
     alignItems: 'center',
   },
@@ -344,16 +348,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerText: {
-    fontSize: 16,
+    fontSize: 13,
     color: '#2A2E33',
-    fontWeight: '300',
-    textDecorationLine: 'underline',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   actionHeaderCell: {
     width: 70,
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 52,
+  },
+  filterIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   list: {
     flex: 1,
@@ -394,6 +409,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   cellText: {
     fontSize: 15,
@@ -423,23 +439,23 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     backgroundColor: '#E2E8F0',
-    paddingVertical: 8,
-    paddingLeft: 24,
+    paddingVertical: 10,
+    paddingLeft: 20,
     paddingRight: 16,
   },
   sectionHeaderText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#374151',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#475569',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
 });
 
 export {
   Table,
   TableHeader,
-  TableBody,
   TableRow,
   TableHead,
-  TableCell,
-  ForkTable
+  ForkTable,
 };

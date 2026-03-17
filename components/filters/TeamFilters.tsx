@@ -3,10 +3,7 @@ import { View, StyleSheet, Text, TextInput, Pressable, Keyboard, Platform } from
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 export interface TeamFilterState {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
+  name: string;
 }
 
 interface TeamFiltersProps {
@@ -20,18 +17,8 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
   onFiltersChange,
   onClearFilters
 }) => {
-  
-  const updateFilter = (field: keyof TeamFilterState, value: string) => {
-    onFiltersChange({ ...filters, [field]: value });
-  };
 
-  // Vérifier si des filtres sont actifs
-  const hasActiveFilters = () => {
-    return filters.firstName !== '' ||
-           filters.lastName !== '' ||
-           filters.email !== '' ||
-           filters.phone !== '';
-  };
+  const hasActiveFilters = () => filters.name !== '';
 
   return (
     <KeyboardAwareScrollViewWrapper
@@ -41,54 +28,15 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
       scrollEventThrottle={16}
     >
       <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
-      {/* Prénom */}
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterLabel}>Prénom</Text>
-        <TextInput
-          style={styles.textInput}
-          value={filters.firstName}
-          onChangeText={(text) => updateFilter('firstName', text)}
-          placeholder="Rechercher..."
-          placeholderTextColor="#999"
-        />
-      </View>
-
       {/* Nom */}
       <View style={styles.filterGroup}>
         <Text style={styles.filterLabel}>Nom</Text>
         <TextInput
           style={styles.textInput}
-          value={filters.lastName}
-          onChangeText={(text) => updateFilter('lastName', text)}
+          value={filters.name}
+          onChangeText={(text) => onFiltersChange({ ...filters, name: text })}
           placeholder="Rechercher..."
           placeholderTextColor="#999"
-        />
-      </View>
-
-      {/* Email */}
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterLabel}>Email</Text>
-        <TextInput
-          style={styles.textInput}
-          value={filters.email}
-          onChangeText={(text) => updateFilter('email', text)}
-          placeholder="Rechercher..."
-          placeholderTextColor="#999"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
-
-      {/* Téléphone */}
-      <View style={styles.filterGroup}>
-        <Text style={styles.filterLabel}>Téléphone</Text>
-        <TextInput
-          style={styles.textInput}
-          value={filters.phone}
-          onChangeText={(text) => updateFilter('phone', text)}
-          placeholder="Rechercher..."
-          placeholderTextColor="#999"
-          keyboardType="phone-pad"
         />
       </View>
 
@@ -166,7 +114,7 @@ const styles = StyleSheet.create({
   clearButtonInactive: {
     ...Platform.select({
       web: {
-        backgroundColor: '#F3F4F6', // Gris clair sur web pour éviter le noir avec opacity
+        backgroundColor: '#F3F4F6',
       },
       default: {
         backgroundColor: 'transparent',

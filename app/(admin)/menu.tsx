@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger, ForkTable } from "~/component
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
 import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { tabsBarStyle } from '~/lib/styles.utils';
 import { useState, useCallback } from "react";
 import { MenuFilters } from '~/components/filters/MenuFilters';
 import { X, Tag, LayoutList } from 'lucide-react-native';
@@ -112,7 +113,7 @@ export default function MenuPage() {
           className="w-full mx-auto flex-col"
         >
           {/* Tabs bar */}
-          <View style={{ backgroundColor: '#FBFBFB', height: 50, flexDirection: 'row' }}>
+          <View style={tabsBarStyle}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
