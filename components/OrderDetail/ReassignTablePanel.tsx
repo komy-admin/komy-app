@@ -1,7 +1,8 @@
-import React, { memo, useState, useCallback, useMemo } from 'react';
-import { View, ScrollView, Pressable, Text as RNText, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import { memo, useState, useCallback, useMemo } from 'react';
+import { View, Pressable, Text as RNText, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { Text } from '~/components/ui';
-import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
+import { TabsHeader } from '~/components/ui/TabsHeader';
+import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import RoomComponent from '~/components/Room/Room';
 import { Room } from '~/types/room.types';
 import { Table } from '~/types/table.types';
@@ -80,37 +81,30 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
 
   return (
     <View style={styles.container}>
-      {/* Banner */}
-      <View style={styles.banner}>
-        <RNText style={styles.bannerText}>
-          <RNText style={styles.bannerBold}>Changement de table</RNText>
-          {' : Nouvelle assignation'}
-        </RNText>
-      </View>
-
       {/* Room tabs */}
-      <View style={styles.tabsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsScrollContent}
-          nestedScrollEnabled
-        >
-          {rooms.length === 0 ? (
-            <Text style={styles.emptyText}>Aucune room disponible</Text>
-          ) : (
-            rooms.map((room) => (
-              <RoomBadgeItem
-                key={room.id}
-                room={room}
-                isActive={room.id === reassignRoomId}
-                orderCount={orderCountByRoom[room.id] || 0}
-                onPress={handleRoomChange}
-              />
-            ))
-          )}
-        </ScrollView>
-      </View>
+      <TabsHeader style={styles.headerWhite}>
+        {rooms.length === 0 ? (
+          <Text style={styles.emptyText}>Aucune room disponible</Text>
+        ) : (
+          rooms.map((room) => {
+            const count = orderCountByRoom[room.id] || 0;
+            return (
+              <Pressable key={room.id} onPress={() => handleRoomChange(room)}>
+                {({ pressed }) => (
+                  <View style={pressed ? styles.pressed : undefined}>
+                    <TabBadgeItem
+                      name={room.name}
+                      stats={`${count} commande${count !== 1 ? 's' : ''}`}
+                      isActive={room.id === reassignRoomId}
+                      activeColor={room.color || '#6366F1'}
+                    />
+                  </View>
+                )}
+              </Pressable>
+            );
+          })
+        )}
+      </TabsHeader>
 
       {/* Room canvas + footer overlay */}
       <View style={styles.roomContainer} onLayout={handleLayout}>
@@ -133,6 +127,14 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
         />
       </View>
 
+      {/* Banner */}
+      <View style={[styles.banner, reassignRoom?.color && { backgroundColor: reassignRoom.color }]}>
+        <RNText style={styles.bannerText}>
+          <RNText style={styles.bannerBold}>Changement de table</RNText>
+          {' : Nouvelle assignation'}
+        </RNText>
+      </View>
+
       {/* Footer */}
       <View style={styles.footer}>
         <Pressable
@@ -152,7 +154,8 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
           style={({ pressed }) => [
             styles.actionButton,
             styles.confirmButton,
-            !selectedTable && styles.confirmButtonDisabled,
+            { backgroundColor: '#2A2E33', borderColor: '#2A2E33' },
+            !selectedTable && { opacity: 0.5 },
             pressed && selectedTable && !isReassigning && { opacity: 0.85 },
           ]}
         >
@@ -180,6 +183,9 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: '#E5E7EB',
   },
+  headerWhite: {
+    backgroundColor: '#FFFFFF',
+  },
   banner: {
     backgroundColor: '#3B82F6',
     paddingVertical: 6,
@@ -196,14 +202,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
-  },
-  tabsContainer: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  tabsScrollContent: {
-    alignItems: 'flex-end',
   },
   roomContainer: {
     flex: 1,
@@ -231,10 +229,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#3B82F6',
   },
-  confirmButtonDisabled: {
-    backgroundColor: '#9FC1FC',
-    borderColor: '#9FC1FC',
-  },
   confirmText: {
     fontSize: 14,
     fontWeight: '600',
@@ -249,6 +243,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#64748B',
+  },
+  pressed: {
+    opacity: 0.6,
   },
   emptyText: {
     color: '#999',

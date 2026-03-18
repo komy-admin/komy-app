@@ -1,5 +1,8 @@
-import { View, ScrollView, useWindowDimensions, Text } from "react-native";
-import { Tabs, TabsContent, TabsList, TabsTrigger, Button } from "~/components/ui";
+import { View, useWindowDimensions, Text } from "react-native";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui";
+import { TabsHeader } from '~/components/ui/TabsHeader';
+import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
+import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { ForkTable } from "~/components/ui/table";
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
@@ -21,7 +24,6 @@ import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { getColorWithOpacity } from '~/lib/color-utils';
-import { tabsBarStyle } from '~/lib/styles.utils';
 
 const TEAM_TABLE_COLUMNS = [
   {
@@ -119,6 +121,19 @@ export default function TeamPage() {
     if (activeTab === 'all') return [];
     return filterTeamUsers(getUsersByProfile(activeTab), teamFilters);
   }, [users, activeTab, teamFilters, getUsersByProfile]);
+
+  // Compteurs par profil
+  const userCountByProfile = useMemo(() => {
+    const counts: Record<string, number> = {};
+    let total = 0;
+    for (const profile of DISPLAYABLE_PROFILES) {
+      const count = filterTeamUsers(getUsersByProfile(profile), teamFilters).length;
+      counts[profile] = count;
+      total += count;
+    }
+    counts['all'] = total;
+    return counts;
+  }, [users, teamFilters, getUsersByProfile]);
 
   // Sections pour tab "Tous"
   const teamSections = useMemo(() => {
@@ -289,85 +304,33 @@ export default function TeamPage() {
             setActiveTab(newTab);
           }}
         >
-          <View style={tabsBarStyle}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-              style={{
-                flex: 1
-              }}
-              contentContainerStyle={{
-                alignItems: 'center'
-              }}
+          <TabsHeader
+            rightSlot={canModifyUsers ? (
+              <HeaderActionButton label="AJOUTER" onPress={handleCreateUser} />
+            ) : undefined}
+          >
+            <TabsList
+              className="flex-row justify-start h-full"
+              style={{ height: 60 }}
             >
-              <TabsList
-                className="flex-row justify-start h-full"
-                style={{
-                  paddingTop: 4,
-                  height: 50
-                }}
-              >
-                <TabsTrigger
-                  value="all"
-                  className="flex-row h-full"
-                  style={{ width: 100, minWidth: 100 }}
-                >
-                  <Text style={{ color: activeTab === 'all' ? '#2A2E33' : '#A0A0A0' }}>
-                    Tous
-                  </Text>
+              <TabsTrigger value="all" className="">
+                <TabBadgeItem
+                  name="Tous"
+                  stats={`${userCountByProfile['all'] || 0} utilisateur${(userCountByProfile['all'] || 0) !== 1 ? 's' : ''}`}
+                  isActive={activeTab === 'all'}
+                />
+              </TabsTrigger>
+              {DISPLAYABLE_PROFILES.map((type) => (
+                <TabsTrigger key={type} value={type} className="">
+                  <TabBadgeItem
+                    name={getUserProfileText(type)}
+                    stats={`${userCountByProfile[type] || 0} utilisateur${(userCountByProfile[type] || 0) !== 1 ? 's' : ''}`}
+                    isActive={activeTab === type}
+                  />
                 </TabsTrigger>
-                {DISPLAYABLE_PROFILES.map((type) => (
-                  <TabsTrigger
-                    key={type}
-                    value={type}
-                    className="flex-row h-full"
-                    style={{ width: 100, minWidth: 100 }}
-                  >
-                    <Text style={{ color: activeTab === type ? '#2A2E33' : '#A0A0A0' }}>
-                      {getUserProfileText(type)}
-                    </Text>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </ScrollView>
-
-            {/* Bouton "Créer un utilisateur" - caché pour les managers */}
-            {canModifyUsers && (
-              <View
-                style={{
-                  width: 200,
-                  backgroundColor: '#FBFBFB',
-                  shadowColor: '#000',
-                  shadowOffset: { width: -4, height: 0 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 2,
-                }}
-              >
-                <Button
-                  onPress={handleCreateUser}
-                  className="w-[200px] h-[50px] flex items-center justify-center"
-                  style={{
-                    backgroundColor: '#2A2E33',
-                    borderRadius: 0,
-                    height: 50,
-                    width: 200
-                  }}
-                >
-                  <Text style={{
-                    fontSize: 14,
-                    color: '#FBFBFB',
-                    fontWeight: '500',
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                  }}>
-                    Créer un utilisateur
-                  </Text>
-                </Button>
-              </View>
-            )}
-          </View>
+              ))}
+            </TabsList>
+          </TabsHeader>
 
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             {!canManageUsers ? (
@@ -424,3 +387,4 @@ export default function TeamPage() {
     </>
   );
 }
+

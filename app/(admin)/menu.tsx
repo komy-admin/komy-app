@@ -1,10 +1,12 @@
-import { useWindowDimensions, View, ScrollView, Text, Pressable, Platform, StyleSheet } from "react-native";
+import { useWindowDimensions, View, Text, Pressable, Platform, StyleSheet } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, ForkTable } from "~/components/ui";
+import { TabsHeader } from '~/components/ui/TabsHeader';
+import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
+import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
 import { usePanelPortal } from '~/hooks/usePanelPortal';
-import { tabsBarStyle } from '~/lib/styles.utils';
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { MenuFilters } from '~/components/filters/MenuFilters';
 import { X, Tag, LayoutList } from 'lucide-react-native';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
@@ -31,6 +33,20 @@ export default function MenuPage() {
     getItemActions, getMenuActions, getTousActions, handleTousRowPress,
     itemTableColumns, menuTableColumns, tousColumns,
   } = useMenuPage();
+
+  // Compteurs par tab
+  const menuTabCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    counts['menus'] = filteredMenus.length;
+    let total = filteredMenus.length;
+    for (const type of itemTypes) {
+      const count = items.filter(i => i.itemTypeId === type.id).length;
+      counts[type.id!] = count;
+      total += count;
+    }
+    counts['tous'] = total;
+    return counts;
+  }, [items, itemTypes, filteredMenus]);
 
   // Panel de création — appel direct sans état intermédiaire
   const openCreatePanel = useCallback(() => {
@@ -113,39 +129,37 @@ export default function MenuPage() {
           className="w-full mx-auto flex-col"
         >
           {/* Tabs bar */}
-          <View style={tabsBarStyle}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ alignItems: 'center' }}
-            >
-              <TabsList className="flex-row justify-start h-full" style={{ paddingTop: 4, height: 50 }}>
-                <TabsTrigger value="tous" className="flex-row h-full" style={{ width: 100, minWidth: 100 }}>
-                  <Text style={{ color: activeTab === 'tous' ? '#2A2E33' : '#A0A0A0' }}>Tous</Text>
+          <TabsHeader
+            rightSlot={
+              <HeaderActionButton label="AJOUTER" onPress={openCreatePanel} />
+            }
+          >
+            <TabsList className="flex-row justify-start h-full" style={{ height: 60 }}>
+              <TabsTrigger value="tous" className="">
+                <TabBadgeItem
+                  name="Tous"
+                  stats={`${menuTabCounts['tous'] || 0} élément${(menuTabCounts['tous'] || 0) !== 1 ? 's' : ''}`}
+                  isActive={activeTab === 'tous'}
+                />
+              </TabsTrigger>
+              <TabsTrigger value="menus" className="">
+                <TabBadgeItem
+                  name="Menus"
+                  stats={`${menuTabCounts['menus'] || 0} menu${(menuTabCounts['menus'] || 0) !== 1 ? 's' : ''}`}
+                  isActive={activeTab === 'menus'}
+                />
+              </TabsTrigger>
+              {itemTypes.map((type) => (
+                <TabsTrigger key={type.id} value={type.id!} className="">
+                  <TabBadgeItem
+                    name={type.name}
+                    stats={`${menuTabCounts[type.id!] || 0} article${(menuTabCounts[type.id!] || 0) !== 1 ? 's' : ''}`}
+                    isActive={activeTab === type.id}
+                  />
                 </TabsTrigger>
-                <TabsTrigger value="menus" className="flex-row h-full" style={{ width: 100, minWidth: 100 }}>
-                  <Text style={{ color: activeTab === 'menus' ? '#2A2E33' : '#A0A0A0' }}>Menus</Text>
-                </TabsTrigger>
-                {itemTypes.map((type) => (
-                  <TabsTrigger
-                    key={type.id}
-                    value={type.id!}
-                    className="flex-row h-full"
-                    style={{ minWidth: 100, paddingHorizontal: 10 }}
-                  >
-                    <Text style={{ color: activeTab === type.id ? '#2A2E33' : '#A0A0A0' }}>{type.name}</Text>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </ScrollView>
-
-            <Pressable onPress={openCreatePanel} style={styles.createButton}>
-              <Text style={styles.createButtonText}>AJOUTER</Text>
-            </Pressable>
-          </View>
+              ))}
+            </TabsList>
+          </TabsHeader>
 
           {/* Content */}
           <TabsContent style={{ flex: 1 }} value={activeTab}>
@@ -258,20 +272,6 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu }: {
 // ============================================================
 
 const styles = StyleSheet.create({
-  createButton: {
-    backgroundColor: '#2A2E33',
-    height: 50,
-    width: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
-  },
-  createButtonText: {
-    fontSize: 14,
-    color: '#FBFBFB',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-  },
   createPanel: {
     flex: 1,
     backgroundColor: '#FFFFFF',

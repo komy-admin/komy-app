@@ -7,11 +7,12 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, Platform } from "react-native";
+import { StyleSheet, View, Text, Pressable } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
-import { RoomBadgeItem } from '~/components/Service/RoomBadgeItem';
+import { TabsHeader } from '~/components/ui/TabsHeader';
+import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
 import { TableFormContent } from '~/components/admin/TableForm/TableFormContent';
@@ -24,7 +25,8 @@ import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { generateTableName, findAvailablePosition } from '~/lib/room-utils';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { RoomFormContent, RoomModeSelection } from '~/components/admin/RoomForm';
-import { LayoutPanelLeft, Trash2 } from 'lucide-react-native';
+import { Trash2, LayoutPanelLeft } from 'lucide-react-native';
+import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 
 // Constantes
 const SLIDE_PANEL_WIDTH = 450;
@@ -365,68 +367,45 @@ export default function RoomEditionMode() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.editionBanner}>
-        <Text style={styles.editionBannerText}>
-          <Text style={styles.editionBannerBold}>Mode édition</Text> : Ajouter / Modifier vos salles et vos tables
-        </Text>
-      </View>
-      <View style={styles.headerContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.badgeContainer}
-          contentContainerStyle={styles.badgeContent}
-        >
-          {rooms.map((room) => (
-            <RoomBadgeItem
-              key={room.id}
-              room={room}
-              isActive={room.id === currentRoom?.id}
-              orderCount={orderCountByRoom[room.id] || 0}
-              onPress={handleChangeRoom}
-              showInactiveIndicator
+      <TabsHeader
+        style={styles.headerWhite}
+        rightSlot={
+          <View style={styles.actionButtonsContainer}>
+            {currentRoom && (
+              <HeaderActionButton
+                label="AJOUTER TABLE"
+                onPress={handleAddTable}
+                disabled={isCreatingTable || isCreateOperationInProgress()}
+                variant="light"
+              />
+            )}
+            <HeaderActionButton
+              label="GÉRER SALLES"
+              onPress={handleOpenRoomPanel}
             />
-          ))}
-        </ScrollView>
-
-        {/* Boutons d'action */}
-        <View style={styles.actionButtonsContainer}>
-          {currentRoom && (
-            <Pressable
-              onPress={handleAddTable}
-              disabled={isCreatingTable || isCreateOperationInProgress()}
-              style={styles.addButton}
-              android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
-            >
+          </View>
+        }
+      >
+        {rooms.map((room) => {
+          const count = orderCountByRoom[room.id] || 0;
+          const isInactive = !room.isActive;
+          return (
+            <Pressable key={room.id} onPress={() => handleChangeRoom(room)}>
               {({ pressed }) => (
-                <View style={[
-                  styles.addButtonInner,
-                  pressed && Platform.OS === 'ios' && { opacity: 0.8 }
-                ]}>
-                  <Text style={styles.addButtonText}>
-                    AJOUTER UNE TABLE
-                  </Text>
+                <View style={pressed ? styles.pressed : undefined}>
+                  <TabBadgeItem
+                    name={room.name}
+                    stats={`${count} commande${count !== 1 ? 's' : ''}`}
+                    isActive={room.id === currentRoom?.id}
+                    activeColor={room.color || '#6366F1'}
+                    isInactive={isInactive}
+                  />
                 </View>
               )}
             </Pressable>
-          )}
-          <Pressable
-            onPress={handleOpenRoomPanel}
-            style={styles.settingsButton}
-            android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
-          >
-            {({ pressed }) => (
-              <View style={[
-                styles.settingsButtonInner,
-                pressed && Platform.OS === 'ios' && { opacity: 0.8 }
-              ]}>
-                <LayoutPanelLeft size={20} color="#FBFBFB" />
-              </View>
-            )}
-          </Pressable>
-        </View>
-      </View>
-
+          );
+        })}
+      </TabsHeader>
       {/* État vide : aucune room */}
       {rooms.length === 0 && (
         <View style={styles.emptyContainer}>
@@ -476,6 +455,11 @@ export default function RoomEditionMode() {
           )}
         </View>
       )}
+      <View style={[styles.editionBanner, currentRoom?.color && { backgroundColor: currentRoom.color }]}>
+        <Text style={styles.editionBannerText}>
+          <Text style={styles.editionBannerBold}>Mode édition</Text> : Ajouter / Modifier vos salles et vos tables
+        </Text>
+      </View>
 
       <DeleteConfirmationModal
         isVisible={isDeleteModalVisible}
@@ -502,6 +486,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  headerWhite: {
+    backgroundColor: '#FFFFFF',
+  },
+  pressed: {
+    opacity: 0.6,
+  },
   editionBanner: {
     backgroundColor: '#F59E0B',
     paddingVertical: 6,
@@ -519,24 +509,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  headerContainer: {
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    zIndex: 10,
-    elevation: 5,
-    ...Platform.select({
-      android: { shadowColor: 'transparent' },
-    }),
-  },
-  badgeContainer: {
-    flex: 1,
-  },
-  badgeContent: {
-    alignItems: 'flex-end',
-  },
   roomContainer: {
     flex: 1,
     position: 'relative',
@@ -544,38 +516,6 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     flexDirection: 'row',
     flexShrink: 0,
-  },
-  addButton: {
-    backgroundColor: '#2A2E33',
-    height: 60,
-    width: 200,
-    borderLeftWidth: 1,
-    borderLeftColor: '#EFEFEF',
-  },
-  addButtonInner: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontSize: 14,
-    color: '#FBFBFB',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-  },
-  settingsButton: {
-    backgroundColor: '#475569',
-    height: 60,
-    width: 60,
-    borderLeftWidth: 1,
-    borderLeftColor: '#EFEFEF',
-  },
-  settingsButtonInner: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   deleteButtonWrapper: {
     position: 'absolute',

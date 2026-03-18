@@ -254,7 +254,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
         {filteredMenus.length > 0 && (
           <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionHeaderText}>Menus</Text>
+              <RNText style={styles.sectionHeaderText}>Menus</RNText>
             </View>
             <View style={styles.itemsGrid}>
               {filteredMenus.map((menu) => (
@@ -276,7 +276,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             onLayout={(e) => handleSectionLayout(group.itemType.id, e)}
           >
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionHeaderText}>{group.itemType.name}</Text>
+              <RNText style={styles.sectionHeaderText}>{group.itemType.name}</RNText>
             </View>
             <View style={styles.itemsGrid}>
               {group.items.map((item) => (
@@ -333,21 +333,25 @@ const styles = StyleSheet.create({
   // Section header
   sectionHeader: {
     backgroundColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    height: 38,
+    justifyContent: 'center',
+    paddingLeft: 20,
+    paddingRight: 16,
     marginBottom: 12,
     borderRadius: 6,
   },
   sectionHeaderText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#374151',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#475569',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
 
   // Card base
   card: {
     borderRadius: 12,
-    borderWidth: 2.5,
+    borderWidth: 1.5,
     minHeight: 130,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden' as const,

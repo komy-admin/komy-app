@@ -343,10 +343,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    borderLeftWidth: 1,
-    borderLeftColor: '#E5E7EB',
     padding: 16,
     gap: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: -4, height: 0 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '-4px 0 12px rgba(0, 0, 0, 0.08)',
+      },
+    }),
   },
   sectionLabel: {
     fontSize: 11,
@@ -372,8 +384,8 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
@@ -409,7 +421,7 @@ const styles = StyleSheet.create({
     bottom: -1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: 'hidden',
     ...Platform.select({
       web: {
@@ -438,8 +450,8 @@ const styles = StyleSheet.create({
   infoTile: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
@@ -486,8 +498,8 @@ const styles = StyleSheet.create({
   noteCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
     overflow: 'hidden',
   },

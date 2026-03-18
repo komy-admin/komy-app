@@ -34,14 +34,14 @@ const TabsTrigger = React.forwardRef<TabsPrimitive.TriggerRef, TabsPrimitive.Tri
         <TabsPrimitive.Trigger
           ref={ref}
           className={cn(
-            'inline-flex items-center justify-center shadow-none',
+            'inline-flex items-stretch justify-center shadow-none',
             props.disabled && 'web:pointer-events-none opacity-50',
             isActive
-              ? 'border-b-4 border-black-500 text-black-500'
-              : 'border-b-4 border-transparent text-gray-500',
+              ? 'border-b-0 text-black-500'
+              : 'border-b-0 text-gray-500',
             className
           )}
-          style={{  width: 120 }}
+          style={{ minWidth: 100, height: '100%' }}
           {...props}
         />
       </TextClassContext.Provider>

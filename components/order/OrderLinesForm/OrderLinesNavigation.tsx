@@ -5,7 +5,7 @@ import { LayoutGrid, List, Menu } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 
-const ACTIVE_COLOR = '#3B82F6';
+const ACTIVE_COLOR = '#2A2E33';
 const INACTIVE_COLOR = '#9CA3AF';
 
 /**

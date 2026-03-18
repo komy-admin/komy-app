@@ -1,7 +1,9 @@
-import { memo } from 'react';
-import { View, ScrollView, StyleSheet, Platform, Pressable, Text as RNText } from 'react-native';
+import { memo, useMemo } from 'react';
+import { View, StyleSheet, Platform, Pressable } from 'react-native';
 import { LayoutDashboard, LayoutGrid } from 'lucide-react-native';
-import { RoomBadgeItem } from './RoomBadgeItem';
+import { TabsHeader } from '~/components/ui/TabsHeader';
+import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
+import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 
 type ServiceViewMode = 'rooms' | 'orders';
 
@@ -24,29 +26,9 @@ export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
   viewMode,
   onViewModeChange,
 }) => {
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
-      >
-        {rooms.map((room) => (
-          <RoomBadgeItem
-            key={room.id}
-            room={room}
-            isActive={room.id === currentRoomId}
-            orderCount={orderCountByRoom[room.id] || 0}
-            onPress={onRoomChange}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Separator */}
+  const rightSlot = useMemo(() => (
+    <>
       <View style={styles.separator} />
-
-      {/* View mode toggle */}
       <View style={styles.toggleContainer}>
         <Pressable
           onPress={() => onViewModeChange('rooms')}
@@ -54,7 +36,7 @@ export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
         >
           <LayoutDashboard
             size={18}
-            color={viewMode === 'rooms' ? '#3B82F6' : '#9CA3AF'}
+            color={viewMode === 'rooms' ? '#2A2E33' : '#9CA3AF'}
             strokeWidth={2}
           />
         </Pressable>
@@ -64,43 +46,48 @@ export const RoomTabsHeader = memo<RoomTabsHeaderProps>(({
         >
           <LayoutGrid
             size={18}
-            color={viewMode === 'orders' ? '#3B82F6' : '#9CA3AF'}
+            color={viewMode === 'orders' ? '#2A2E33' : '#9CA3AF'}
             strokeWidth={2}
           />
         </Pressable>
       </View>
-
       {viewMode === 'rooms' && (
-        <Pressable
-          onPress={onEditModePress}
-          style={styles.editButton}
-        >
-          <RNText style={styles.editButtonText}>
-            MODE ÉDITION
-          </RNText>
-        </Pressable>
+        <HeaderActionButton label="MODE ÉDITION" onPress={onEditModePress} />
       )}
-    </View>
+    </>
+  ), [viewMode, onViewModeChange, onEditModePress]);
+
+  return (
+    <TabsHeader rightSlot={rightSlot} style={styles.header}>
+      {rooms.map((room) => {
+        const count = orderCountByRoom[room.id] || 0;
+        return (
+          <Pressable key={room.id} onPress={() => onRoomChange(room)}>
+            {({ pressed }) => (
+              <View style={pressed ? styles.pressed : undefined}>
+                <TabBadgeItem
+                  name={room.name}
+                  stats={`${count} commande${count !== 1 ? 's' : ''}`}
+                  isActive={room.id === currentRoomId}
+                  activeColor={room.color || '#6366F1'}
+                />
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
+    </TabsHeader>
   );
 });
 
 RoomTabsHeader.displayName = 'RoomTabsHeader';
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    width: '100%',
-    height: 60,
+  header: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    zIndex: 10,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    alignItems: 'flex-end',
+  pressed: {
+    opacity: 0.6,
   },
   separator: {
     width: 1,
@@ -133,23 +120,5 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  editButton: {
-    backgroundColor: '#2A2E33',
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      web: { cursor: 'pointer' as any },
-    }),
-  },
-  editButtonText: {
-    fontSize: 14,
-    color: '#FBFBFB',
-    fontWeight: '500',
-    textAlign: 'center',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
   },
 });

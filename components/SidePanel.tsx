@@ -22,7 +22,7 @@ export function SidePanel({
   children,
   title,
   width = 350,
-  collapsedWidth = 50,
+  collapsedWidth = 60,
   onBack,
   isCollapsed: controlledIsCollapsed,
   onCollapsedChange,
@@ -186,21 +186,19 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+    borderRightWidth: 0,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 1, height: 0 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
+        shadowOffset: { width: 4, height: 0 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 10, // Plus élevé que les headers (elevation: 5) pour rester au-dessus
-        shadowColor: 'transparent', // Pas d'ombre visible, la bordure suffit
+        elevation: 10,
       },
       web: {
-        boxShadow: '1px 0 3px rgba(0, 0, 0, 0.05)',
+        boxShadow: '4px 0 12px rgba(0, 0, 0, 0.08)',
       },
     }),
   },
@@ -264,8 +262,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   fullWidthIconSection: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     backgroundColor: '#2A2E33',
     borderLeftWidth: 1,
     borderLeftColor: '#FFFFFF',
@@ -282,6 +280,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     height: 200,
-    width: 50,
+    width: 60,
   },
 });

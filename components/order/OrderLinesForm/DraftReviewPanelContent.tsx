@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2A2E33',
   },
   saveButtonDisabled: {
     opacity: 0.5,

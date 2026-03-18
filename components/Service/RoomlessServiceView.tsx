@@ -550,7 +550,7 @@ export default function RoomlessServiceView({ viewModeToggle, onEditModePress }:
               >
                 <LayoutDashboard
                   size={18}
-                  color={viewModeToggle.viewMode === 'rooms' ? '#3B82F6' : '#9CA3AF'}
+                  color={viewModeToggle.viewMode === 'rooms' ? '#2A2E33' : '#9CA3AF'}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -560,7 +560,7 @@ export default function RoomlessServiceView({ viewModeToggle, onEditModePress }:
               >
                 <LayoutGrid
                   size={18}
-                  color={viewModeToggle.viewMode === 'orders' ? '#3B82F6' : '#9CA3AF'}
+                  color={viewModeToggle.viewMode === 'orders' ? '#2A2E33' : '#9CA3AF'}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -609,7 +609,7 @@ export default function RoomlessServiceView({ viewModeToggle, onEditModePress }:
                 minute: '2-digit',
               });
               const statusColor = getStatusColor(globalStatus);
-              const bgColor = getColorWithOpacity(statusColor, 0.12);
+              const borderColor = getColorWithOpacity(getStatusTextColor(globalStatus), 0.5);
 
               return (
                 <View
@@ -618,8 +618,8 @@ export default function RoomlessServiceView({ viewModeToggle, onEditModePress }:
                     styles.card,
                     {
                       width: cardWidth,
-                      borderColor: statusColor,
-                      backgroundColor: bgColor,
+                      borderColor: borderColor,
+                      backgroundColor: statusColor,
                     },
                   ]}
                 >
@@ -675,7 +675,7 @@ export default function RoomlessServiceView({ viewModeToggle, onEditModePress }:
 }
 
 const styles = StyleSheet.create({
-  flex1: { flex: 1 },
+  flex1: { flex: 1, backgroundColor: '#FFFFFF' },
   columnLayout: { flex: 1, flexDirection: 'column' },
   orderDetailLayout: { flex: 1, flexDirection: 'row' },
 
@@ -687,6 +687,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+      },
+    }),
   },
   headerLeft: {
     flex: 1,
@@ -808,7 +822,7 @@ const styles = StyleSheet.create({
   // Card — identical to OrderItemsCardView
   card: {
     borderRadius: 12,
-    borderWidth: 2.5,
+    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,

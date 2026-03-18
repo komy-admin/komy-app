@@ -167,14 +167,14 @@ const Room: React.FC<RoomProps> = ({
     top: EXTRA_LINES * CELL_SIZE,
     width: width * CELL_SIZE,
     height: height * CELL_SIZE,
+    backgroundColor: roomBg,
     ...(!editionMode && { borderWidth: 2, borderColor: resolvedColor }),
-  }), [width, height, editionMode, resolvedColor]);
+  }), [width, height, editionMode, resolvedColor, roomBg]);
 
   const gridStyle = useMemo(() => ({
     width: dimensions?.gridWidth ?? 0,
     height: dimensions?.gridHeight ?? 0,
-    backgroundColor: roomBg,
-  }), [dimensions?.gridWidth, dimensions?.gridHeight, roomBg]);
+  }), [dimensions?.gridWidth, dimensions?.gridHeight]);
 
   if (isLoading || !dimensions || !isGridReady) {
     return (
@@ -187,11 +187,11 @@ const Room: React.FC<RoomProps> = ({
   return (
     <GestureHandlerRootView
       nativeID="room-zoom-container"
-      style={[styles.container, { backgroundColor: roomBg }]}
+      style={[styles.container, { backgroundColor: '#FFFFFF' }]}
     >
       <GestureDetector gesture={composedGesture}>
         {/* Zone de détection des gestures : fixe, plein conteneur, jamais transformée */}
-        <Animated.View style={[styles.gestureArea, { backgroundColor: roomBg }]}>
+        <Animated.View style={[styles.gestureArea, { backgroundColor: '#FFFFFF' }]}>
           {/* Translate (déplacement) */}
           <Animated.View style={[styles.transformLayer, translateStyle]}>
             {/* Scale (zoom visuel) */}
