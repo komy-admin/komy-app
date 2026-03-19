@@ -22,3 +22,4 @@ export * from './ConfirmationModal';
 export * from './TabBadgeItem';
 export * from './TabsHeader';
 export * from './HeaderActionButton';
+export * from './SectionDivider';

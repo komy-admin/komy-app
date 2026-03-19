@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState, useRef } from 'react';
 import { View, Pressable, StyleSheet, LayoutChangeEvent, Platform, Text as RNText } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Text } from '~/components/ui';
+import { Text, SectionDivider } from '~/components/ui';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
 import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
@@ -253,9 +253,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
         {/* Section Menus */}
         {filteredMenus.length > 0 && (
           <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
-            <View style={styles.sectionHeader}>
-              <RNText style={styles.sectionHeaderText}>Menus</RNText>
-            </View>
+            <SectionDivider title="Menus" borderRadius={6} style={{ marginBottom: 12 }} />
             <View style={styles.itemsGrid}>
               {filteredMenus.map((menu) => (
                 <MenuCard
@@ -275,9 +273,7 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             key={group.itemType.id}
             onLayout={(e) => handleSectionLayout(group.itemType.id, e)}
           >
-            <View style={styles.sectionHeader}>
-              <RNText style={styles.sectionHeaderText}>{group.itemType.name}</RNText>
-            </View>
+            <SectionDivider title={group.itemType.name} borderRadius={6} style={{ marginBottom: 12 }} />
             <View style={styles.itemsGrid}>
               {group.items.map((item) => (
                 <OrderItemCard
@@ -330,23 +326,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Section header
-  sectionHeader: {
-    backgroundColor: '#E2E8F0',
-    height: 38,
-    justifyContent: 'center',
-    paddingLeft: 20,
-    paddingRight: 16,
-    marginBottom: 12,
-    borderRadius: 6,
-  },
-  sectionHeaderText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#475569',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
 
   // Card base
   card: {

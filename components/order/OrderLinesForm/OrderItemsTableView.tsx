@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 import { View, Pressable, StyleSheet, SectionList, Text as RNText } from 'react-native';
 import { ForkTable } from '~/components/ui/table';
+import { SECTION_DIVIDER_HEIGHT } from '~/components/ui/SectionDivider';
 import { Plus } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
@@ -11,7 +12,6 @@ import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
 
 const MENU_COLOR = '#10B981';
 const ITEM_HEIGHT = 58;
-const SECTION_HEADER_HEIGHT = 38;
 
 interface TableSection {
   key: string;
@@ -258,7 +258,7 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
     let offset = 0;
     return sectionsRef.current.map(section => {
       const sectionOffset = offset;
-      offset += SECTION_HEADER_HEIGHT + section.data.length * ITEM_HEIGHT;
+      offset += SECTION_DIVIDER_HEIGHT + section.data.length * ITEM_HEIGHT;
       return { key: section.key, offset: sectionOffset };
     });
   }, []);
@@ -269,7 +269,7 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
     sectionListRef.current?.scrollToLocation({
       sectionIndex,
       itemIndex: 0,
-      viewOffset: SECTION_HEADER_HEIGHT,
+      viewOffset: SECTION_DIVIDER_HEIGHT,
       animated: true,
     });
   }, []);
@@ -294,10 +294,10 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
 
       // Section header
       if (flatIndex === index) {
-        return { length: SECTION_HEADER_HEIGHT, offset: pixelOffset, index };
+        return { length: SECTION_DIVIDER_HEIGHT, offset: pixelOffset, index };
       }
       flatIndex++;
-      pixelOffset += SECTION_HEADER_HEIGHT;
+      pixelOffset += SECTION_DIVIDER_HEIGHT;
 
       // Section items
       if (index < flatIndex + sectionData.length) {

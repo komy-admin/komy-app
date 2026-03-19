@@ -13,6 +13,7 @@ import {
 import { Trash2, ListFilter } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { TableLoader } from '~/components/TableLoader';
+import { SectionDivider } from './SectionDivider';
 
 interface ColumnData {
   label?: string;
@@ -187,9 +188,7 @@ const ForkTable = React.memo(({
   }, [columns, onRowPress, onRowDelete, useActionMenu, getActions, hasActionColumn]);
 
   const renderSectionHeader = React.useCallback(({ section }: { section: any }) => (
-    <View style={styles.sectionHeader}>
-      <RNText style={styles.sectionHeaderText}>{section.title}</RNText>
-    </View>
+    <SectionDivider title={section.title} />
   ), []);
 
   const headerContent = customRenderHeader ? customRenderHeader() : (
@@ -436,19 +435,6 @@ const styles = StyleSheet.create({
     color: '#999999',
     fontWeight: '400',
     textAlign: 'center',
-  },
-  sectionHeader: {
-    backgroundColor: '#E2E8F0',
-    paddingVertical: 10,
-    paddingLeft: 20,
-    paddingRight: 16,
-  },
-  sectionHeaderText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#475569',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
   },
 });
 

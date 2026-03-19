@@ -1,6 +1,7 @@
-import { View, Text as RNText, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { KitchenItem } from '../types/kitchen-card.types';
 import { ItemRow } from './ItemRow';
+import { SectionDivider } from '~/components/ui';
 
 interface CategorySectionProps {
   category: string;
@@ -24,9 +25,7 @@ export function CategorySection({
 }: CategorySectionProps) {
   return (
     <View style={[styles.container, isLastSection && styles.containerLast]}>
-      <View style={styles.header}>
-        <RNText style={styles.categoryName}>{category.toUpperCase()}</RNText>
-      </View>
+      <SectionDivider title={category} style={{ paddingLeft: 12 }} />
 
       {items.map((item, index) => (
         <ItemRow
@@ -47,16 +46,5 @@ const styles = StyleSheet.create({
   },
   containerLast: {
     marginBottom: 0,
-  },
-  header: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  categoryName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#374151',
-    letterSpacing: 1,
   },
 });

@@ -66,10 +66,10 @@ const ActionButton = memo<ActionButtonProps>(({ icon: Icon, label, onPress, colo
         pressed && !disabled && { opacity: 0.7, transform: [{ scale: 0.97 }] },
       ]}>
         <Icon size={compact ? 16 : 20} color={color} strokeWidth={1.8} />
-        <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact]} numberOfLines={1}>{label}</RNText>
+        <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact, { color }]} numberOfLines={1}>{label}</RNText>
         {disabled && (
           <View style={[styles.lockOverlay, compact && styles.lockOverlayCompact]}>
-            <Lock size={compact ? 14 : 18} color="#2A2E33" strokeWidth={2} />
+            <Lock size={compact ? 16 : 20} color="#2A2E33" strokeWidth={2} />
             {disabledReason && (
               <RNText style={[styles.disabledReason, compact && { fontSize: 8 }]} numberOfLines={1}>{disabledReason}</RNText>
             )}
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 8,
     overflow: 'hidden',
     ...(Platform.OS === 'web' ? {
@@ -404,9 +404,10 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#374151',
     textAlign: 'center',
+    textTransform: 'uppercase',
   },
   cardLabelCompact: {
     fontSize: 11,
@@ -421,6 +422,7 @@ const styles = StyleSheet.create({
     bottom: -1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
     borderRadius: 12,
     overflow: 'hidden',
     ...Platform.select({
@@ -436,14 +438,14 @@ const styles = StyleSheet.create({
   },
   lockOverlayCompact: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 6,
   },
   disabledReason: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#2A2E33',
     textAlign: 'center',
-    marginTop: 2,
+    textTransform: 'uppercase',
   },
 
   // Info tiles — mode normal

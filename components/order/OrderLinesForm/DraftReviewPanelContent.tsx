@@ -7,6 +7,7 @@ import { Status } from '~/types/status.enum';
 import { formatPrice, getStatusText } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
 import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
+import { SectionDivider } from '~/components/ui';
 
 // Fingerprint: identical item + tags + note + status + paymentFraction = same line
 const getLineFingerprint = (line: OrderLine): string => {
@@ -228,11 +229,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
             {/* Item sections grouped by itemType */}
             {itemSections.map((section) => (
               <View key={section.itemTypeId} style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <RNText style={styles.sectionTitle}>
-                    {section.lines.length}x {section.itemTypeName}
-                  </RNText>
-                </View>
+                <SectionDivider title={`${section.lines.length}x ${section.itemTypeName}`} />
 
                 <View style={styles.sectionBlock}>
                   {section.groupedLines.map((group) => {
@@ -267,11 +264,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
             {/* Menu section */}
             {menuLines.length > 0 && (
               <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <RNText style={styles.sectionTitle}>
-                    {menuLines.length}x Menu{menuLines.length > 1 ? 's' : ''}
-                  </RNText>
-                </View>
+                <SectionDivider title={`${menuLines.length}x Menu${menuLines.length > 1 ? 's' : ''}`} />
 
                 <View style={styles.sectionBlock}>
                   {menuLines.map(({ line, originalIndex }) => {
@@ -647,11 +640,9 @@ const styles = StyleSheet.create({
   },
   panelHeader: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
     flexDirection: 'row',
     alignItems: 'center',
-    height: 54,
+    height: 53,
     paddingHorizontal: 4,
     elevation: 0,
   },
@@ -703,22 +694,7 @@ const styles = StyleSheet.create({
 
   // Section
   section: {
-    marginBottom: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#F3F4F6',
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 0,
   },
 
   // Section block (white)
