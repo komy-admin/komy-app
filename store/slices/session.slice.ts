@@ -69,6 +69,7 @@ export interface SessionState {
   authInitialized: boolean;
   appInitialized: boolean;
   isAppInitializing: boolean; // Flag pour l'état de chargement
+  isInAppLock: boolean; // true = verrouillage in-app (pas post-login)
   initializationProgress: Record<string, boolean>;
   progressPercentage: number; // 0-100, ne recule jamais
 
@@ -153,6 +154,7 @@ const initialState: SessionState = {
   authInitialized: false,
   appInitialized: false,
   isAppInitializing: false,
+  isInAppLock: false,
   initializationProgress: {},
   progressPercentage: 0,
 
@@ -204,6 +206,7 @@ const sessionSlice = createSlice({
       state.isAuthenticated = true;
       state.requiresPin = false;
       state.isPinVerified = true;
+      state.isInAppLock = false;
     },
 
     // Clear session token (but keep authToken)
@@ -213,6 +216,7 @@ const sessionSlice = createSlice({
       state.isAuthenticated = false;
       state.isPinVerified = false;
       state.requiresPin = true;  // Need PIN again
+      state.isInAppLock = true;
     },
 
     // Called when app starts with stored authToken

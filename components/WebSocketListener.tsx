@@ -7,10 +7,12 @@ import {
 } from "~/hooks/useSocket/useWebSocketSync";
 import { useForceLogout } from "~/hooks/useSocket/useForceLogout";
 import { useInvalidationRefetch } from "~/hooks/useSocket/useInvalidationRefetch";
+import { useAlertMonitor } from "~/hooks/useAlertMonitor";
 
 /**
- * Composant qui initialise tous les listeners WebSocket
+ * Composant qui initialise tous les listeners WebSocket et le monitoring
  * Point d'entrée unique pour éviter les doubles instanciations de hooks
+ * Monté uniquement quand l'app est authentifiée et initialisée
  */
 export const WebSocketListener: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -35,6 +37,9 @@ export const WebSocketListener: React.FC<{ children: React.ReactNode }> = ({
 
   // Déconnexion forcée multi-device
   useForceLogout();
+
+  // Monitoring des commandes en retard
+  useAlertMonitor();
 
   return <>{children}</>;
 };

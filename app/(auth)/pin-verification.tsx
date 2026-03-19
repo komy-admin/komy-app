@@ -9,16 +9,16 @@ import {
 import { PinInput } from '~/components/ui';
 import type { PinInputRef } from '~/components/ui';
 import { useSelector } from 'react-redux';
-import { selectRequiresPinSetup, selectAuthToken } from '~/store';
+import { selectRequiresPinSetup, selectAuthToken, RootState } from '~/store';
 import { sessionService } from '~/services/SessionService';
-import { useRouter, Link, useLocalSearchParams } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 export default function PinVerificationScreen() {
-  const { noAutoFocus } = useLocalSearchParams<{ noAutoFocus?: string }>();
+  const { isInAppLock, isPinVerified: isPinAlreadyVerified } = useSelector((state: RootState) => state.session);
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -213,7 +213,7 @@ export default function PinVerificationScreen() {
                   onComplete={handlePinComplete}
                   error={error}
                   disabled={isLoading}
-                  autoFocus={!noAutoFocus}
+                  autoFocus={!isInAppLock && !isPinAlreadyVerified}
                   secure={!isSetupMode}
                 />
               </View>

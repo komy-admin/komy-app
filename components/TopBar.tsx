@@ -71,7 +71,7 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
   const handleLock = useCallback(() => {
     setShowProfileMenu(false);
     sessionService.clearSession();
-    router.replace('/pin-verification?noAutoFocus=1' as Href);
+    router.replace('/pin-verification' as Href);
   }, [router]);
 
   const handleLogout = useCallback(async () => {

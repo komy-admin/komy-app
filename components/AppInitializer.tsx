@@ -1,22 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useRouter, useSegments } from 'expo-router';
 import { RootState } from '~/store';
 import { InitializationProgress, useAppInit } from '~/hooks/useAppInit';
-import { useAlertMonitor } from '~/hooks/useAlertMonitor';
 import { WebSocketListener } from './WebSocketListener';
 import { getHomeRoute } from '~/constants/routes';
 
-interface AppInitializerProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+const INIT_STEPS = [
+  { key: 'accountConfig', label: 'Configuration du compte...' },
+  { key: 'rooms', label: 'Chargement des salles...' },
+  { key: 'tables', label: 'Chargement des tables...' },
+  { key: 'itemTypes', label: 'Chargement des types d\'articles...' },
+  { key: 'items', label: 'Chargement des articles...' },
+  { key: 'menus', label: 'Chargement des menus...' },
+  { key: 'tags', label: 'Chargement des tags...' },
+  { key: 'users', label: 'Chargement des utilisateurs...' },
+  { key: 'orders', label: 'Chargement des commandes...' },
+  { key: 'payments', label: 'Chargement des paiements...' },
+] as const;
+
+function getCurrentStepLabel(progress: InitializationProgress): string {
+  for (const step of INIT_STEPS) {
+    if (!progress[step.key]) {
+      return step.label;
+    }
+  }
+  return INIT_STEPS[INIT_STEPS.length - 1].label;
 }
 
-export const AppInitializer: React.FC<AppInitializerProps> = ({
-  children,
-  fallback
-}) => {
+export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
   const segments = useSegments();
   const {
@@ -28,93 +41,69 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({
     isAppInitializing
   } = useSelector((state: RootState) => state.session);
 
-  // Check if user is properly authenticated
   const isFullyAuthenticated = !!(
     (sessionToken && user) ||
     (authToken && user && isPinVerified)
   );
 
-  // Le hook useAlertMonitor gère automatiquement l'initialisation et les conditions
-  useAlertMonitor();
-
-  // Hook simplifié uniquement pour charger les données
   const { progress, progressPercentage } = useAppInit();
 
+  const onPinRoute = segments.join('/') === '(auth)/pin-verification';
+  const shouldShowLoader = isFullyAuthenticated && (!appInitialized || isAppInitializing || onPinRoute);
+
+  // Retarder la disparition de l'overlay pour laisser la nouvelle route se peindre
+  const [showLoader, setShowLoader] = useState(false);
+  useEffect(() => {
+    if (shouldShowLoader) {
+      setShowLoader(true);
+    } else {
+      const timer = setTimeout(() => setShowLoader(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldShowLoader]);
 
   // Redirection après initialisation complète
   useEffect(() => {
     if (isFullyAuthenticated && appInitialized && !isAppInitializing && user?.profil) {
-      const fullPath = segments.length ? `/${segments.join('/')}` : '/';
-
-      // Si on est encore sur PIN verification après initialisation complète, rediriger
-      if (fullPath === '/(auth)/pin-verification') {
+      if (onPinRoute) {
         const homeRoute = getHomeRoute(user.profil);
         router.replace(homeRoute as any);
       }
     }
-  }, [isFullyAuthenticated, appInitialized, isAppInitializing, user?.profil, segments, router]);
+  }, [isFullyAuthenticated, appInitialized, isAppInitializing, user?.profil, onPinRoute, router]);
 
-  // Si pas authentifié, passer directement au contenu (pages de login/pin)
+  // Pas authentifié → passer directement au contenu (login/pin)
   if (!isFullyAuthenticated) {
     return <>{children}</>;
   }
 
-  const showLoader = !appInitialized || isAppInitializing;
-
-  // Toujours rendre les children (Stack) pour que Expo Router conserve la route.
-  // Le loader est affiché en overlay par-dessus quand l'init est en cours.
+  // Toujours rendre children (Stack) pour que Expo Router conserve la route.
+  // Le loader est un overlay par-dessus.
   return (
     <WebSocketListener>
       {children}
       {showLoader && (
-        fallback || (
-          <View style={styles.loaderOverlay}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
-              </View>
-              <Text style={styles.progressText}>
-                {progressPercentage >= 90 ? 'Finalisation...' : getCurrentStepLabel(progress)} ({Math.round(progressPercentage)}%)
-              </Text>
-            </View>
+        <View style={styles.loaderOverlay}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
-        )
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+            </View>
+            <Text style={styles.progressText}>
+              {progressPercentage >= 90 ? 'Finalisation...' : getCurrentStepLabel(progress)} ({Math.round(progressPercentage)}%)
+            </Text>
+          </View>
+        </View>
       )}
     </WebSocketListener>
   );
 };
-
-function getCurrentStepLabel(progress: InitializationProgress): string {
-  const steps = [
-    { key: 'accountConfig', label: 'Configuration du compte...' },
-    { key: 'rooms', label: 'Chargement des salles...' },
-    { key: 'tables', label: 'Chargement des tables...' },
-    { key: 'itemTypes', label: 'Chargement des types d\'articles...' },
-    { key: 'items', label: 'Chargement des articles...' },
-    { key: 'menus', label: 'Chargement des menus...' },
-    { key: 'tags', label: 'Chargement des tags...' },
-    { key: 'users', label: 'Chargement des utilisateurs...' },
-    { key: 'orders', label: 'Chargement des commandes...' },
-    { key: 'payments', label: 'Chargement des paiements...' }
-  ];
-
-  // Trouver la première étape non complétée
-  for (const step of steps) {
-    if (!progress[step.key]) {
-      return step.label;
-    }
-  }
-
-  // Si toutes les étapes sont complétées, afficher la dernière
-  return steps[steps.length - 1].label;
-}
 
 const styles = StyleSheet.create({
   loaderOverlay: {
@@ -161,18 +150,5 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' && {
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }),
-  },
-  errorContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-    width: '80%',
-    maxWidth: 400,
-  },
-  errorText: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#EF4444',
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
