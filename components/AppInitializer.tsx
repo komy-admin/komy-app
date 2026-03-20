@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSelector } from 'react-redux';
 import { useRouter, useSegments } from 'expo-router';
 import { RootState } from '~/store';
@@ -46,7 +47,7 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
     (authToken && user && isPinVerified)
   );
 
-  const { progress, progressPercentage } = useAppInit();
+  const { progress, progressPercentage, initializeApp } = useAppInit();
 
   const onPinRoute = segments.join('/') === '(auth)/pin-verification';
   const shouldShowLoader = isFullyAuthenticated && (!appInitialized || isAppInitializing || onPinRoute);
@@ -61,6 +62,43 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
       return () => clearTimeout(timer);
     }
   }, [shouldShowLoader]);
+
+  // Lancer l'initialisation une fois l'image de fond réellement affichée
+  const hasTriggeredInit = React.useRef(false);
+  const fallbackTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerInit = React.useCallback(() => {
+    if (!hasTriggeredInit.current && isFullyAuthenticated && !appInitialized && !isAppInitializing) {
+      hasTriggeredInit.current = true;
+      // Micro-delay pour laisser le frame se peindre après onLoad
+      requestAnimationFrame(() => initializeApp());
+    }
+  }, [isFullyAuthenticated, appInitialized, isAppInitializing, initializeApp]);
+
+  const handleBackgroundReady = React.useCallback(() => {
+    if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
+    triggerInit();
+  }, [triggerInit]);
+
+  // Fallback si onLoad ne se déclenche jamais (image corrompue, erreur mémoire)
+  useEffect(() => {
+    if (shouldShowLoader && !hasTriggeredInit.current) {
+      fallbackTimer.current = setTimeout(() => triggerInit(), 1500);
+      return () => {
+        if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
+      };
+    }
+  }, [shouldShowLoader, triggerInit]);
+
+  useEffect(() => {
+    if (!showLoader) {
+      hasTriggeredInit.current = false;
+      if (fallbackTimer.current) {
+        clearTimeout(fallbackTimer.current);
+        fallbackTimer.current = null;
+      }
+    }
+  }, [showLoader]);
 
   // Redirection après initialisation complète
   useEffect(() => {
@@ -84,20 +122,39 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
       {children}
       {showLoader && (
         <View style={styles.loaderOverlay}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+          <ExpoImage
+            source={require('../assets/images/dark-texture-surface.jpg')}
+            style={styles.heroImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            priority="high"
+            onLoad={handleBackgroundReady}
+          />
+          <View style={styles.imageOverlay} />
+
+          <View style={styles.contentContainer}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../assets/images/logo_komy_png/Logo_Komy_blancSF.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.progressText}>
-              {progressPercentage >= 90 ? 'Finalisation...' : getCurrentStepLabel(progress)} ({Math.round(progressPercentage)}%)
-            </Text>
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${appInitialized ? 100 : isAppInitializing ? progressPercentage : 0}%` }]} />
+              </View>
+              <Text style={styles.progressText}>
+                {appInitialized
+                  ? 'Finalisation...'
+                  : !isAppInitializing
+                    ? 'Préparation...'
+                    : progressPercentage >= 90
+                      ? 'Finalisation...'
+                      : getCurrentStepLabel(progress)
+                } ({Math.round(appInitialized ? 100 : isAppInitializing ? progressPercentage : 0)}%)
+              </Text>
+            </View>
           </View>
         </View>
       )}
@@ -108,10 +165,24 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
 const styles = StyleSheet.create({
   loaderOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  contentContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   logoContainer: {
     justifyContent: 'center',
@@ -123,28 +194,28 @@ const styles = StyleSheet.create({
     height: 200,
   },
   progressContainer: {
-    width: '80%',
+    width: 320,
     maxWidth: 400,
     alignItems: 'center',
   },
   progressBar: {
     width: '100%',
     height: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 16,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#2A2E33',
+    backgroundColor: '#FFFFFF',
     borderRadius: 3,
     minWidth: 6,
   },
   progressText: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(0, 0, 0, 0.7)',
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
     letterSpacing: 0.3,
     ...(Platform.OS === 'web' && {

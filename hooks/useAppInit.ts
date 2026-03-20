@@ -214,19 +214,15 @@ export const useAppInit = () => {
     }
   }, [canInitialize, appInitialized, isAppInitializing, dispatch, user?.profil, loadRooms, loadItemTypes, loadUsers, loadItems, loadAllMenus, loadAllOrders]);
 
-  // Démarrage automatique de l'initialisation
-  useEffect(() => {
-    if (canInitialize && user?.profil && !appInitialized && !isAppInitializing) {
-      initializeApp();
-    }
-  }, [canInitialize, user?.profil, appInitialized, isAppInitializing, initializeApp]);
+  // L'initialisation est déclenchée manuellement par AppInitializer une fois le loader visible
 
-  // Fonction de réinitialisation manuelle
-  const reinitializeApp = useCallback(async () => {
+  // Réinitialisation : reset les flags Redux uniquement.
+  // AppInitializer re-déclenchera l'init via son fallback/onLoad au prochain rendu.
+  // (Ne pas appeler initializeApp() ici : la closure capture les anciens flags.)
+  const reinitializeApp = useCallback(() => {
     dispatch(sessionActions.setAppInitialized(false));
     dispatch(sessionActions.setAppInitializing(false));
-    return initializeApp();
-  }, [initializeApp, dispatch]);
+  }, [dispatch]);
 
   return {
     // Données de progression pour l'UI

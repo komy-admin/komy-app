@@ -6,6 +6,7 @@ import {
   Text as RNText,
   Pressable,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { PinInput } from '~/components/ui';
 import type { PinInputRef } from '~/components/ui';
 import { useSelector } from 'react-redux';
@@ -150,138 +151,153 @@ export default function PinVerificationScreen() {
   };
 
   return (
-    <AuthScreenLayout>
-      <View style={styles.fullWrapper}>
-        <View style={styles.contentContainer}>
-          {isLocked ? (
-            <View style={styles.lockedContainer}>
-              <RNText style={[styles.title, { color: '#DC2626' }]}>
-                {isPermanentlyLocked
-                  ? 'PIN verrouillé'
-                  : 'Compte temporairement verrouillé'}
-              </RNText>
+    <View style={styles.root}>
+      <ExpoImage
+        source={require('../../assets/images/dark-texture-surface.jpg')}
+        style={styles.heroImage}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        priority="high"
+      />
+      <View style={styles.imageOverlay} />
 
-              <View style={styles.lockedIconCircle}>
-                <Lock size={32} color="#FFFFFF" strokeWidth={2} />
-              </View>
-
-              {isPermanentlyLocked ? (
-                <RNText style={styles.lockedHint}>
-                  Trop de tentatives incorrectes.{'\n'}
-                  Réinitialisez votre PIN par email pour continuer.
+      <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
+          <View style={styles.contentContainer}>
+            {isLocked ? (
+              <View style={styles.lockedContainer}>
+                <RNText style={[styles.title, { color: '#FF6B6B' }]}>
+                  {isPermanentlyLocked
+                    ? 'PIN verrouillé'
+                    : 'Compte temporairement verrouillé'}
                 </RNText>
-              ) : (
-                <>
-                  <RNText style={styles.lockedCountdown}>
-                    Réessayez dans : {formatCountdown(countdown)}
-                  </RNText>
+
+                <View style={styles.lockedIconCircle}>
+                  <Lock size={32} color="#FFFFFF" strokeWidth={2} />
+                </View>
+
+                {isPermanentlyLocked ? (
                   <RNText style={styles.lockedHint}>
                     Trop de tentatives incorrectes.{'\n'}
-                    Le délai augmente après chaque série d'échecs.
+                    Réinitialisez votre PIN par email pour continuer.
                   </RNText>
-                </>
-              )}
-            </View>
-          ) : (
-            <View style={styles.headerContainer}>
-              <RNText style={styles.title}>
-                {isSetupMode ? 'Créer votre code PIN' : 'Entrez votre code PIN'}
-              </RNText>
-              <RNText style={styles.subtitle}>
-                {isSetupMode
-                  ? 'Créez un code PIN à 4 chiffres pour sécuriser votre compte'
-                  : 'Entrez votre code PIN pour continuer'}
-              </RNText>
-            </View>
-          )}
-
-          {isPermanentlyLocked ? (
-            <View style={styles.resetLinkContainer}>
-              <Link href="/forgot-credentials?type=pin" asChild>
-                <Pressable style={styles.resetButton}>
-                  <RNText style={styles.resetButtonText}>Réinitialiser par email</RNText>
-                </Pressable>
-              </Link>
-            </View>
-          ) : !isLocked ? (
-            <>
-              <View style={styles.pinContainer}>
-                <PinInput
-                  ref={pinInputRef}
-                  value={pin}
-                  onChange={setPin}
-                  onComplete={handlePinComplete}
-                  error={error}
-                  disabled={isLoading}
-                  autoFocus={!isInAppLock && !isPinAlreadyVerified}
-                  secure={!isSetupMode}
-                />
-              </View>
-
-              {error && (
-                <RNText style={styles.errorText}>
-                  Code PIN incorrect
-                  {attemptsRemaining !== null && attemptsRemaining >= 0 && (
-                    <>
-                      {' — '}
-                      <RNText style={styles.errorTextBold}>
-                        {attemptsRemaining} essai{attemptsRemaining > 1 ? 's' : ''} restant{attemptsRemaining > 1 ? 's' : ''}
-                      </RNText>
-                    </>
-                  )}
-                </RNText>
-              )}
-            </>
-          ) : null}
-
-          <View style={styles.buttonContainer}>
-            <Pressable
-              onPress={handleCancel}
-              disabled={isLoading}
-              style={[styles.cancelButton, isLoading && { opacity: 0.5 }]}
-            >
-              <RNText style={styles.cancelButtonText}>Annuler</RNText>
-            </Pressable>
-
-            {!isSetupMode && !isPermanentlyLocked && (
-              <View style={styles.forgotPinContainer}>
-                <Link href="/forgot-credentials?type=pin" asChild>
-                  <Pressable>
-                    <RNText style={styles.forgotPinText}>
-                      PIN oublié ?
+                ) : (
+                  <>
+                    <RNText style={styles.lockedCountdown}>
+                      Réessayez dans : {formatCountdown(countdown)}
                     </RNText>
+                    <RNText style={styles.lockedHint}>
+                      Trop de tentatives incorrectes.{'\n'}
+                      Le délai augmente après chaque série d'échecs.
+                    </RNText>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View style={styles.headerContainer}>
+                <RNText style={styles.title}>
+                  {isSetupMode ? 'Créer votre code PIN' : 'Entrez votre code PIN'}
+                </RNText>
+                <RNText style={styles.subtitle}>
+                  {isSetupMode
+                    ? 'Créez un code PIN à 4 chiffres pour sécuriser votre compte'
+                    : 'Entrez votre code PIN pour continuer'}
+                </RNText>
+              </View>
+            )}
+
+            {isPermanentlyLocked ? (
+              <View style={styles.resetLinkContainer}>
+                <Link href="/forgot-credentials?type=pin" asChild>
+                  <Pressable style={styles.resetButton}>
+                    <RNText style={styles.resetButtonText}>Réinitialiser par email</RNText>
                   </Pressable>
                 </Link>
               </View>
+            ) : !isLocked ? (
+              <>
+                <View style={styles.pinContainer}>
+                  <PinInput
+                    ref={pinInputRef}
+                    value={pin}
+                    onChange={setPin}
+                    onComplete={handlePinComplete}
+                    error={error}
+                    disabled={isLoading}
+                    autoFocus={!isInAppLock && !isPinAlreadyVerified}
+                    secure={!isSetupMode}
+                    variant="dark"
+                  />
+                </View>
+
+                {error && (
+                  <RNText style={styles.errorText}>
+                    Code PIN incorrect
+                    {attemptsRemaining !== null && attemptsRemaining >= 0 && (
+                      <>
+                        {' — '}
+                        <RNText style={styles.errorTextBold}>
+                          {attemptsRemaining} essai{attemptsRemaining > 1 ? 's' : ''} restant{attemptsRemaining > 1 ? 's' : ''}
+                        </RNText>
+                      </>
+                    )}
+                  </RNText>
+                )}
+              </>
+            ) : null}
+
+            <View style={styles.buttonContainer}>
+              <Pressable
+                onPress={handleCancel}
+                disabled={isLoading}
+                style={[styles.cancelButton, isLoading && { opacity: 0.5 }]}
+              >
+                <RNText style={styles.cancelButtonText}>Annuler</RNText>
+              </Pressable>
+
+              {!isSetupMode && !isPermanentlyLocked && (
+                <View style={styles.forgotPinContainer}>
+                  <Link href="/forgot-credentials?type=pin" asChild>
+                    <Pressable>
+                      <RNText style={styles.forgotPinText}>
+                        PIN oublié ?
+                      </RNText>
+                    </Pressable>
+                  </Link>
+                </View>
+              )}
+            </View>
+
+            {isSetupMode && (
+              <View style={styles.infoContainer}>
+                <RNText style={styles.infoText}>
+                  Mémorisez bien ce code PIN. Il vous sera demandé à chaque connexion.
+                </RNText>
+              </View>
             )}
           </View>
-
-          {isSetupMode && (
-            <View style={styles.infoContainer}>
-              <RNText style={styles.infoText}>
-                ℹ️ Mémorisez bien ce code PIN. Il vous sera demandé à chaque connexion.
-              </RNText>
-            </View>
-          )}
-        </View>
-      </View>
-    </AuthScreenLayout>
+      </AuthScreenLayout>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fullWrapper: {
+  root: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#1A1A1A',
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   contentContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 60,
-    maxWidth: 480,
-    alignSelf: 'center',
     width: '100%',
+    maxWidth: 380,
   },
   headerContainer: {
     alignItems: 'center',
@@ -290,14 +306,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -306,7 +322,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FF6B6B',
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
@@ -317,23 +333,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   buttonContainer: {
-    width: 280,
+    width: '100%',
     marginTop: 12,
   },
   cancelButton: {
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#FFFFFF',
   },
   forgotPinContainer: {
     width: '100%',
@@ -342,11 +358,13 @@ const styles = StyleSheet.create({
   },
   forgotPinText: {
     fontSize: 14,
-    color: '#1F2937',
+    color: 'rgba(255, 255, 255, 0.6)',
     textDecorationLine: 'underline',
   },
   infoContainer: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -354,27 +372,27 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoText: {
-    color: '#1E40AF',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
   resetLinkContainer: {
-    width: 280,
+    width: '100%',
     marginBottom: 12,
   },
   resetButton: {
     width: '100%',
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   resetButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1A1A1A',
   },
   lockedContainer: {
     alignItems: 'center',
@@ -386,18 +404,18 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: 'rgba(255, 107, 107, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   lockedCountdown: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#DC2626',
+    color: '#FF6B6B',
   },
   lockedHint: {
     fontSize: 13,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.5)',
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 280,

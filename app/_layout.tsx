@@ -9,6 +9,7 @@ import { PortalHost } from '@rn-primitives/portal';
 import { store, RootState } from '~/store';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppState, AppStateStatus, Platform, Keyboard, Dimensions, TouchableWithoutFeedback, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
 import { storageService } from '~/lib/storageService';
@@ -82,6 +83,7 @@ function AuthenticationGate() {
       } catch (error) {
         console.error('❌ [AuthGate] Erreur lors de l\'initialisation auth:', error);
       } finally {
+        dispatch(sessionActions.setAuthInitialized(true));
         setIsInitialized(true);
       }
     };
@@ -226,12 +228,21 @@ function RootLayoutNav() {
     'Mona-Sans': require('../assets/images/fonts/MonaSans-VariableFont_wdth,wght.ttf'),
     'material-community': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf'),
   });
+  const [imagesReady, setImagesReady] = React.useState(false);
+
+  // Prefetch les images auth au démarrage (pendant le splash screen)
+  React.useEffect(() => {
+    ExpoImage.prefetch([
+      require('../assets/images/dark-texture-surface.jpg'),
+      require('../assets/images/logo_komy_png/Logo_Komy_blancSF.png'),
+    ]).finally(() => setImagesReady(true));
+  }, []);
 
   React.useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && imagesReady) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, imagesReady]);
 
   // Fermer le clavier automatiquement lors d'un changement d'orientation
   React.useEffect(() => {

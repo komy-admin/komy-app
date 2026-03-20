@@ -4,14 +4,16 @@ import {
   StyleSheet,
   Platform,
   Text as RNText,
+  TextInput as RNTextInput,
+  Pressable,
 } from 'react-native';
-import { Button, Text, TextInput } from '~/components/ui';
+import { Image as ExpoImage } from 'expo-image';
 import { authApiService } from '~/api/auth.api';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
-import { ChevronLeft, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -20,6 +22,7 @@ export default function ResetPasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
   const router = useRouter();
   const { showToast } = useToast();
@@ -32,9 +35,20 @@ export default function ResetPasswordScreen() {
     }
   }, [token]);
 
+  const getPasswordError = (): string | null => {
+    if (!password) return 'Le mot de passe est requis';
+    if (password.length < 8) return '8 caractères minimum';
+    if (!/[A-Z]/.test(password)) return '1 majuscule requise';
+    if (!/[a-z]/.test(password)) return '1 minuscule requise';
+    if (!/\d/.test(password)) return '1 chiffre requis';
+    if (!/[^a-zA-Z0-9]/.test(password)) return '1 caractère spécial requis';
+    return null;
+  };
+
   const validatePassword = () => {
-    if (password.length < 6) {
-      showToast('Le mot de passe doit contenir au moins 6 caractères', 'error');
+    const error = getPasswordError();
+    if (error) {
+      showToast(error, 'error');
       return false;
     }
 
@@ -67,7 +81,6 @@ export default function ResetPasswordScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      // Redirect to login after 2 seconds
       setTimeout(() => {
         router.replace('/login');
       }, 2000);
@@ -80,7 +93,6 @@ export default function ResetPasswordScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
 
-      // If token is invalid or expired
       if (error.response?.status === 400 || error.response?.status === 404) {
         setTimeout(() => {
           router.replace('/forgot-credentials?type=password');
@@ -95,161 +107,173 @@ export default function ResetPasswordScreen() {
     router.replace('/login');
   };
 
+  const isPasswordValid = password.length >= 8
+    && /[A-Z]/.test(password)
+    && /[a-z]/.test(password)
+    && /\d/.test(password)
+    && /[^a-zA-Z0-9]/.test(password);
+  const passwordsMatch = password === confirmPassword && password.length > 0;
+
   if (isSuccess) {
     return (
-      <View style={styles.container}>
-        <View style={styles.successContainer}>
-          <View style={styles.successIcon}>
-            <Text style={styles.successEmoji}>✅</Text>
+      <View style={styles.root}>
+        <ExpoImage
+          source={require('../../assets/images/dark-texture-surface.jpg')}
+          style={styles.heroImage}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          priority="high"
+        />
+        <View style={styles.imageOverlay} />
+        <View style={styles.successOverlay}>
+          <View style={styles.successIconCircle}>
+            <Check size={40} color="#FFFFFF" strokeWidth={2.5} />
           </View>
           <RNText style={styles.successTitle}>Mot de passe réinitialisé!</RNText>
-          <Text style={styles.successText}>
+          <RNText style={styles.successText}>
             Vous allez être redirigé vers la page de connexion...
-          </Text>
+          </RNText>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <KeyboardAwareScrollViewWrapper
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContainer}
-        bottomOffset={40}
-        scrollEventThrottle={16}
-      >
+    <View style={styles.root}>
+      <ExpoImage
+        source={require('../../assets/images/dark-texture-surface.jpg')}
+        style={styles.heroImage}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        priority="high"
+      />
+      <View style={styles.imageOverlay} />
+
+      <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
           <View style={styles.contentContainer}>
-            <Button
-              variant="ghost"
+            <Pressable
               onPress={handleBack}
               style={styles.backButton}
             >
-              <ChevronLeft size={24} color="#1F2937" />
-              <Text style={styles.backButtonText}>Retour</Text>
-            </Button>
+              <ChevronLeft size={24} color="rgba(255, 255, 255, 0.7)" />
+              <RNText style={styles.backButtonText}>Retour</RNText>
+            </Pressable>
 
             <View style={styles.headerContainer}>
-              <View style={styles.iconContainer}>
-                <Lock size={48} color="#6366F1" />
-              </View>
               <RNText style={styles.title}>
                 Nouveau mot de passe
               </RNText>
-              <Text style={styles.subtitle}>
+              <RNText style={styles.subtitle}>
                 Créez un nouveau mot de passe sécurisé pour votre compte
-              </Text>
+              </RNText>
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mot de passe</Text>
+              <RNText style={styles.label}>Mot de passe</RNText>
               <View style={styles.inputWrapper}>
-                <TextInput
-                  id="password"
+                <RNTextInput
                   value={password}
                   onChangeText={setPassword}
+                  onBlur={() => setPasswordTouched(true)}
                   placeholder="Entrez votre nouveau mot de passe"
                   secureTextEntry={!showPassword}
-                  style={styles.input}
-                  placeholderTextColor="#9CA3AF"
+                  style={[styles.input, passwordTouched && !isPasswordValid && password.length > 0 ? styles.inputError : null]}
+                  placeholderTextColor="rgba(255, 255, 255, 0.35)"
                   editable={!isLoading}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                <Button
-                  variant="ghost"
+                <Pressable
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeButton}
                 >
                   {showPassword ? (
-                    <EyeOff size={20} color="#6B7280" />
+                    <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />
                   ) : (
-                    <Eye size={20} color="#6B7280" />
+                    <Eye size={20} color="rgba(255, 255, 255, 0.5)" />
                   )}
-                </Button>
+                </Pressable>
               </View>
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirmer le mot de passe</Text>
+              <RNText style={styles.label}>Confirmer le mot de passe</RNText>
               <View style={styles.inputWrapper}>
-                <TextInput
-                  id="confirmPassword"
+                <RNTextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   placeholder="Confirmez votre nouveau mot de passe"
                   secureTextEntry={!showConfirmPassword}
-                  style={styles.input}
-                  placeholderTextColor="#9CA3AF"
+                  style={[styles.input, confirmPassword.length > 0 && password !== confirmPassword ? styles.inputError : null]}
+                  placeholderTextColor="rgba(255, 255, 255, 0.35)"
                   editable={!isLoading}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                <Button
-                  variant="ghost"
+                <Pressable
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   style={styles.eyeButton}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff size={20} color="#6B7280" />
+                    <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />
                   ) : (
-                    <Eye size={20} color="#6B7280" />
+                    <Eye size={20} color="rgba(255, 255, 255, 0.5)" />
                   )}
-                </Button>
+                </Pressable>
               </View>
             </View>
 
-            <View style={styles.requirementsContainer}>
-              <Text style={styles.requirementsTitle}>Le mot de passe doit :</Text>
-              <Text style={[styles.requirement, password.length >= 6 && styles.requirementMet]}>
-                • Contenir au moins 6 caractères
-              </Text>
-              <Text style={[styles.requirement, password === confirmPassword && password.length > 0 && styles.requirementMet]}>
-                • Correspondre à la confirmation
-              </Text>
+            <View style={styles.passwordRulesRow}>
+              <RNText style={[styles.passwordRule, password.length >= 8 ? styles.passwordRuleValid : passwordTouched && password.length > 0 && styles.passwordRuleError]}>8 caractères</RNText>
+              <RNText style={styles.passwordRuleSep}>·</RNText>
+              <RNText style={[styles.passwordRule, /[A-Z]/.test(password) ? styles.passwordRuleValid : passwordTouched && password.length > 0 && styles.passwordRuleError]}>1 majuscule</RNText>
+              <RNText style={styles.passwordRuleSep}>·</RNText>
+              <RNText style={[styles.passwordRule, /[a-z]/.test(password) ? styles.passwordRuleValid : passwordTouched && password.length > 0 && styles.passwordRuleError]}>1 minuscule</RNText>
+              <RNText style={styles.passwordRuleSep}>·</RNText>
+              <RNText style={[styles.passwordRule, /\d/.test(password) ? styles.passwordRuleValid : passwordTouched && password.length > 0 && styles.passwordRuleError]}>1 chiffre</RNText>
+              <RNText style={styles.passwordRuleSep}>·</RNText>
+              <RNText style={[styles.passwordRule, /[^a-zA-Z0-9]/.test(password) ? styles.passwordRuleValid : passwordTouched && password.length > 0 && styles.passwordRuleError]}>1 spécial</RNText>
             </View>
 
-            <Button
-              variant="default"
+            <Pressable
               onPress={handleResetPassword}
-              disabled={isLoading || !password || !confirmPassword}
-              style={styles.submitButton}
+              disabled={isLoading || !isPasswordValid || !passwordsMatch}
+              style={[styles.primaryButton, (isLoading || !isPasswordValid || !passwordsMatch) && styles.primaryButtonDisabled]}
             >
-              <Text style={styles.submitButtonText}>
+              <RNText style={styles.primaryButtonText}>
                 {isLoading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
-              </Text>
-            </Button>
+              </RNText>
+            </Pressable>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.infoText}>
-                ℹ️ Après la réinitialisation, vous devrez vous connecter avec votre nouveau mot de passe.
-              </Text>
+              <RNText style={styles.infoText}>
+                Après la réinitialisation, vous devrez vous connecter avec votre nouveau mot de passe.
+              </RNText>
             </View>
           </View>
-      </KeyboardAwareScrollViewWrapper>
+      </AuthScreenLayout>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1A1A1A',
   },
-  scrollView: {
-    flex: 1,
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
   },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingTop: 20,
-    paddingBottom: 40,
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   contentContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 60,
-    maxWidth: 480,
-    alignSelf: 'center',
+    alignItems: 'center',
     width: '100%',
+    maxWidth: 380,
   },
   backButton: {
     flexDirection: 'row',
@@ -258,41 +282,44 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingVertical: 8,
     paddingRight: 16,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+    }),
   },
   backButtonText: {
     fontSize: 16,
-    color: '#1F2937',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginLeft: 4,
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 48,
-  },
-  iconContainer: {
     marginBottom: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: 20,
+    maxWidth: 360,
   },
   inputContainer: {
+    width: '100%',
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 8,
   },
   inputWrapper: {
@@ -300,102 +327,115 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    height: 56,
+    height: 48,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingRight: 50,
-    fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    color: '#1F2937',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingRight: 48,
+    fontSize: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    color: '#FFFFFF',
+    ...(Platform.OS === 'web' ? {
+      outlineStyle: 'none',
+    } as any : {
+      textAlignVertical: 'center' as const,
+    }),
+  },
+  inputError: {
+    borderColor: '#FF6B6B',
   },
   eyeButton: {
     position: 'absolute',
     right: 0,
     top: 0,
-    height: 56,
-    width: 50,
+    height: 48,
+    width: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  requirementsContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 16,
+  passwordRulesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
     marginBottom: 24,
+    gap: 4,
   },
-  requirementsTitle: {
-    fontSize: 14,
+  passwordRule: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.35)',
+  },
+  passwordRuleValid: {
+    color: '#FFFFFF',
     fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
   },
-  requirement: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginVertical: 4,
-  },
-  requirementMet: {
-    color: '#10B981',
+  passwordRuleError: {
+    color: '#FF6B6B',
     fontWeight: '500',
   },
-  submitButton: {
+  passwordRuleSep: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.2)',
+  },
+  primaryButton: {
     width: '100%',
-    height: 56,
-    backgroundColor: '#000000',
-    borderRadius: 8,
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
-  submitButtonText: {
-    fontSize: 18,
+  primaryButtonText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1A1A1A',
+    letterSpacing: 0.3,
+  },
+  primaryButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   infoContainer: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginTop: 32,
+    width: '100%',
   },
   infoText: {
-    color: '#1E40AF',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
-  successContainer: {
-    flex: 1,
+  successOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
     padding: 24,
   },
-  successIcon: {
+  successIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 24,
-  },
-  successEmoji: {
-    fontSize: 72,
   },
   successTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
   },
   successText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
   },
 });

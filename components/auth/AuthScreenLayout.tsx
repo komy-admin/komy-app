@@ -1,49 +1,40 @@
 /**
  * AuthScreenLayout Component
  *
- * Unified layout wrapper for authentication screens (login, PIN verification, etc.)
+ * Unified layout wrapper for authentication screens.
+ * Uses KeyboardAwareScrollView for reliable auto-scroll to focused inputs.
  *
- * Handles:
- * - KeyboardAwareScrollViewWrapper for auto-scroll to focused input
- * - Consistent behavior across iOS and Android (no platform-specific offset needed)
- *
- * Architecture Pattern:
- * - Uses KeyboardAwareScrollViewWrapper instead of KeyboardAvoidingView
- * - Auto-scrolls to the focused input with a consistent bottomOffset gap
- * - Keyboard dismiss is handled by keyboardShouldPersistTaps="handled" (default in wrapper):
- *   → Tap on TextInput: keyboard stays, input gets focus
- *   → Tap on empty area: keyboard dismisses
- * - No Pressable wrapper needed (it blocks PinInput re-focus on iOS)
- *
- * @example
- * ```tsx
- * <AuthScreenLayout>
- *   <View style={styles.contentContainer}>
- *     <TextInput ... />
- *     <Button ... />
- *   </View>
- * </AuthScreenLayout>
- * ```
+ * Two modes:
+ * - Default: standard scroll with flexGrow (login)
+ * - Centered: top padding + generous bottom padding for visual spacing
  */
 
 import React from 'react';
-import { StyleSheet, ViewStyle } from 'react-native';
+import { StyleSheet, ViewStyle, View } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 interface AuthScreenLayoutProps {
   children: React.ReactNode;
   style?: ViewStyle;
+  centered?: boolean;
 }
 
-export const AuthScreenLayout: React.FC<AuthScreenLayoutProps> = ({ children, style }) => {
+export const AuthScreenLayout: React.FC<AuthScreenLayoutProps> = ({ children, style, centered }) => {
   return (
     <KeyboardAwareScrollViewWrapper
       style={[styles.container, style]}
-      contentContainerStyle={styles.scrollContent}
-      bottomOffset={40}
+      contentContainerStyle={centered ? styles.centeredScrollContent : styles.scrollContent}
+      bottomOffset={centered ? 80 : 40}
       scrollEventThrottle={16}
+      keyboardShouldPersistTaps="handled"
     >
-      {children}
+      {centered ? (
+        <View style={styles.centeredContent}>
+          {children}
+        </View>
+      ) : (
+        children
+      )}
     </KeyboardAwareScrollViewWrapper>
   );
 };
@@ -55,5 +46,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  centeredScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+  },
+  centeredContent: {
+    alignItems: 'center',
+    width: '100%',
   },
 });

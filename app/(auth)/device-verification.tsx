@@ -5,6 +5,7 @@ import {
   Text as RNText,
   Pressable,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { PinInput } from '~/components/ui';
 import { useSelector } from 'react-redux';
 import { RootState, store } from '~/store';
@@ -13,7 +14,6 @@ import { sessionService } from '~/services/SessionService';
 import { authApiService } from '~/api/auth.api';
 import { useRouter } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
-import { ShieldAlert } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 export default function DeviceVerificationScreen() {
@@ -53,6 +53,13 @@ export default function DeviceVerificationScreen() {
     return () => clearTimeout(timer);
   }, [emailCooldown]);
 
+  // Auto-send email when switching to or landing on email method
+  useEffect(() => {
+    if (activeMethod === 'email' && emailCooldown <= 0 && !isSendingEmail && loginToken) {
+      handleSendEmailCode();
+    }
+  }, [activeMethod]);
+
   // Reset error when user types
   useEffect(() => {
     if (error && code.length > 0 && code.length < 6) {
@@ -91,7 +98,7 @@ export default function DeviceVerificationScreen() {
       const response = await sessionService.verifyLogin2FA(codeValue, activeMethod);
 
       if (response.requirePin || response.requirePinSetup) {
-        router.push('/pin-verification');
+        router.replace('/pin-verification');
         return;
       }
 
@@ -117,114 +124,122 @@ export default function DeviceVerificationScreen() {
   };
 
   return (
-    <AuthScreenLayout>
-      <View style={styles.fullWrapper}>
-        <View style={styles.contentContainer}>
-          <View style={styles.iconContainer}>
-            <ShieldAlert size={60} color="#1F2937" strokeWidth={1.5} />
-          </View>
+    <View style={styles.root}>
+      <ExpoImage
+        source={require('../../assets/images/dark-texture-surface.jpg')}
+        style={styles.heroImage}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        priority="high"
+      />
+      <View style={styles.imageOverlay} />
 
-          <View style={styles.headerContainer}>
-            <RNText style={styles.title}>Nouvel appareil détecté</RNText>
-            <RNText style={styles.subtitle}>
-              {activeMethod === 'totp'
-                ? 'Entrez le code à 6 chiffres depuis l\'application d\'authentification de l\'administrateur.'
-                : 'Demandez le code à 6 chiffres envoyé par email à l\'administrateur.'}
-            </RNText>
-          </View>
-
-          {/* Method selector when both are active */}
-          {hasBoth && (
-            <View style={styles.methodSelector}>
-              <Pressable
-                style={[styles.methodTab, activeMethod === 'totp' && styles.methodTabActive]}
-                onPress={() => { setActiveMethod('totp'); setCode(''); setError(false); }}
-              >
-                <RNText style={[styles.methodTabText, activeMethod === 'totp' && styles.methodTabTextActive]}>Application</RNText>
-              </Pressable>
-              <Pressable
-                style={[styles.methodTab, activeMethod === 'email' && styles.methodTabActive]}
-                onPress={() => { setActiveMethod('email'); setCode(''); setError(false); }}
-              >
-                <RNText style={[styles.methodTabText, activeMethod === 'email' && styles.methodTabTextActive]}>Email</RNText>
-              </Pressable>
+      <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
+          <View style={styles.contentContainer}>
+            <View style={styles.headerContainer}>
+              <RNText style={styles.title}>Nouvel appareil détecté</RNText>
+              <RNText style={styles.subtitle}>
+                {activeMethod === 'totp'
+                  ? 'Entrez le code à 6 chiffres depuis l\'application d\'authentification de l\'administrateur.'
+                  : 'Demandez le code à 6 chiffres envoyé par email à l\'administrateur.'}
+              </RNText>
             </View>
-          )}
 
-          {/* Send email button */}
-          {activeMethod === 'email' && (
+            {/* Method selector when both are active */}
+            {hasBoth && (
+              <View style={styles.methodSelector}>
+                <Pressable
+                  style={[styles.methodTab, activeMethod === 'totp' && styles.methodTabActive]}
+                  onPress={() => { setActiveMethod('totp'); setCode(''); setError(false); }}
+                >
+                  <RNText style={[styles.methodTabText, activeMethod === 'totp' && styles.methodTabTextActive]}>Application</RNText>
+                </Pressable>
+                <Pressable
+                  style={[styles.methodTab, activeMethod === 'email' && styles.methodTabActive]}
+                  onPress={() => { setActiveMethod('email'); setCode(''); setError(false); }}
+                >
+                  <RNText style={[styles.methodTabText, activeMethod === 'email' && styles.methodTabTextActive]}>Email</RNText>
+                </Pressable>
+              </View>
+            )}
+
+            {/* Send email button */}
+            {activeMethod === 'email' && (
+              <Pressable
+                style={[styles.sendEmailButton, (emailCooldown > 0 || isSendingEmail) && styles.buttonDisabled]}
+                onPress={handleSendEmailCode}
+                disabled={emailCooldown > 0 || isSendingEmail}
+              >
+                <RNText style={styles.sendEmailButtonText}>
+                  {isSendingEmail ? 'Envoi...' : emailCooldown > 0 ? `Renvoyer (${emailCooldown}s)` : 'Envoyer le code'}
+                </RNText>
+              </Pressable>
+            )}
+
+            {/* PIN Input */}
+            <View style={styles.pinContainer}>
+              <PinInput
+                length={6}
+                value={code}
+                onChange={setCode}
+                onComplete={handleVerify}
+                secure={false}
+                autoFocus
+                error={error}
+                variant="dark"
+              />
+            </View>
+
+            {/* Error message */}
+            {error && (
+              <View style={styles.errorContainer}>
+                <RNText style={styles.errorText}>Code invalide. Veuillez réessayer.</RNText>
+              </View>
+            )}
+
+            {/* Verify button */}
             <Pressable
-              style={[styles.sendEmailButton, (emailCooldown > 0 || isSendingEmail) && styles.buttonDisabled]}
-              onPress={handleSendEmailCode}
-              disabled={emailCooldown > 0 || isSendingEmail}
+              style={[styles.primaryButton, (code.length !== 6 || isLoading) && styles.primaryButtonDisabled]}
+              onPress={() => handleVerify(code)}
+              disabled={code.length !== 6 || isLoading}
             >
-              <RNText style={styles.sendEmailButtonText}>
-                {isSendingEmail ? 'Envoi...' : emailCooldown > 0 ? `Renvoyer (${emailCooldown}s)` : 'Envoyer le code'}
+              <RNText style={styles.primaryButtonText}>
+                {isLoading ? 'Vérification...' : 'Confirmer'}
               </RNText>
             </Pressable>
-          )}
 
-          {/* PIN Input */}
-          <View style={styles.pinContainer}>
-            <PinInput
-              length={6}
-              value={code}
-              onChange={setCode}
-              onComplete={handleVerify}
-              secure={false}
-              autoFocus
-              error={error}
-            />
+            {/* Cancel button */}
+            <Pressable
+              style={[styles.cancelButton, isLoading && styles.buttonDisabled]}
+              onPress={handleCancel}
+              disabled={isLoading}
+            >
+              <RNText style={styles.cancelButtonText}>Annuler</RNText>
+            </Pressable>
           </View>
-
-          {/* Error message */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <RNText style={styles.errorText}>Code invalide. Veuillez réessayer.</RNText>
-            </View>
-          )}
-
-          {/* Verify button */}
-          <Pressable
-            style={[styles.primaryButton, (code.length !== 6 || isLoading) && styles.primaryButtonDisabled]}
-            onPress={() => handleVerify(code)}
-            disabled={code.length !== 6 || isLoading}
-          >
-            <RNText style={styles.primaryButtonText}>
-              {isLoading ? 'Vérification...' : 'Confirmer'}
-            </RNText>
-          </Pressable>
-
-          {/* Cancel button */}
-          <Pressable
-            style={[styles.cancelButton, isLoading && styles.buttonDisabled]}
-            onPress={handleCancel}
-            disabled={isLoading}
-          >
-            <RNText style={styles.cancelButtonText}>Annuler</RNText>
-          </Pressable>
-        </View>
-      </View>
-    </AuthScreenLayout>
+      </AuthScreenLayout>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fullWrapper: {
+  root: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#1A1A1A',
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   contentContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 60,
-    maxWidth: 480,
-    alignSelf: 'center',
     width: '100%',
-  },
-  iconContainer: {
-    marginBottom: 16,
+    maxWidth: 380,
   },
   headerContainer: {
     alignItems: 'center',
@@ -233,21 +248,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: 360,
   },
   methodSelector: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 8,
     padding: 4,
     width: '100%',
@@ -262,51 +277,41 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   methodTabActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   methodTabText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: 'rgba(255, 255, 255, 0.4)',
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   methodTabTextActive: {
-    color: '#1F2937',
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   sendEmailButton: {
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   sendEmailButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1F2937',
+    color: '#FFFFFF',
   },
   pinContainer: {
     marginBottom: 24,
     width: '100%',
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(255, 107, 107, 0.15)',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -314,30 +319,25 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FF6B6B',
     fontSize: 14,
     textAlign: 'center',
   },
   primaryButton: {
     width: '100%',
     height: 56,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
   primaryButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1A1A1A',
   },
   primaryButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -346,9 +346,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
@@ -356,6 +356,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#FFFFFF',
   },
 });

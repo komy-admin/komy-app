@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } f
 import {
   View,
   TextInput,
+  InputAccessoryView,
   Pressable,
   StyleSheet,
   Platform,
@@ -20,6 +21,7 @@ interface PinInputProps {
   autoFocus?: boolean;
   secure?: boolean;
   keyboardType?: 'numeric' | 'number-pad';
+  variant?: 'light' | 'dark';
 }
 
 export interface PinInputRef {
@@ -38,7 +40,9 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
   autoFocus = true,
   secure = true,
   keyboardType = 'number-pad',
+  variant = 'light',
 }, ref) => {
+  const isDark = variant === 'dark';
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const lastCompletedValueRef = useRef<string>('');
@@ -103,14 +107,15 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
               key={index}
               style={[
                 styles.box,
-                isActive && styles.boxActive,
-                error && styles.boxError,
-                hasValue && styles.boxFilled,
+                isDark && styles.boxDark,
+                isActive && (isDark ? styles.boxActiveDark : styles.boxActive),
+                error && (isDark ? styles.boxErrorDark : styles.boxError),
+                hasValue && (isDark ? styles.boxFilledDark : styles.boxFilled),
                 disabled && styles.boxDisabled,
               ]}
             >
               {hasValue && (
-                <Text style={[styles.digit, disabled && styles.digitDisabled]}>
+                <Text style={[styles.digit, isDark && styles.digitDark, disabled && styles.digitDisabled]}>
                   {secure ? '•' : value[index]}
                 </Text>
               )}
@@ -142,8 +147,15 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
         textContentType="oneTimeCode"
         returnKeyType="done"
         blurOnSubmit={false}
-        caretHidden
+        inputAccessoryViewID="pin-input-empty"
+        caretHidden={false}
+        selection={{ start: value.length, end: value.length }}
       />
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="pin-input-empty">
+          <View />
+        </InputAccessoryView>
+      )}
     </Pressable>
   );
 });
@@ -195,6 +207,25 @@ const styles = StyleSheet.create({
   },
   digitDisabled: {
     color: '#9CA3AF',
+  },
+  // Dark variant
+  boxDark: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  boxActiveDark: {
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  boxErrorDark: {
+    borderColor: '#FF6B6B',
+    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+  },
+  boxFilledDark: {
+    borderColor: '#FFFFFF',
+  },
+  digitDark: {
+    color: '#FFFFFF',
   },
   // The real input - positioned over the boxes but transparent
   realInput: {
