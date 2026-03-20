@@ -5,7 +5,7 @@
  *
  * Handles:
  * - FormHeader (fixed at top)
- * - KeyboardSafeFormView with ADMIN role (scrollable content)
+ * - KeyboardAwareScrollViewWrapper (scrollable content)
  * - Footer actions with Cancel/Save buttons (fixed at bottom, covered by keyboard)
  *
  * Architecture Pattern:
@@ -13,7 +13,7 @@
  * │ FormHeader (FIXED)              │
  * ├─────────────────────────────────┤
  * │                                 │
- * │ KeyboardSafeFormView            │
+ * │ KeyboardAwareScrollView         │
  * │ (SCROLLABLE + Keyboard Aware)   │
  * │                                 │
  * │ {children}                      │
@@ -67,9 +67,6 @@ export interface AdminFormLayoutProps {
   /** Form content */
   children: React.ReactNode;
 
-  /** Optional custom keyboard vertical offset (default: 150) */
-  keyboardVerticalOffset?: number;
-
   /** Optional right element in header (tabs, buttons, etc.) */
   headerRight?: React.ReactNode;
 }
@@ -83,7 +80,6 @@ export const AdminFormLayout: React.FC<AdminFormLayoutProps> = ({
   saveButtonText = 'Enregistrer',
   cancelButtonText = 'Annuler',
   children,
-  keyboardVerticalOffset = 150,
   headerRight,
 }) => {
   return (

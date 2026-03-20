@@ -8,26 +8,9 @@
  * AdminFormView is a CONTENT CONTAINER that:
  * - Provides form structure and action buttons
  * - Does NOT manage keyboard (parent handles it)
- * - Is always used with external KeyboardSafeFormView + ScrollView
+ * - Is always used with external KeyboardAwareScrollViewWrapper
  *
  * IMPORTANT: Keyboard management is ALWAYS handled by the parent screen!
- *
- * Usage pattern (see team.tsx):
- * ```tsx
- * <KeyboardSafeFormView keyboardVerticalOffset={150}>
- *   <ScrollView keyboardShouldPersistTaps="handled">
- *     <AdminFormView
- *       mode="edit"
- *       onSave={handleSave}
- *       hideHeaderAndActions={true}  // Parent manages header/footer
- *     >
- *       <TeamForm />
- *     </AdminFormView>
- *   </ScrollView>
- * </KeyboardSafeFormView>
- * ```
- *
- * For comparison with Pattern A (short auth forms), see: login.tsx, pin-verification.tsx
  * ════════════════════════════════════════════════════════════════════════════
  */
 

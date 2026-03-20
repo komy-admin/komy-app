@@ -6,11 +6,11 @@
  *
  * Two modes:
  * - Default: standard scroll with flexGrow (login)
- * - Centered: top padding + generous bottom padding for visual spacing
+ * - Centered: static paddingTop based on screen height for stable centering
  */
 
 import React from 'react';
-import { StyleSheet, ViewStyle, View } from 'react-native';
+import { StyleSheet, ViewStyle, View, useWindowDimensions } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 interface AuthScreenLayoutProps {
@@ -20,10 +20,15 @@ interface AuthScreenLayoutProps {
 }
 
 export const AuthScreenLayout: React.FC<AuthScreenLayoutProps> = ({ children, style, centered }) => {
+  const { height: windowHeight } = useWindowDimensions();
+
   return (
     <KeyboardAwareScrollViewWrapper
       style={[styles.container, style]}
-      contentContainerStyle={centered ? styles.centeredScrollContent : styles.scrollContent}
+      contentContainerStyle={centered
+        ? [styles.centeredScrollContent, { minHeight: windowHeight }]
+        : styles.scrollContent
+      }
       bottomOffset={centered ? 80 : 40}
       scrollEventThrottle={16}
       keyboardShouldPersistTaps="handled"
@@ -48,7 +53,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   centeredScrollContent: {
-    flexGrow: 1,
     justifyContent: 'center',
     paddingVertical: 40,
     paddingHorizontal: 24,

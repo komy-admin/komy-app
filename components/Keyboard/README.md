@@ -9,8 +9,7 @@ Basé sur `react-native-keyboard-controller`.
 _layout.tsx
   └─ KeyboardProviderWrapper          ← Provider racine (1x dans l'app)
        └─ Screens
-            ├─ KeyboardAwareScrollViewWrapper   ← Formulaires scrollables
-            └─ KeyboardSafeFormView             ← Formulaires simples (auth)
+            └─ KeyboardAwareScrollViewWrapper   ← Tous les formulaires
 ```
 
 ## Composants
@@ -22,7 +21,7 @@ Sur Web : pass-through transparent. Sur Native : active `react-native-keyboard-c
 
 ### `KeyboardAwareScrollViewWrapper`
 
-**Usage principal.** Remplace `ScrollView` dans tout formulaire avec inputs.
+**Composant unique** pour tous les formulaires avec inputs (admin, auth, filtres).
 Auto-scroll vers l'input focusé + espace entre input et clavier.
 
 ```tsx
@@ -41,35 +40,14 @@ Auto-scroll vers l'input focusé + espace entre input et clavier.
 
 Sur Web : fallback `ScrollView` standard.
 
-### `KeyboardSafeFormView`
-
-Pour les formulaires **sans scroll** (écrans auth : login, reset password/PIN).
-Wrap `KeyboardAvoidingView` avec `behavior="padding"`.
-
-```tsx
-<KeyboardSafeFormView keyboardVerticalOffset={150}>
-  <TextInput placeholder="Code PIN" />
-  <Button title="Valider" />
-</KeyboardSafeFormView>
-```
-
-## Quand utiliser quoi ?
-
-| Contexte | Composant |
-|----------|-----------|
-| Formulaire dans SidePanel/SlidePanel | `KeyboardAwareScrollViewWrapper` |
-| Filtres dans SidePanel | `KeyboardAwareScrollViewWrapper` |
-| Écran auth (login, PIN) | `KeyboardSafeFormView` |
-
-**Ne jamais combiner les deux.** `KeyboardSafeFormView` intercepte les events clavier et empêche `KeyboardAwareScrollViewWrapper` de calculer l'offset.
+Les écrans auth utilisent `AuthScreenLayout` qui wrappe ce composant avec des options de centrage.
 
 ## Fichiers
 
 ```
 Keyboard/
   ├─ index.ts                  API publique
-  ├─ KeyboardWrapper.tsx       Provider + AvoidingView + AwareScrollView
-  └─ KeyboardSafeFormView.tsx  Wrapper pré-configuré pour auth
+  └─ KeyboardWrapper.tsx       Provider + AvoidingView + AwareScrollView
 ```
 
 ## Dépendances

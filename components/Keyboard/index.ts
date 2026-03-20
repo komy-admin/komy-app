@@ -8,5 +8,3 @@ export {
 } from './KeyboardWrapper';
 
 export type { KeyboardAwareScrollViewWrapperProps } from './KeyboardWrapper';
-
-export { KeyboardSafeFormView } from './KeyboardSafeFormView';
