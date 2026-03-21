@@ -234,12 +234,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    color: 'rgba(0, 0, 0, 0.01)', // Almost invisible but not fully transparent
+    color: 'rgba(0, 0, 0, 0.01)',
     backgroundColor: 'transparent',
-    fontSize: 1, // Tiny font size
+    fontSize: 1,
     textAlign: 'center',
-    letterSpacing: 50, // Space out the invisible characters
-    opacity: 0.01, // Additional opacity layer
+    letterSpacing: 50,
+    opacity: 0.01,
   },
 });
 

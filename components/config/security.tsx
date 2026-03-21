@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Platform, Keyboard } from 'react-native';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { ShieldCheck, Smartphone, Mail, Monitor } from 'lucide-react-native';
 import { authApiService } from '~/api/auth.api';
 import { useToast } from '~/components/ToastProvider';
 import type { ToastType } from '~/components/ui/toast';
 import type { TrustedDevice } from '~/types/auth.types';
 import { getDeviceId } from '~/lib/deviceId';
-import { TwoFactorModal } from '~/components/ui/TwoFactorModal';
 import { QRCode } from '~/components/ui/QRCode';
 import PinInput from '~/components/ui/pin-input';
 import * as Clipboard from 'expo-clipboard';
@@ -118,6 +118,7 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
         setSetup({ method: 'totp', qrCodeUrl: res.qrCodeUrl, secret: res.secret });
       } else {
         setSetup({ method: 'email' });
+        setEmailCooldown(30);
         showToast('Code envoyé par email', 'success');
       }
     } catch (error: any) {
@@ -192,28 +193,29 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
   // Setup flow
   if (setup) {
     return (
-      <View style={styles.tabContent}>
-        <View style={styles.tabHeader}>
-          <View>
-            <Text style={styles.tabTitle}>
-              {setup.method === 'totp' ? 'Configurer TOTP' : 'Configurer Email'}
-            </Text>
-            <Text style={styles.tabSubtitle}>
-              {setup.method === 'totp'
-                ? 'Scannez le QR code avec votre application'
-                : 'Un code a été envoyé à votre email'}
-            </Text>
+      <KeyboardAwareScrollViewWrapper style={styles.tabContent} contentContainerStyle={styles.tabScrollContent} showsVerticalScrollIndicator={false} bottomOffset={40} keyboardShouldPersistTaps="handled">
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
+          <View style={styles.tabHeader}>
+            <View>
+              <Text style={styles.tabTitle}>
+                {setup.method === 'totp' ? 'Configurer TOTP' : 'Configurer Email'}
+              </Text>
+              <Text style={styles.tabSubtitle}>
+                {setup.method === 'totp'
+                  ? 'Scannez le QR code avec votre application'
+                  : 'Un code a été envoyé à votre email'}
+              </Text>
+            </View>
           </View>
-        </View>
-        <ScrollView style={styles.viewsScrollContainer} contentContainerStyle={styles.viewsContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.viewCard}>
             <View style={[styles.viewModeSection, { alignItems: 'center', borderTopWidth: 0, marginTop: 0 }]}>
               {setup.method === 'totp' && (
                 <>
                   {setup.qrCodeUrl ? <QRCode value={setup.qrCodeUrl} size={180} /> : null}
                   {setup.secret ? (
-                    <TouchableOpacity onPress={() => handleCopySecret(setup.secret!)} activeOpacity={0.7}>
-                      <Text style={twoFaStyles.secretText}>Clé : {setup.secret} (copier)</Text>
+                    <TouchableOpacity style={twoFaStyles.secretBadge} onPress={() => handleCopySecret(setup.secret!)} activeOpacity={0.7}>
+                      <Text style={twoFaStyles.secretText}>Clé : {setup.secret}</Text>
+                      <Text style={twoFaStyles.secretCopyHint}>Copier</Text>
                     </TouchableOpacity>
                   ) : null}
                 </>
@@ -233,6 +235,17 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
                   autoFocus={false}
                 />
               </View>
+              {setup.method === 'email' && (
+                <TouchableOpacity
+                  style={twoFaStyles.sendEmailLink}
+                  onPress={handleSendEmailCode}
+                  disabled={emailCooldown > 0 || isSendingEmail}
+                >
+                  <Text style={[twoFaStyles.sendEmailLinkText, (emailCooldown > 0 || isSendingEmail) && { opacity: 0.5 }]}>
+                    {isSendingEmail ? 'Envoi...' : emailCooldown > 0 ? `Renvoyer le code (${emailCooldown}s)` : 'Renvoyer le code par email'}
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[twoFaStyles.verifyButton, (verifyCode.length !== 6 || isLoading) && twoFaStyles.verifyButtonDisabled]}
                 onPress={handleVerify}
@@ -244,14 +257,14 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={twoFaStyles.backLink}
-                onPress={() => { setSetup(null); setVerifyCode(''); }}
+                onPress={() => { setSetup(null); setVerifyCode(''); setEmailCooldown(0); }}
               >
                 <Text style={twoFaStyles.backLinkText}>Annuler</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
-      </View>
+        </Pressable>
+      </KeyboardAwareScrollViewWrapper>
     );
   }
 
@@ -260,16 +273,16 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
     const otherMethodActive = disablingMethod === 'totp' ? status.email : status.totp;
     const isViaEmail = disableVia === 'email';
     return (
-      <View style={styles.tabContent}>
-        <View style={styles.tabHeader}>
-          <View>
-            <Text style={styles.tabTitle}>Désactiver {disablingMethod === 'totp' ? 'TOTP' : 'Email'}</Text>
-            <Text style={styles.tabSubtitle}>
-              {isViaEmail ? 'Vérification par email' : 'Vérification par application'}
-            </Text>
+      <KeyboardAwareScrollViewWrapper style={styles.tabContent} contentContainerStyle={styles.tabScrollContent} showsVerticalScrollIndicator={false} bottomOffset={40} keyboardShouldPersistTaps="handled">
+        <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
+          <View style={styles.tabHeader}>
+            <View>
+              <Text style={styles.tabTitle}>Désactiver {disablingMethod === 'totp' ? 'TOTP' : 'Email'}</Text>
+              <Text style={styles.tabSubtitle}>
+                {isViaEmail ? 'Vérification par email' : 'Vérification par application'}
+              </Text>
+            </View>
           </View>
-        </View>
-        <ScrollView style={styles.viewsScrollContainer} contentContainerStyle={styles.viewsContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.viewCard}>
             <View style={[styles.viewModeSection, { alignItems: 'center', borderTopWidth: 0, marginTop: 0 }]}>
               <Text style={twoFaStyles.verifyLabel}>
@@ -330,8 +343,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
               )}
             </View>
           </View>
-        </ScrollView>
-      </View>
+        </Pressable>
+      </KeyboardAwareScrollViewWrapper>
     );
   }
 
@@ -608,16 +621,37 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
 // ====================================================================
 
 const twoFaStyles = StyleSheet.create({
+  secretBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 12,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   secretText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#475569',
     fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-    marginTop: 8,
-    textAlign: 'center',
+    fontWeight: '600',
+  },
+  secretCopyHint: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    backgroundColor: '#475569',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    overflow: 'hidden',
   },
   verifyLabel: {
     fontSize: 14,
     color: '#64748B',
+    marginTop: 8,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -702,7 +736,7 @@ const twoFaStyles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     height: 48,
-    marginTop: 24,
+    marginTop: 16,
   },
   verifyButtonDisabled: {
     opacity: 0.4,
@@ -719,7 +753,7 @@ const twoFaStyles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     height: 48,
-    marginTop: 12,
+    marginTop: 16,
   },
   disableButtonDisabled: {
     opacity: 0.4,
@@ -730,13 +764,14 @@ const twoFaStyles = StyleSheet.create({
     fontWeight: '600',
   },
   sendEmailLink: {
-    marginTop: 10,
+    marginTop: 16,
     padding: 4,
   },
   sendEmailLinkText: {
     fontSize: 13,
     color: '#475569',
     fontWeight: '500',
+    textDecorationLine: 'underline',
   },
   switchMethodLink: {
     marginTop: 10,
@@ -901,6 +936,10 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
     padding: 24,
+  },
+  tabScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
   },
   tabHeader: {
     flexDirection: 'row',

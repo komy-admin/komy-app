@@ -60,7 +60,7 @@ export default function ConfigPage() {
         currentSection={currentSection}
         onSectionChange={setCurrentSection}
       />
-      {currentSection === 'configuration' ? (
+      {currentSection === 'configuration' || currentSection === 'security' ? (
         <View style={{ flex: 1, height: '100%' }}>
           {renderSection()}
         </View>
