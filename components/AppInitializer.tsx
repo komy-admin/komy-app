@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { AuthBackground } from '~/components/auth/AuthBackground';
 import { useSelector } from 'react-redux';
 import { useRouter, useSegments } from 'expo-router';
 import { RootState } from '~/store';
@@ -121,16 +121,8 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
     <WebSocketListener>
       {children}
       {showLoader && (
-        <View style={styles.loaderOverlay}>
-          <ExpoImage
-            source={require('../assets/images/dark-texture-surface.jpg')}
-            style={styles.heroImage}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            priority="high"
-            onLoad={handleBackgroundReady}
-          />
-          <View style={styles.imageOverlay} />
+        <View style={styles.loaderOverlay} onLayout={handleBackgroundReady}>
+          <AuthBackground />
 
           <View style={styles.contentContainer}>
             <View style={styles.logoContainer}>
@@ -165,19 +157,10 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
 const styles = StyleSheet.create({
   loaderOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   contentContainer: {
     justifyContent: 'center',
@@ -201,21 +184,21 @@ const styles = StyleSheet.create({
   progressBar: {
     width: '100%',
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(42, 46, 51, 0.15)',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 16,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2A2E33',
     borderRadius: 3,
     minWidth: 6,
   },
   progressText: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
     letterSpacing: 0.3,
     ...(Platform.OS === 'web' && {

@@ -7,7 +7,7 @@ import {
   TextInput as RNTextInput,
   Pressable,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { AuthBackground } from '~/components/auth/AuthBackground';
 import { PinInput } from '~/components/ui';
 import { useDispatch } from 'react-redux';
 import { sessionActions } from '~/store';
@@ -229,14 +229,7 @@ export default function SetupAccountScreen() {
 
   return (
     <View style={styles.root}>
-      <ExpoImage
-        source={require('../../assets/images/dark-texture-surface.jpg')}
-        style={styles.heroImage}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        priority="high"
-      />
-      <View style={styles.imageOverlay} />
+      <AuthBackground />
 
       <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
           <View style={styles.contentContainer}>
@@ -265,7 +258,7 @@ export default function SetupAccountScreen() {
                     placeholder="Minimum 8 caractères"
                     secureTextEntry={!showPassword}
                     style={[styles.input, errors.password ? styles.inputError : null]}
-                    placeholderTextColor="rgba(255, 255, 255, 0.35)"
+                    placeholderTextColor="#9CA3AF"
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
@@ -275,9 +268,9 @@ export default function SetupAccountScreen() {
                     style={styles.eyeButton}
                   >
                     {showPassword ? (
-                      <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />
+                      <EyeOff size={20} color="#9CA3AF" />
                     ) : (
-                      <Eye size={20} color="rgba(255, 255, 255, 0.5)" />
+                      <Eye size={20} color="#9CA3AF" />
                     )}
                   </Pressable>
                 </View>
@@ -294,7 +287,7 @@ export default function SetupAccountScreen() {
                     placeholder="Confirmez votre mot de passe"
                     secureTextEntry={!showConfirmPassword}
                     style={[styles.input, errors.confirmPassword ? styles.inputError : null]}
-                    placeholderTextColor="rgba(255, 255, 255, 0.35)"
+                    placeholderTextColor="#9CA3AF"
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
@@ -304,9 +297,9 @@ export default function SetupAccountScreen() {
                     style={styles.eyeButton}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />
+                      <EyeOff size={20} color="#9CA3AF" />
                     ) : (
-                      <Eye size={20} color="rgba(255, 255, 255, 0.5)" />
+                      <Eye size={20} color="#9CA3AF" />
                     )}
                   </Pressable>
                 </View>
@@ -339,7 +332,7 @@ export default function SetupAccountScreen() {
                     error={!!errors.pin}
                     disabled={isLoading}
                     secure={false}
-                    variant="dark"
+                    variant="light"
                   />
                 </View>
               </View>
@@ -367,21 +360,11 @@ export default function SetupAccountScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: '#E2E8F0',
   },
   contentContainer: {
     alignItems: 'center',
     width: '100%',
-    maxWidth: 380,
   },
   headerContainer: {
     alignItems: 'center',
@@ -390,20 +373,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#2A2E33',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
-    maxWidth: 360,
   },
   errorContainer: {
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -411,7 +393,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#FF6B6B',
+    color: '#EF4444',
     fontSize: 14,
     textAlign: 'center',
     fontWeight: '500',
@@ -426,7 +408,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#4B5563',
     marginBottom: 8,
   },
   inputWrapper: {
@@ -436,13 +418,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingRight: 48,
     fontSize: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    color: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
+    color: '#2A2E33',
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
@@ -450,7 +432,7 @@ const styles = StyleSheet.create({
     }),
   },
   inputError: {
-    borderColor: '#FF6B6B',
+    borderColor: '#EF4444',
   },
   eyeButton: {
     position: 'absolute',
@@ -462,7 +444,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fieldError: {
-    color: '#FF6B6B',
+    color: '#EF4444',
     fontSize: 13,
     marginTop: 6,
     marginLeft: 2,
@@ -476,23 +458,23 @@ const styles = StyleSheet.create({
   },
   passwordRule: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.35)',
+    color: '#9CA3AF',
   },
   passwordRuleValid: {
-    color: '#FFFFFF',
+    color: '#2A2E33',
     fontWeight: '600',
   },
   passwordRuleError: {
-    color: '#FF6B6B',
+    color: '#EF4444',
     fontWeight: '500',
   },
   passwordRuleSep: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: '#D1D5DB',
   },
   pinHelp: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#6B7280',
     marginBottom: 12,
     lineHeight: 20,
   },
@@ -502,7 +484,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2A2E33',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -510,14 +492,14 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   primaryButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#D1D5DB',
   },
   infoText: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: '#9CA3AF',
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,

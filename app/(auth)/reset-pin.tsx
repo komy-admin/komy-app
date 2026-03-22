@@ -6,7 +6,7 @@ import {
   Text as RNText,
   Pressable,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { AuthBackground } from '~/components/auth/AuthBackground';
 import { PinInput } from '~/components/ui';
 import type { PinInputRef } from '~/components/ui';
 import { authApiService } from '~/api/auth.api';
@@ -131,14 +131,7 @@ export default function ResetPinScreen() {
 
   return (
     <View style={styles.root}>
-      <ExpoImage
-        source={require('../../assets/images/dark-texture-surface.jpg')}
-        style={styles.heroImage}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        priority="high"
-      />
-      <View style={styles.imageOverlay} />
+      <AuthBackground />
 
       <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
           <View style={styles.contentContainer}>
@@ -164,7 +157,7 @@ export default function ResetPinScreen() {
                 disabled={isLoading}
                 autoFocus
                 secure={false}
-                variant="dark"
+                variant="light"
               />
             </View>
 
@@ -202,21 +195,11 @@ export default function ResetPinScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: '#E2E8F0',
   },
   contentContainer: {
     alignItems: 'center',
     width: '100%',
-    maxWidth: 380,
   },
   headerContainer: {
     alignItems: 'center',
@@ -225,14 +208,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#2A2E33',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -241,7 +224,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorContainer: {
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -249,7 +232,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#FF6B6B',
+    color: '#EF4444',
     fontSize: 14,
     textAlign: 'center',
   },
@@ -261,21 +244,21 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#2A2E33',
   },
   infoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -283,7 +266,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,

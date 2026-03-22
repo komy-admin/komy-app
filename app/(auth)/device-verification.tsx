@@ -5,7 +5,7 @@ import {
   Text as RNText,
   Pressable,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { AuthBackground } from '~/components/auth/AuthBackground';
 import { PinInput } from '~/components/ui';
 import { useSelector } from 'react-redux';
 import { RootState, store } from '~/store';
@@ -125,14 +125,7 @@ export default function DeviceVerificationScreen() {
 
   return (
     <View style={styles.root}>
-      <ExpoImage
-        source={require('../../assets/images/dark-texture-surface.jpg')}
-        style={styles.heroImage}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        priority="high"
-      />
-      <View style={styles.imageOverlay} />
+      <AuthBackground />
 
       <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
           <View style={styles.contentContainer}>
@@ -186,7 +179,7 @@ export default function DeviceVerificationScreen() {
                 secure={false}
                 autoFocus
                 error={error}
-                variant="dark"
+                variant="light"
               />
             </View>
 
@@ -225,21 +218,11 @@ export default function DeviceVerificationScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: '#E2E8F0',
   },
   contentContainer: {
     alignItems: 'center',
     width: '100%',
-    maxWidth: 380,
   },
   headerContainer: {
     alignItems: 'center',
@@ -248,21 +231,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#2A2E33',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
-    maxWidth: 360,
   },
   methodSelector: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F3F4F6',
     borderRadius: 8,
     padding: 4,
     width: '100%',
@@ -277,26 +259,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   methodTabActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#FFFFFF',
   },
   methodTabText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: '#9CA3AF',
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   methodTabTextActive: {
-    color: '#FFFFFF',
+    color: '#2A2E33',
     fontWeight: '600',
   },
   sendEmailButton: {
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -304,14 +286,14 @@ const styles = StyleSheet.create({
   sendEmailButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#2A2E33',
   },
   pinContainer: {
     marginBottom: 24,
     width: '100%',
   },
   errorContainer: {
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -319,14 +301,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#FF6B6B',
+    color: '#EF4444',
     fontSize: 14,
     textAlign: 'center',
   },
   primaryButton: {
     width: '100%',
     height: 56,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2A2E33',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -334,10 +316,10 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
   },
   primaryButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#D1D5DB',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -346,9 +328,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
@@ -356,6 +338,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#2A2E33',
   },
 });

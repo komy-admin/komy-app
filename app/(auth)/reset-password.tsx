@@ -7,7 +7,7 @@ import {
   TextInput as RNTextInput,
   Pressable,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { AuthBackground } from '~/components/auth/AuthBackground';
 import { authApiService } from '~/api/auth.api';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
@@ -117,17 +117,10 @@ export default function ResetPasswordScreen() {
   if (isSuccess) {
     return (
       <View style={styles.root}>
-        <ExpoImage
-          source={require('../../assets/images/dark-texture-surface.jpg')}
-          style={styles.heroImage}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          priority="high"
-        />
-        <View style={styles.imageOverlay} />
+        <AuthBackground />
         <View style={styles.successOverlay}>
           <View style={styles.successIconCircle}>
-            <Check size={40} color="#FFFFFF" strokeWidth={2.5} />
+            <Check size={40} color="#22C55E" strokeWidth={2.5} />
           </View>
           <RNText style={styles.successTitle}>Mot de passe réinitialisé!</RNText>
           <RNText style={styles.successText}>
@@ -140,14 +133,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <View style={styles.root}>
-      <ExpoImage
-        source={require('../../assets/images/dark-texture-surface.jpg')}
-        style={styles.heroImage}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        priority="high"
-      />
-      <View style={styles.imageOverlay} />
+      <AuthBackground />
 
       <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
           <View style={styles.contentContainer}>
@@ -155,7 +141,7 @@ export default function ResetPasswordScreen() {
               onPress={handleBack}
               style={styles.backButton}
             >
-              <ChevronLeft size={24} color="rgba(255, 255, 255, 0.7)" />
+              <ChevronLeft size={24} color="#6B7280" />
               <RNText style={styles.backButtonText}>Retour</RNText>
             </Pressable>
 
@@ -178,7 +164,7 @@ export default function ResetPasswordScreen() {
                   placeholder="Entrez votre nouveau mot de passe"
                   secureTextEntry={!showPassword}
                   style={[styles.input, passwordTouched && !isPasswordValid && password.length > 0 ? styles.inputError : null]}
-                  placeholderTextColor="rgba(255, 255, 255, 0.35)"
+                  placeholderTextColor="#9CA3AF"
                   editable={!isLoading}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -188,9 +174,9 @@ export default function ResetPasswordScreen() {
                   style={styles.eyeButton}
                 >
                   {showPassword ? (
-                    <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />
+                    <EyeOff size={20} color="#9CA3AF" />
                   ) : (
-                    <Eye size={20} color="rgba(255, 255, 255, 0.5)" />
+                    <Eye size={20} color="#9CA3AF" />
                   )}
                 </Pressable>
               </View>
@@ -205,7 +191,7 @@ export default function ResetPasswordScreen() {
                   placeholder="Confirmez votre nouveau mot de passe"
                   secureTextEntry={!showConfirmPassword}
                   style={[styles.input, confirmPassword.length > 0 && password !== confirmPassword ? styles.inputError : null]}
-                  placeholderTextColor="rgba(255, 255, 255, 0.35)"
+                  placeholderTextColor="#9CA3AF"
                   editable={!isLoading}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -215,9 +201,9 @@ export default function ResetPasswordScreen() {
                   style={styles.eyeButton}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff size={20} color="rgba(255, 255, 255, 0.5)" />
+                    <EyeOff size={20} color="#9CA3AF" />
                   ) : (
-                    <Eye size={20} color="rgba(255, 255, 255, 0.5)" />
+                    <Eye size={20} color="#9CA3AF" />
                   )}
                 </Pressable>
               </View>
@@ -259,21 +245,11 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: '#E2E8F0',
   },
   contentContainer: {
     alignItems: 'center',
     width: '100%',
-    maxWidth: 380,
   },
   backButton: {
     flexDirection: 'row',
@@ -290,7 +266,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#6B7280',
     marginLeft: 4,
   },
   headerContainer: {
@@ -300,17 +276,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#2A2E33',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
-    maxWidth: 360,
   },
   inputContainer: {
     width: '100%',
@@ -319,7 +294,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#4B5563',
     marginBottom: 8,
   },
   inputWrapper: {
@@ -329,13 +304,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingRight: 48,
     fontSize: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    color: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
+    color: '#2A2E33',
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
@@ -343,7 +318,7 @@ const styles = StyleSheet.create({
     }),
   },
   inputError: {
-    borderColor: '#FF6B6B',
+    borderColor: '#EF4444',
   },
   eyeButton: {
     position: 'absolute',
@@ -363,24 +338,24 @@ const styles = StyleSheet.create({
   },
   passwordRule: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.35)',
+    color: '#9CA3AF',
   },
   passwordRuleValid: {
-    color: '#FFFFFF',
+    color: '#2A2E33',
     fontWeight: '600',
   },
   passwordRuleError: {
-    color: '#FF6B6B',
+    color: '#EF4444',
     fontWeight: '500',
   },
   passwordRuleSep: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: '#D1D5DB',
   },
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2A2E33',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -388,16 +363,16 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   primaryButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#D1D5DB',
   },
   infoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -405,7 +380,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -429,13 +404,13 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#2A2E33',
     marginBottom: 12,
     textAlign: 'center',
   },
   successText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
   },
 });

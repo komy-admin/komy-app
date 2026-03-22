@@ -6,7 +6,7 @@ import {
   Text as RNText,
   Pressable,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { AuthBackground } from '~/components/auth/AuthBackground';
 import { PinInput } from '~/components/ui';
 import type { PinInputRef } from '~/components/ui';
 import { useSelector } from 'react-redux';
@@ -152,27 +152,20 @@ export default function PinVerificationScreen() {
 
   return (
     <View style={styles.root}>
-      <ExpoImage
-        source={require('../../assets/images/dark-texture-surface.jpg')}
-        style={styles.heroImage}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        priority="high"
-      />
-      <View style={styles.imageOverlay} />
+      <AuthBackground />
 
       <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
           <View style={styles.contentContainer}>
             {isLocked ? (
               <View style={styles.lockedContainer}>
-                <RNText style={[styles.title, { color: '#FF6B6B' }]}>
+                <RNText style={[styles.title, { color: '#EF4444' }]}>
                   {isPermanentlyLocked
                     ? 'PIN verrouillé'
                     : 'Compte temporairement verrouillé'}
                 </RNText>
 
                 <View style={styles.lockedIconCircle}>
-                  <Lock size={32} color="#FFFFFF" strokeWidth={2} />
+                  <Lock size={32} color="#EF4444" strokeWidth={2} />
                 </View>
 
                 {isPermanentlyLocked ? (
@@ -225,7 +218,7 @@ export default function PinVerificationScreen() {
                     disabled={isLoading}
                     autoFocus={!isInAppLock && !isPinAlreadyVerified}
                     secure={!isSetupMode}
-                    variant="dark"
+                    variant="light"
                   />
                 </View>
 
@@ -283,21 +276,11 @@ export default function PinVerificationScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: '#E2E8F0',
   },
   contentContainer: {
     alignItems: 'center',
     width: '100%',
-    maxWidth: 380,
   },
   headerContainer: {
     alignItems: 'center',
@@ -306,14 +289,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#2A2E33',
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -322,7 +305,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#FF6B6B',
+    color: '#EF4444',
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
@@ -340,16 +323,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#2A2E33',
   },
   forgotPinContainer: {
     width: '100%',
@@ -358,13 +341,13 @@ const styles = StyleSheet.create({
   },
   forgotPinText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textDecorationLine: 'underline',
   },
   infoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -372,7 +355,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#6B7280',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -385,14 +368,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2A2E33',
     alignItems: 'center',
     justifyContent: 'center',
   },
   resetButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
   },
   lockedContainer: {
     alignItems: 'center',
@@ -404,18 +387,18 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(255, 107, 107, 0.2)',
+    backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   lockedCountdown: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FF6B6B',
+    color: '#EF4444',
   },
   lockedHint: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 280,

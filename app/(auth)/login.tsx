@@ -1,5 +1,5 @@
 import { View, StyleSheet, Modal, Image, Platform, Text as RNText, TextInput as RNTextInput, Pressable, useWindowDimensions } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { AuthBackground } from '~/components/auth/AuthBackground';
 import { useState, useEffect } from 'react';
 import { sessionService } from '~/services/SessionService';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
@@ -9,7 +9,7 @@ import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 const BREAKPOINT = 768;
-const APP_VERSION = 'v3.7.1';
+const APP_VERSION = 'Komy - v3.7.1';
 
 // Inject CSS to override browser autofill styles on web
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -19,8 +19,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     input:-webkit-autofill:hover,
     input:-webkit-autofill:focus,
     input:-webkit-autofill:active {
-      -webkit-box-shadow: 0 0 0 30px rgba(255, 255, 255, 0.08) inset !important;
-      -webkit-text-fill-color: #FFFFFF !important;
+      -webkit-box-shadow: 0 0 0 30px #F9FAFB inset !important;
+      -webkit-text-fill-color: #2A2E33 !important;
       transition: background-color 5000s ease-in-out 0s;
     }
   `;
@@ -85,12 +85,6 @@ export default function LoginScreen() {
   const formContent = (
     <View style={styles.formWrapper}>
       <View style={styles.formContent}>
-        <Image
-          source={require('../../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-
         <RNText style={styles.welcomeTitle}>Bienvenue</RNText>
         <RNText style={styles.welcomeSubtitle}>Connectez-vous à votre espace</RNText>
 
@@ -100,7 +94,7 @@ export default function LoginScreen() {
             onPress={() => setShowQrScanner(true)}
           >
             <View style={styles.qrButtonContent}>
-              <QrCode size={18} color="#FFFFFF" strokeWidth={2} />
+              <QrCode size={18} color="#2A2E33" strokeWidth={2} />
               <RNText style={styles.qrButtonText}>Connexion via QR code</RNText>
             </View>
           </Pressable>
@@ -118,7 +112,7 @@ export default function LoginScreen() {
           onChangeText={setLoginId}
           placeholder="Identifiant"
           style={styles.input}
-          placeholderTextColor="rgba(255, 255, 255, 0.4)"
+          placeholderTextColor="#9CA3AF"
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="next"
@@ -131,7 +125,7 @@ export default function LoginScreen() {
           placeholder="Mot de passe"
           secureTextEntry
           style={styles.input}
-          placeholderTextColor="rgba(255, 255, 255, 0.4)"
+          placeholderTextColor="#9CA3AF"
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="done"
@@ -150,26 +144,25 @@ export default function LoginScreen() {
           <RNText style={styles.loginButtonText}>Se connecter</RNText>
         </Pressable>
       </View>
-
-      <RNText style={styles.versionText}>Komy {APP_VERSION}</RNText>
     </View>
   );
 
   return (
     <>
       <View style={styles.root}>
-        <ExpoImage
-          source={require('../../assets/images/dark-texture-surface.jpg')}
-          style={styles.heroImage}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          priority="high"
-        />
-        <View style={styles.imageOverlay} />
+        <AuthBackground />
 
         <View style={[styles.formPanel, isWide && styles.formPanelWide]}>
-          <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
-            {formContent}
+          <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered noCard>
+            <Image
+              source={require('../../assets/images/logo_komy_png/Logo_Komy_blancSF.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View style={styles.formCard}>
+              {formContent}
+            </View>
+            <RNText style={styles.versionText}>{APP_VERSION}</RNText>
           </AuthScreenLayout>
         </View>
       </View>
@@ -192,16 +185,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: '#E2E8F0',
   },
 
   // === Form panel ===
@@ -217,11 +201,33 @@ const styles = StyleSheet.create({
     transform: [{ translateX: '-50%' }],
   },
 
+  // === Card ===
+  formCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 32,
+    paddingVertical: 36,
+    alignItems: 'center',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+      } as any,
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 32,
+        elevation: 12,
+      },
+    }),
+  },
+
   // === Form content ===
   formWrapper: {
     alignItems: 'center',
     width: '100%',
-    maxWidth: 380,
   },
   formContent: {
     width: '100%',
@@ -230,20 +236,19 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
-    marginBottom: 24,
-    tintColor: '#FFFFFF',
+    marginBottom: 20,
   },
   welcomeTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#2A2E33',
     letterSpacing: -0.5,
     marginBottom: 6,
   },
   welcomeSubtitle: {
     fontSize: 15,
     fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     marginBottom: 32,
   },
 
@@ -256,9 +261,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -271,7 +276,7 @@ const styles = StyleSheet.create({
   qrButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#2A2E33',
   },
 
   // === Divider ===
@@ -284,13 +289,13 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#E5E7EB',
   },
   dividerText: {
     paddingHorizontal: 14,
     fontSize: 13,
     fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#9CA3AF',
   },
 
   // === Inputs ===
@@ -298,13 +303,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     paddingHorizontal: 16,
     fontSize: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F9FAFB',
     marginBottom: 14,
-    color: '#FFFFFF',
+    color: '#2A2E33',
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
@@ -321,7 +326,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: 13,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#6B7280',
     textDecorationLine: 'underline',
   },
 
@@ -329,7 +334,7 @@ const styles = StyleSheet.create({
   loginButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2A2E33',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -337,16 +342,17 @@ const styles = StyleSheet.create({
   loginButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
 
   // === Version ===
   versionText: {
-    marginTop: 32,
+    marginTop: 16,
+    marginBottom: 16,
     fontSize: 12,
     fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.35)',
+    color: '#9CA3AF',
     letterSpacing: 0.5,
   },
 });
