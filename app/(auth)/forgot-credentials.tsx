@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { ChevronLeft } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 type CredentialType = 'pin' | 'password';
 
@@ -31,9 +32,16 @@ export default function ForgotCredentialsScreen() {
     ? 'Entrez votre adresse email pour réinitialiser votre PIN'
     : 'Entrez votre adresse email pour réinitialiser votre mot de passe';
 
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
   const handleSubmit = async () => {
     if (!email) {
       showToast('Veuillez entrer votre email', 'error');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      showToast('Veuillez entrer une adresse email valide', 'error');
       return;
     }
 
@@ -50,10 +58,17 @@ export default function ForgotCredentialsScreen() {
 
       setIsSubmitted(true);
       showToast(response.message || 'Email envoyé avec succès', 'success');
-    } catch (_error) {
-      // Always show success message to prevent user enumeration
-      setIsSubmitted(true);
-      showToast('Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.', 'success');
+    } catch (error) {
+      const { isValidation, code } = extractApiError(error);
+
+      if (isValidation) {
+        // Erreur de validation (email mal formé) → afficher l'erreur
+        showToast('Veuillez entrer une adresse email valide', 'error');
+      } else {
+        // User not found ou autre erreur → message générique (anti-énumération)
+        setIsSubmitted(true);
+        showToast('Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.', 'success');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,8 +125,8 @@ export default function ForgotCredentialsScreen() {
 
                 <Pressable
                   onPress={handleSubmit}
-                  disabled={isLoading || !email}
-                  style={[styles.primaryButton, (isLoading || !email) && styles.primaryButtonDisabled]}
+                  disabled={isLoading || !email || !isValidEmail(email)}
+                  style={[styles.primaryButton, (isLoading || !email || !isValidEmail(email)) && styles.primaryButtonDisabled]}
                 >
                   <RNText style={styles.primaryButtonText}>
                     {isLoading ? 'Envoi en cours...' : 'Envoyer le lien'}

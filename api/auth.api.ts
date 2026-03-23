@@ -330,22 +330,22 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
           return Promise.reject(error);
         }
 
-        const errorCode = error.response?.data?.code;
+        // Support both new format ({ error: { code } }) and legacy format ({ code })
+        const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
 
         // Don't try to refresh on PIN-related or login 2FA endpoints
         const isPinEndpoint = originalRequest.url?.includes('/verify-pin') ||
                               originalRequest.url?.includes('/set-pin') ||
+                              originalRequest.url?.includes('/confirm-pin') ||
                               originalRequest.url?.includes('/change-password') ||
                               originalRequest.url?.includes('/change-pin') ||
                               originalRequest.url?.includes('/verify-login-2fa') ||
                               originalRequest.url?.includes('/send-login-2fa-email') ||
                               originalRequest.url?.includes('/auth/logout');
 
-        // Don't refresh on PIN errors (401 with attemptsRemaining or PIN in message)
+        // Don't refresh on PIN errors (business 401, not auth 401)
         const isPinError = error.response?.status === 401 &&
-                          (error.response?.data?.message?.includes('PIN') ||
-                           error.response?.data?.attemptsRemaining !== undefined ||
-                           error.response?.data?.error === 'INVALID_PIN');
+                          (errorCode === 'INVALID_PIN' || errorCode === 'PIN_LOCKED');
 
         if (isPinEndpoint || isPinError) {
           return Promise.reject(error);
