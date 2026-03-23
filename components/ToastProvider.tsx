@@ -1,37 +1,60 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Toast, ToastType } from './ui/toast';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
+import { useSyncExternalStore } from 'react';
+import { ToastType, ToastData, ToastStack, DEFAULT_DURATIONS } from './ui/toast';
+
+const MAX_TOASTS = 3;
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void;
+  showToast: (message: string, type?: ToastType, duration?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+/** Simple external store to avoid re-render hack */
+function createToastStore() {
+  let toasts: ToastData[] = [];
+  let idCounter = 0;
+  const listeners = new Set<() => void>();
+
+  const notify = () => listeners.forEach((l) => l());
+
+  return {
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    getSnapshot: () => toasts,
+    add: (message: string, type: ToastType, duration: number) => {
+      const id = ++idCounter;
+      toasts = [...toasts.slice(-(MAX_TOASTS - 1)), { id, message, type, duration }];
+      notify();
+    },
+    remove: (id: number) => {
+      toasts = toasts.filter((t) => t.id !== id);
+      notify();
+    },
+  };
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [visible, setVisible] = useState(false);
-  const [message, setMessage] = useState('');
-  const [type, setType] = useState<ToastType>('info');
+  const storeRef = useRef(createToastStore());
+  const store = storeRef.current;
 
-  const showToast = useCallback((newMessage: string, newType: ToastType = 'info') => {
-    // Reset pour forcer le re-render
-    setVisible(false);
+  const toasts = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
-    setTimeout(() => {
-      setMessage(newMessage);
-      setType(newType);
-      setVisible(true);
-    }, 10);
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: ToastType = 'info', duration?: number) => {
+      store.add(message, type, duration ?? DEFAULT_DURATIONS[type]);
+    },
+    [store]
+  );
+
+  const handleRemove = useCallback((id: number) => store.remove(id), [store]);
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <Toast
-        visible={visible}
-        message={message}
-        type={type}
-        onHide={() => setVisible(false)}
-      />
+      <ToastStack toasts={toasts} onRemove={handleRemove} />
     </ToastContext.Provider>
   );
 }
