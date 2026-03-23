@@ -12,6 +12,7 @@ import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 import { CARD_VARIANTS } from '~/components/Kitchen/cards/config/card-variants.config';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { useItemGrouping } from '~/hooks/useItemGrouping';
 import { filterItemsByArea } from '~/lib/itemFilters';
 import { ItemGroup } from '~/types/kitchen.types';
@@ -63,19 +64,8 @@ export default function BarmanKitchenPage() {
         });
       }
 
-    } catch (error: any) {
-      console.error('Error updating status:', error);
-
-      // Gestion d'erreur spécifique pour le 500
-      if (error.response?.status === 500) {
-        showToast('Erreur serveur temporaire, l\'API est en cours de correction', 'error');
-      } else if (error.response?.status === 404) {
-        showToast('Commande introuvable', 'error');
-      } else if (error.response?.status === 403) {
-        showToast('Vous n\'avez pas les droits pour cette action', 'error');
-      } else {
-        showToast('Impossible de mettre à jour le statut, veuillez réessayer', 'error');
-      }
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de mettre à jour le statut');
     }
   };
 

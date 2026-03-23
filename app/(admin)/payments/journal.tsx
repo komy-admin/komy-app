@@ -31,6 +31,7 @@ import { fr } from 'date-fns/locale';
 import { paymentApi } from '~/api/payment.api';
 import RefundModal from '~/components/Payment/RefundModal';
 import type { Payment } from '~/types/payment.types';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 // Types pour le journal
 interface Allocation {
@@ -351,9 +352,9 @@ export default function PaymentJournalScreen() {
       setIsRefundModalOpen(false);
       setSelectedPaymentForRefund(null);
       handleRefresh();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Erreur lors du remboursement';
-      throw new Error(errorMessage);
+    } catch (error) {
+      const info = extractApiError(error);
+      throw new Error(info.message || 'Erreur lors du remboursement');
     }
   }, [selectedPaymentForRefund, handleRefresh]);
 

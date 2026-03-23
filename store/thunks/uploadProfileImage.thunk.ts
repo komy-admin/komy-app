@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { userApiService } from '~/api/user.api';
 import { User } from '~/types/user.types';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 /**
  * Thunk asynchrone pour uploader une photo de profil
@@ -22,14 +23,10 @@ export const uploadProfileImage = createAsyncThunk<
         imageBase64
       );
       return updatedUser;
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Échec de l\'upload de l\'image';
-
+    } catch (error) {
+      const info = extractApiError(error);
       console.error('Upload profile image error:', error);
-      return rejectWithValue(errorMessage);
+      return rejectWithValue(info.message || 'Échec de l\'upload de l\'image');
     }
   }
 );

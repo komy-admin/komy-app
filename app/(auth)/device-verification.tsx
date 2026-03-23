@@ -15,6 +15,7 @@ import { authApiService } from '~/api/auth.api';
 import { useRouter } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 export default function DeviceVerificationScreen() {
   const [code, setCode] = useState('');
@@ -74,14 +75,15 @@ export default function DeviceVerificationScreen() {
       await authApiService.sendLogin2FAEmail(loginToken);
       setEmailCooldown(60);
       showToast('Code envoyé par email', 'success');
-    } catch (err: any) {
-      if (err?.response?.status === 401) {
+    } catch (err) {
+      const info = extractApiError(err);
+      if (info.status === 401) {
         showToast('Session expirée. Veuillez vous reconnecter.', 'error');
         store.dispatch(sessionActions.clearLogin2FAState());
         router.replace('/login');
         return;
       }
-      showToast('Erreur lors de l\'envoi du code', 'error');
+      showToast(info.message || 'Erreur lors de l\'envoi du code', 'error');
     } finally {
       setIsSendingEmail(false);
     }
@@ -103,8 +105,9 @@ export default function DeviceVerificationScreen() {
       }
 
       showToast('Erreur de configuration. Contactez un administrateur.', 'error');
-    } catch (err: any) {
-      if (err?.response?.status === 401 && err?.response?.data?.message?.includes('Token')) {
+    } catch (err) {
+      const info = extractApiError(err);
+      if (info.status === 401 && info.code === 'SESSION_EXPIRED') {
         showToast('Session expirée. Veuillez vous reconnecter.', 'error');
         store.dispatch(sessionActions.clearLogin2FAState());
         router.replace('/login');
@@ -114,7 +117,7 @@ export default function DeviceVerificationScreen() {
       setError(true);
       setCode('');
       setIsLoading(false);
-      showToast(err?.response?.data?.message || 'Code invalide', 'error');
+      showToast(info.message || 'Code invalide', 'error');
     }
   }, [isLoading, loginToken, activeMethod]);
 

@@ -12,6 +12,7 @@ import type { PinInputRef } from '~/components/ui';
 import { authApiService } from '~/api/auth.api';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
+import { extractApiError } from '~/lib/apiErrorHandler';
 import { useDispatch } from 'react-redux';
 import { sessionActions } from '~/store';
 import { storageService } from '~/lib/storageService';
@@ -97,17 +98,17 @@ export default function ResetPinScreen() {
 
       router.replace('/pin-verification');
 
-    } catch (error: any) {
+    } catch (error) {
       setError(true);
 
       if (Platform.OS === 'ios') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
 
-      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors de la réinitialisation';
-      showToast(errorMessage, 'error');
+      const info = extractApiError(error);
+      showToast(info.message || 'Erreur lors de la réinitialisation', 'error');
 
-      if (error.response?.status === 400 || error.response?.status === 404) {
+      if (info.status === 400 || info.status === 404) {
         setTimeout(() => {
           router.replace('/forgot-credentials?type=pin');
         }, 2000);

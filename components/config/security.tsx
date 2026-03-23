@@ -11,6 +11,7 @@ import { QRCode } from '~/components/ui/QRCode';
 import PinInput from '~/components/ui/pin-input';
 import * as Clipboard from 'expo-clipboard';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 type SecurityTab = '2fa-account' | 'devices';
 
@@ -121,8 +122,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
         setEmailCooldown(30);
         showToast('Code envoyé par email', 'success');
       }
-    } catch (error: any) {
-      showToast(error?.response?.data?.message || 'Erreur lors de la configuration', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la configuration');
     } finally {
       setIsLoading(false);
     }
@@ -137,8 +138,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
       setSetup(null);
       setVerifyCode('');
       showToast(`${setup.method === 'totp' ? 'TOTP' : 'Email'} activé pour la 2FA`, 'success');
-    } catch (error: any) {
-      showToast(error?.response?.data?.message || 'Code invalide', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Code invalide');
       setVerifyCode('');
     } finally {
       setIsLoading(false);
@@ -154,8 +155,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
       setDisablingMethod(null);
       await loadConfig();
       showToast(`${disablingMethod === 'totp' ? 'TOTP' : 'Email'} désactivé pour la 2FA`, 'success');
-    } catch (error: any) {
-      showToast(error?.response?.data?.message || 'Code invalide', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Code invalide');
       setDisableCode('');
     } finally {
       setIsDisabling(false);

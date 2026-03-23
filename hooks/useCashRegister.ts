@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { cashRegisterApiService, CashRegisterSession, CloseSummary } from '~/api/cash-register.api';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 /**
  * Hook pour gérer la caisse enregistreuse
@@ -26,9 +27,10 @@ export function useCashRegister() {
       const session = await cashRegisterApiService.getCurrent();
       setCurrentSession(session);
       return session;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur récupération session:', err);
-      setError(err.response?.data?.error || err.message || 'Erreur lors de la récupération de la session');
+      const info = extractApiError(err);
+      setError(info.message);
       setCurrentSession(null);
       return null;
     } finally {
@@ -50,9 +52,10 @@ export function useCashRegister() {
       const session = await cashRegisterApiService.open(openingBalance, notes);
       setCurrentSession(session);
       return session;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur ouverture session:', err);
-      setError(err.response?.data?.error || err.message || 'Erreur lors de l\'ouverture de la session');
+      const info = extractApiError(err);
+      setError(info.message);
       throw err;
     } finally {
       setIsLoading(false);
@@ -73,9 +76,10 @@ export function useCashRegister() {
       const result = await cashRegisterApiService.close(actualCash, notes);
       setCurrentSession(null); // La session est fermée
       return result;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur fermeture session:', err);
-      setError(err.response?.data?.error || err.message || 'Erreur lors de la fermeture de la session');
+      const info = extractApiError(err);
+      setError(info.message);
       throw err;
     } finally {
       setIsLoading(false);
@@ -98,9 +102,10 @@ export function useCashRegister() {
 
       const result = await cashRegisterApiService.getHistory(page, limit);
       return result;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur récupération historique:', err);
-      setError(err.response?.data?.error || err.message || 'Erreur lors de la récupération de l\'historique');
+      const info = extractApiError(err);
+      setError(info.message);
       throw err;
     } finally {
       setIsLoading(false);
@@ -117,9 +122,10 @@ export function useCashRegister() {
 
       const result = await cashRegisterApiService.generateZReport(sessionId);
       return result;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur génération Z:', err);
-      setError(err.response?.data?.error || err.message || 'Erreur lors de la génération du Z');
+      const info = extractApiError(err);
+      setError(info.message);
       throw err;
     } finally {
       setIsLoading(false);

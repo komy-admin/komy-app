@@ -27,6 +27,7 @@ import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { RoomFormContent, RoomModeSelection } from '~/components/admin/RoomForm';
 import { Trash2, LayoutPanelLeft } from 'lucide-react-native';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 // Constantes
 const SLIDE_PANEL_WIDTH = 450;
@@ -125,25 +126,9 @@ export default function RoomEditionMode() {
       setIsEditPanelVisible(false);
       setIsDeleteModalVisible(false);
       showToast('Table supprimée avec succès', 'success');
-    } catch (error: any) {
+    } catch (error) {
       setIsDeleteModalVisible(false);
-
-      let errorMessage = 'Erreur lors de la suppression de la table';
-
-      // Gestion spécifique des erreurs courantes
-      if (error.response?.status === 409) {
-        errorMessage = 'Impossible de supprimer : cette table a des commandes en cours';
-      } else if (error.response?.status === 404) {
-        errorMessage = 'Table introuvable (déjà supprimée ?)';
-      } else if (error.response?.status === 403) {
-        errorMessage = 'Vous n\'avez pas les permissions pour supprimer cette table';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = `Erreur : ${error.message}`;
-      }
-
-      showToast(errorMessage, 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression de la table');
     }
   }, [selectedTable?.id, deleteTableFast, setSelectedTable, showToast]);
 
@@ -235,18 +220,8 @@ export default function RoomEditionMode() {
       setCurrentRoom(newRoom.id);
       setRoomPanelMode('closed');
       showToast('Salle créée avec succès', 'success');
-    } catch (error: any) {
-      let errorMessage = 'Erreur lors de la création';
-
-      if (error.response?.status === 409) {
-        errorMessage = error.response.data?.message || 'Une salle avec ce nom existe déjà';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      showToast(errorMessage, 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la création');
     }
   }, [createRoom, setCurrentRoom, showToast]);
 
@@ -270,20 +245,10 @@ export default function RoomEditionMode() {
       showToast('Salle supprimée avec succès', 'success');
       setIsRoomDeleteModalVisible(false);
       setRoomToDelete(null);
-    } catch (error: any) {
+    } catch (error) {
       setIsRoomDeleteModalVisible(false);
 
-      let errorMessage = 'Erreur lors de la suppression de la salle';
-
-      if (error.response?.status === 409) {
-        errorMessage = 'Impossible de supprimer : cette salle a des commandes en cours';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      showToast(errorMessage, 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression de la salle');
     } finally {
       setIsRoomDeleting(false);
     }
@@ -296,16 +261,8 @@ export default function RoomEditionMode() {
       setRoomPanelMode('closed');
       setRoomToEdit(null);
       showToast('Salle mise à jour', 'success');
-    } catch (error: any) {
-      let errorMessage = 'Erreur lors de la mise à jour';
-
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      showToast(errorMessage, 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la mise à jour');
     }
   }, [roomToEdit?.id, updateRoom, showToast]);
 

@@ -17,6 +17,7 @@ import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 export default function PinVerificationScreen() {
   const { isInAppLock, isPinVerified: isPinAlreadyVerified } = useSelector((state: RootState) => state.session);
@@ -101,7 +102,7 @@ export default function PinVerificationScreen() {
 
       setAttemptsRemaining(null);
       setIsLocked(false);
-    } catch (err: any) {
+    } catch (err) {
       setError(true);
 
       if (Platform.OS === 'ios') {
@@ -113,32 +114,31 @@ export default function PinVerificationScreen() {
         pinInputRef.current?.focus();
       }, 300);
 
-      const { status, data } = err.response || {};
+      const info = extractApiError(err);
 
-      if (data?.code === 'PIN_PERMANENTLY_LOCKED') {
+      if (info.code === 'PIN_PERMANENTLY_LOCKED') {
         setIsPermanentlyLocked(true);
         setIsLocked(true);
         setAttemptsRemaining(0);
         showToast('PIN verrouillé. Réinitialisez votre PIN par email.', 'error');
-      } else if (status === 429 || data?.code === 'ACCOUNT_LOCKED' || data?.code === 'TOO_MANY_ATTEMPTS') {
+      } else if (info.code === 'PIN_LOCKED' || info.code === 'ACCOUNT_LOCKED' || info.code === 'TOO_MANY_ATTEMPTS') {
         setIsLocked(true);
         setAttemptsRemaining(0);
-        if (data?.remainingSeconds) {
-          startCountdown(data.remainingSeconds);
+        if (info.details?.remainingSeconds) {
+          startCountdown(info.details.remainingSeconds);
         }
-        showToast(data?.error || data?.message || 'Compte verrouillé', 'error');
-      } else if (status === 401 && (data?.code === 'AUTH_TOKEN_INVALID' || data?.code === 'AUTH_TOKEN_MISSING')) {
+        showToast(info.message || 'Compte verrouillé', 'error');
+      } else if (info.code === 'AUTH_TOKEN_INVALID' || info.code === 'AUTH_TOKEN_MISSING' || info.code === 'SESSION_EXPIRED') {
         showToast('Session expirée. Veuillez vous reconnecter.', 'error');
         await sessionService.logout();
         router.replace('/login');
-      } else if (status === 401) {
-        const attempts = data?.attemptsRemaining;
-        if (attempts !== undefined) {
-          setAttemptsRemaining(attempts);
+      } else if (info.code === 'INVALID_PIN') {
+        if (info.details?.attemptsRemaining !== undefined) {
+          setAttemptsRemaining(info.details.attemptsRemaining);
         }
-        showToast(data?.message || 'Code PIN incorrect', 'error');
+        showToast(info.message || 'Code PIN incorrect', 'error');
       } else {
-        showToast(`Erreur: ${err.message || 'Une erreur est survenue'}`, 'error');
+        showToast(info.message || 'Une erreur est survenue', 'error');
       }
     } finally {
       setIsLoading(false);

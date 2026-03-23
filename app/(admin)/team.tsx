@@ -24,6 +24,7 @@ import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { getColorWithOpacity } from '~/lib/color-utils';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 const TEAM_TABLE_COLUMNS = [
   {
@@ -191,10 +192,8 @@ export default function TeamPage() {
         showToast('Utilisateur créé avec succès', 'success');
       }
       handleCloseFormPanel();
-    } catch (err: any) {
-      console.error('Error saving user:', err);
-      const errorMessage = err?.message || (userId ? 'Erreur lors de la modification de l\'utilisateur' : 'Erreur lors de la création de l\'utilisateur');
-      showToast(errorMessage, 'error');
+    } catch (err) {
+      showApiError(err, showToast, userId ? 'Erreur lors de la modification de l\'utilisateur' : 'Erreur lors de la création de l\'utilisateur');
     }
   }, [createQuickUser, updateUser, showToast, handleCloseFormPanel]);
 

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Status } from '~/types/status.enum';
 import { OrderLineType } from '~/types/order-line.types';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 export interface GroupedItem {
   name: string;
@@ -289,9 +290,8 @@ export const useOrderStatusActions = ({
       await deleteOrder(selectedTableOrder.id);
       showToast('Commande supprimée avec succès', 'success');
       onCleanup();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erreur lors de la suppression de la commande';
-      showToast(errorMessage, 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la suppression de la commande');
     }
   }, [selectedTableOrder, deleteOrder, showToast, onCleanup]);
 

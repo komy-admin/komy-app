@@ -13,6 +13,7 @@ import PinInput from '~/components/ui/pin-input';
 import type { PinInputRef } from '~/components/ui/pin-input';
 import { authApiService } from '~/api/auth.api';
 import * as Haptics from 'expo-haptics';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 interface PinConfirmationModalProps {
   isVisible: boolean;
@@ -117,35 +118,33 @@ export function PinConfirmationModal({
       setAttemptsRemaining(null);
       setIsLocked(false);
       onConfirm();
-    } catch (err: any) {
+    } catch (err) {
       setError(true);
 
       if (Platform.OS === 'ios') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
 
-      const { status, data } = err?.response || {};
+      const info = extractApiError(err);
 
-      if (data?.code === 'PIN_PERMANENTLY_LOCKED') {
+      if (info.code === 'PIN_PERMANENTLY_LOCKED') {
         setIsPermanentlyLocked(true);
         setIsLocked(true);
         setAttemptsRemaining(0);
         setErrorMessage('PIN verrouill\u00e9. R\u00e9initialisez par email.');
-      } else if (status === 429 || data?.code === 'ACCOUNT_LOCKED' || data?.code === 'TOO_MANY_ATTEMPTS') {
+      } else if (info.code === 'PIN_LOCKED' || info.code === 'ACCOUNT_LOCKED' || info.code === 'TOO_MANY_ATTEMPTS') {
         setAttemptsRemaining(0);
-        const remainingSeconds = data?.remainingSeconds;
-        if (remainingSeconds) {
-          startCountdown(remainingSeconds);
+        if (info.details?.remainingSeconds) {
+          startCountdown(info.details.remainingSeconds);
         }
-        setErrorMessage(data?.error || data?.message || 'Compte verrouill\u00e9');
-      } else if (status === 401) {
-        const attempts = data?.attemptsRemaining;
-        if (attempts !== undefined) {
-          setAttemptsRemaining(attempts);
+        setErrorMessage(info.message || 'Compte verrouill\u00e9');
+      } else if (info.code === 'INVALID_PIN') {
+        if (info.details?.attemptsRemaining !== undefined) {
+          setAttemptsRemaining(info.details.attemptsRemaining);
         }
-        setErrorMessage(data?.message || 'Code PIN incorrect');
+        setErrorMessage(info.message || 'Code PIN incorrect');
       } else {
-        setErrorMessage(err?.response?.data?.message || 'Code PIN incorrect');
+        setErrorMessage(info.message || 'Code PIN incorrect');
       }
 
       setTimeout(() => {

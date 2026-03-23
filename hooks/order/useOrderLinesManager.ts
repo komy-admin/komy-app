@@ -17,6 +17,7 @@ import { useOrderLines } from "~/hooks/useOrderLines";
 import { useOrders } from "~/hooks/useOrders";
 import { useToast } from "~/components/ToastProvider";
 import { usePayments } from "~/hooks/usePayments";
+import { extractApiError } from "~/lib/apiErrorHandler";
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -480,28 +481,21 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
 
       onSuccessRef.current?.(result);
       return result;
-    } catch (error: any) {
+    } catch (error) {
       // Rollback vers l'état initial en cas d'erreur
       setOrderLines([...initialOrderLines]);
 
-      let errorMessage = "Erreur lors de la sauvegarde";
-      if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
+      const info = extractApiError(error);
       if (
-        errorMessage.includes("allocation") ||
-        errorMessage.includes("payé") ||
-        errorMessage.includes("payment")
+        info.code === 'VALIDATION_ERROR' &&
+        (info.message.includes("allocation") || info.message.includes("payé") || info.message.includes("payment"))
       ) {
         showToast(
           "Impossible de modifier: certaines lignes ont déjà été payées",
           "error",
         );
       } else {
-        showToast(errorMessage, "error");
+        showToast(info.message || "Erreur lors de la sauvegarde", "error");
       }
 
       onErrorRef.current?.(error as Error);

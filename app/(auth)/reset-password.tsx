@@ -11,6 +11,7 @@ import { AuthBackground } from '~/components/auth/AuthBackground';
 import { authApiService } from '~/api/auth.api';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
+import { extractApiError } from '~/lib/apiErrorHandler';
 import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
@@ -85,15 +86,15 @@ export default function ResetPasswordScreen() {
         router.replace('/login');
       }, 2000);
 
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors de la réinitialisation';
-      showToast(errorMessage, 'error');
+    } catch (error) {
+      const info = extractApiError(error);
+      showToast(info.message || 'Erreur lors de la réinitialisation', 'error');
 
       if (Platform.OS === 'ios') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
 
-      if (error.response?.status === 400 || error.response?.status === 404) {
+      if (info.status === 400 || info.status === 404) {
         setTimeout(() => {
           router.replace('/forgot-credentials?type=password');
         }, 2000);

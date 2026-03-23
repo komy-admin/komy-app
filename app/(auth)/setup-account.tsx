@@ -17,6 +17,7 @@ import { useToast } from '~/components/ToastProvider';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { getHomeRoute } from '~/constants/routes';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 export default function SetupAccountScreen() {
   const [password, setPassword] = useState('');
@@ -191,28 +192,27 @@ export default function SetupAccountScreen() {
       const targetRoute = getHomeRoute(response.profil);
       router.replace(targetRoute as any);
 
-    } catch (error: any) {
+    } catch (error) {
+      const info = extractApiError(error);
 
-      if (error.response?.status === 400) {
-        if (error.response.data?.message?.includes('token')) {
+      if (info.status === 400) {
+        if (info.message?.includes('token')) {
           setErrors(prev => ({ ...prev, token: 'Le lien a expiré ou est invalide' }));
           showToast('Le lien a expiré. Veuillez demander un nouveau lien.', 'error');
         } else {
           showToast('Erreur de configuration. Veuillez vérifier vos informations.', 'error');
         }
-      } else if (error.response?.status === 422) {
-        const validationErrors = error.response.data?.errors;
-        if (validationErrors) {
-          if (validationErrors.password) {
-            setErrors(prev => ({ ...prev, password: validationErrors.password[0] }));
-          }
-          if (validationErrors.pin) {
-            setErrors(prev => ({ ...prev, pin: validationErrors.pin[0] }));
+      } else if (info.isValidation && info.details) {
+        const details = info.details;
+        if (Array.isArray(details)) {
+          for (const d of details) {
+            if (d.field === 'password') setErrors(prev => ({ ...prev, password: d.message }));
+            if (d.field === 'pin') setErrors(prev => ({ ...prev, pin: d.message }));
           }
         }
         showToast('Veuillez corriger les erreurs de validation', 'error');
       } else {
-        showToast(`Erreur: ${error.message || 'Une erreur est survenue'}`, 'error');
+        showToast(info.message || 'Une erreur est survenue', 'error');
       }
     } finally {
       setIsLoading(false);

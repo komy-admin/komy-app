@@ -14,6 +14,7 @@ import type {
   TrustedDevice,
 } from '~/types/auth.types';
 import { User, UserProfile } from '~/types/user.types';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 export class AuthApiService extends BaseApiService<AuthResponse> {
   protected endpoint = '/auth';
@@ -53,9 +54,10 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
         `${this.endpoint}/verify-qr-token`
       );
       return { valid: true, user: data.user };
-    } catch (err: any) {
-      if (err.response?.status === 401) {
-        return { valid: false, error: err.response?.data?.error || 'Token révoqué' };
+    } catch (err) {
+      const info = extractApiError(err);
+      if (info.status === 401) {
+        return { valid: false, error: info.message || 'Token révoqué' };
       }
       throw err;
     }

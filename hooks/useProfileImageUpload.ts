@@ -6,6 +6,7 @@ import { compressForProfile, convertToBase64, validateImageSize } from '~/utils/
 import { RootState, AppDispatch } from '~/store';
 import { uploadProfileImage } from '~/store/thunks/uploadProfileImage.thunk';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 /**
  * Hook personnalisé pour gérer l'upload de photo de profil
@@ -142,9 +143,9 @@ export const useProfileImageUpload = () => {
 
       // Upload
       await uploadImage(base64);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Mobile picker error:', error);
-      showToast(error.message || 'Impossible de charger l\'image', 'error');
+      showToast(error instanceof Error ? error.message : 'Impossible de charger l\'image', 'error');
       setUploadProgress(0);
     }
   };
@@ -170,9 +171,8 @@ export const useProfileImageUpload = () => {
       setUploadProgress(100);
       showToast('Photo de profil mise à jour !', 'success');
       setPreviewUri(null);
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      showToast(error.message || 'Échec de l\'upload', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Échec de l\'upload');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -189,7 +189,7 @@ export const useProfileImageUpload = () => {
       } else {
         await handleMobileImagePicker();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Pick image error:', error);
       showToast('Une erreur est survenue', 'error');
       setIsUploading(false);

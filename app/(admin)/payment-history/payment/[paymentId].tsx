@@ -10,6 +10,7 @@ import RefundModal from '~/components/Payment/RefundModal'
 import { Button } from '~/components/ui/button'
 import { usePayments } from '~/hooks/usePayments'
 import type { Payment } from '~/types/payment.types'
+import { extractApiError } from '~/lib/apiErrorHandler'
 export default function PaymentDetailScreen() {
   const { paymentId } = useLocalSearchParams<{ paymentId: string }>()
   const router = useRouter()
@@ -84,9 +85,9 @@ export default function PaymentDetailScreen() {
 
       // Fermer le modal
       setIsRefundModalOpen(false)
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Erreur lors du remboursement'
-      throw new Error(errorMessage)
+    } catch (error) {
+      const info = extractApiError(error)
+      throw new Error(info.message || 'Erreur lors du remboursement')
     }
   }
 

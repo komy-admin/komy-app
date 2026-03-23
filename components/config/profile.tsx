@@ -8,6 +8,7 @@ import { userApiService } from '~/api/user.api';
 import { authApiService } from '~/api/auth.api';
 import { useToast } from '~/components/ToastProvider';
 import type { ToastType } from '~/components/ui/toast';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 type TabType = 'info' | 'password' | 'pin';
 
@@ -188,9 +189,8 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
       dispatch(sessionActions.updateUser(updatedUser));
       setHasChanges(false);
       showToast('Informations mises à jour avec succès', 'success');
-    } catch (error: any) {
-      const message = error?.response?.data?.message || 'Impossible de mettre à jour les informations';
-      showToast(message, 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de mettre à jour les informations');
     } finally {
       setIsSaving(false);
     }
@@ -359,9 +359,8 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
       setConfirmPassword('');
       setTouchedFields({});
       showToast('Mot de passe modifié avec succès', 'success');
-    } catch (error: any) {
-      const message = error?.response?.data?.message || 'Impossible de modifier le mot de passe';
-      showToast(message, 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de modifier le mot de passe');
     } finally {
       setIsSavingPassword(false);
     }
@@ -541,9 +540,8 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
       setNewPin('');
       setConfirmPin('');
       showToast('Code PIN modifié avec succès', 'success');
-    } catch (error: any) {
-      const message = error?.response?.data?.message || 'Impossible de modifier le code PIN';
-      showToast(message, 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de modifier le code PIN');
     } finally {
       setIsSaving(false);
     }

@@ -110,9 +110,9 @@ export abstract class BaseApiService<T> {
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Check for QR token revocation
-        if (error.response?.status === 401 && error.response?.data?.code === 'QR_TOKEN_REVOKED') {
-          // Dispatch logout action
+        // Check for QR token revocation (supports both new and legacy formats)
+        const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
+        if (error.response?.status === 401 && errorCode === 'QR_TOKEN_REVOKED') {
           store.dispatch(logout());
         }
         return Promise.reject(error);

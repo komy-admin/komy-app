@@ -50,7 +50,7 @@ export default function ForgotCredentialsScreen() {
 
       setIsSubmitted(true);
       showToast(response.message || 'Email envoyé avec succès', 'success');
-    } catch (error: any) {
+    } catch (_error) {
       // Always show success message to prevent user enumeration
       setIsSubmitted(true);
       showToast('Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.', 'success');

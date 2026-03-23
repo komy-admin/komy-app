@@ -17,6 +17,7 @@ import { AlertCircle, Loader2, ChevronDown } from 'lucide-react-native'
 import type { Payment } from '~/types/payment.types'
 import { formatPrice } from '~/lib/utils'
 import { Portal } from '@rn-primitives/portal'
+import { extractApiError } from '~/lib/apiErrorHandler'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
@@ -113,8 +114,9 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
     try {
       await onRefund(refundAmount, finalReason, refundMethod)
       handleClose()
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du remboursement')
+    } catch (err) {
+      const info = extractApiError(err)
+      setError(info.message || 'Erreur lors du remboursement')
       setShowConfirmation(false)
     } finally {
       setIsLoading(false)

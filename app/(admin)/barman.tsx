@@ -10,7 +10,7 @@ import { selectAllKitchenItems } from '~/store/slices/entities.slice';
 import { useToast } from '~/components/ToastProvider';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
-import { handleOrderStatusError } from '~/lib/errorHandlers';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { useItemGrouping } from '~/hooks/useItemGrouping';
 import { filterItemsByArea } from '~/lib/itemFilters';
 import { CARD_VARIANTS } from '~/components/Kitchen/cards/config/card-variants.config';
@@ -73,8 +73,8 @@ export default function BarmanPage() {
         });
       }
 
-    } catch (error: any) {
-      handleOrderStatusError(error, showToast);
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de mettre à jour le statut');
     }
   };
 

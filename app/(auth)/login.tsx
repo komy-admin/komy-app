@@ -6,6 +6,7 @@ import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 
 const BREAKPOINT = 768;
@@ -60,9 +61,8 @@ export default function LoginScreen() {
       }
 
       showToast('Erreur de configuration. Contactez un administrateur.', 'error');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Erreur serveur, veuillez réessayer.';
-      showToast(`Échec de connexion : ${message}`, 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Échec de connexion');
     }
   };
 

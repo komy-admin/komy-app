@@ -14,6 +14,7 @@ import { ItemTypeFormPanel } from './ItemTypeFormPanel';
 import { TagFormPanel } from './TagFormPanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
 
 type TabType = 'item-types' | 'tags' | 'views';
 
@@ -156,16 +157,8 @@ export default function ConfigurationRestoPage() {
       }
       showToast(editingItemType ? 'Type d\'article modifié' : 'Type d\'article créé', 'success');
       closeSidePanel();
-    } catch (error: any) {
-      console.error('Error saving item type:', error);
-
-      // Generic error message for validation errors
-      let errorMessage = 'Erreur lors de la sauvegarde';
-      if (error?.response?.status === 422) {
-        errorMessage = editingItemType ? 'Erreur lors de la modification du type d\'article' : 'Erreur lors de la création du type d\'article';
-      }
-
-      showToast(errorMessage, 'error');
+    } catch (error) {
+      showApiError(error, showToast, editingItemType ? 'Erreur lors de la modification du type d\'article' : 'Erreur lors de la création du type d\'article');
     }
   }, [editingItemType, updateItemType, createItemType, showToast, closeSidePanel]);
 
@@ -489,10 +482,9 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
       });
       setHasChanges(false);
       showToast('Configuration des vues sauvegardée avec succès', 'success');
-    } catch (error: any) {
-      console.error('Erreur lors de la sauvegarde de la configuration:', error);
-      const apiMessage = error?.response?.data?.message;
-      if (error?.response?.status === 409 && apiMessage) {
+    } catch (error) {
+      const info = extractApiError(error);
+      if (info.status === 409) {
         // Revert all local state on conflict (active orders exist)
         setLocalRoomEnabled(roomEnabled);
         setLocalTeamEnabled(teamEnabled);
@@ -500,10 +492,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         setLocalBarEnabled(barEnabled);
         setLocalKitchenViewMode(kitchenViewMode);
         setLocalBarViewMode(barViewMode);
-        showToast(apiMessage, 'error');
-      } else {
-        showToast('Erreur lors de la sauvegarde de la configuration', 'error');
       }
+      showToast(info.message || 'Erreur lors de la sauvegarde de la configuration', 'error');
     }
   };
 

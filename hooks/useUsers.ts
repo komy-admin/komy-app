@@ -5,6 +5,7 @@ import { selectUsers } from '~/store/selectors';
 import { userApiService } from '~/api/user.api';
 import { User, UserProfile } from '~/types/user.types';
 import { FilterQueryBuilder } from './useFilter/query-builder';
+import { extractApiError } from '~/lib/apiErrorHandler';
 
 /**
  * Hook spécialisé pour la gestion des utilisateurs
@@ -20,8 +21,6 @@ export const useUsers = () => {
   // Actions asynchrones pour charger les données
   const loadUsers = useCallback(async (filters?: any) => {
     try {
-      // Loading géré globalement maintenant
-
       // Toujours construire la query avec un perPage élevé par défaut
       const queryString = FilterQueryBuilder.build({
         filters: filters?.filters || [],
@@ -33,8 +32,7 @@ export const useUsers = () => {
       dispatch(entitiesActions.setUsers({ users }));
       return users;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des utilisateurs';
-      console.error('Erreur lors du chargement des utilisateurs:', errorMessage);
+      console.error('Erreur lors du chargement des utilisateurs:', error);
       throw error;
     }
   }, [dispatch]);
@@ -45,35 +43,10 @@ export const useUsers = () => {
       const newUser = await userApiService.create({ ...userData, isPasswordSet: false });
       dispatch(entitiesActions.createUser({ user: newUser }));
       return newUser;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la création de l\'utilisateur:', error);
-      
-      // Gestion des nouvelles réponses d'erreur structurées du backend
-      if (error?.response?.data?.message) {
-        const errorData = error.response.data;
-        
-        // Erreurs de conflit (409) - contraintes d'unicité
-        if (error.response.status === 409) {
-          throw new Error(errorData.message);
-        }
-        
-        // Erreurs de validation (422)
-        if (error.response.status === 422) {
-          throw new Error(errorData.message);
-        }
-        
-        // Erreurs 404
-        if (error.response.status === 404) {
-          throw new Error(errorData.message);
-        }
-        
-        // Erreurs 400
-        if (error.response.status === 400) {
-          throw new Error(errorData.message);
-        }
-      }
-      
-      throw error;
+      const info = extractApiError(error);
+      throw new Error(info.message);
     }
   }, [dispatch]);
 
@@ -82,35 +55,10 @@ export const useUsers = () => {
       const updatedUser = await userApiService.update(userId, userData);
       dispatch(entitiesActions.updateUser({ user: updatedUser }));
       return updatedUser;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
-      
-      // Gestion des nouvelles réponses d'erreur structurées du backend
-      if (error?.response?.data?.message) {
-        const errorData = error.response.data;
-        
-        // Erreurs de conflit (409) - contraintes d'unicité
-        if (error.response.status === 409) {
-          throw new Error(errorData.message);
-        }
-        
-        // Erreurs de validation (422)
-        if (error.response.status === 422) {
-          throw new Error(errorData.message);
-        }
-        
-        // Erreurs 404
-        if (error.response.status === 404) {
-          throw new Error(errorData.message);
-        }
-        
-        // Erreurs 400
-        if (error.response.status === 400) {
-          throw new Error(errorData.message);
-        }
-      }
-      
-      throw error;
+      const info = extractApiError(error);
+      throw new Error(info.message);
     }
   }, [dispatch]);
 
@@ -170,7 +118,7 @@ export const useUsers = () => {
 
   const searchUsers = useCallback((searchTerm: string) => {
     const term = searchTerm.toLowerCase();
-    return users.filter(user => 
+    return users.filter(user =>
       user.firstName.toLowerCase().includes(term) ||
       user.lastName.toLowerCase().includes(term) ||
       user.email.toLowerCase().includes(term)
