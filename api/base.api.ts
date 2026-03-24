@@ -84,8 +84,11 @@ export abstract class BaseApiService<T> {
             if (config.headers) {
               config.headers.Authorization = `Bearer ${sessionToken}`;
             }
+          } else {
+            // Session expired - clear it to force re-authentication via PIN
+            store.dispatch({ type: 'session/clearSessionToken' });
+            return Promise.reject(new axios.Cancel('Session expired'));
           }
-          // If expired, don't set header - let 401 handler deal with it
         }
 
         return config;
