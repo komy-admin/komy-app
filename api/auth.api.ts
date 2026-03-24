@@ -64,166 +64,108 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
   }
 
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<LoginResponse>(
-        `${this.endpoint}/login`,
-        credentials
-      );
-
-      // New dual token system - login returns authToken
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<LoginResponse>(
+      `${this.endpoint}/login`,
+      credentials
+    );
+    return data;
   }
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
-        `${this.endpoint}/register`,
-        credentials
-      );
-      await this.setToken(data.token.token);
-      await this.setUserProfile(data.profil);
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<AuthResponse>(
+      `${this.endpoint}/register`,
+      credentials
+    );
+    await this.setToken(data.token.token);
+    await this.setUserProfile(data.profil);
+    return data;
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
-        `${this.endpoint}/refresh`
-      );
-      await this.setToken(data.token.token);
-      await this.setUserProfile(data.profil);
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<AuthResponse>(
+      `${this.endpoint}/refresh`
+    );
+    await this.setToken(data.token.token);
+    await this.setUserProfile(data.profil);
+    return data;
   }
 
   async forgotPassword(credentials: ForgotCredentials): Promise<AuthResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
-        `${this.endpoint}/forgot-password`,
-        credentials
-      );
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<AuthResponse>(
+      `${this.endpoint}/forgot-password`,
+      credentials
+    );
+    return data;
   }
 
   async resetPassword(credentials: ResetCredentials): Promise<AuthResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
-        `${this.endpoint}/reset-password`,
-        credentials
-      );
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<AuthResponse>(
+      `${this.endpoint}/reset-password`,
+      credentials
+    );
+    return data;
   }
 
   async setupAccount(credentials: SetupAccountCredentials): Promise<AuthResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<AuthResponse>(
-        `${this.endpoint}/setup-account`,
-        credentials
-      );
-      await this.setToken(data.token.token);
-      await this.setUserProfile(data.profil);
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<AuthResponse>(
+      `${this.endpoint}/setup-account`,
+      credentials
+    );
+    await this.setToken(data.token.token);
+    await this.setUserProfile(data.profil);
+    return data;
   }
 
   async confirmPin(pin: string): Promise<{ confirmed: boolean }> {
-    try {
-      const { data } = await this.axiosInstance.post<{ confirmed: boolean }>(
-        `${this.endpoint}/confirm-pin`,
-        { pin }
-      );
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<{ confirmed: boolean }>(
+      `${this.endpoint}/confirm-pin`,
+      { pin }
+    );
+    return data;
   }
 
-  // New method for dual token system - verify PIN with authToken
   async verifyPinWithAuthToken(pin: string, authToken: string): Promise<PinVerificationResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<PinVerificationResponse>(
-        `${this.endpoint}/verify-pin`,
-        { pin },
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`
-          }
-        }
-      );
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<PinVerificationResponse>(
+      `${this.endpoint}/verify-pin`,
+      { pin },
+      { headers: { Authorization: `Bearer ${authToken}` } }
+    );
+    return data;
   }
 
-  // New method for dual token system - set PIN with authToken
   async setPinWithAuthToken(pin: string, authToken: string): Promise<PinVerificationResponse> {
-    try {
-      const { data } = await this.axiosInstance.post<PinVerificationResponse>(
-        `${this.endpoint}/set-pin`,
-        { pin },
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`
-          }
-        }
-      );
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<PinVerificationResponse>(
+      `${this.endpoint}/set-pin`,
+      { pin },
+      { headers: { Authorization: `Bearer ${authToken}` } }
+    );
+    return data;
   }
 
-  // Forgot PIN - sends email with reset link
   async forgotPin(email: string): Promise<{ message: string }> {
-    try {
-      const { data } = await this.axiosInstance.post<{ message: string }>(
-        `${this.endpoint}/forgot-pin`,
-        { email }
-      );
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<{ message: string }>(
+      `${this.endpoint}/forgot-pin`,
+      { email }
+    );
+    return data;
   }
 
-  // Reset PIN with token from email
   async resetPin(token: string, pin: string): Promise<{
     message: string;
     authToken: string;
     requirePinVerification: boolean;
     user: User;
   }> {
-    try {
-      const { data } = await this.axiosInstance.post<{
-        message: string;
-        authToken: string;
-        requirePinVerification: boolean;
-        user: User;
-      }>(
-        `${this.endpoint}/reset-pin`,
-        { token, pin }
-      );
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const { data } = await this.axiosInstance.post<{
+      message: string;
+      authToken: string;
+      requirePinVerification: boolean;
+      user: User;
+    }>(
+      `${this.endpoint}/reset-pin`,
+      { token, pin }
+    );
+    return data;
   }
 
   async changePassword(oldPassword: string, newPassword: string): Promise<{ message: string }> {

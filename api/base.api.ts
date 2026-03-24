@@ -121,50 +121,27 @@ export abstract class BaseApiService<T> {
   }
 
   async getAll(params?: string): Promise<{ data: T[], meta: any }> {
-    try {
-      // const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
-      const url = `${this.endpoint}${params ? `?${params}` : ''}`;
-      const response = await this.axiosInstance.get<{ data: T[], meta: any }>(url);
-      return response.data;
-    } catch (error) {
-      console.error(`Error in getAll for ${this.endpoint}:`, error);
-      throw error;
-    }
+    const url = `${this.endpoint}${params ? `?${params}` : ''}`;
+    const response = await this.axiosInstance.get<{ data: T[], meta: any }>(url);
+    return response.data;
   }
 
   async get(id: string): Promise<T> {
-    try {
-      const response = await this.axiosInstance.get<T>(`${this.endpoint}/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error in get for ${this.endpoint}/${id}:`, error);
-      throw error;
-    }
+    const response = await this.axiosInstance.get<T>(`${this.endpoint}/${id}`);
+    return response.data;
   }
 
   async create(data: Partial<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>): Promise<T> {
-    try {
-      const response = await this.axiosInstance.post<T>(this.endpoint, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.axiosInstance.post<T>(this.endpoint, data);
+    return response.data;
   }
 
   async update(id: string, data: Partial<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>): Promise<T> {
-    try {
-      const response = await this.axiosInstance.put<T>(`${this.endpoint}/${id}`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.axiosInstance.put<T>(`${this.endpoint}/${id}`, data);
+    return response.data;
   }
 
   async delete(id: string): Promise<void> {
-    try {
-      await this.axiosInstance.delete(`${this.endpoint}/${id}`);
-    } catch (error) {
-      throw error;
-    }
+    await this.axiosInstance.delete(`${this.endpoint}/${id}`);
   }
 }

@@ -34,7 +34,7 @@ export default function ResetPasswordScreen() {
       showToast('Lien invalide. Veuillez demander un nouveau lien.', 'error');
       router.replace('/login');
     }
-  }, [token]);
+  }, [token, router, showToast]);
 
   const getPasswordError = (): string | null => {
     if (!password) return 'Le mot de passe est requis';
