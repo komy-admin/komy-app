@@ -53,14 +53,6 @@ export const useOrders = () => {
       dispatch(entitiesActions.setOrders({ orders }));
       return orders;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Erreur lors du chargement des commandes";
-      console.error(
-        "Erreur lors du chargement de toutes les commandes:",
-        errorMessage,
-      );
       throw error;
     }
   }, [dispatch]);
@@ -72,14 +64,6 @@ export const useOrders = () => {
         dispatch(entitiesActions.createOrder({ order: newOrder }));
         return newOrder;
       } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Erreur lors de la création de la commande";
-        console.error(
-          "Erreur lors de la création de la commande:",
-          errorMessage,
-        );
         throw error;
       }
     },
@@ -93,7 +77,6 @@ export const useOrders = () => {
         dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
         return updatedOrder;
       } catch (error) {
-        console.error("Erreur lors de la mise à jour de la commande:", error);
         throw error;
       }
     },
@@ -111,10 +94,6 @@ export const useOrders = () => {
         dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
         return updatedOrder;
       } catch (error) {
-        console.error(
-          "Erreur lors de la mise à jour du statut de la commande:",
-          error,
-        );
         throw error;
       }
     },
@@ -146,10 +125,6 @@ export const useOrders = () => {
         dispatch(entitiesActions.updateOrder({ order: updatedOrder }));
         return updatedOrder;
       } catch (error) {
-        console.error(
-          "Erreur lors de la mise à jour de la commande avec lignes:",
-          error,
-        );
         throw error;
       }
     },

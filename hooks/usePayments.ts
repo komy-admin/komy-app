@@ -28,7 +28,6 @@ export const usePayments = () => {
       const response = await paymentApi.getByOrder(orderId);
       return response;
     } catch (error) {
-      console.error("Erreur lors de la récupération des paiements:", error);
       return [];
     }
   }, []);
@@ -42,10 +41,6 @@ export const usePayments = () => {
         const response = await paymentApi.getOrdersWithPayments(params);
         return response;
       } catch (error) {
-        console.error(
-          "Erreur lors de la récupération des commandes avec paiements:",
-          error,
-        );
         return [];
       }
     },
@@ -60,7 +55,6 @@ export const usePayments = () => {
       const response = await paymentApi.getById(paymentId);
       return response;
     } catch (error) {
-      console.error("Erreur lors de la récupération du paiement:", error);
       return null;
     }
   }, []);
@@ -73,7 +67,6 @@ export const usePayments = () => {
       await paymentApi.printTicket(paymentId);
       return true;
     } catch (error) {
-      console.error("Erreur lors de l'impression du ticket:", error);
       throw error;
     }
   }, []);
@@ -86,7 +79,6 @@ export const usePayments = () => {
       const response = await paymentApi.getAuditLogs(paymentId);
       return response;
     } catch (error) {
-      console.error("Erreur lors de la récupération des logs d'audit:", error);
       return [];
     }
   }, []);
@@ -168,7 +160,6 @@ export const usePayments = () => {
 
         return payment;
       } catch (error) {
-        console.error("Erreur lors de la création du paiement:", error);
         throw error;
       }
     },
@@ -188,7 +179,6 @@ export const usePayments = () => {
 
         return payment;
       } catch (error) {
-        console.error("Erreur lors de la mise à jour du paiement:", error);
         throw error;
       }
     },
@@ -216,7 +206,6 @@ export const usePayments = () => {
 
         return true;
       } catch (error) {
-        console.error("Erreur lors de la suppression du paiement:", error);
         throw error;
       }
     },
@@ -248,11 +237,6 @@ export const usePayments = () => {
 
         return result;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Erreur lors du remboursement";
-        console.error("Erreur lors du remboursement:", errorMessage);
         throw err;
       }
     },

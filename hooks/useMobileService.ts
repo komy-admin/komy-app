@@ -174,7 +174,6 @@ export const useMobileService = () => {
 
       return false;
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
       showToast('Erreur lors de la sauvegarde', 'error');
       return false;
     } finally {
@@ -230,7 +229,6 @@ export const useMobileService = () => {
 
       return false;
     } catch (error) {
-      console.error('Erreur mise à jour statut:', error);
       showToast('Erreur lors de la mise à jour du statut', 'error');
       return false;
     }
@@ -253,7 +251,6 @@ export const useMobileService = () => {
 
       return true;
     } catch (error) {
-      console.error('Erreur suppression:', error);
       showToast('Erreur lors de la suppression', 'error');
       return false;
     }
@@ -271,7 +268,6 @@ export const useMobileService = () => {
       }
       return true;
     } catch (error) {
-      console.error('Erreur suppression lignes:', error);
       showToast('Erreur lors de la suppression', 'error');
       return false;
     }

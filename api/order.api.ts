@@ -43,7 +43,6 @@ export class OrderApiService extends BaseApiService<Order> {
       const response = await this.axiosInstance.post<Order>(this.endpoint, data);
       return response.data;
     } catch (error) {
-      console.error(`Error in createWithLines for ${this.endpoint}:`, error);
       throw error;
     }
   }
@@ -57,7 +56,6 @@ export class OrderApiService extends BaseApiService<Order> {
       const response = await this.axiosInstance.patch(`${this.endpoint}/${orderId}/status`, payload);
       return response.data;
     } catch (error) {
-      console.error(`Error in updateStatus for ${this.endpoint}/${orderId}/status:`, error);
       throw error;
     }
   }
@@ -72,7 +70,6 @@ export class OrderApiService extends BaseApiService<Order> {
       const response = await this.axiosInstance.put(`${this.endpoint}/${orderId}`, payload);
       return response.data;
     } catch (error) {
-      console.error(`Error in updateWithLines for ${this.endpoint}/${orderId}:`, error);
       throw error;
     }
   }

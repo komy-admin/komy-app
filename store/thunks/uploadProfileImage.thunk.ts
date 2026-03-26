@@ -25,7 +25,6 @@ export const uploadProfileImage = createAsyncThunk<
       return updatedUser;
     } catch (error) {
       const info = extractApiError(error);
-      console.error('Upload profile image error:', error);
       return rejectWithValue(info.message || 'Échec de l\'upload de l\'image');
     }
   }

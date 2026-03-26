@@ -35,7 +35,6 @@ export const useMenuCalculator = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du calcul du prix';
       setCalculationError(errorMessage);
-      console.error('Erreur lors du calcul du prix du menu:', error);
       return null;
     } finally {
       setCalculatingPrice(false);

@@ -1,6 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useCallback } from 'react';
-import { RootState, entitiesActions } from '~/store';
+import { entitiesActions } from '~/store';
 import { selectUsers } from '~/store/selectors';
 import { userApiService } from '~/api/user.api';
 import { User, UserProfile } from '~/types/user.types';
@@ -32,7 +32,6 @@ export const useUsers = () => {
       dispatch(entitiesActions.setUsers({ users }));
       return users;
     } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs:', error);
       throw error;
     }
   }, [dispatch]);
@@ -44,7 +43,6 @@ export const useUsers = () => {
       dispatch(entitiesActions.createUser({ user: newUser }));
       return newUser;
     } catch (error) {
-      console.error('Erreur lors de la création de l\'utilisateur:', error);
       const info = extractApiError(error);
       throw new Error(info.message);
     }
@@ -56,7 +54,6 @@ export const useUsers = () => {
       dispatch(entitiesActions.updateUser({ user: updatedUser }));
       return updatedUser;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
       const info = extractApiError(error);
       throw new Error(info.message);
     }
@@ -67,8 +64,8 @@ export const useUsers = () => {
       await userApiService.delete(userId);
       dispatch(entitiesActions.deleteUser({ userId }));
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'utilisateur:', error);
-      throw error;
+      const info = extractApiError(error);
+      throw new Error(info.message);
     }
   }, [dispatch]);
 
@@ -78,7 +75,6 @@ export const useUsers = () => {
       const response = await userApiService.getOrGenerateQrToken(userId);
       return response;
     } catch (error) {
-      console.error('Erreur lors de la récupération/génération du QR code:', error);
       throw error;
     }
   }, []);
@@ -88,7 +84,6 @@ export const useUsers = () => {
       const response = await userApiService.revokeQrToken(userId);
       return response;
     } catch (error) {
-      console.error('Erreur lors de la révocation du QR code:', error);
       throw error;
     }
   }, []);
@@ -102,7 +97,6 @@ export const useUsers = () => {
       }
       return response;
     } catch (error) {
-      console.error('Erreur lors de la création rapide de l\'utilisateur:', error);
       throw error;
     }
   }, [dispatch]);

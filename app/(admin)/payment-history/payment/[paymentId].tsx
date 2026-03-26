@@ -10,11 +10,13 @@ import RefundModal from '~/components/Payment/RefundModal'
 import { Button } from '~/components/ui/button'
 import { usePayments } from '~/hooks/usePayments'
 import type { Payment } from '~/types/payment.types'
-import { extractApiError } from '~/lib/apiErrorHandler'
+import { extractApiError, showApiError } from '~/lib/apiErrorHandler'
+import { useToast } from '~/components/ToastProvider'
 export default function PaymentDetailScreen() {
   const { paymentId } = useLocalSearchParams<{ paymentId: string }>()
   const router = useRouter()
   const { getPaymentById, getAuditLogs, refundPayment, loading } = usePayments()
+  const { showToast } = useToast()
   const [payment, setPayment] = useState<Payment | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false)
@@ -27,7 +29,7 @@ export default function PaymentDetailScreen() {
         const data = await getPaymentById(paymentId as string)
         setPayment(data)
       } catch (error) {
-        console.error('Erreur lors du chargement du paiement:', error)
+        showApiError(error, showToast, 'Erreur lors du chargement du paiement')
       }
     }
     loadPayment()
@@ -41,7 +43,7 @@ export default function PaymentDetailScreen() {
         const logs = await getAuditLogs(paymentId as string)
         setAuditLogs(logs)
       } catch (error) {
-        console.error('Erreur lors du chargement des logs:', error)
+        showApiError(error, showToast, 'Erreur lors du chargement des logs')
       }
     }
     loadAuditLogs()

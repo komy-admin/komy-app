@@ -368,7 +368,6 @@ class SessionService {
 
       return true;
     } catch (error) {
-      console.error('Error verifying QR token:', error);
       return true; // Don't logout on network errors
     }
   }

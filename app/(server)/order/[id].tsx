@@ -72,7 +72,6 @@ export default function OrderDetailPage() {
       showToast('Commande supprimée avec succès', 'success');
       router.replace('/(server)');
     } catch (error) {
-      console.error('Erreur suppression:', error);
       showToast('Erreur lors de la suppression', 'error');
     }
   }, [order, deleteOrder, showToast]);
@@ -109,7 +108,6 @@ export default function OrderDetailPage() {
       setShowTerminateModal(false);
       router.replace('/(server)');
     } catch (error) {
-      console.error('Erreur terminaison:', error);
       showToast('Erreur lors de la terminaison', 'error');
     }
   }, [order, updateOrderStatus, showToast]);
@@ -130,7 +128,6 @@ export default function OrderDetailPage() {
       // Si toutes les lignes sont supprimées, la commande sera supprimée automatiquement
       // et la redirection se fera via le useEffect
     } catch (error) {
-      console.error('Erreur suppression lignes:', error);
       showToast('Erreur lors de la suppression', 'error');
     }
   }, [deleteOrderLine, deleteOrderLines, showToast]);
@@ -167,7 +164,6 @@ export default function OrderDetailPage() {
 
       showToast('Statut mis à jour avec succès', 'success');
     } catch (error) {
-      console.error('Erreur mise à jour statut:', error);
       showToast('Erreur lors de la mise à jour', 'error');
     }
   }, [order, updateOrderStatus, showToast]);

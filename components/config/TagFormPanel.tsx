@@ -4,6 +4,8 @@ import { X, Check, Plus, Trash2 } from 'lucide-react-native';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { eurosToCents, centsToEuros } from '~/lib/utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { showApiError } from '~/lib/apiErrorHandler';
+import { useToast } from '~/components/ToastProvider';
 
 interface TagFormPanelProps {
   tag: Tag | null;
@@ -13,6 +15,7 @@ interface TagFormPanelProps {
 }
 
 export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBulkDeleteOptions }) => {
+  const { showToast } = useToast();
   const [label, setLabel] = useState(tag?.label || '');
   const [fieldType, setFieldType] = useState<TagFieldType | null>(tag?.fieldType || null); // null = aucune sélection
   const [isRequired, setIsRequired] = useState(tag?.isRequired || false);
@@ -90,7 +93,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         try {
           await onBulkDeleteOptions(tag.id, optionsToDelete);
         } catch (error) {
-          console.error('Error bulk deleting options:', error);
+          showApiError(error, showToast, 'Erreur lors de la suppression des options');
         }
       }
 

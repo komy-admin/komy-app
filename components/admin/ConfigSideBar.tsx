@@ -234,7 +234,6 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
       // Navigate to login page
       router.replace('/login');
     } catch (error) {
-      console.error('Logout error:', error);
       // Even if logout fails, navigate to login
       router.replace('/login');
     }

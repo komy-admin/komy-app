@@ -19,7 +19,6 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
       const response = await this.axiosInstance.get<{ data: OrderLine[] }>(`/order/${orderId}/lines`);
       return response.data.data;
     } catch (error) {
-      console.error(`Error in getByOrderId for order ${orderId}:`, error);
       throw error;
     }
   }
@@ -32,7 +31,6 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
       const response = await this.axiosInstance.post<{ data: OrderLine }>(`/order/${orderId}/lines`, lineData);
       return response.data.data;
     } catch (error) {
-      console.error(`Error in createLine for order ${orderId}:`, error);
       throw error;
     }
   }
@@ -47,7 +45,6 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error in createLines for order ${orderId}:`, error);
       throw error;
     }
   }
@@ -60,7 +57,6 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
       const response = await this.axiosInstance.patch<{ success: boolean }>(`/order-line-items/${lineItemId}`, updateData);
       return response.data;
     } catch (error) {
-      console.error(`Error in updateLineItemStatus for line item ${lineItemId}:`, error);
       throw error;
     }
   }
@@ -76,7 +72,6 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error in updateManyItemsStatus:`, error);
       throw error;
     }
   }
@@ -92,7 +87,6 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error in updateManyLinesStatus:`, error);
       throw error;
     }
   }
@@ -107,7 +101,6 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error in deleteLines:`, error);
       throw error;
     }
   }

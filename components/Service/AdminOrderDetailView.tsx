@@ -97,7 +97,6 @@ const AdminOrderLineItem = ({
     try {
       onDelete?.();
     } catch (error) {
-      console.error('Erreur dans onDelete:', error);
       setIsDeleting(false);
     }
   };
@@ -958,7 +957,6 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                           await onDeleteOrderLines([menuLine.id]);
                           showToast('Menu supprimé avec succès.', 'success');
                         } catch (error) {
-                          console.error('Erreur lors de la suppression du menu:', error);
                           showToast('Erreur lors de la suppression du menu.', 'error');
                         }
                       }}
@@ -973,7 +971,6 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                           });
                           showToast('Statut mis à jour avec succès.', 'success');
                         } catch (error) {
-                          console.error('Erreur lors de la mise à jour du statut:', error);
                           showToast('Erreur lors de la mise à jour du statut.', 'error');
                         }
                       } : undefined}

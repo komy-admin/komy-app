@@ -9,7 +9,6 @@ export class MenuApiService extends BaseApiService<Menu> {
       const response = await this.axiosInstance.post(`${this.endpoint}/calculate-price`, data);
       return response.data;
     } catch (error) {
-      console.error(`Error in calculatePrice for ${this.endpoint}:`, error);
       throw error;
     }
   }
@@ -21,7 +20,6 @@ export class MenuApiService extends BaseApiService<Menu> {
       const data = response.data.data || response.data;
       return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error(`Error in getActiveMenus for ${this.endpoint}:`, error);
       throw error;
     }
   }
@@ -32,7 +30,6 @@ export class MenuApiService extends BaseApiService<Menu> {
       const response = await this.axiosInstance.post(`${this.endpoint}/bulk`, data);
       return response.data;
     } catch (error) {
-      console.error(`Error in createBulk for ${this.endpoint}:`, error);
       throw error;
     }
   }
@@ -43,7 +40,6 @@ export class MenuApiService extends BaseApiService<Menu> {
       const response = await this.axiosInstance.put(`${this.endpoint}/${menuId}/bulk`, data);
       return response.data;
     } catch (error) {
-      console.error(`Error in updateBulk for ${this.endpoint}:`, error);
       throw error;
     }
   }

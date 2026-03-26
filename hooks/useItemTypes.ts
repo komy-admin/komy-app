@@ -28,9 +28,6 @@ export const useItemTypes = () => {
       
       return newItemType;
     } catch (err) {
-      const errorMessage = 'Erreur lors de la création du type d\'article';
-      console.error(errorMessage, err);
-      console.error('Error creating item type:', err);
       throw err;
     }
   }, [dispatch]);
@@ -46,9 +43,6 @@ export const useItemTypes = () => {
       
       return updatedItemType;
     } catch (err) {
-      const errorMessage = 'Erreur lors de la modification du type d\'article';
-      console.error(errorMessage, err);
-      console.error('Error updating item type:', err);
       throw err;
     }
   }, [dispatch]);
@@ -62,9 +56,6 @@ export const useItemTypes = () => {
       dispatch(entitiesActions.deleteItemType({ itemTypeId: id }));
       // Loading géré globalement maintenant
     } catch (err) {
-      const errorMessage = 'Erreur lors de la suppression du type d\'article';
-      console.error(errorMessage, err);
-      console.error('Error deleting item type:', err);
       throw err;
     }
   }, [dispatch]);

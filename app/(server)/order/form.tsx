@@ -39,8 +39,6 @@ export default function OrderFormPage() {
     },
     onError: (error: any) => {
       // The detailed error message is already shown by useOrderLinesManager
-      // We just log for debugging
-      console.error('Order save error:', error);
     },
   });
 

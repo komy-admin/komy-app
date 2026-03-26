@@ -86,8 +86,7 @@ export default function ConfigurationRestoPage() {
       showToast('Tag supprimé avec succès', 'success');
       setTagToDelete(null);
     } catch (error) {
-      console.error('Error deleting tag:', error);
-      showToast('Erreur lors de la suppression du tag', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression du tag');
     } finally {
       setIsDeleting(false);
     }
@@ -110,8 +109,7 @@ export default function ConfigurationRestoPage() {
       showToast('Type d\'article supprimé avec succès', 'success');
       setItemTypeToDelete(null);
     } catch (error) {
-      console.error('Error deleting item type:', error);
-      showToast('Erreur lors de la suppression du type d\'article', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression du type d\'article');
     } finally {
       setIsDeleting(false);
     }

@@ -114,7 +114,6 @@ export const useUserQrCode = (): UseUserQrCodeReturn => {
         title: "Connexion Komy",
       });
     } catch (error) {
-      console.error('Error sharing QR link:', error);
       showToast('Erreur lors du partage', 'error');
     }
   };
@@ -141,7 +140,6 @@ export const useUserQrCode = (): UseUserQrCodeReturn => {
       // Reset copied state after 2 seconds
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Error copying QR link:', error);
       showToast('Erreur lors de la copie', 'error');
     }
   };
@@ -159,7 +157,6 @@ export const useUserQrCode = (): UseUserQrCodeReturn => {
       setMagicLink(null);
       showToast('QR code révoqué avec succès', 'success');
     } catch (error) {
-      console.error('Error revoking QR:', error);
       showToast('Erreur lors de la révocation du QR code', 'error');
       throw error;
     } finally {

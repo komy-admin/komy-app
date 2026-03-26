@@ -117,8 +117,7 @@ export const useOrderStatusActions = ({
       });
       showToast('Statut mis à jour avec succès', 'success');
     } catch (error) {
-      showToast('Erreur lors de la mise à jour du statut', 'error');
-      console.error('Erreur updateItemStatus:', error);
+      showApiError(error, showToast, 'Erreur lors de la mise à jour du statut');
     }
   }, [selectedTableOrder, updateOrderStatus, showToast]);
 
@@ -131,8 +130,7 @@ export const useOrderStatusActions = ({
       });
       showToast('Statut mis à jour avec succès', 'success');
     } catch (error) {
-      showToast('Erreur lors de la mise à jour du statut', 'error');
-      console.error('Erreur updateMenuItemStatus:', error);
+      showApiError(error, showToast, 'Erreur lors de la mise à jour du statut');
     }
   }, [selectedTableOrder, updateOrderStatus, showToast]);
 
@@ -150,8 +148,7 @@ export const useOrderStatusActions = ({
       });
       showToast(`${orderLineIds.length + orderLineItemIds.length} article(s) mis à jour`, 'success');
     } catch (error) {
-      showToast('Erreur lors de la mise à jour', 'error');
-      console.error('Erreur bulk update:', error);
+      showApiError(error, showToast, 'Erreur lors de la mise à jour');
     }
   }, [selectedTableOrder, updateOrderStatus, showToast]);
 
@@ -212,8 +209,7 @@ export const useOrderStatusActions = ({
       setShowClaimConfirmModal(false);
       setItemsToClaimData(null);
     } catch (error) {
-      showToast('Erreur lors de la réclamation', 'error');
-      console.error('Erreur claim:', error);
+      showApiError(error, showToast, 'Erreur lors de la réclamation');
     }
   }, [itemsToClaimData, handleBulkUpdateStatus, showToast]);
 
@@ -266,8 +262,7 @@ export const useOrderStatusActions = ({
       setShowServeConfirmModal(false);
       setItemsToServeData(null);
     } catch (error) {
-      showToast('Erreur lors du service', 'error');
-      console.error('Erreur serve:', error);
+      showApiError(error, showToast, 'Erreur lors du service');
     }
   }, [itemsToServeData, handleBulkUpdateStatus, showToast]);
 
@@ -278,7 +273,7 @@ export const useOrderStatusActions = ({
       await deleteOrderLine(orderLineId);
       showToast('Ligne supprimée avec succès', 'success');
     } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression');
     }
   }, [deleteOrderLine, showToast]);
 
@@ -321,8 +316,7 @@ export const useOrderStatusActions = ({
       setShowTerminateDialog(false);
       onCleanup();
     } catch (error) {
-      showToast('Erreur lors de la terminaison de la commande', 'error');
-      console.error('Erreur terminate:', error);
+      showApiError(error, showToast, 'Erreur lors de la terminaison de la commande');
     }
   }, [selectedTableOrder, updateOrder, showToast, onCleanup]);
 

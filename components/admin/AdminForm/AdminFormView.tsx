@@ -18,6 +18,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Button } from '~/components/ui';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Action Button Components
@@ -274,6 +276,7 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
   const [isSaving, setIsSaving] = React.useState(false);
   const [confirmationModal, setConfirmationModal] = React.useState<AdminConfirmationModal | null>(null);
   const formRef = React.useRef<AdminFormRef>(null);
+  const { showToast } = useToast();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Form Save Handler
@@ -299,7 +302,7 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
         onClose();
       }
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      showApiError(error, showToast, 'Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
     }
@@ -402,7 +405,7 @@ export const AdminFormView = React.forwardRef<AdminFormViewRef, AdminFormViewPro
               await confirmationModal.onConfirm();
               setConfirmationModal(null);
             } catch (error) {
-              console.error('Erreur lors de la confirmation:', error);
+              showApiError(error, showToast, 'Erreur lors de la confirmation');
               setConfirmationModal(prev => prev ? { ...prev, isLoading: false } : null);
             }
           }}

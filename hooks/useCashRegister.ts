@@ -28,7 +28,6 @@ export function useCashRegister() {
       setCurrentSession(session);
       return session;
     } catch (err) {
-      console.error('Erreur récupération session:', err);
       const info = extractApiError(err);
       setError(info.message);
       setCurrentSession(null);
@@ -53,7 +52,6 @@ export function useCashRegister() {
       setCurrentSession(session);
       return session;
     } catch (err) {
-      console.error('Erreur ouverture session:', err);
       const info = extractApiError(err);
       setError(info.message);
       throw err;
@@ -77,7 +75,6 @@ export function useCashRegister() {
       setCurrentSession(null); // La session est fermée
       return result;
     } catch (err) {
-      console.error('Erreur fermeture session:', err);
       const info = extractApiError(err);
       setError(info.message);
       throw err;
@@ -103,7 +100,6 @@ export function useCashRegister() {
       const result = await cashRegisterApiService.getHistory(page, limit);
       return result;
     } catch (err) {
-      console.error('Erreur récupération historique:', err);
       const info = extractApiError(err);
       setError(info.message);
       throw err;
@@ -123,7 +119,6 @@ export function useCashRegister() {
       const result = await cashRegisterApiService.generateZReport(sessionId);
       return result;
     } catch (err) {
-      console.error('Erreur génération Z:', err);
       const info = extractApiError(err);
       setError(info.message);
       throw err;

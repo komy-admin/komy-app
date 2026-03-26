@@ -20,7 +20,6 @@ export const useTags = () => {
       dispatch(entitiesActions.createTag({ tag: newTag }));
       return newTag;
     } catch (err) {
-      console.error('Error creating tag:', err);
       throw err;
     }
   }, [dispatch]);
@@ -31,7 +30,6 @@ export const useTags = () => {
       dispatch(entitiesActions.updateTag({ tag: updatedTag }));
       return updatedTag;
     } catch (err) {
-      console.error('Error updating tag:', err);
       throw err;
     }
   }, [dispatch]);
@@ -41,7 +39,6 @@ export const useTags = () => {
       await tagApiService.delete(id);
       dispatch(entitiesActions.deleteTag({ tagId: id }));
     } catch (err) {
-      console.error('Error deleting tag:', err);
       throw err;
     }
   }, [dispatch]);
@@ -50,7 +47,6 @@ export const useTags = () => {
     try {
       return await tagApiService.getOptions(tagId);
     } catch (err) {
-      console.error('Error getting tag options:', err);
       throw err;
     }
   }, []);
@@ -61,7 +57,6 @@ export const useTags = () => {
       // WebSocket mettra à jour automatiquement le tag
       return newOption;
     } catch (err) {
-      console.error('Error creating tag option:', err);
       throw err;
     }
   }, []);
@@ -72,7 +67,6 @@ export const useTags = () => {
       // WebSocket mettra à jour automatiquement le tag
       return newOptions;
     } catch (err) {
-      console.error('Error bulk creating tag options:', err);
       throw err;
     }
   }, []);
@@ -83,7 +77,6 @@ export const useTags = () => {
       // WebSocket mettra à jour automatiquement le tag
       return updatedOption;
     } catch (err) {
-      console.error('Error updating tag option:', err);
       throw err;
     }
   }, []);
@@ -93,7 +86,6 @@ export const useTags = () => {
       await tagApiService.deleteOption(tagId, optionId);
       // WebSocket mettra à jour automatiquement le tag
     } catch (err) {
-      console.error('Error deleting tag option:', err);
       throw err;
     }
   }, []);
@@ -103,7 +95,6 @@ export const useTags = () => {
       await tagApiService.bulkDeleteOptions(tagId, optionIds);
       // WebSocket mettra à jour automatiquement le tag
     } catch (err) {
-      console.error('Error bulk deleting tag options:', err);
       throw err;
     }
   }, []);

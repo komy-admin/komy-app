@@ -171,7 +171,6 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
 
       setCategoryItems(items);
     } catch (error) {
-      console.error('Erreur lors du chargement des items:', error);
       Alert.alert('Erreur', 'Impossible de charger les items du menu');
     } finally {
       setLoading(false);

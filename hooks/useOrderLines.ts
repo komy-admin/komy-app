@@ -37,7 +37,6 @@ export const useOrderLines = () => {
       dispatch(entitiesActions.createOrder({ order: enrichedOrder }));
       return enrichedOrder;
     } catch (error) {
-      console.error('Erreur lors de la création de la commande avec lignes:', error);
       throw error;
     }
   }, [dispatch]);
@@ -53,7 +52,6 @@ export const useOrderLines = () => {
 
       return orderWithNewLines;
     } catch (error) {
-      console.error('Erreur lors de la création des lignes de commande:', error);
       throw error;
     }
   }, [dispatch]);
@@ -67,7 +65,6 @@ export const useOrderLines = () => {
 
       dispatch(entitiesActions.deleteOrderLine({ orderLineId }));
     } catch (error) {
-      console.error('Erreur lors de la suppression de la ligne de commande:', error);
       throw error;
     }
   }, [dispatch]);
@@ -81,7 +78,6 @@ export const useOrderLines = () => {
 
       dispatch(entitiesActions.deleteOrderLinesBatch({ orderLineIds }));
     } catch (error) {
-      console.error('Erreur lors de la suppression des lignes:', error);
       throw error;
     }
   }, [dispatch]);

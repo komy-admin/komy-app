@@ -18,7 +18,6 @@ export class UserApiService extends BaseApiService<User> {
       
       return updatedUser;
     } catch (error) {
-      console.error('Erreur mise à jour image de profil:', error);
       throw new Error('Impossible de mettre à jour la photo de profil');
     }
   }
@@ -31,7 +30,6 @@ export class UserApiService extends BaseApiService<User> {
       const response = await this.axiosInstance.get<UserQrTokenResponse>(`/admin/user/${userId}/qr-token`);
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la récupération du QR code:', error);
       throw error;
     }
   }
@@ -44,7 +42,6 @@ export class UserApiService extends BaseApiService<User> {
       const response = await this.axiosInstance.delete<{ message: string }>(`/admin/user/${userId}/revoke-qr`);
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la révocation du QR code:', error);
       throw error;
     }
   }
@@ -61,7 +58,6 @@ export class UserApiService extends BaseApiService<User> {
       });
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la création rapide de l\'utilisateur:', error);
       throw error;
     }
   }

@@ -78,7 +78,6 @@ export const compressForProfile = async (
     return compressForProfile(resized.uri, newQuality);
 
   } catch (error) {
-    console.error('Erreur compression image:', error);
     throw new Error('Impossible de compresser l\'image');
   }
 };
@@ -92,7 +91,6 @@ export const validateImageSize = async (uri: string): Promise<boolean> => {
     const maxSize = 5 * 1024 * 1024; // 5MB avant compression
     return fileSize <= maxSize;
   } catch (error) {
-    console.error('Erreur validation taille:', error);
     return false;
   }
 };
@@ -115,7 +113,6 @@ export const convertToBase64 = async (uri: string): Promise<string> => {
 
     return `data:image/jpeg;base64,${base64}`;
   } catch (error) {
-    console.error('Erreur conversion base64:', error);
     throw new Error('Impossible de convertir l\'image');
   }
 };

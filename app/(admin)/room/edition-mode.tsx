@@ -97,8 +97,7 @@ export default function RoomEditionMode() {
     try {
       await updateTableFast(id, updates);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la mise à jour de la table';
-      showToast(errorMessage, 'error');
+      showApiError(error, showToast, 'Erreur lors de la mise à jour de la table');
     }
   }, [updateTableFast, showToast]);
 
@@ -178,8 +177,7 @@ export default function RoomEditionMode() {
       showToast('Table créée avec succès', 'success');
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Erreur lors de la création de la table";
-      showToast(errorMessage, 'error');
+      showApiError(error, showToast, 'Erreur lors de la création de la table');
     } finally {
       setIsCreatingTable(false);
     }

@@ -6,11 +6,14 @@ import type { PaymentHistoryFilters, OrderWithPayments } from '~/types/payment-h
 import { PaymentPeriodSummary } from '~/components/Payment/PaymentHistoryScreen/PaymentPeriodSummary';
 import { OrderWithPaymentsCard } from '~/components/Payment/PaymentHistoryScreen/OrderWithPaymentsCard';
 import { usePayments } from '~/hooks/usePayments';
+import { showApiError } from '~/lib/apiErrorHandler';
+import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 
 export default function PaymentHistoryScreen() {
   const router = useRouter();
   const { getOrdersWithPayments, loading } = usePayments();
+  const { showToast } = useToast();
   const [ordersWithPayments, setOrdersWithPayments] = useState<OrderWithPayments[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -28,7 +31,7 @@ export default function PaymentHistoryScreen() {
       const data = await getOrdersWithPayments(filters);
       setOrdersWithPayments(data);
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      showApiError(error, showToast, 'Erreur lors du chargement des données');
     }
   };
 

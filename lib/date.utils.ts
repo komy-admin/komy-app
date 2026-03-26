@@ -50,7 +50,6 @@ export const formatDate = (date: string | Date, format: DateFormat): string => {
         return dateObject.toLocaleString('fr-FR');
     }
   } catch (error) {
-    console.error('Error formatting date:', error);
     return 'Invalid date';
   }
 };

@@ -80,7 +80,6 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
       await sessionService.logout();
       router.replace('/login');
     } catch (error) {
-      console.error('Logout error:', error);
       router.replace('/login');
     }
   }, [router]);

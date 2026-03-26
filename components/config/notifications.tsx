@@ -120,7 +120,6 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
       setHasChanges(false);
       showToast('Configuration sauvegardée avec succès', 'success');
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
       showToast('Impossible de sauvegarder la configuration', 'error');
     }
   };

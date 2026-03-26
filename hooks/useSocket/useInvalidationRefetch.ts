@@ -71,7 +71,6 @@ export const useInvalidationRefetch = () => {
     try {
       await refetchFn();
     } catch (error) {
-      console.error(`❌ Erreur refetch ${resource}:`, error);
       throw error;
     }
   }, [refetchMap]);
@@ -125,7 +124,6 @@ export const useInvalidationRefetch = () => {
       ]);
       console.log('✅ Toutes les ressources synchronisées');
     } catch (error) {
-      console.error('❌ Erreur refetch global:', error);
       throw error;
     } finally {
       isRefetchingRef.current = false;

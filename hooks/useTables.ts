@@ -103,11 +103,6 @@ export const useTables = () => {
         dispatch(entitiesActions.createTable({ table: newTable }));
         return newTable;
       } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Erreur lors de la création de la table";
-        console.error("Erreur lors de la création de la table:", errorMessage);
         throw error;
       }
     },
@@ -121,7 +116,6 @@ export const useTables = () => {
         dispatch(entitiesActions.updateTable({ table: updatedTable }));
         return updatedTable;
       } catch (error) {
-        console.error("Erreur lors de la mise à jour de la table:", error);
         throw error;
       }
     },
@@ -134,7 +128,6 @@ export const useTables = () => {
         await tableApiService.delete(tableId);
         dispatch(entitiesActions.deleteTable({ tableId }));
       } catch (error) {
-        console.error("Erreur lors de la suppression de la table:", error);
         throw error;
       }
     },

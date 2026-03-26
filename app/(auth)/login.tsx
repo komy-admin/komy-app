@@ -77,7 +77,6 @@ export default function LoginScreen() {
 
       router.push('/pin-verification');
     } catch (error) {
-      console.error('QR scan error:', error);
       showToast('Erreur lors de la connexion QR', 'error');
     }
   };

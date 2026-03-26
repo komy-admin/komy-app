@@ -278,7 +278,6 @@ export default function PaymentJournalScreen() {
       setHasMore(meta.hasMore);
       setPeriodSummary(meta.periodSummary);
     } catch (error) {
-      console.error('Erreur chargement journal:', error);
       Alert.alert('Erreur', 'Impossible de charger le journal des encaissements');
     } finally {
       setIsLoading(false);

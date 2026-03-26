@@ -9,7 +9,6 @@ export class MenuCategoryItemApiService extends BaseApiService<MenuCategoryItem>
       const response = await this.axiosInstance.get(`${this.endpoint}?menuCategoryId=${menuCategoryId}`);
       return response.data.data || response.data;
     } catch (error) {
-      console.error(`Error in getByMenuCategoryId for ${this.endpoint}:`, error);
       throw error;
     }
   }
@@ -19,7 +18,6 @@ export class MenuCategoryItemApiService extends BaseApiService<MenuCategoryItem>
       const response = await this.axiosInstance.get(`${this.endpoint}?menuCategoryId=${menuCategoryId}&isAvailable=true`);
       return response.data.data || response.data;
     } catch (error) {
-      console.error(`Error in getAvailableByMenuCategoryId for ${this.endpoint}:`, error);
       throw error;
     }
   }

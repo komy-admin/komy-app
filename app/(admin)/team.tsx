@@ -210,8 +210,7 @@ export default function TeamPage() {
       await deleteUser(deleteModal.user.id);
       showToast('Utilisateur supprimé avec succès', 'success');
     } catch (err) {
-      console.error('Error deleting user:', err);
-      showToast('Erreur lors de la suppression de l\'utilisateur', 'error');
+      showApiError(err, showToast, 'Erreur lors de la suppression de l\'utilisateur');
     } finally {
       setDeleteModal(null);
     }

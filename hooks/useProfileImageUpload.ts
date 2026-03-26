@@ -34,7 +34,6 @@ export const useProfileImageUpload = () => {
       }
       return true;
     } catch (error) {
-      console.error('Validation error:', error);
       showToast('Impossible de valider l\'image', 'error');
       return false;
     }
@@ -144,7 +143,6 @@ export const useProfileImageUpload = () => {
       // Upload
       await uploadImage(base64);
     } catch (error) {
-      console.error('Mobile picker error:', error);
       showToast(error instanceof Error ? error.message : 'Impossible de charger l\'image', 'error');
       setUploadProgress(0);
     }
@@ -190,7 +188,6 @@ export const useProfileImageUpload = () => {
         await handleMobileImagePicker();
       }
     } catch (error) {
-      console.error('Pick image error:', error);
       showToast('Une erreur est survenue', 'error');
       setIsUploading(false);
       setUploadProgress(0);

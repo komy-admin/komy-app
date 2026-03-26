@@ -26,8 +26,6 @@ export const useMenu = () => {
       dispatch(entitiesActions.setItems({ items }));
       return items;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement du menu';
-      console.error('Erreur lors du chargement du menu:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -38,8 +36,6 @@ export const useMenu = () => {
       dispatch(entitiesActions.setItemTypes({ itemTypes }));
       return itemTypes;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des types d\'articles';
-      console.error('Erreur lors du chargement des types d\'articles:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -51,7 +47,6 @@ export const useMenu = () => {
       dispatch(entitiesActions.createMenuItem({ item: newItem }));
       return newItem;
     } catch (error) {
-      console.error('Erreur lors de la création de l\'article:', error);
       throw error;
     }
   }, [dispatch]);
@@ -62,7 +57,6 @@ export const useMenu = () => {
       dispatch(entitiesActions.updateMenuItem({ item: updatedItem }));
       return updatedItem;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'article:', error);
       throw error;
     }
   }, [dispatch]);
@@ -72,7 +66,6 @@ export const useMenu = () => {
       await itemApiService.delete(itemId);
       dispatch(entitiesActions.deleteMenuItem({ itemId }));
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'article:', error);
       throw error;
     }
   }, [dispatch]);
@@ -84,7 +77,6 @@ export const useMenu = () => {
       dispatch(entitiesActions.createItemType({ itemType: newItemType }));
       return newItemType;
     } catch (error) {
-      console.error('Erreur lors de la création du type d\'article:', error);
       throw error;
     }
   }, [dispatch]);
@@ -95,7 +87,6 @@ export const useMenu = () => {
       dispatch(entitiesActions.updateItemType({ itemType: updatedItemType }));
       return updatedItemType;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du type d\'article:', error);
       throw error;
     }
   }, [dispatch]);
@@ -105,7 +96,6 @@ export const useMenu = () => {
       await itemTypeApiService.delete(itemTypeId);
       dispatch(entitiesActions.deleteItemType({ itemTypeId }));
     } catch (error) {
-      console.error('Erreur lors de la suppression du type d\'article:', error);
       throw error;
     }
   }, [dispatch]);
@@ -141,7 +131,6 @@ export const useMenu = () => {
       dispatch(entitiesActions.updateMenuItem({ item: updatedItem }));
       return updatedItem;
     } catch (error) {
-      console.error('Erreur lors du changement de statut de l\'article:', error);
       throw error;
     }
   }, [dispatch, getItemById]);

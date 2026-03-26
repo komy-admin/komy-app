@@ -87,7 +87,6 @@ export function useMenuPage() {
       }
       handleCloseItemModal();
     } catch (err) {
-      console.error('Error saving item:', err);
       showToast("Erreur lors de la sauvegarde de l'article", 'error');
     }
   }, [itemTypes, updateMenuItem, createMenuItem, showToast, handleCloseItemModal]);
@@ -106,7 +105,6 @@ export function useMenuPage() {
       await deleteMenuItem(itemToDelete.id);
       showToast('Article supprimé avec succès', 'success');
     } catch (err) {
-      console.error('Error deleting item:', err);
       showToast("Erreur lors de la suppression de l'article", 'error');
     } finally {
       setIsDeleting(false);
@@ -125,7 +123,6 @@ export function useMenuPage() {
       await toggleItemStatus(id);
       showToast('Statut modifié avec succès', 'success');
     } catch (err) {
-      console.error('Error toggling item status:', err);
       showToast('Erreur lors de la modification du statut', 'error');
     }
   }, [toggleItemStatus, showToast]);
@@ -158,7 +155,6 @@ export function useMenuPage() {
       await updateMenu(id, { isActive: !menu.isActive });
       showToast(`Menu ${menu.isActive ? 'désactivé' : 'activé'} avec succès`, 'success');
     } catch (err) {
-      console.error('Error toggling menu status:', err);
       showToast('Erreur lors de la modification du statut', 'error');
     }
   }, [allMenus, updateMenu, showToast]);
@@ -215,7 +211,6 @@ export function useMenuPage() {
       showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
       handleCloseMenuModal();
     } catch (err) {
-      console.error('Error saving bulk menu:', err);
       showToast('Erreur lors de la sauvegarde du menu', 'error');
       throw err;
     }
@@ -235,7 +230,6 @@ export function useMenuPage() {
       await deleteMenu(menuToDelete.id);
       showToast('Menu supprimé avec succès', 'success');
     } catch (err) {
-      console.error('Error deleting menu:', err);
       showToast('Erreur lors de la suppression du menu', 'error');
     } finally {
       setIsDeletingMenu(false);

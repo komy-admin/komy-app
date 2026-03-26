@@ -7,11 +7,14 @@ import { PaymentListCard } from '~/components/Payment/PaymentListView/PaymentLis
 import { Button } from '~/components/ui/button'
 import { usePayments } from '~/hooks/usePayments'
 import type { Payment } from '~/types/payment.types'
+import { showApiError } from '~/lib/apiErrorHandler'
+import { useToast } from '~/components/ToastProvider'
 
 export default function PaymentListScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>()
   const router = useRouter()
   const { getPaymentsByOrder } = usePayments()
+  const { showToast } = useToast()
   const [payments, setPayments] = useState<Payment[]>([])
 
   useEffect(() => {
@@ -21,7 +24,7 @@ export default function PaymentListScreen() {
         const data = await getPaymentsByOrder(orderId as string)
         setPayments(data)
       } catch (error) {
-        console.error('Erreur lors du chargement des paiements:', error)
+        showApiError(error, showToast, 'Erreur lors du chargement des paiements')
       }
     }
     loadPayments()

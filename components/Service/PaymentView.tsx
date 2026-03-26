@@ -175,7 +175,6 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
       onPaymentComplete();
       setIsProcessing(false);
     } catch (error) {
-      console.error('Erreur lors de la création du paiement:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors du paiement');
       setIsProcessing(false);
     }

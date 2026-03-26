@@ -9,7 +9,6 @@ export class TableApiService extends BaseApiService<Table> {
       const response = await this.axiosInstance.post<Table>(this.endpoint, data);
       return response.data;
     } catch (error) {
-      console.error(`Error in create for ${this.endpoint}:`, error);
       throw error;
     }
   }

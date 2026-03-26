@@ -52,8 +52,6 @@ export const useMenus = () => {
       
       return menus;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des menus';
-      console.error('Erreur lors de l\'opération menus:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -69,8 +67,6 @@ export const useMenus = () => {
       dispatch(entitiesActions.setMenus({ menus }));
       return menus;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des menus actifs';
-      console.error('Erreur lors de l\'opération menus:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -83,8 +79,6 @@ export const useMenus = () => {
       dispatch(entitiesActions.setMenuCategoryItems({ menuCategoryId, items }));
       return items;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors du chargement des items disponibles';
-      console.error('Erreur lors de l\'opération menus:', errorMessage);
       throw error;
     }
   }, [dispatch]);
@@ -116,11 +110,10 @@ export const useMenus = () => {
             const createdCategory = await menuCategoryApiService.create(categoryData);
             createdCategories.push(createdCategory);
           } catch (categoryError) {
-            console.error(`❌ Erreur création catégorie ${index + 1}:`, categoryError);
             throw categoryError;
           }
         }
-        
+
         // Mettre à jour le menu avec les catégories créées
         newMenu.categories = createdCategories;
       } else {
@@ -129,7 +122,6 @@ export const useMenus = () => {
       dispatch(entitiesActions.createMenu({ menu: newMenu }));
       return newMenu;
     } catch (error) {
-      console.error('❌ Erreur lors de la création du menu:', error);
       throw error;
     }
   }, [dispatch]);
@@ -165,7 +157,6 @@ export const useMenus = () => {
               });
               createdCategories.push(updatedCategory);
             } catch (categoryError) {
-              console.error(`❌ Erreur mise à jour catégorie ${index + 1}:`, categoryError);
               throw categoryError;
             }
           } else {
@@ -179,7 +170,6 @@ export const useMenus = () => {
               const createdCategory = await menuCategoryApiService.create(categoryData);
               createdCategories.push(createdCategory);
             } catch (categoryError) {
-              console.error(`❌ Erreur création catégorie ${index + 1}:`, categoryError);
               throw categoryError;
             }
           }
@@ -193,7 +183,6 @@ export const useMenus = () => {
       dispatch(entitiesActions.updateMenu({ menu: updatedMenu }));
       return updatedMenu;
     } catch (error) {
-      console.error('❌ Erreur lors de la mise à jour du menu:', error);
       throw error;
     }
   }, [dispatch]);
@@ -203,7 +192,6 @@ export const useMenus = () => {
       await menuApiService.delete(menuId);
       dispatch(entitiesActions.deleteMenu({ menuId }));
     } catch (error) {
-      console.error('Erreur lors de la suppression du menu:', error);
       throw error;
     }
   }, [dispatch]);
@@ -231,7 +219,6 @@ export const useMenus = () => {
       
       return createdMenu;
     } catch (error) {
-      console.error('❌ Erreur lors de la création bulk du menu:', error);
       throw error;
     }
   }, [dispatch]);
@@ -259,7 +246,6 @@ export const useMenus = () => {
       
       return updatedMenu;
     } catch (error) {
-      console.error('❌ Erreur lors de la mise à jour bulk du menu:', error);
       throw error;
     }
   }, [dispatch]);
@@ -279,7 +265,6 @@ export const useMenus = () => {
       dispatch(entitiesActions.createMenuCategoryItem({ menuCategoryItem: newItem }));
       return newItem;
     } catch (error) {
-      console.error('Erreur lors de la création de l\'item de catégorie:', error);
       throw error;
     }
   }, [dispatch, items]);
@@ -298,7 +283,6 @@ export const useMenus = () => {
       dispatch(entitiesActions.updateMenuCategoryItem({ menuCategoryItem: updatedItem }));
       return updatedItem;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'item de catégorie:', error);
       throw error;
     }
   }, [dispatch, items]);
@@ -308,7 +292,6 @@ export const useMenus = () => {
       await menuCategoryItemApiService.delete(itemId);
       dispatch(entitiesActions.deleteMenuCategoryItem({ menuCategoryItemId: itemId }));
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'item de catégorie:', error);
       throw error;
     }
   }, [dispatch]);
