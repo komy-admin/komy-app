@@ -16,6 +16,7 @@ import { usePayments } from '~/hooks/usePayments';
 import { entitiesActions } from '~/store';
 import { useDispatch } from 'react-redux';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 // Helper function pour interpréter le ratio de paiement
 const parsePaymentStatus = (fraction: number) => ({
@@ -957,7 +958,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                           await onDeleteOrderLines([menuLine.id]);
                           showToast('Menu supprimé avec succès.', 'success');
                         } catch (error) {
-                          showToast('Erreur lors de la suppression du menu.', 'error');
+                          showApiError(error, showToast, 'Erreur lors de la suppression du menu.');
                         }
                       }}
                       onDeleteOrderLines={onDeleteOrderLines}
@@ -971,7 +972,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                           });
                           showToast('Statut mis à jour avec succès.', 'success');
                         } catch (error) {
-                          showToast('Erreur lors de la mise à jour du statut.', 'error');
+                          showApiError(error, showToast, 'Erreur lors de la mise à jour du statut.');
                         }
                       } : undefined}
                       groupId={`menu-${menuLine.id}`}

@@ -2,6 +2,7 @@ import { View, StyleSheet, Pressable, Platform, Text as RNText, ScrollView, Layo
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { navigationEvents } from '~/lib/navigation-events';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { ActionConfirmModal } from '~/components/Service/ActionConfirmModal';
 import { useMenu, useOrders } from '~/hooks/useRestaurant';
 import { useAppSelector } from '~/store/hooks';
@@ -346,8 +347,8 @@ export default function RoomlessServiceView({ viewModeToggle, onEditModePress }:
     if (!orderNoteId) return;
     try {
       await updateOrder(orderNoteId, { note });
-    } catch {
-      showToast('Erreur lors de la sauvegarde de la note', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la sauvegarde de la note');
     }
   }, [orderNoteId, updateOrder, showToast]);
 

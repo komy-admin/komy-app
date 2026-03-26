@@ -6,6 +6,7 @@ import { Status } from '~/types/status.enum';
 import { Order } from '~/types/order.types';
 import { Text } from '~/components/ui';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { ItemType } from '~/types/item-type.types';
 
 // Import direct des composants Admin
@@ -35,7 +36,7 @@ export default function MobileOrderDetailView({
         showToast('Articles supprimés', 'success');
       }
     } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression');
     }
   }, [onDeleteOrderLines, showToast]);
 
@@ -46,7 +47,7 @@ export default function MobileOrderDetailView({
         showToast('Statut mis à jour', 'success');
       }
     } catch (error) {
-      showToast('Erreur lors de la mise à jour', 'error');
+      showApiError(error, showToast, 'Erreur lors de la mise à jour');
     }
   }, [onStatusUpdate, showToast]);
 

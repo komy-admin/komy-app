@@ -7,6 +7,7 @@ import { navigationEvents } from '~/lib/navigation-events';
 import { Table } from "~/types/table.types";
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { RoomTabsHeader } from '~/components/Service/RoomTabsHeader';
 import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
 import { ActionConfirmModal } from '~/components/Service/ActionConfirmModal';
@@ -344,7 +345,7 @@ export default function ServicePage() {
     try {
       await updateOrder(selectedOrderId, { note });
     } catch (error) {
-      showToast('Erreur lors de la sauvegarde de la note', 'error');
+      showApiError(error, showToast, 'Erreur lors de la sauvegarde de la note');
     }
   }, [selectedOrderId, updateOrder, showToast]);
 

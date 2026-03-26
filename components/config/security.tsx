@@ -175,8 +175,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
       await authApiService.sendTwoFactorEmailCode();
       setEmailCooldown(30);
       showToast('Code envoyé par email', 'success');
-    } catch {
-      showToast('Erreur lors de l\'envoi', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de l\'envoi');
     } finally {
       setIsSendingEmail(false);
     }
@@ -486,8 +486,8 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
     try {
       const data = await authApiService.getDevices();
       setDevices(data);
-    } catch {
-      showToast('Impossible de charger les appareils', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de charger les appareils');
     } finally {
       setIsLoading(false);
     }
@@ -499,8 +499,8 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
       await authApiService.revokeDevice(deviceId);
       setDevices(prev => prev.filter(d => d.id !== deviceId));
       showToast('Appareil supprimé', 'success');
-    } catch {
-      showToast('Impossible de déconnecter l\'appareil', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de déconnecter l\'appareil');
     } finally {
       setRevokingId(null);
     }

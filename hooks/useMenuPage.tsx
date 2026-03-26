@@ -13,6 +13,7 @@ import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
 import { formatPrice, getContrastColor, sortActiveFirst } from '~/lib/utils';
 import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 // ============================================================
 // Hook principal — logique métier de la page Menu admin
@@ -86,8 +87,8 @@ export function useMenuPage() {
         showToast('Article créé avec succès', 'success');
       }
       handleCloseItemModal();
-    } catch (err) {
-      showToast("Erreur lors de la sauvegarde de l'article", 'error');
+    } catch (error) {
+      showApiError(error, showToast, "Erreur lors de la sauvegarde de l'article");
     }
   }, [itemTypes, updateMenuItem, createMenuItem, showToast, handleCloseItemModal]);
 
@@ -104,8 +105,8 @@ export function useMenuPage() {
     try {
       await deleteMenuItem(itemToDelete.id);
       showToast('Article supprimé avec succès', 'success');
-    } catch (err) {
-      showToast("Erreur lors de la suppression de l'article", 'error');
+    } catch (error) {
+      showApiError(error, showToast, "Erreur lors de la suppression de l'article");
     } finally {
       setIsDeleting(false);
       setIsDeleteItemModalVisible(false);
@@ -122,8 +123,8 @@ export function useMenuPage() {
     try {
       await toggleItemStatus(id);
       showToast('Statut modifié avec succès', 'success');
-    } catch (err) {
-      showToast('Erreur lors de la modification du statut', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la modification du statut');
     }
   }, [toggleItemStatus, showToast]);
 
@@ -154,8 +155,8 @@ export function useMenuPage() {
     try {
       await updateMenu(id, { isActive: !menu.isActive });
       showToast(`Menu ${menu.isActive ? 'désactivé' : 'activé'} avec succès`, 'success');
-    } catch (err) {
-      showToast('Erreur lors de la modification du statut', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la modification du statut');
     }
   }, [allMenus, updateMenu, showToast]);
 
@@ -210,9 +211,9 @@ export function useMenuPage() {
 
       showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
       handleCloseMenuModal();
-    } catch (err) {
-      showToast('Erreur lors de la sauvegarde du menu', 'error');
-      throw err;
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la sauvegarde du menu');
+      throw error;
     }
   }, [itemTypes, updateMenuBulk, createMenuBulk, showToast, handleCloseMenuModal]);
 
@@ -229,8 +230,8 @@ export function useMenuPage() {
     try {
       await deleteMenu(menuToDelete.id);
       showToast('Menu supprimé avec succès', 'success');
-    } catch (err) {
-      showToast('Erreur lors de la suppression du menu', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la suppression du menu');
     } finally {
       setIsDeletingMenu(false);
       setIsDeleteMenuModalVisible(false);

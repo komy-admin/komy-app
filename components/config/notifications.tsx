@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, ScrollView, Switch, TouchableOpacity
 import { Clock, Check, Bell } from 'lucide-react-native';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 type TabType = 'alerts';
 
@@ -120,7 +121,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
       setHasChanges(false);
       showToast('Configuration sauvegardée avec succès', 'success');
     } catch (error) {
-      showToast('Impossible de sauvegarder la configuration', 'error');
+      showApiError(error, showToast, 'Impossible de sauvegarder la configuration');
     }
   };
 

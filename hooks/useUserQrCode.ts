@@ -32,6 +32,7 @@ import { Share, Clipboard, Platform } from 'react-native';
 import { useUsers } from './useRestaurant';
 import { useToast } from '~/components/ToastProvider';
 import { User } from '~/types/user.types';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 interface UseUserQrCodeReturn {
   /** QR token string */
@@ -92,7 +93,7 @@ export const useUserQrCode = (): UseUserQrCodeReturn => {
         setMagicLink(`komy://auth/qr-login?token=${qrToken}`);
       }
     } catch (error) {
-      showToast('Erreur lors de la récupération du QR code', 'error');
+      showApiError(error, showToast, 'Erreur lors de la récupération du QR code');
       throw error;
     } finally {
       setLoading(false);
@@ -157,7 +158,7 @@ export const useUserQrCode = (): UseUserQrCodeReturn => {
       setMagicLink(null);
       showToast('QR code révoqué avec succès', 'success');
     } catch (error) {
-      showToast('Erreur lors de la révocation du QR code', 'error');
+      showApiError(error, showToast, 'Erreur lors de la révocation du QR code');
       throw error;
     } finally {
       setLoading(false);

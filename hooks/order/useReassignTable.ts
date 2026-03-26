@@ -3,6 +3,7 @@ import { Order } from '~/types/order.types';
 import { Room } from '~/types/room.types';
 import { Table } from '~/types/table.types';
 import { ToastType } from '~/components/ui/toast';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 interface UseReassignTableProps {
   currentRoom: Room | null;
@@ -62,7 +63,7 @@ export function useReassignTable({
       setShowReassignInline(false);
       showToast('Table réassignée avec succès', 'success');
     } catch (error) {
-      showToast('Erreur lors de la réassignation', 'error');
+      showApiError(error, showToast, 'Erreur lors de la réassignation');
     } finally {
       // Délai pour laisser le WebSocket mettre à jour le store
       setTimeout(() => {

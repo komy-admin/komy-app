@@ -9,6 +9,7 @@ import { Status } from '~/types/status.enum';
 import { OrderLineType, OrderLine } from '~/types/order-line.types';
 import { ArrowLeft, Trash2, CheckCircle, Plus } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { useOrders, useMenu, useOrderLines } from '~/hooks/useRestaurant';
 import * as Haptics from 'expo-haptics';
 
@@ -72,7 +73,7 @@ export default function OrderDetailPage() {
       showToast('Commande supprimée avec succès', 'success');
       router.replace('/(server)');
     } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression');
     }
   }, [order, deleteOrder, showToast]);
 
@@ -108,7 +109,7 @@ export default function OrderDetailPage() {
       setShowTerminateModal(false);
       router.replace('/(server)');
     } catch (error) {
-      showToast('Erreur lors de la terminaison', 'error');
+      showApiError(error, showToast, 'Erreur lors de la terminaison');
     }
   }, [order, updateOrderStatus, showToast]);
 
@@ -128,7 +129,7 @@ export default function OrderDetailPage() {
       // Si toutes les lignes sont supprimées, la commande sera supprimée automatiquement
       // et la redirection se fera via le useEffect
     } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression');
     }
   }, [deleteOrderLine, deleteOrderLines, showToast]);
 
@@ -164,7 +165,7 @@ export default function OrderDetailPage() {
 
       showToast('Statut mis à jour avec succès', 'success');
     } catch (error) {
-      showToast('Erreur lors de la mise à jour', 'error');
+      showApiError(error, showToast, 'Erreur lors de la mise à jour');
     }
   }, [order, updateOrderStatus, showToast]);
 

@@ -6,6 +6,7 @@ import { Status } from '~/types/status.enum';
 import { useToast } from '~/components/ToastProvider';
 import { useOrders, useTables, useOrderLines } from '~/hooks/useRestaurant';
 import * as Haptics from 'expo-haptics';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 export type ServiceMode = 'overview' | 'detail' | 'ordering';
 
@@ -174,7 +175,7 @@ export const useMobileService = () => {
 
       return false;
     } catch (error) {
-      showToast('Erreur lors de la sauvegarde', 'error');
+      showApiError(error, showToast, 'Erreur lors de la sauvegarde');
       return false;
     } finally {
       setState(prev => ({ ...prev, isProcessing: false }));
@@ -229,7 +230,7 @@ export const useMobileService = () => {
 
       return false;
     } catch (error) {
-      showToast('Erreur lors de la mise à jour du statut', 'error');
+      showApiError(error, showToast, 'Erreur lors de la mise à jour du statut');
       return false;
     }
   }, [updateOrderStatus, showToast]);
@@ -251,7 +252,7 @@ export const useMobileService = () => {
 
       return true;
     } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression');
       return false;
     }
   }, [deleteOrder, showToast, setMode]);
@@ -268,7 +269,7 @@ export const useMobileService = () => {
       }
       return true;
     } catch (error) {
-      showToast('Erreur lors de la suppression', 'error');
+      showApiError(error, showToast, 'Erreur lors de la suppression');
       return false;
     }
   }, [deleteOrderLine, deleteOrderLines, showToast]);
