@@ -265,21 +265,12 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
 
         const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
 
-        // Handle auth-specific 401 scenarios (session expiry is handled globally in base.api.ts)
+        // Auth-specific 401 (session expiry + device revoked handled globally in base.api.ts)
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
-          // Auth token invalid - need full re-login (PIN/set-pin endpoints use authToken)
+          // Auth token invalid — need full re-login (PIN/set-pin endpoints use authToken)
           if (errorCode === 'AUTH_TOKEN_INVALID' || errorCode === 'AUTH_TOKEN_MISSING') {
-            return Promise.reject(error);
-          }
-
-          // Device revoked - force full logout (clear authToken + Redux state)
-          if (errorCode === 'DEVICE_REVOKED') {
-            const { store } = await import('~/store');
-            const { logout: logoutAction } = await import('~/store/slices/session.slice');
-            await this.logout();
-            store.dispatch(logoutAction());
             return Promise.reject(error);
           }
         }
