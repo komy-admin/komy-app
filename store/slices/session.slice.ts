@@ -101,13 +101,8 @@ export const logout = createAsyncThunk(
   'session/logout',
   async () => {
     try {
-      // Remove authToken from storage (dual token system)
       await storageService.removeItem('authToken');
-      // TODO [legacy]: Remove the following legacy cleanup once dual token migration is complete (Q1 2025)
-      await storageService.removeItem('token');
-      await storageService.removeItem('userProfile');
     } catch (error) {
-      // Storage cleanup errors are non-critical, but log for debugging purposes
       console.error('Error during storage cleanup in logout:', error);
     }
   }

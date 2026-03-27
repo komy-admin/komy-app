@@ -123,6 +123,7 @@ export abstract class BaseApiService<T> {
       (response) => response,
       (error) => {
         const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
+        const errorMessage = error.response?.data?.error?.message || error.response?.data?.message;
 
         if (error.response?.status === 401) {
           // Auth token expired/invalid or device/QR revoked → full logout + redirect login
@@ -131,21 +132,20 @@ export abstract class BaseApiService<T> {
             if (!isSessionClearing) {
               isSessionClearing = true;
               store.dispatch(logout());
-              const message = errorCode === 'DEVICE_REVOKED'
-                ? 'Cet appareil a été déconnecté.'
-                : 'Votre session a expiré, veuillez vous reconnecter.';
-              globalToast.show(message, 'error');
+              globalToast.show(errorMessage, 'error');
               setTimeout(() => { isSessionClearing = false; }, 2000);
             }
             return Promise.reject(new SessionExpiredError());
           }
 
           // Session expiry → redirect to PIN verification (keep authToken)
-          if (SESSION_EXPIRY_CODES.includes(errorCode)) {
+          // Only handle if we actually have a session (avoids catching login-2fa token expiry)
+          const currentState = store.getState();
+          if (SESSION_EXPIRY_CODES.includes(errorCode) && currentState.session.sessionToken) {
             if (!isSessionClearing) {
               isSessionClearing = true;
               store.dispatch(sessionActions.expireSession());
-              globalToast.show('Session expirée, veuillez renseigner votre pin', 'warning');
+              globalToast.show(errorMessage, 'warning');
               setTimeout(() => { isSessionClearing = false; }, 2000);
             }
             return Promise.reject(new SessionExpiredError());

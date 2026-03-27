@@ -2,7 +2,6 @@ import { QRLoginResponse } from '@/types/user.qr.types';
 import { BaseApiService } from './base.api';
 import type {
   LoginCredentials,
-  RegisterCredentials,
   ForgotCredentials,
   ResetCredentials,
   AuthResponse,
@@ -13,27 +12,11 @@ import type {
   Enable2FAResponse,
   TrustedDevice,
 } from '~/types/auth.types';
-import { User, UserProfile } from '~/types/user.types';
+import { User } from '~/types/user.types';
 import { extractApiError } from '~/lib/apiErrorHandler';
 
 export class AuthApiService extends BaseApiService<AuthResponse> {
   protected endpoint = '/auth';
-
-  private async setToken(token: string): Promise<void> {
-    await this.storage.setItem('token', token);
-  }
-
-  private async setUserProfile(userProfile: UserProfile): Promise<void> {
-    await this.storage.setItem('userProfile', userProfile);
-  }
-
-  private async removeToken(): Promise<void> {
-    await this.storage.removeItem('token');
-  }
-
-  private async removeUserProfile(): Promise<void> {
-    await this.storage.removeItem('userProfile');
-  }
 
   async qrLogin(token: string): Promise<QRLoginResponse> {
     const { data } = await this.axiosInstance.post<QRLoginResponse>(
@@ -66,16 +49,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
-  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    const { data } = await this.axiosInstance.post<AuthResponse>(
-      `${this.endpoint}/register`,
-      credentials
-    );
-    await this.setToken(data.token.token);
-    await this.setUserProfile(data.profil);
-    return data;
-  }
-
   async forgotPassword(credentials: ForgotCredentials): Promise<AuthResponse> {
     const { data } = await this.axiosInstance.post<AuthResponse>(
       `${this.endpoint}/forgot-password`,
@@ -97,8 +70,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
       `${this.endpoint}/setup-account`,
       credentials
     );
-    await this.setToken(data.token.token);
-    await this.setUserProfile(data.profil);
     return data;
   }
 
@@ -237,14 +208,7 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
   }
 
   async logout(): Promise<void> {
-    try {
-      await this.axiosInstance.post(`${this.endpoint}/logout`);
-    } catch {
-      // Server-side cleanup failed — proceed with local cleanup
-    } finally {
-      await this.removeToken();
-      await this.removeUserProfile();
-    }
+    await this.axiosInstance.post(`${this.endpoint}/logout`);
   }
 
 }

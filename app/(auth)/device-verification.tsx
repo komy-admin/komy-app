@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { extractApiError } from '~/lib/apiErrorHandler';
+import { SessionExpiredError } from '~/api/base.api';
 
 export default function DeviceVerificationScreen() {
   const [code, setCode] = useState('');
@@ -76,6 +77,8 @@ export default function DeviceVerificationScreen() {
       setEmailCooldown(60);
       showToast('Code envoyé par email', 'success');
     } catch (err) {
+      if (err instanceof SessionExpiredError) return;
+
       const info = extractApiError(err);
       if (info.status === 401) {
         showToast('Session expirée. Veuillez vous reconnecter.', 'error');
@@ -106,8 +109,10 @@ export default function DeviceVerificationScreen() {
 
       showToast('Erreur de configuration. Contactez un administrateur.', 'error');
     } catch (err) {
+      if (err instanceof SessionExpiredError) return;
+
       const info = extractApiError(err);
-      if (info.status === 401 && info.code === 'SESSION_EXPIRED') {
+      if (info.status === 401) {
         showToast('Session expirée. Veuillez vous reconnecter.', 'error');
         store.dispatch(sessionActions.clearLogin2FAState());
         router.replace('/login');
