@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { useSyncExternalStore } from 'react';
 import { ToastType, ToastData, ToastStack, DEFAULT_DURATIONS } from './ui/toast';
 
@@ -36,9 +36,18 @@ function createToastStore() {
   };
 }
 
+/** Singleton — partagé entre le Provider React et l'accès global (API interceptors) */
+const toastStore = createToastStore();
+
+/** Accès global au toast depuis l'extérieur de l'arbre React (ex: axios interceptors) */
+export const globalToast = {
+  show: (message: string, type: ToastType = 'info', duration?: number) => {
+    toastStore.add(message, type, duration ?? DEFAULT_DURATIONS[type]);
+  },
+};
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const storeRef = useRef(createToastStore());
-  const store = storeRef.current;
+  const store = toastStore;
 
   const toasts = useSyncExternalStore(store.subscribe, store.getSnapshot);
 

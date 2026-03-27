@@ -209,14 +209,20 @@ const sessionSlice = createSlice({
       state.isInAppLock = false;
     },
 
-    // Clear session token (but keep authToken)
-    clearSessionToken: (state) => {
+    // Session expired — clear session + force re-init after PIN
+    expireSession: (state) => {
+      // Clear session (keep authToken for PIN re-verification)
       state.sessionToken = null;
       state.sessionExpiresAt = null;
       state.isAuthenticated = false;
       state.isPinVerified = false;
-      state.requiresPin = true;  // Need PIN again
+      state.requiresPin = true;
       state.isInAppLock = true;
+      // Reset initialization so data reloads after PIN
+      state.appInitialized = false;
+      state.isAppInitializing = false;
+      state.initializationProgress = {};
+      state.progressPercentage = 0;
     },
 
     // Called when app starts with stored authToken

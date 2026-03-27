@@ -81,15 +81,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
-  async refreshToken(): Promise<AuthResponse> {
-    const { data } = await this.axiosInstance.post<AuthResponse>(
-      `${this.endpoint}/refresh`
-    );
-    await this.setToken(data.token.token);
-    await this.setUserProfile(data.profil);
-    return data;
-  }
-
   async forgotPassword(credentials: ForgotCredentials): Promise<AuthResponse> {
     const { data } = await this.axiosInstance.post<AuthResponse>(
       `${this.endpoint}/forgot-password`,
@@ -272,40 +263,14 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
           return Promise.reject(error);
         }
 
-        // Support both new format ({ error: { code } }) and legacy format ({ code })
         const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
 
-        // Don't try to refresh on PIN-related or login 2FA endpoints
-        const isPinEndpoint = originalRequest.url?.includes('/verify-pin') ||
-                              originalRequest.url?.includes('/set-pin') ||
-                              originalRequest.url?.includes('/confirm-pin') ||
-                              originalRequest.url?.includes('/change-password') ||
-                              originalRequest.url?.includes('/change-pin') ||
-                              originalRequest.url?.includes('/verify-login-2fa') ||
-                              originalRequest.url?.includes('/send-login-2fa-email') ||
-                              originalRequest.url?.includes('/auth/logout');
-
-        // Don't refresh on PIN errors (business 401, not auth 401)
-        const isPinError = error.response?.status === 401 &&
-                          (errorCode === 'INVALID_PIN' || errorCode === 'PIN_LOCKED');
-
-        if (isPinEndpoint || isPinError) {
-          return Promise.reject(error);
-        }
-
-        // Handle different 401 scenarios
+        // Handle auth-specific 401 scenarios (session expiry is handled globally in base.api.ts)
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
-          // Session token expired - need PIN verification
-          if (errorCode === 'SESSION_TOKEN_INVALID' || errorCode === 'SESSION_TOKEN_MISSING') {
-            // The UI will handle redirecting to PIN verification
-            return Promise.reject(error);
-          }
-
-          // Auth token invalid - need full re-login
+          // Auth token invalid - need full re-login (PIN/set-pin endpoints use authToken)
           if (errorCode === 'AUTH_TOKEN_INVALID' || errorCode === 'AUTH_TOKEN_MISSING') {
-            // The UI will handle redirecting to login
             return Promise.reject(error);
           }
 
@@ -317,28 +282,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
             store.dispatch(logoutAction());
             return Promise.reject(error);
           }
-
-          // Legacy token refresh attempt (for backward compatibility)
-          try {
-            const response = await this.refreshToken();
-            const newToken = response.token.token;
-
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            }
-
-            return this.axiosInstance(originalRequest);
-          } catch (refreshError) {
-            // Let the UI handle logout
-            await this.logout();
-            return Promise.reject(refreshError);
-          }
-        }
-
-        // Handle rate limiting (429)
-        if (error.response?.status === 429) {
-          // Rate limit exceeded - handled by UI
-          return Promise.reject(error);
         }
 
         return Promise.reject(error);

@@ -4,14 +4,13 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { SplashScreen } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as React from 'react';
-import { Provider, useDispatch, useSelector } from 'react-redux';
+import { Provider, useSelector } from 'react-redux';
 import { PortalHost } from '@rn-primitives/portal';
 import { store, RootState } from '~/store';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppState, AppStateStatus, Platform, Keyboard, Dimensions, TouchableWithoutFeedback, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SocketProvider } from '~/hooks/useSocket/SockerProvider';
-import { storageService } from '~/lib/storageService';
 import { sessionActions, logout } from '~/store';
 import { selectAuthInitialized } from '~/store/slices/session.slice';
 import { useAppDispatch } from '~/store/hooks';
@@ -65,22 +64,17 @@ function AuthenticationGate() {
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   React.useEffect(() => {
-    // Protection simple avec Redux state
+    // Si déjà initialisé (ex: remount après AppInitializer switch), synchroniser le state local
     if (authInitialized) {
+      setIsInitialized(true);
       return;
     }
 
     const initializeAuth = async () => {
       try {
-        // Initialize session to check for stored authToken
-        const sessionStatus = await sessionService.initialize();
-
-        if (!sessionStatus.requireLogin) {
-          // Marquer comme initialisé IMMÉDIATEMENT
-          dispatch(sessionActions.setAuthInitialized(true));
-        }
+        await sessionService.initialize();
       } catch (error) {
-        console.error('❌ [AuthGate] Erreur lors de l\'initialisation auth:', error);
+        console.error('[AuthGate] Auth initialization error:', error);
       } finally {
         dispatch(sessionActions.setAuthInitialized(true));
         setIsInitialized(true);
@@ -217,6 +211,7 @@ function AuthenticationGate() {
         return;
       }
     }
+
   }, [isInitialized, isLoading, authToken, sessionToken, isAuthenticated, userProfile, segments, router, dispatch, requiresPin, requiresPinSetup, isPinVerified]);
 
   return null;

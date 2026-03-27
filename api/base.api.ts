@@ -3,8 +3,20 @@ import { Platform } from "react-native";
 import { StorageInterface, storageService } from "~/lib/storageService";
 import { getDeviceId } from "~/lib/deviceId";
 import { getDeviceInfoJson } from "~/lib/deviceInfo";
-import { store } from "~/store";
-import { logout } from "~/store";
+import { store, logout, sessionActions } from "~/store";
+import { globalToast } from "~/components/ToastProvider";
+
+/** Codes 401 indiquant une expiration de session (envoyés par auth_middleware backend) */
+const SESSION_EXPIRY_CODES = ['UNAUTHORIZED', 'TOKEN_INVALID_OR_EXPIRED', 'SESSION_EXPIRED'];
+
+/** Erreur silencieuse : les catch blocks la propagent mais aucun toast n'est affiché */
+export class SessionExpiredError extends Error {
+  readonly silent = true;
+  constructor() { super('Session expired'); }
+}
+
+/** Flag anti-rebond : évite N dispatches si N requêtes parallèles reçoivent 401 */
+let isSessionClearing = false;
 
 const DEV_API_URL = Platform.select({
   android: `${process.env.EXPO_PUBLIC_API_URL}/api`,
@@ -106,15 +118,31 @@ export abstract class BaseApiService<T> {
       }
     );
 
-    // Response interceptor to handle QR token revocation
+    // Response interceptor to handle 401 errors
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Check for QR token revocation (supports both new and legacy formats)
         const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
-        if (error.response?.status === 401 && errorCode === 'QR_TOKEN_REVOKED') {
-          store.dispatch(logout());
+
+        if (error.response?.status === 401) {
+          // QR token revocation → full logout (clear authToken + redirect login)
+          if (errorCode === 'QR_TOKEN_REVOKED') {
+            store.dispatch(logout());
+            return Promise.reject(error);
+          }
+
+          // Session expiry → redirect to PIN verification (keep authToken)
+          if (SESSION_EXPIRY_CODES.includes(errorCode)) {
+            if (!isSessionClearing) {
+              isSessionClearing = true;
+              store.dispatch(sessionActions.expireSession());
+              globalToast.show('Session expirée, veuillez renseigner votre pin', 'warning');
+              setTimeout(() => { isSessionClearing = false; }, 2000);
+            }
+            return Promise.reject(new SessionExpiredError());
+          }
         }
+
         return Promise.reject(error);
       }
     );

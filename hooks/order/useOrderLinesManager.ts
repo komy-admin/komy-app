@@ -17,7 +17,7 @@ import { useOrderLines } from "~/hooks/useOrderLines";
 import { useOrders } from "~/hooks/useOrders";
 import { useToast } from "~/components/ToastProvider";
 import { usePayments } from "~/hooks/usePayments";
-import { extractApiError } from "~/lib/apiErrorHandler";
+import { extractApiError, showApiError } from "~/lib/apiErrorHandler";
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -486,7 +486,9 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       setOrderLines([...initialOrderLines]);
 
       const info = extractApiError(error);
-      if (
+      if (info.silent) {
+        // Already handled globally (session expiry)
+      } else if (
         info.code === 'VALIDATION_ERROR' &&
         (info.message.includes("allocation") || info.message.includes("payé") || info.message.includes("payment"))
       ) {
@@ -498,7 +500,9 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
         showToast(info.message || "Erreur lors de la sauvegarde", "error");
       }
 
-      onErrorRef.current?.(error as Error);
+      if (!info.silent) {
+        onErrorRef.current?.(error as Error);
+      }
       throw error;
     } finally {
       setIsProcessing(false);

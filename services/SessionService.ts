@@ -46,41 +46,35 @@ class SessionService {
    * If 2FA required on new device, dispatches login2FA state
    */
   async login(loginId: string, password: string): Promise<LoginResponse> {
-    try {
-      const response = await authApiService.login({ loginId, password });
+    const response = await authApiService.login({ loginId, password });
 
-      // Check if 2FA is required for this device
-      if (response.requiresTwoFactor && response.loginToken) {
-        store.dispatch(sessionActions.setLogin2FARequired({
-          loginToken: response.loginToken,
-          methods: response.twoFactorMethods || { totp: false, email: false },
-        }));
-        return response;
-      }
-
-      // Store the long-lived authToken
-      if (response.authToken) {
-        await storageService.setItem('authToken', response.authToken);
-
-        // Always store authToken in Redux
-        store.dispatch(sessionActions.setAuthToken({
-          authToken: response.authToken,
-          requirePin: response.requirePin || false
-        }));
-
-        // Additionally set PIN setup flag if needed
-        if (response.requirePinSetup) {
-          store.dispatch(sessionActions.setPinRequired({
-            requirePin: false,
-            requirePinSetup: true
-          }));
-        }
-      }
-
+    // Check if 2FA is required for this device
+    if (response.requiresTwoFactor && response.loginToken) {
+      store.dispatch(sessionActions.setLogin2FARequired({
+        loginToken: response.loginToken,
+        methods: response.twoFactorMethods || { totp: false, email: false },
+      }));
       return response;
-    } catch (error) {
-      throw error;
     }
+
+    // Store the long-lived authToken
+    if (response.authToken) {
+      await storageService.setItem('authToken', response.authToken);
+
+      store.dispatch(sessionActions.setAuthToken({
+        authToken: response.authToken,
+        requirePin: response.requirePin || false
+      }));
+
+      if (response.requirePinSetup) {
+        store.dispatch(sessionActions.setPinRequired({
+          requirePin: false,
+          requirePinSetup: true
+        }));
+      }
+    }
+
+    return response;
   }
 
   /**
@@ -88,40 +82,34 @@ class SessionService {
    * Called after login returns requiresTwoFactor
    */
   async verifyLogin2FA(code: string, via?: 'totp' | 'email'): Promise<LoginResponse> {
-    try {
-      const state = store.getState();
-      const loginToken = state.session.loginToken;
+    const state = store.getState();
+    const loginToken = state.session.loginToken;
 
-      if (!loginToken) {
-        throw new Error('No login token available');
-      }
-
-      const response = await authApiService.verifyLogin2FA(code, loginToken, via);
-
-      // Clear 2FA state
-      store.dispatch(sessionActions.clearLogin2FAState());
-
-      // Continue normal login flow (same as login success)
-      if (response.authToken) {
-        await storageService.setItem('authToken', response.authToken);
-
-        store.dispatch(sessionActions.setAuthToken({
-          authToken: response.authToken,
-          requirePin: response.requirePin || false
-        }));
-
-        if (response.requirePinSetup) {
-          store.dispatch(sessionActions.setPinRequired({
-            requirePin: false,
-            requirePinSetup: true
-          }));
-        }
-      }
-
-      return response;
-    } catch (error) {
-      throw error;
+    if (!loginToken) {
+      throw new Error('No login token available');
     }
+
+    const response = await authApiService.verifyLogin2FA(code, loginToken, via);
+
+    store.dispatch(sessionActions.clearLogin2FAState());
+
+    if (response.authToken) {
+      await storageService.setItem('authToken', response.authToken);
+
+      store.dispatch(sessionActions.setAuthToken({
+        authToken: response.authToken,
+        requirePin: response.requirePin || false
+      }));
+
+      if (response.requirePinSetup) {
+        store.dispatch(sessionActions.setPinRequired({
+          requirePin: false,
+          requirePinSetup: true
+        }));
+      }
+    }
+
+    return response;
   }
 
   /**
@@ -130,62 +118,52 @@ class SessionService {
    * For quick-created users (skipPin=true), completes full authentication immediately
    */
   async qrLogin(qrToken: string): Promise<QRLoginResponse> {
-    try {
-      const response = await authApiService.qrLogin(qrToken);
+    const response = await authApiService.qrLogin(qrToken);
 
-      // Store the authToken (same as regular login)
-      if (response.authToken) {
-        await storageService.setItem('authToken', response.authToken);
+    if (response.authToken) {
+      await storageService.setItem('authToken', response.authToken);
 
-        // Check if user can skip PIN (quick-created users)
-        if (response.skipPin && response.sessionToken) {
-          // Store sessionToken persistently for skip-PIN users
-          await storageService.setItem('sessionToken', response.sessionToken);
+      // Quick-created users (skipPin) get full auth immediately
+      if (response.skipPin && response.sessionToken) {
+        await storageService.setItem('sessionToken', response.sessionToken);
 
-          // Set full authentication state in Redux
-          store.dispatch(sessionActions.setAuthToken({
-            authToken: response.authToken,
-            requirePin: false
-          }));
-
-          store.dispatch(sessionActions.setSessionToken({
-            sessionToken: response.sessionToken,
-            expiresIn: response.expiresIn ?? 0,
-            user: response.user
-          }));
-
-          // Store user info
-          if (response.user) {
-            store.dispatch(sessionActions.updateUser(response.user));
-          }
-
-          return response;
-        }
-
-        // Standard flow: Set auth state in Redux
         store.dispatch(sessionActions.setAuthToken({
           authToken: response.authToken,
-          requirePin: response.requirePinVerification || false
+          requirePin: false
         }));
 
-        // Handle PIN setup flag if needed
-        if (response.requirePinSetup) {
-          store.dispatch(sessionActions.setPinRequired({
-            requirePin: false,
-            requirePinSetup: true
-          }));
-        }
+        store.dispatch(sessionActions.setSessionToken({
+          sessionToken: response.sessionToken,
+          expiresIn: response.expiresIn ?? 0,
+          user: response.user
+        }));
 
-        // Store user info
         if (response.user) {
           store.dispatch(sessionActions.updateUser(response.user));
         }
+
+        return response;
       }
 
-      return response;
-    } catch (error) {
-      throw error;
+      // Standard flow: requires PIN verification
+      store.dispatch(sessionActions.setAuthToken({
+        authToken: response.authToken,
+        requirePin: response.requirePinVerification || false
+      }));
+
+      if (response.requirePinSetup) {
+        store.dispatch(sessionActions.setPinRequired({
+          requirePin: false,
+          requirePinSetup: true
+        }));
+      }
+
+      if (response.user) {
+        store.dispatch(sessionActions.updateUser(response.user));
+      }
     }
+
+    return response;
   }
 
   /**
@@ -193,60 +171,48 @@ class SessionService {
    * Uses authToken in headers
    */
   async verifyPin(pin: string): Promise<PinVerificationResponse> {
-    try {
-      const state = store.getState();
-      const authToken = state.session.authToken;
+    const state = store.getState();
+    const authToken = state.session.authToken;
 
-      if (!authToken) {
-        throw new Error('No auth token available. Please login first.');
-      }
-
-      // Call verify-pin with authToken in headers
-      const response = await authApiService.verifyPinWithAuthToken(pin, authToken);
-
-      // Store sessionToken in memory only (Redux)
-      if (response.sessionToken) {
-        store.dispatch(sessionActions.setSessionToken({
-          sessionToken: response.sessionToken,
-          expiresIn: response.expiresIn,
-          user: response.user
-        }));
-      }
-
-      return response;
-    } catch (error) {
-      throw error;
+    if (!authToken) {
+      throw new Error('No auth token available. Please login first.');
     }
+
+    const response = await authApiService.verifyPinWithAuthToken(pin, authToken);
+
+    if (response.sessionToken) {
+      store.dispatch(sessionActions.setSessionToken({
+        sessionToken: response.sessionToken,
+        expiresIn: response.expiresIn,
+        user: response.user
+      }));
+    }
+
+    return response;
   }
 
   /**
    * Set PIN for first time
    */
   async setPin(pin: string): Promise<PinVerificationResponse> {
-    try {
-      const state = store.getState();
-      const authToken = state.session.authToken;
+    const state = store.getState();
+    const authToken = state.session.authToken;
 
-      if (!authToken) {
-        throw new Error('No auth token available');
-      }
-
-      // Call set-pin with authToken in headers
-      const response = await authApiService.setPinWithAuthToken(pin, authToken);
-
-      // Store sessionToken in memory only
-      if (response.sessionToken) {
-        store.dispatch(sessionActions.setSessionToken({
-          sessionToken: response.sessionToken,
-          expiresIn: response.expiresIn,
-          user: response.user
-        }));
-      }
-
-      return response;
-    } catch (error) {
-      throw error;
+    if (!authToken) {
+      throw new Error('No auth token available');
     }
+
+    const response = await authApiService.setPinWithAuthToken(pin, authToken);
+
+    if (response.sessionToken) {
+      store.dispatch(sessionActions.setSessionToken({
+        sessionToken: response.sessionToken,
+        expiresIn: response.expiresIn,
+        user: response.user
+      }));
+    }
+
+    return response;
   }
 
   /**
@@ -264,7 +230,7 @@ class SessionService {
 
     // Check if session is expired
     if (sessionExpiresAt && new Date() > new Date(sessionExpiresAt)) {
-      store.dispatch(sessionActions.clearSessionToken());
+      store.dispatch(sessionActions.expireSession());
       throw new Error('Session expired. Please verify PIN again.');
     }
 
@@ -317,31 +283,23 @@ class SessionService {
    * Used when session expires or user backgrounds app
    */
   clearSession(): void {
-    store.dispatch(sessionActions.clearSessionToken());
-    store.dispatch(sessionActions.setAppInitialized(false));
+    store.dispatch(sessionActions.expireSession());
   }
 
   /**
    * Full logout - clear everything
    */
   async logout(): Promise<void> {
+    await storageService.removeItem('authToken');
+    await storageService.removeItem('sessionToken');
+
     try {
-      // Clear stored authToken
-      await storageService.removeItem('authToken');
-      await storageService.removeItem('sessionToken');
-
-      // Optional: notify backend
-      try {
-        await authApiService.logout();
-      } catch (error) {
-        // Proceed with local cleanup even if API call fails
-      }
-
-      // Clear Redux state
-      store.dispatch(sessionActions.logout());
-    } catch (error) {
-      throw error;
+      await authApiService.logout();
+    } catch {
+      // Proceed with local cleanup even if API call fails
     }
+
+    store.dispatch(sessionActions.logout());
   }
 
   /**
