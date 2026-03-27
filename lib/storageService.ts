@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 export interface StorageInterface {
@@ -23,20 +23,19 @@ class WebStorage implements StorageInterface {
 
 class MobileStorage implements StorageInterface {
   async setItem(key: string, value: string): Promise<void> {
-    await AsyncStorage.setItem(key, value);
+    await SecureStore.setItemAsync(key, value);
   }
 
   async getItem(key: string): Promise<string | null> {
-    return await AsyncStorage.getItem(key);
+    return await SecureStore.getItemAsync(key);
   }
 
   async removeItem(key: string): Promise<void> {
-    await AsyncStorage.removeItem(key);
+    await SecureStore.deleteItemAsync(key);
   }
 }
 
 const createStorage = (): StorageInterface => {
-  console.log('Detected Platform: ', Platform.OS)
   if (Platform.OS === 'web') {
     return new WebStorage();
   }
