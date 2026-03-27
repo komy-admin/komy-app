@@ -146,20 +146,22 @@ export default function DeviceVerificationScreen() {
               </RNText>
             </View>
 
-            {/* Method selector when both are active */}
+            {/* Method selector */}
             {hasBoth && (
-              <View style={styles.methodSelector}>
+              <View style={styles.switchContainer}>
                 <Pressable
-                  style={[styles.methodTab, activeMethod === 'totp' && styles.methodTabActive]}
+                  style={[styles.switchOption, activeMethod === 'totp' && styles.switchOptionActive]}
                   onPress={() => { setActiveMethod('totp'); setCode(''); setError(false); }}
                 >
-                  <RNText style={[styles.methodTabText, activeMethod === 'totp' && styles.methodTabTextActive]}>Application</RNText>
+                  <RNText style={[styles.switchName, activeMethod === 'totp' && styles.switchNameActive]}>Application</RNText>
+                  <RNText style={[styles.switchSub, activeMethod === 'totp' && styles.switchSubActive]}>Authenticator</RNText>
                 </Pressable>
                 <Pressable
-                  style={[styles.methodTab, activeMethod === 'email' && styles.methodTabActive]}
+                  style={[styles.switchOption, activeMethod === 'email' && styles.switchOptionActive]}
                   onPress={() => { setActiveMethod('email'); setCode(''); setError(false); }}
                 >
-                  <RNText style={[styles.methodTabText, activeMethod === 'email' && styles.methodTabTextActive]}>Email</RNText>
+                  <RNText style={[styles.switchName, activeMethod === 'email' && styles.switchNameActive]}>Email</RNText>
+                  <RNText style={[styles.switchSub, activeMethod === 'email' && styles.switchSubActive]}>Code par email</RNText>
                 </Pressable>
               </View>
             )}
@@ -188,6 +190,8 @@ export default function DeviceVerificationScreen() {
                 autoFocus
                 error={error}
                 variant="light"
+                cellWidth={48}
+                cellHeight={56}
               />
             </View>
 
@@ -228,6 +232,47 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#E2E8F0',
   },
+  switchContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    padding: 4,
+    width: '100%',
+    marginBottom: 24,
+  },
+  switchOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  switchOptionActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  switchName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#9CA3AF',
+  },
+  switchNameActive: {
+    color: '#2A2E33',
+    fontWeight: '600',
+  },
+  switchSub: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#C4C9D1',
+    marginTop: 1,
+  },
+  switchSubActive: {
+    color: '#9CA3AF',
+  },
   contentContainer: {
     alignItems: 'center',
     width: '100%',
@@ -250,49 +295,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  methodSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    padding: 4,
-    width: '100%',
-    height: 48,
-    marginBottom: 24,
-  },
-  methodTab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 40,
-    borderRadius: 8,
-  },
-  methodTabActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  methodTabText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  methodTabTextActive: {
-    color: '#2A2E33',
-    fontWeight: '600',
-  },
   sendEmailButton: {
     width: '100%',
     height: 48,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
   },
   sendEmailButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: '#2A2E33',
   },
@@ -315,14 +330,14 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     width: '100%',
-    height: 56,
+    height: 48,
     backgroundColor: '#2A2E33',
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryButtonText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -334,17 +349,17 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     width: '100%',
-    height: 56,
+    height: 48,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: '#2A2E33',
   },

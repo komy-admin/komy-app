@@ -22,6 +22,8 @@ interface PinInputProps {
   secure?: boolean;
   keyboardType?: 'numeric' | 'number-pad';
   variant?: 'light' | 'dark';
+  cellWidth?: number;
+  cellHeight?: number;
 }
 
 export interface PinInputRef {
@@ -41,6 +43,8 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
   secure = true,
   keyboardType = 'number-pad',
   variant = 'light',
+  cellWidth,
+  cellHeight,
 }, ref) => {
   const isDark = variant === 'dark';
   const [focused, setFocused] = useState(false);
@@ -107,6 +111,8 @@ const PinInput = forwardRef<PinInputRef, PinInputProps>(({
               key={index}
               style={[
                 styles.box,
+                cellWidth != null && { width: cellWidth },
+                cellHeight != null && { height: cellHeight },
                 isDark && styles.boxDark,
                 isActive && (isDark ? styles.boxActiveDark : styles.boxActive),
                 error && (isDark ? styles.boxErrorDark : styles.boxError),
