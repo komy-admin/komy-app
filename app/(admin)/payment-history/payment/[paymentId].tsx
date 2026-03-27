@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, X, ChevronRight } from 'lucide-react-native'
@@ -15,7 +15,7 @@ import { useToast } from '~/components/ToastProvider'
 export default function PaymentDetailScreen() {
   const { paymentId } = useLocalSearchParams<{ paymentId: string }>()
   const router = useRouter()
-  const { getPaymentById, getAuditLogs, refundPayment, loading } = usePayments()
+  const { getPaymentById, getAuditLogs, refundPayment } = usePayments()
   const { showToast } = useToast()
   const [payment, setPayment] = useState<Payment | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
@@ -58,7 +58,7 @@ export default function PaymentDetailScreen() {
   }
 
   const handleReprint = () => {
-    Alert.alert('Réimprimer', 'Fonctionnalité à implémenter')
+    showToast('Fonctionnalité à implémenter', 'info')
   }
 
   const handleRefund = () => {
@@ -75,11 +75,7 @@ export default function PaymentDetailScreen() {
         refundMethod: method,
       })
 
-      // Afficher un message de succès
-      Alert.alert(
-        'Remboursement effectué',
-        `Le remboursement de ${(amount / 100).toFixed(2)}€ a été effectué avec succès`
-      )
+      showToast(`Remboursement de ${(amount / 100).toFixed(2)}€ effectué avec succès`, 'success')
 
       // Recharger le paiement pour voir les mises à jour
       const updatedPayment = await getPaymentById(payment.id)
@@ -94,14 +90,14 @@ export default function PaymentDetailScreen() {
   }
 
   const handleViewAudit = () => {
-    Alert.alert('Audit Trail', 'Fonctionnalité à implémenter')
+    showToast('Fonctionnalité à implémenter', 'info')
   }
 
   const handleSendEmail = () => {
-    Alert.alert('Envoyer par email', 'Fonctionnalité à implémenter')
+    showToast('Fonctionnalité à implémenter', 'info')
   }
 
-  if (loading || !payment) {
+  if (!payment) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#3B82F6" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { Text, Button } from '~/components/ui';
 import { useCashRegister } from '~/hooks/useCashRegister';
+import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 import { usePayments } from '~/hooks/usePayments';
 import { formatPrice } from '~/lib/utils';
 import { format } from 'date-fns';
@@ -38,6 +40,7 @@ import {
  * - Génération du Z
  */
 export default function CashRegisterScreen() {
+  const { showToast } = useToast();
   const {
     currentSession,
     isLoading,
@@ -92,7 +95,7 @@ export default function CashRegisterScreen() {
     const balance = parseFloat(openingBalance) * 100; // Convertir en cents
 
     if (isNaN(balance) || balance < 0) {
-      Alert.alert('Erreur', 'Veuillez entrer un fond de caisse valide');
+      showToast('Veuillez entrer un fond de caisse valide', 'error');
       return;
     }
 
@@ -101,9 +104,9 @@ export default function CashRegisterScreen() {
       setShowOpenModal(false);
       setOpeningBalance('');
       setNotes('');
-      Alert.alert('Succès', 'Caisse ouverte avec succès');
+      showToast('Caisse ouverte avec succès', 'success');
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible d\'ouvrir la caisse');
+      showApiError(error, showToast, 'Impossible d\'ouvrir la caisse');
     }
   }, [openingBalance, notes, openSession]);
 
@@ -114,7 +117,7 @@ export default function CashRegisterScreen() {
     const cash = parseFloat(actualCash) * 100; // Convertir en cents
 
     if (isNaN(cash) || cash < 0) {
-      Alert.alert('Erreur', 'Veuillez entrer un montant valide');
+      showToast('Veuillez entrer un montant valide', 'error');
       return;
     }
 
@@ -133,6 +136,7 @@ export default function CashRegisterScreen() {
         ? `Surplus de ${formatPrice(discrepancy)}`
         : `Manquant de ${formatPrice(Math.abs(discrepancy))}`;
 
+      // A SUPPRIMER POUR UNE MDOALE OU AUTRE
       Alert.alert(
         'Caisse fermée',
         `${message}\nNuméro Z: ${zNumber}`,
@@ -147,7 +151,7 @@ export default function CashRegisterScreen() {
         ]
       );
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de fermer la caisse');
+      showApiError(error, showToast, 'Impossible de fermer la caisse');
     }
   }, [actualCash, notes, closeSession]);
 

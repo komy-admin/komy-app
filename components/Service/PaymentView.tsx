@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, ScrollView, Pressable, Alert, TextInput, Modal, Platform } from 'react-native';
+import { View, ScrollView, Pressable, TextInput, Modal, Platform } from 'react-native';
 import { Button, Text } from '~/components/ui';
 import {
   ChevronLeft,
@@ -15,6 +15,8 @@ import { Order } from '~/types/order.types';
 import { OrderLine } from '~/types/order-line.types';
 import { formatPrice } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
+import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 interface PaymentViewProps {
   order: Order;
@@ -35,6 +37,7 @@ const getLinePaymentStatus = (line: OrderLine): { isPaid: boolean; isPartiallyPa
 
 export default function PaymentView({ order, tableName, onBack, onPaymentComplete, onTerminate }: PaymentViewProps) {
   const { createPayment } = usePayments();
+  const { showToast } = useToast();
 
   // États principaux
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -152,12 +155,12 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
   // Traiter le paiement
   const handlePayment = useCallback(async () => {
     if (selectedAmount === 0) {
-      Alert.alert('Erreur', 'Veuillez sélectionner au moins un article');
+      showToast('Veuillez sélectionner au moins un article', 'error');
       return;
     }
 
     if (!paymentMethod) {
-      Alert.alert('Erreur', 'Veuillez sélectionner une méthode de paiement');
+      showToast('Veuillez sélectionner une méthode de paiement', 'error');
       return;
     }
 
@@ -175,7 +178,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
       onPaymentComplete();
       setIsProcessing(false);
     } catch (error) {
-      Alert.alert('Erreur', 'Une erreur est survenue lors du paiement');
+      showApiError(error, showToast, 'Une erreur est survenue lors du paiement');
       setIsProcessing(false);
     }
   }, [selectedAmount, paymentMethod, createPayment, order.id, buildAllocations, onPaymentComplete]);
@@ -393,7 +396,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
         setShowCustomDialog(null);
         setCustomPercentage('');
       } else {
-        Alert.alert('Erreur', `Veuillez entrer un pourcentage entre 1 et ${maxPercentage}`);
+        showToast(`Veuillez entrer un pourcentage entre 1 et ${maxPercentage}`, 'error');
       }
     };
 

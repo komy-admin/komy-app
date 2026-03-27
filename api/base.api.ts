@@ -139,9 +139,10 @@ export abstract class BaseApiService<T> {
           }
 
           // Session expiry → redirect to PIN verification (keep authToken)
-          // Only handle if we actually have a session (avoids catching login-2fa token expiry)
+          // Check authToken (not sessionToken) : après expireSession(), sessionToken est null
+          // mais authToken persiste. Pendant login-2fa, authToken n'existe pas → on ne catch pas.
           const currentState = store.getState();
-          if (SESSION_EXPIRY_CODES.includes(errorCode) && currentState.session.sessionToken) {
+          if (SESSION_EXPIRY_CODES.includes(errorCode) && currentState.session.authToken) {
             if (!isSessionClearing) {
               isSessionClearing = true;
               store.dispatch(sessionActions.expireSession());

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, memo } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Platform, Alert, Dimensions, ImageSourcePropType } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Platform, Dimensions, ImageSourcePropType } from 'react-native';
 import { User, Bell, LogOut, PenTool, Database, Settings, ShieldCheck } from 'lucide-react-native';
 import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
@@ -117,7 +117,7 @@ type ConfigSidebarProps = {
 };
 
 export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebarProps) {
-  const { user, isLoading, error } = useSelector((state: RootState) => state.session);
+  const { user } = useSelector((state: RootState) => state.session);
   const router = useRouter();
   const { pickImage, isUploading } = useProfileImageUpload();
 
@@ -219,13 +219,6 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
     };
   }, [heightBreakpoint, widthBreakpoint]);
 
-  // Gestion des erreurs
-  useEffect(() => {
-    if (error) {
-      Alert.alert('Erreur', error);
-      // TODO: Handle error clearing with new store
-    }
-  }, [error]);
 
   const handleLogout = async () => {
     try {

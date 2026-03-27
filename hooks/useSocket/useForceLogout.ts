@@ -4,7 +4,7 @@ import { RootState } from '~/store';
 import { useAppDispatch } from '~/store/hooks';
 import { logout } from '~/store/slices/session.slice';
 import { useSocket } from './index';
-import { Alert } from 'react-native';
+import { globalToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 import { getDeviceId } from '~/lib/deviceId';
 
@@ -57,9 +57,9 @@ export const useForceLogout = () => {
           ? 'Cet appareil a été déconnecté depuis votre profil.'
           : 'Vous avez été déconnecté car votre compte est maintenant utilisé sur un autre appareil.';
 
-        // Afficher l'alerte après la déconnexion
+        // Afficher le toast après la déconnexion
         setTimeout(() => {
-          Alert.alert('Déconnexion', message, [{ text: 'OK', style: 'default' }]);
+          globalToast.show(message, 'error');
         }, 500);
       }
     };

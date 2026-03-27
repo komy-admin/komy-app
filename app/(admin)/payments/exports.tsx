@@ -21,6 +21,7 @@ import {
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatPrice } from '~/lib/utils';
+import { useToast } from '~/components/ToastProvider';
 
 /**
  * ExportsScreen
@@ -32,6 +33,7 @@ import { formatPrice } from '~/lib/utils';
  * - Analyses
  */
 export default function ExportsScreen() {
+  const { showToast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month' | 'custom'>('month');
   const [selectedFormat, setSelectedFormat] = useState<'csv' | 'pdf' | 'xlsx'>('csv');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -40,6 +42,7 @@ export default function ExportsScreen() {
    * Générer un export
    */
   const handleGenerateExport = (type: 'journal' | 'tva' | 'detailed' | 'summary') => {
+    // A SUPPRIMER POUR UNE MDOALE OU AUTRE
     Alert.alert(
       'Générer l\'export',
       `Export ${type} en ${selectedFormat.toUpperCase()} pour la période sélectionnée`,
@@ -52,7 +55,7 @@ export default function ExportsScreen() {
             // TODO: Appeler l'API pour générer l'export
             setTimeout(() => {
               setIsGenerating(false);
-              Alert.alert('Export généré', 'Le fichier a été téléchargé avec succès');
+              showToast('Le fichier a été téléchargé avec succès', 'success');
             }, 2000);
           },
         },

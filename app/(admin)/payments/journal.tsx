@@ -5,7 +5,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Pressable,
-  Alert,
 } from 'react-native';
 import { Text } from '~/components/ui';
 import {
@@ -31,7 +30,8 @@ import { fr } from 'date-fns/locale';
 import { paymentApi } from '~/api/payment.api';
 import RefundModal from '~/components/Payment/RefundModal';
 import type { Payment } from '~/types/payment.types';
-import { extractApiError } from '~/lib/apiErrorHandler';
+import { showApiError } from '~/lib/apiErrorHandler';
+import { useToast } from '~/components/ToastProvider';
 
 // Types pour le journal
 interface Allocation {
@@ -122,6 +122,8 @@ interface GroupedOrder {
  * - Vue détaillée des paiements multiples sur une commande
  */
 export default function PaymentJournalScreen() {
+  const { showToast } = useToast();
+
   // État local
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -278,7 +280,7 @@ export default function PaymentJournalScreen() {
       setHasMore(meta.hasMore);
       setPeriodSummary(meta.periodSummary);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de charger le journal des encaissements');
+      showApiError(error, showToast, 'Impossible de charger le journal des encaissements');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -318,9 +320,9 @@ export default function PaymentJournalScreen() {
   const handlePrintTicket = useCallback(async (paymentId: string) => {
     try {
       await paymentApi.printTicket(paymentId);
-      Alert.alert('Succès', 'Ticket imprimé avec succès');
+      showToast('Ticket imprimé avec succès', 'success');
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible d\'imprimer le ticket');
+      showApiError(error, showToast, 'Impossible d\'imprimer le ticket');
     }
   }, []);
 
@@ -345,15 +347,14 @@ export default function PaymentJournalScreen() {
         refundMethod: method,
       });
 
-      Alert.alert('Succès', `Remboursement de ${formatPrice(amount)} effectué avec succès`);
+      showToast(`Remboursement de ${formatPrice(amount)} effectué avec succès`, 'success');
 
       // Fermer le modal et rafraîchir la liste
       setIsRefundModalOpen(false);
       setSelectedPaymentForRefund(null);
       handleRefresh();
     } catch (error) {
-      const info = extractApiError(error);
-      throw new Error(info.message || 'Erreur lors du remboursement');
+      showApiError(error, showToast, 'Erreur lors du remboursement');
     }
   }, [selectedPaymentForRefund, handleRefresh]);
 

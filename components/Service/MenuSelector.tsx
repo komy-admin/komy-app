@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useState, useEffect } from 'react';
 import { X, Check, Plus, Minus } from 'lucide-react-native';
 import { Menu, MenuCategory, MenuCategoryItem } from '~/types/menu.types';
@@ -6,6 +6,8 @@ import { useMenus } from '~/hooks/useMenus';
 import { useMenuCalculator } from '~/hooks/useMenuCalculator';
 import { Button } from '../ui';
 import { formatPrice } from '~/lib/utils';
+import { useToast } from '~/components/ToastProvider';
+import { showApiError } from '~/lib/apiErrorHandler';
 
 interface MenuSelectorProps {
   visible: boolean;
@@ -137,6 +139,7 @@ function CategorySelection({
 export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSelectorProps) {
   const { activeMenus, loadActiveMenus, loadMenuCategoryItems } = useMenus();
   const { calculateLocalMenuPrice, validateMenuSelection } = useMenuCalculator();
+  const { showToast } = useToast();
 
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
   const [categoryItems, setCategoryItems] = useState<Record<string, MenuCategoryItem[]>>({});
@@ -171,7 +174,7 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
 
       setCategoryItems(items);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de charger les items du menu');
+      showApiError(error, showToast, 'Impossible de charger les items du menu');
     } finally {
       setLoading(false);
     }
@@ -214,7 +217,7 @@ export default function MenuSelector({ visible, onClose, onMenuSelect }: MenuSel
     // Valider la sélection
     const validation = validateMenuSelection(selectedMenu, [], selectedItemsByCategory);
     if (!validation.isValid) {
-      Alert.alert('Sélection incomplète', validation.errors.join('\n'));
+      showToast(validation.errors.join('\n'), 'error');
       return;
     }
 
