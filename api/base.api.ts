@@ -125,12 +125,16 @@ export abstract class BaseApiService<T> {
         const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
 
         if (error.response?.status === 401) {
-          // Device or QR token revocation → full logout + redirect login
-          if (errorCode === 'DEVICE_REVOKED' || errorCode === 'QR_TOKEN_REVOKED') {
+          // Auth token expired/invalid or device/QR revoked → full logout + redirect login
+          if (errorCode === 'AUTH_TOKEN_INVALID' || errorCode === 'AUTH_TOKEN_MISSING'
+            || errorCode === 'DEVICE_REVOKED' || errorCode === 'QR_TOKEN_REVOKED') {
             if (!isSessionClearing) {
               isSessionClearing = true;
               store.dispatch(logout());
-              globalToast.show('Cet appareil a été déconnecté.', 'error');
+              const message = errorCode === 'DEVICE_REVOKED'
+                ? 'Cet appareil a été déconnecté.'
+                : 'Votre session a expiré, veuillez vous reconnecter.';
+              globalToast.show(message, 'error');
               setTimeout(() => { isSessionClearing = false; }, 2000);
             }
             return Promise.reject(new SessionExpiredError());

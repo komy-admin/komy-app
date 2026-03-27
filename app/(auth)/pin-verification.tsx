@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { extractApiError } from '~/lib/apiErrorHandler';
+import { SessionExpiredError } from '~/api/base.api';
 
 export default function PinVerificationScreen() {
   const { isInAppLock, isPinVerified: isPinAlreadyVerified } = useSelector((state: RootState) => state.session);
@@ -103,6 +104,9 @@ export default function PinVerificationScreen() {
       setAttemptsRemaining(null);
       setIsLocked(false);
     } catch (err) {
+      // Already handled globally (auth token expired, device revoked, session expiry)
+      if (err instanceof SessionExpiredError) return;
+
       setError(true);
 
       if (Platform.OS === 'ios') {
@@ -116,7 +120,9 @@ export default function PinVerificationScreen() {
 
       const info = extractApiError(err);
 
-      if (info.code === 'PIN_PERMANENTLY_LOCKED') {
+      if (info.silent) {
+        // noop — safety net
+      } else if (info.code === 'PIN_PERMANENTLY_LOCKED') {
         setIsPermanentlyLocked(true);
         setIsLocked(true);
         setAttemptsRemaining(0);
@@ -128,10 +134,6 @@ export default function PinVerificationScreen() {
           startCountdown(info.details.remainingSeconds);
         }
         showToast(info.message || 'Compte verrouillé', 'error');
-      } else if (info.code === 'AUTH_TOKEN_INVALID' || info.code === 'AUTH_TOKEN_MISSING' || info.code === 'SESSION_EXPIRED') {
-        showToast('Session expirée. Veuillez vous reconnecter.', 'error');
-        await sessionService.logout();
-        router.replace('/login');
       } else if (info.code === 'INVALID_PIN') {
         if (info.details?.attemptsRemaining !== undefined) {
           setAttemptsRemaining(info.details.attemptsRemaining);

@@ -19,11 +19,6 @@ import { extractApiError } from '~/lib/apiErrorHandler';
 export class AuthApiService extends BaseApiService<AuthResponse> {
   protected endpoint = '/auth';
 
-  constructor() {
-    super();
-    this.setupAuthInterceptor();
-  }
-
   private async setToken(token: string): Promise<void> {
     await this.storage.setItem('token', token);
   }
@@ -252,33 +247,6 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     }
   }
 
-  private setupAuthInterceptor(): void {
-    this.axiosInstance.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const originalRequest = error.config;
-
-        // No config = network error (no request was sent) — bail out immediately
-        if (!originalRequest) {
-          return Promise.reject(error);
-        }
-
-        const errorCode = error.response?.data?.error?.code || error.response?.data?.code;
-
-        // Auth-specific 401 (session expiry + device revoked handled globally in base.api.ts)
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-
-          // Auth token invalid — need full re-login (PIN/set-pin endpoints use authToken)
-          if (errorCode === 'AUTH_TOKEN_INVALID' || errorCode === 'AUTH_TOKEN_MISSING') {
-            return Promise.reject(error);
-          }
-        }
-
-        return Promise.reject(error);
-      }
-    );
-  }
 }
 
 export const authApiService = new AuthApiService()

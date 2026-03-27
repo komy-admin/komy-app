@@ -290,13 +290,17 @@ class SessionService {
    * Full logout - clear everything
    */
   async logout(): Promise<void> {
+    const { sessionToken } = store.getState().session;
+
     await storageService.removeItem('authToken');
     await storageService.removeItem('sessionToken');
 
-    try {
-      await authApiService.logout();
-    } catch {
-      // Proceed with local cleanup even if API call fails
+    if (sessionToken) {
+      try {
+        await authApiService.logout();
+      } catch {
+        // Proceed with local cleanup even if API call fails
+      }
     }
 
     store.dispatch(sessionActions.logout());
