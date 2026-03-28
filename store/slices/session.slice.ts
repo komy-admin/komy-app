@@ -196,7 +196,9 @@ const sessionSlice = createSlice({
     }>) => {
       const { sessionToken, expiresIn, user } = action.payload;
       state.sessionToken = sessionToken;
-      state.sessionExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+      // TODO: REMOVE - Force 30s expiry for testing sliding window fix
+      const debugExpiresIn = __DEV__ ? 30 : expiresIn;
+      state.sessionExpiresAt = new Date(Date.now() + debugExpiresIn * 1000).toISOString();
       state.user = { ...state.user, ...user } as User;
       state.isAuthenticated = true;
       state.requiresPin = false;

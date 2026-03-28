@@ -10,7 +10,9 @@ interface DeleteConfirmationModalProps {
   onConfirm: () => void;
   entityName: string;
   entityType: string;
+  description?: string;
   isLoading?: boolean;
+  confirmDisabled?: boolean;
   usePortal?: boolean;
   portalName?: string;
 }
@@ -26,7 +28,9 @@ export function DeleteConfirmationModal({
   onConfirm,
   entityName,
   entityType,
+  description,
   isLoading = false,
+  confirmDisabled = false,
   usePortal = false,
   portalName = 'delete-confirmation-modal'
 }: DeleteConfirmationModalProps) {
@@ -58,6 +62,9 @@ export function DeleteConfirmationModal({
           <Text style={styles.deleteMessage}>
             Êtes-vous sûr de vouloir supprimer {entityType} {entityName} ?
           </Text>
+          {description ? (
+            <Text style={styles.deleteDescription}>{description}</Text>
+          ) : null}
           <Text style={styles.deleteWarning}>
             {'(Cette action est irréversible.)'}
           </Text>
@@ -65,9 +72,9 @@ export function DeleteConfirmationModal({
         <View style={styles.deleteButtonContainer}>
           <Button
             onPress={onConfirm}
-            style={styles.deleteButton}
+            style={[styles.deleteButton, confirmDisabled && { opacity: 0.4 }]}
             variant="destructive"
-            disabled={isLoading}
+            disabled={isLoading || confirmDisabled}
           >
             <Text style={styles.deleteButtonText}>
               {isLoading ? 'Suppression...' : 'Supprimer'}
@@ -108,6 +115,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
     color: '#2A2E33',
+  },
+  deleteDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   deleteWarning: {
     fontSize: 14,

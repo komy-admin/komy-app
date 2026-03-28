@@ -1,7 +1,7 @@
 // components/admin/Sidebar.tsx
 import { Href, router, usePathname } from 'expo-router';
 import { View, Pressable, Platform, StyleSheet } from 'react-native';
-import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, CreditCard } from 'lucide-react-native';
+import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, CreditCard, CalendarDays } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../ui';
 import { useSelector } from 'react-redux';
@@ -20,7 +20,8 @@ const NAV_ITEMS = [
   { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null },
   { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const },
   { href: '/kitchen', icon: ChefHat, label: 'Cuisine', configKey: 'kitchenEnabled' as const },
-  { href: '/barman', icon: GlassWater, label: 'Bar', configKey: 'barEnabled' as const }
+  { href: '/barman', icon: GlassWater, label: 'Bar', configKey: 'barEnabled' as const },
+  { href: '/reservation', icon: CalendarDays, label: 'Réservations', configKey: null }
 ];
 
 export function AdminSidebar() {
