@@ -88,9 +88,12 @@ export function ReservationList({ reservation }: ReservationListProps) {
   }, [loadData]);
 
   const navigateDate = (direction: number) => {
-    const date = new Date(filterDate);
-    date.setDate(date.getDate() + direction);
-    setFilterDate(date.toISOString().split('T')[0]);
+    const [year, month, day] = filterDate.split('-').map(Number);
+    const date = new Date(year, month - 1, day + direction);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    setFilterDate(`${y}-${m}-${d}`);
     setCurrentPage(1);
   };
 
@@ -231,6 +234,8 @@ export function ReservationList({ reservation }: ReservationListProps) {
 
       {/* Date navigation with calendar */}
       <View style={styles.dateNavContainer}>
+        <View style={styles.dateNavSide} />
+
         <View style={styles.dateNav}>
           <Pressable onPress={() => navigateDate(-1)} style={styles.dateArrowButton}>
             <ChevronLeft size={20} color="#1E293B" />
@@ -244,15 +249,15 @@ export function ReservationList({ reservation }: ReservationListProps) {
             <ChevronRight size={20} color="#1E293B" />
           </Pressable>
         </View>
-      </View>
 
-      {!isToday && (
-        <View style={styles.todayRow}>
-          <Pressable onPress={() => { setFilterDate(today); setCurrentPage(1); }} style={styles.todayChip}>
-            <Text style={styles.todayChipText}>Revenir à aujourd'hui</Text>
-          </Pressable>
+        <View style={styles.dateNavSide}>
+          {!isToday && (
+            <Pressable onPress={() => { setFilterDate(today); setCurrentPage(1); }} style={styles.todayChip}>
+              <Text style={styles.todayChipText}>Revenir à aujourd'hui</Text>
+            </Pressable>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Calendar dropdown */}
       {showCalendar && (
@@ -622,7 +627,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     marginBottom: 20,
-    position: 'relative',
+  },
+  dateNavSide: {
+    width: 160,
+    alignItems: 'flex-start',
   },
   dateNav: {
     flexDirection: 'row',
@@ -655,10 +663,6 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     textTransform: 'capitalize',
     ...(Platform.OS === 'web' && { userSelect: 'none' } as any),
-  },
-  todayRow: {
-    alignItems: 'center',
-    marginBottom: 12,
   },
   todayChip: {
     backgroundColor: '#EFF6FF',
