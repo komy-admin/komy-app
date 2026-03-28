@@ -185,3 +185,44 @@ export interface ReservationTokenResponse {
   professionalId: string | null;
   slug: string | null;
 }
+
+// === WebSocket Event ===
+
+export type ReservationEventType =
+  | 'reservation.created'
+  | 'reservation.confirmed'
+  | 'reservation.cancelled'
+  | 'reservation.no_show'
+  | 'reservation.completed';
+
+export interface ReservationWebSocketEvent {
+  event: ReservationEventType;
+  reservation: {
+    id: string;
+    professionalId: string;
+    serviceId: string;
+    guestId: string;
+    date: string;
+    timeSlot: string;
+    partySize: number;
+    status: ReservationStatus;
+    notes: string | null;
+    cancellationReason: string | null;
+    cancelledAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  guest: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+  };
+  service: {
+    id: string;
+    name: string;
+    serviceDurationMinutes: number;
+    color: string | null;
+  };
+}

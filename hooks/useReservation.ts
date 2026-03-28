@@ -1,7 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { reservationBridgeApiService, reservationApiService } from '~/api/reservation.api';
+import { SocketContext } from '~/hooks/useSocket/SockerProvider';
+import { useToast } from '~/components/ToastProvider';
 import {
   ReservationService,
   ReservationSchedule,
@@ -17,7 +19,28 @@ import {
   UpdateReservationOverrideDto,
   UpdateReservationSettingsDto,
   ReservationApiListResponse,
+  ReservationWebSocketEvent,
 } from '~/types/reservation.types';
+
+const RESERVATION_EVENT = 'reservation_event';
+
+function getToastForEvent(event: ReservationWebSocketEvent): { message: string; type: 'success' | 'info' | 'warning' | 'error' } {
+  const name = `${event.guest.firstName} ${event.guest.lastName}`;
+  switch (event.event) {
+    case 'reservation.created':
+      return { message: `Nouvelle réservation de ${name} le ${event.reservation.date} à ${event.reservation.timeSlot} (${event.reservation.partySize} pers.)`, type: 'info' };
+    case 'reservation.confirmed':
+      return { message: `Réservation de ${name} confirmée`, type: 'success' };
+    case 'reservation.cancelled':
+      return { message: `Réservation de ${name} annulée`, type: 'warning' };
+    case 'reservation.no_show':
+      return { message: `No-show : ${name}`, type: 'error' };
+    case 'reservation.completed':
+      return { message: `Réservation de ${name} terminée`, type: 'success' };
+    default:
+      return { message: `Événement réservation : ${name}`, type: 'info' };
+  }
+}
 
 interface ReservationState {
   isActivated: boolean;
@@ -36,6 +59,8 @@ interface ReservationState {
 export const useReservation = () => {
   const user = useSelector((state: RootState) => state.session.user);
   const restaurantId = user?.accountId || '';
+  const { showToast } = useToast();
+  const socketContext = useContext(SocketContext);
 
   const [state, setState] = useState<ReservationState>({
     isActivated: false,
@@ -52,6 +77,7 @@ export const useReservation = () => {
   });
 
   const initialized = useRef(false);
+  const lastReservationParams = useRef<{ date?: string; status?: string; serviceId?: string; page?: number; limit?: number } | undefined>(undefined);
 
   // === INITIALIZATION: Fetch token from fork-it-api ===
 
@@ -278,6 +304,7 @@ export const useReservation = () => {
     page?: number;
     limit?: number;
   }) => {
+    lastReservationParams.current = params;
     try {
       const result = await reservationApiService.getReservations(params);
       setState(prev => ({
@@ -327,6 +354,76 @@ export const useReservation = () => {
     }));
     return reservation;
   }, []);
+
+  // === WEBSOCKET: écoute temps réel des événements de réservation ===
+
+  const showToastRef = useRef(showToast);
+  useEffect(() => { showToastRef.current = showToast; }, [showToast]);
+
+  useEffect(() => {
+    if (!socketContext?.socket || !socketContext.isConnected) return;
+
+    const socket = socketContext.socket.getSocket();
+    if (!socket) return;
+
+    const handler = (data: ReservationWebSocketEvent) => {
+      const { reservation: resData, guest, service } = data;
+
+      const fullReservation: Reservation = {
+        id: resData.id,
+        serviceId: resData.serviceId,
+        service: {
+          id: service.id,
+          name: service.name,
+          serviceDurationMinutes: service.serviceDurationMinutes,
+          color: service.color,
+          maxCapacity: 0,
+          slotIntervalMinutes: 0,
+          isActive: true,
+          createdAt: '',
+          updatedAt: '',
+        },
+        date: resData.date,
+        timeSlot: resData.timeSlot,
+        partySize: resData.partySize,
+        status: resData.status,
+        guest: {
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          email: guest.email,
+          phone: guest.phone,
+        },
+        guestId: resData.guestId,
+        professionalId: resData.professionalId,
+        notes: resData.notes,
+        cancellationReason: resData.cancellationReason,
+        cancelledAt: resData.cancelledAt,
+        createdAt: resData.createdAt,
+        updatedAt: resData.updatedAt,
+      };
+
+
+      // Mise à jour du state
+      if (data.event === 'reservation.created') {
+        // Recharger depuis l'API pour respecter les filtres actifs
+        loadReservations(lastReservationParams.current).catch(() => {});
+      } else {
+        // Mise à jour en place du statut pour les autres events
+        setState(prev => ({
+          ...prev,
+          reservations: prev.reservations.map(r =>
+            r.id === fullReservation.id ? fullReservation : r
+          ),
+        }));
+      }
+
+      const toast = getToastForEvent(data);
+      showToastRef.current(toast.message, toast.type);
+    };
+
+    socket.on(RESERVATION_EVENT, handler);
+    return () => { socket.off(RESERVATION_EVENT, handler); };
+  }, [socketContext?.socket, socketContext?.isConnected]);
 
   return {
     // State
