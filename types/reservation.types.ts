@@ -50,6 +50,10 @@ export interface ReservationSettings {
   reminderEnabled: boolean;
   reminderHoursBefore: number;
   requireCardGuarantee: boolean;
+  customEmailMessage: string | null;
+  notifyProfessionalOnNewReservation: boolean;
+  notifyProfessionalOnConfirmation: boolean;
+  notifyProfessionalOnCancellation: boolean;
 }
 
 export interface ReservationProfessionalProfile {
@@ -83,6 +87,7 @@ export interface Reservation {
   guestId: string;
   professionalId: string;
   notes?: string | null;
+  cancellationReason?: string | null;
   cancelledAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -147,6 +152,10 @@ export interface UpdateReservationSettingsDto {
   reminderEnabled?: boolean;
   reminderHoursBefore?: number;
   requireCardGuarantee?: boolean;
+  customEmailMessage?: string | null;
+  notifyProfessionalOnNewReservation?: boolean;
+  notifyProfessionalOnConfirmation?: boolean;
+  notifyProfessionalOnCancellation?: boolean;
 }
 
 // === API Response types ===

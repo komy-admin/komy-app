@@ -301,8 +301,8 @@ export const useReservation = () => {
     return reservation;
   }, []);
 
-  const cancelReservation = useCallback(async (id: string) => {
-    const reservation = await reservationApiService.cancelReservation(id);
+  const cancelReservation = useCallback(async (id: string, reason?: string) => {
+    const reservation = await reservationApiService.cancelReservation(id, reason);
     setState(prev => ({
       ...prev,
       reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation } : r),

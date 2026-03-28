@@ -1,13 +1,12 @@
 import { View, Text, Pressable, StyleSheet, Platform, Linking } from 'react-native';
-import { CalendarDays, Clock, CalendarOff, Settings, List, ExternalLink } from 'lucide-react-native';
+import { List, Sliders, Settings, ExternalLink, BookOpen } from 'lucide-react-native';
 import type { ReservationSection } from '~/app/(admin)/reservation';
 
 const RESERVATION_NAV_ITEMS = [
   { id: 'reservations' as const, Icon: List, label: 'Réservations', color: '#3B82F6' },
-  { id: 'services' as const, Icon: CalendarDays, label: 'Services', color: '#10B981' },
-  { id: 'schedules' as const, Icon: Clock, label: 'Horaires', color: '#F59E0B' },
-  { id: 'overrides' as const, Icon: CalendarOff, label: 'Fermetures', color: '#EF4444' },
+  { id: 'configuration' as const, Icon: Sliders, label: 'Configuration', color: '#10B981' },
   { id: 'settings' as const, Icon: Settings, label: 'Paramètres', color: '#A855F7' },
+  { id: 'guide' as const, Icon: BookOpen, label: 'Guide', color: '#F59E0B' },
 ];
 
 interface ReservationSidebarProps {

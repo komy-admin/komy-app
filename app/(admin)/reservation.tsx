@@ -3,14 +3,13 @@ import { View, ScrollView, StyleSheet } from 'react-native';
 import { useReservation } from '~/hooks/useReservation';
 import { ReservationSidebar } from '~/components/reservation/ReservationSidebar';
 import { ReservationActivation } from '~/components/reservation/ReservationActivation';
-import { ReservationServices } from '~/components/reservation/ReservationServices';
-import { ReservationSchedules } from '~/components/reservation/ReservationSchedules';
-import { ReservationOverrides } from '~/components/reservation/ReservationOverrides';
+import { ReservationConfiguration } from '~/components/reservation/ReservationConfiguration';
 import { ReservationSettingsPage } from '~/components/reservation/ReservationSettings';
 import { ReservationList } from '~/components/reservation/ReservationList';
+import { ReservationGuide } from '~/components/reservation/ReservationGuide';
 import { View as LoadingView, ActivityIndicator } from 'react-native';
 
-export type ReservationSection = 'services' | 'schedules' | 'overrides' | 'settings' | 'reservations';
+export type ReservationSection = 'reservations' | 'configuration' | 'settings' | 'guide';
 
 export default function ReservationPage() {
   const [currentSection, setCurrentSection] = useState<ReservationSection>('reservations');
@@ -32,14 +31,12 @@ export default function ReservationPage() {
 
   const renderSection = () => {
     switch (currentSection) {
-      case 'services':
-        return <ReservationServices reservation={reservation} />;
-      case 'schedules':
-        return <ReservationSchedules reservation={reservation} />;
-      case 'overrides':
-        return <ReservationOverrides reservation={reservation} />;
+      case 'configuration':
+        return <ReservationConfiguration reservation={reservation} />;
       case 'settings':
         return <ReservationSettingsPage reservation={reservation} />;
+      case 'guide':
+        return <ReservationGuide />;
       case 'reservations':
         return <ReservationList reservation={reservation} />;
       default:

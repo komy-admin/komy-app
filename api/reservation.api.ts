@@ -270,9 +270,10 @@ class ReservationApiService {
     return response.data.data;
   }
 
-  async cancelReservation(id: string): Promise<Reservation> {
+  async cancelReservation(id: string, reason?: string): Promise<Reservation> {
     const response = await this.axiosInstance.post<ReservationApiResponse<Reservation>>(
-      `/professionals/me/reservations/${id}/cancel`
+      `/professionals/me/reservations/${id}/cancel`,
+      reason ? { reason } : undefined
     );
     return response.data.data;
   }
