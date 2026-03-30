@@ -32,7 +32,19 @@ export function extractApiError(error: unknown): ApiErrorInfo {
     }
   }
 
-  // 1. Network error (no response from server)
+  // 1. Cancelled request (e.g. session expired in request interceptor)
+  if (axios.isCancel(error)) {
+    return {
+      code: null,
+      message: '',
+      isNetwork: false,
+      isValidation: false,
+      silent: true,
+      status: null,
+    }
+  }
+
+  // 2. Network error (no response from server)
   if (axios.isAxiosError(error) && !error.response) {
     return {
       code: null,
@@ -44,12 +56,12 @@ export function extractApiError(error: unknown): ApiErrorInfo {
     }
   }
 
-  // 2. API response available
+  // 3. API response available
   const response = (error as any)?.response
   const data = response?.data
   const status = response?.status || null
 
-  // 2a. New standardized format: { success: false, error: { code, message, details? } }
+  // 3a. New standardized format: { success: false, error: { code, message, details? } }
   if (data?.error?.code) {
     return {
       code: data.error.code,
@@ -62,7 +74,7 @@ export function extractApiError(error: unknown): ApiErrorInfo {
     }
   }
 
-  // 2b. Legacy format: { message: '...' } or { error: '...' }
+  // 3b. Legacy format: { message: '...' } or { error: '...' }
   const message =
     data?.message ||
     data?.error ||
@@ -91,5 +103,6 @@ export function showApiError(
 ) {
   if (isSilent(error)) return
   const info = extractApiError(error)
+  if (info.silent) return
   showToast(info.message || fallbackMessage || 'Une erreur est survenue', 'error')
 }
