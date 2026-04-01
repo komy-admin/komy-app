@@ -142,10 +142,15 @@ export default function RoomEditionMode() {
   const handleSaveTable = useCallback(async (updates: Partial<Table>) => {
     if (!selectedTable?.id) return;
 
-    await updateTableFast(selectedTable.id, updates);
-    setIsEditPanelVisible(false);
-    setSelectedTable(null);
-  }, [selectedTable?.id, updateTableFast, setSelectedTable]);
+    try {
+      await updateTableFast(selectedTable.id, updates);
+      setIsEditPanelVisible(false);
+      setSelectedTable(null);
+      showToast('Table modifiée avec succès', 'success');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de la sauvegarde de la table');
+    }
+  }, [selectedTable?.id, updateTableFast, setSelectedTable, showToast]);
 
   const handleAddTable = useCallback(async () => {
     if (!currentRoom?.id || isCreatingTable || isCreateOperationInProgress()) return;

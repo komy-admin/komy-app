@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform, type ViewStyle, type TextStyle } from 'react-native';
 import Svg, { Rect, Defs, ClipPath } from 'react-native-svg';
-import { X, Check, ArrowLeft } from 'lucide-react-native';
+import { X, ArrowLeft } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 
 interface RoomFormContentProps {
   room: Room | null;
-  onSave: (roomData: Partial<Room>) => void;
+  onSave: (roomData: Partial<Room>) => Promise<void>;
   onCancel: () => void;
   onBack?: () => void;
 }
@@ -118,22 +118,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
     color: DEFAULT_ROOM_COLOR,
     isActive: true,
   });
-
-  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
-
-  const markFieldAsTouched = (fieldName: string) => {
-    setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
-  };
-
-  const getFieldError = (fieldName: string): string | null => {
-    if (!touchedFields[fieldName]) return null;
-    if (fieldName === 'name') {
-      if (!formData.name.trim()) return 'Le nom de la salle est obligatoire';
-      if (formData.name.trim().length < 2) return 'Le nom doit contenir au moins 2 caractères';
-      if (formData.name.trim().length > 50) return 'Le nom ne peut pas dépasser 50 caractères';
-    }
-    return null;
-  };
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (room) {
@@ -147,16 +132,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
     } else {
       setFormData({ name: '', width: 15, height: 15, color: DEFAULT_ROOM_COLOR, isActive: true });
     }
-    setTouchedFields({});
   }, [room]);
-
-  const isFormValid = (): boolean => {
-    if (!formData.name.trim() || formData.name.trim().length < 2) return false;
-    if (!formData.width || !formData.height) return false;
-    if (formData.width < MIN_ROOM_DIM || formData.width > MAX_ROOM_DIM) return false;
-    if (formData.height < MIN_ROOM_DIM || formData.height > MAX_ROOM_DIM) return false;
-    return true;
-  };
 
   const isCustomSize = !ROOM_SIZES.some(s => s.width === formData.width && s.height === formData.height);
 
@@ -176,17 +152,22 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
     }));
   };
 
-  const handleSave = () => {
-    setTouchedFields({ name: true });
-    if (!isFormValid()) return;
-
-    onSave({
-      name: formData.name.trim(),
-      width: formData.width,
-      height: formData.height,
-      color: formData.color,
-      isActive: formData.isActive,
-    });
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave({
+        name: formData.name.trim(),
+        width: formData.width,
+        height: formData.height,
+        color: formData.color,
+        isActive: formData.isActive,
+      });
+    } catch {
+      // Error handled by parent via showApiError
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSelectSize = (size: typeof ROOM_SIZES[number]) => {
@@ -225,28 +206,14 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
           {/* Room Name */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Nom de la salle</Text>
-            {(() => {
-              const nameError = getFieldError('name');
-              return (
-                <>
-                  <TextInput
-                    value={formData.name}
-                    onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-                    onBlur={() => markFieldAsTouched('name')}
-                    placeholder="Entrez le nom de la salle"
-                    placeholderTextColor="#A0A0A0"
-                    style={[styles.formInput, nameError && styles.formInputError]}
-                    autoComplete="off"
-                  />
-                  {nameError && (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{nameError}</Text>
-                      <Text style={styles.exampleText}>Exemple : Salle principale, Terrasse, Étage 1</Text>
-                    </View>
-                  )}
-                </>
-              );
-            })()}
+            <TextInput
+              value={formData.name}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+              placeholder="Entrez le nom de la salle"
+              placeholderTextColor="#94A3B8"
+              style={styles.formInput}
+              autoComplete="off"
+            />
           </View>
 
           {/* Room Status */}
@@ -355,7 +322,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                   onBlur={() => handleManualBlur('width')}
                   keyboardType="number-pad"
                   placeholder={String(MIN_ROOM_DIM)}
-                  placeholderTextColor="#A0A0A0"
+                  placeholderTextColor="#94A3B8"
                   style={styles.dimensionInput}
                   selectTextOnFocus
                 />
@@ -369,7 +336,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                   onBlur={() => handleManualBlur('height')}
                   keyboardType="number-pad"
                   placeholder={String(MIN_ROOM_DIM)}
-                  placeholderTextColor="#A0A0A0"
+                  placeholderTextColor="#94A3B8"
                   style={styles.dimensionInput}
                   selectTextOnFocus
                 />
@@ -396,13 +363,12 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.saveButton, !isFormValid() && styles.saveButtonDisabled]}
+          style={[styles.saveButton, isSaving && styles.saveButtonSaving]}
           onPress={handleSave}
-          disabled={!isFormValid()}
+          disabled={isSaving}
         >
-          <Check size={20} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.saveButtonText}>
-            {room ? 'Enregistrer' : 'Créer la salle'}
+            {isSaving ? 'Enregistrement...' : (room ? 'Enregistrer' : 'Créer la salle')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -468,35 +434,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   formInput: {
+    height: 44,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    color: '#2A2E33',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    fontWeight: '500',
-    minHeight: 44,
-  },
-  formInputError: {
-    borderColor: '#EF4444',
-    borderWidth: 2,
-    backgroundColor: '#FEF2F2',
-  },
-  errorContainer: {
-    marginTop: 6,
-    gap: 4,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    fontWeight: '600',
-  },
-  exampleText: {
-    fontSize: 11,
-    color: '#64748B',
-    fontStyle: 'italic',
+    backgroundColor: '#F8FAFC',
+    color: '#1E293B',
+    paddingHorizontal: 12,
+    fontSize: 13,
   },
 
   // Status toggle
@@ -692,17 +637,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   dimensionInput: {
+    height: 44,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    color: '#2A2E33',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    fontWeight: '500',
+    backgroundColor: '#F8FAFC',
+    color: '#1E293B',
+    paddingHorizontal: 12,
+    fontSize: 13,
     textAlign: 'center',
-    minHeight: 44,
   },
   dimensionSeparator: {
     fontSize: 16,
@@ -750,31 +693,31 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 12,
+    height: 44,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
   saveButton: {
     flex: 1,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
-    gap: 8,
+    backgroundColor: '#2A2E33',
   },
-  saveButtonDisabled: {
+  saveButtonSaving: {
     opacity: 0.5,
   },
   saveButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
   },

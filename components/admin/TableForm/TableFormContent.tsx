@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, StyleSheet, Text as RNText, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text as RNText, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
-import { TextInput, NumberInput } from '~/components/ui';
+import { NumberInput } from '~/components/ui';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
-import { useToast } from '~/components/ToastProvider';
-import { showApiError } from '~/lib/apiErrorHandler';
 
 interface TableFormContentProps {
   table: Table;
@@ -30,69 +28,18 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
     seats: '',
     shape: 'square',
   });
-  const [initialValues, setInitialValues] = useState<FormData | null>(null);
-  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const { showToast } = useToast();
-
-  // Mark field as touched
-  const markFieldAsTouched = useCallback((fieldName: string) => {
-    setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
-  }, []);
-
-  // Field validation (only if touched)
-  const getFieldError = useCallback((fieldName: string): string | null => {
-    if (!touchedFields[fieldName]) return null;
-
-    switch (fieldName) {
-      case 'name':
-        if (!formData.name.trim()) return 'Le nom de la table est obligatoire';
-        if (formData.name.trim().length > 3) return 'Le nom ne peut pas dépasser 3 caractères';
-        if (!/^[a-zA-Z0-9\s\-_À-ÿ]+$/.test(formData.name)) {
-          return 'Seuls les lettres, chiffres, espaces, tirets et underscores sont autorisés';
-        }
-        return null;
-
-      case 'seats':
-        const seatsValue = parseInt(formData.seats, 10);
-        if (isNaN(seatsValue) || seatsValue < 1) return 'Minimum 1 couvert';
-        if (seatsValue > 20) return 'Maximum 20 couverts';
-        return null;
-
-      default:
-        return null;
-    }
-  }, [touchedFields, formData]);
 
   useEffect(() => {
-    const initialFormData: FormData = {
+    setFormData({
       name: table.name || '',
       seats: table.seats?.toString() || '1',
       shape: table.shape || 'square',
-    };
-    setFormData(initialFormData);
-    setInitialValues(initialFormData);
-    setTouchedFields({});
+    });
   }, [table]);
 
-  const hasChanges = useMemo(() => {
-    if (!initialValues) return false;
-    return (
-      formData.name !== initialValues.name ||
-      formData.seats !== initialValues.seats ||
-      formData.shape !== initialValues.shape
-    );
-  }, [formData, initialValues]);
-
-  const isFormValid = useMemo(() => {
-    if (!hasChanges) return false;
-    return formData.name.trim().length > 0;
-  }, [formData.name, hasChanges]);
-
-  const handleSave = useCallback(async () => {
-    setTouchedFields({ name: true, seats: true });
-    if (!isFormValid) return;
-
+  const handleSave = async () => {
+    if (isSaving) return;
     setIsSaving(true);
     try {
       await onSave({
@@ -100,12 +47,12 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         seats: parseInt(formData.seats, 10),
         shape: formData.shape,
       });
-    } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la sauvegarde de la table');
+    } catch {
+      // Error handled by parent via showApiError
     } finally {
       setIsSaving(false);
     }
-  }, [formData, onSave, isFormValid]);
+  };
 
   return (
     <View style={styles.container}>
@@ -133,52 +80,32 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Formulaire d'édition */}
           <View style={styles.formGroup}>
-            <RNText style={styles.formLabel}>Nom de la table *</RNText>
+            <RNText style={styles.formLabel}>Nom de la table</RNText>
             <TextInput
               value={formData.name}
               onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-              onBlur={() => markFieldAsTouched('name')}
               maxLength={3}
               placeholder="Ex: A01, T1..."
               placeholderTextColor="#94A3B8"
-              style={[
-                styles.formInput,
-                getFieldError('name') && styles.formInputError
-              ]}
+              style={styles.formInput}
             />
-            {getFieldError('name') ? (
-              <View style={styles.errorContainer}>
-                <RNText style={styles.errorText}>{getFieldError('name')}</RNText>
-              </View>
-            ) : (
-              <RNText style={styles.formHelpText}>3 caractères maximum</RNText>
-            )}
+            <RNText style={styles.formHelpText}>3 caractères maximum</RNText>
           </View>
 
           <View style={styles.formGroup}>
-            <RNText style={styles.formLabel}>Nombre max de couverts *</RNText>
+            <RNText style={styles.formLabel}>Nombre max de couverts</RNText>
             <NumberInput
               value={parseInt(formData.seats)}
               onChangeText={(value) => {
                 setFormData(prev => ({ ...prev, seats: value?.toString() || '1' }));
-                markFieldAsTouched('seats');
               }}
               placeholder="Nombre max de couverts"
               decimalPlaces={0}
               min={1}
               max={20}
-              style={[
-                styles.formInput,
-                getFieldError('seats') && styles.formInputError
-              ]}
+              style={styles.formInput}
             />
-            {getFieldError('seats') ? (
-              <View style={styles.errorContainer}>
-                <RNText style={styles.errorText}>{getFieldError('seats')}</RNText>
-              </View>
-            ) : (
-              <RNText style={styles.formHelpText}>Entre 1 et 20 couverts</RNText>
-            )}
+            <RNText style={styles.formHelpText}>Entre 1 et 20 couverts</RNText>
           </View>
 
           <View style={styles.formGroup}>
@@ -211,13 +138,13 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
 
       {/* Footer */}
       <View style={styles.footer}>
+        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <RNText style={styles.cancelButtonText}>Annuler</RNText>
+        </TouchableOpacity>
         <TouchableOpacity
-          style={[
-            styles.saveButton,
-            (!isFormValid || isSaving) && styles.saveButtonDisabled
-          ]}
+          style={[styles.saveButton, isSaving && styles.saveButtonSaving]}
           onPress={handleSave}
-          disabled={!isFormValid || isSaving}
+          disabled={isSaving}
         >
           <RNText style={styles.saveButtonText}>
             {isSaving ? 'Enregistrement...' : 'Enregistrer'}
@@ -282,44 +209,43 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 8,
     paddingHorizontal: 12,
-    fontSize: 14,
+    fontSize: 13,
     color: '#1E293B',
   },
-  formInputError: {
-    borderColor: '#EF4444',
-    borderWidth: 2,
-    backgroundColor: '#FEF2F2',
-  },
-  errorContainer: {
-    marginTop: 6,
-    gap: 4,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    fontWeight: '600',
-  },
   footer: {
+    flexDirection: 'row',
+    gap: 12,
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    backgroundColor: '#FAFAFA',
+  },
+  cancelButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
   },
   saveButton: {
+    flex: 1,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#2A2E33',
   },
-  saveButtonDisabled: {
+  saveButtonSaving: {
     opacity: 0.5,
   },
   saveButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -339,8 +265,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   shapeOptionActive: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    borderColor: '#2A2E33',
+    backgroundColor: '#F8FAFC',
   },
   shapePreview: {
     width: 40,
@@ -353,6 +279,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   shapeLabelActive: {
-    color: '#4F46E5',
+    color: '#2A2E33',
   },
 });
