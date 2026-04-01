@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
-import { X, Check, Users } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { User, UserProfile } from '~/types/user.types';
 import { getUserProfileText } from '~/lib/utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
@@ -13,7 +13,7 @@ const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
 
 interface QuickTeamFormPanelContentProps {
   user?: User | null;  // Utilisateur à éditer (optionnel)
-  onSave: (profil: UserProfile, displayName: string, userId?: string) => void;
+  onSave: (profil: UserProfile, displayName: string, userId?: string) => Promise<void>;
   onCancel: () => void;
   activeTab?: UserProfile | 'all';
 }
@@ -26,6 +26,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
 }) => {
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [displayName, setDisplayName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -42,12 +43,16 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
     setSelectedProfileId(profile);
   };
 
-  const handleSave = () => {
-    if (!selectedProfileId) {
-      alert('Veuillez sélectionner un rôle');
-      return;
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(selectedProfileId as UserProfile, displayName.trim() || '', user?.id);
+    } catch {
+      // Error toast handled by parent (team.tsx via showApiError)
+    } finally {
+      setIsSaving(false);
     }
-    onSave(selectedProfileId as UserProfile, displayName.trim() || '', user?.id);
   };
 
   const isEditMode = !!user;
@@ -71,10 +76,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
         <Pressable style={{ flex: 1, paddingTop: 20 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Section Rôle */}
           <View style={styles.formGroup}>
-            <View style={styles.sectionHeader}>
-              <Users size={18} color="#2A2E33" strokeWidth={2} />
-              <Text style={styles.sectionTitle}>Rôle *</Text>
-            </View>
+            <Text style={styles.formLabel}>Rôle</Text>
             <View style={styles.profileButtons}>
               {DISPLAYABLE_PROFILES.map((profile) => (
                 <SelectButton
@@ -98,7 +100,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
               value={displayName}
               onChangeText={setDisplayName}
               placeholder="Ex: Jean Dupont, Chef Principal, etc."
-              placeholderTextColor="#A0A0A0"
+              placeholderTextColor="#94A3B8"
               style={styles.formInput}
               autoComplete="off"
             />
@@ -111,12 +113,11 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.saveButton, !selectedProfileId && styles.saveButtonDisabled]}
+          style={[styles.saveButton, isSaving && styles.saveButtonSaving]}
           onPress={handleSave}
-          disabled={!selectedProfileId}
+          disabled={isSaving}
         >
-          <Check size={20} color="#FFFFFF" strokeWidth={2} />
-          <Text style={styles.saveButtonText}>{isEditMode ? 'Modifier' : 'Créer'}</Text>
+          <Text style={styles.saveButtonText}>{isSaving ? 'Enregistrement...' : (isEditMode ? 'Modifier' : 'Créer')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -152,22 +153,11 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 20,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2A2E33',
-  },
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2A2E33',
-    marginBottom: 6,
+    color: '#1E293B',
+    marginBottom: 12,
   },
   formHelpText: {
     fontSize: 12,
@@ -175,16 +165,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   formInput: {
+    height: 44,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    color: '#2A2E33',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    fontWeight: '500',
-    minHeight: 44,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#1E293B',
   },
   profileButtons: {
     flexDirection: 'row',
@@ -200,31 +188,31 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 12,
+    height: 44,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
   saveButton: {
     flex: 1,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
-    gap: 8,
+    backgroundColor: '#2A2E33',
   },
-  saveButtonDisabled: {
+  saveButtonSaving: {
     opacity: 0.5,
   },
   saveButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
   },
