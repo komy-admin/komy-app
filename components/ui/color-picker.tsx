@@ -8,11 +8,13 @@ interface ColorPickerComponentProps {
   onChange?: (color: string) => void;
   label?: string;
   placeholder?: string;
+  containerStyle?: object;
+  labelStyle?: object;
 }
 
 // Palette de couleurs organisée par colonnes (1 couleur = 1 colonne)
 // 8 colonnes x 5 teintes
-const COLOR_COLUMNS = [
+export const COLOR_COLUMNS = [
   // Noir/Blanc/Gris
   ['#FFFFFF', '#E5E7EB', '#9CA3AF', '#4B5563', '#000000'],
   // Rouge
@@ -31,7 +33,7 @@ const COLOR_COLUMNS = [
   ['#DDD6FE', '#C4B5FD', '#A78BFA', '#8B5CF6', '#7C3AED'],
 ];
 
-export function ColorPicker({ value, onChange, label, placeholder = 'Sélectionner une couleur' }: ColorPickerComponentProps) {
+export function ColorPicker({ value, onChange, label, placeholder = 'Sélectionner une couleur', containerStyle, labelStyle }: ColorPickerComponentProps) {
   const [showModal, setShowModal] = useState(false);
   const [tempColor, setTempColor] = useState(value || '#2A2E33');
 
@@ -162,8 +164,8 @@ export function ColorPicker({ value, onChange, label, placeholder = 'Sélectionn
   };
 
   return (
-    <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+    <View style={[styles.container, containerStyle]}>
+      {label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
 
       <Pressable
         style={styles.triggerButton}

@@ -8,12 +8,17 @@ import { useMenus } from '~/hooks/useMenus';
 import { useTags } from '~/hooks/useTags';
 import { MenuFilterState } from '~/components/filters/MenuFilters';
 import { filterMenuItems, filterMenus, createEmptyMenuFilters } from '~/utils/menuFilters';
-import { useAdminFormView } from '@/components/admin/AdminForm/AdminFormView';
 import { CreditCard as Edit2, Trash, Power } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
-import { formatPrice, getContrastColor, sortActiveFirst } from '~/lib/utils';
+import { formatPrice, sortActiveFirst } from '~/lib/utils';
 import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
 import { showApiError } from '~/lib/apiErrorHandler';
+
+// ============================================================
+// Types
+// ============================================================
+
+export type MenuPanelType = 'none' | 'item' | 'menu';
 
 // ============================================================
 // Hook principal — logique métier de la page Menu admin
@@ -31,20 +36,31 @@ export function useMenuPage() {
   const { tags } = useTags();
 
   // ============================================================
-  // CRUD générique — état partagé items & menus
+  // Panel state (remplace useAdminFormView)
   // ============================================================
 
-  const itemFormView = useAdminFormView();
+  const [panelType, setPanelType] = useState<MenuPanelType>('none');
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
+  const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
+
+  // Delete modals
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   const [isDeleteItemModalVisible, setIsDeleteItemModalVisible] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const menuFormView = useAdminFormView();
-  const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
   const [isDeleteMenuModalVisible, setIsDeleteMenuModalVisible] = useState(false);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
+
+  // ============================================================
+  // Panel handlers
+  // ============================================================
+
+  const closePanel = useCallback(() => {
+    setPanelType('none');
+    setCurrentItem(null);
+    setCurrentMenu(null);
+  }, []);
 
   // ============================================================
   // Items — handlers
@@ -52,30 +68,26 @@ export function useMenuPage() {
 
   const handleCreateItem = useCallback(() => {
     setCurrentItem(null);
-    itemFormView.openCreate();
-  }, [itemFormView]);
+    setCurrentMenu(null);
+    setPanelType('item');
+  }, []);
 
   const handleEditItem = useCallback((id: string) => {
     const item = items.find(i => i.id === id);
     if (!item) return;
     setCurrentItem(item);
-    itemFormView.openEdit();
-  }, [items, itemFormView]);
-
-  const handleCloseItemModal = useCallback(() => {
-    itemFormView.close();
-    setCurrentItem(null);
-  }, [itemFormView]);
+    setCurrentMenu(null);
+    setPanelType('item');
+  }, [items]);
 
   const handleSaveItem = useCallback(async (item: Item) => {
     try {
       const itemType = itemTypes.find(type => type.id === item.itemType?.id);
-      if (!itemType) throw new Error('Type not found');
 
       const itemData: any = {
         ...item,
         color: item.color || undefined,
-        itemType,
+        itemType: itemType || undefined,
         tags: item.tags?.map(t => t.id) || [],
       };
 
@@ -86,11 +98,12 @@ export function useMenuPage() {
         await createMenuItem(itemData);
         showToast('Article créé avec succès', 'success');
       }
-      handleCloseItemModal();
+      closePanel();
     } catch (error) {
       showApiError(error, showToast, "Erreur lors de la sauvegarde de l'article");
+      throw error;
     }
-  }, [itemTypes, updateMenuItem, createMenuItem, showToast, handleCloseItemModal]);
+  }, [itemTypes, updateMenuItem, createMenuItem, showToast, closePanel]);
 
   const handleDeleteItem = useCallback((id: string) => {
     const item = items.find(i => i.id === id);
@@ -134,20 +147,17 @@ export function useMenuPage() {
 
   const handleCreateMenu = useCallback(() => {
     setCurrentMenu(null);
-    menuFormView.openCreate();
-  }, [menuFormView]);
+    setCurrentItem(null);
+    setPanelType('menu');
+  }, []);
 
   const handleEditMenu = useCallback((id: string) => {
     const menu = allMenus.find(m => m.id === id);
     if (!menu) return;
     setCurrentMenu(menu);
-    menuFormView.openEdit();
-  }, [allMenus, menuFormView]);
-
-  const handleCloseMenuModal = useCallback(() => {
-    menuFormView.close();
-    setCurrentMenu(null);
-  }, [menuFormView]);
+    setCurrentItem(null);
+    setPanelType('menu');
+  }, [allMenus]);
 
   const handleToggleMenuStatus = useCallback(async (id: string) => {
     const menu = allMenus.find(m => m.id === id);
@@ -160,9 +170,6 @@ export function useMenuPage() {
     }
   }, [allMenus, updateMenu, showToast]);
 
-  /**
-   * Mappe les données du formulaire vers le format API bulk, puis crée ou met à jour
-   */
   const handleBulkMenuSave = useCallback(async (menuData: any) => {
     try {
       const mapCategories = (categories: any[], includeIds: boolean) =>
@@ -210,12 +217,12 @@ export function useMenuPage() {
       }
 
       showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
-      handleCloseMenuModal();
+      closePanel();
     } catch (error) {
       showApiError(error, showToast, 'Erreur lors de la sauvegarde du menu');
       throw error;
     }
-  }, [itemTypes, updateMenuBulk, createMenuBulk, showToast, handleCloseMenuModal]);
+  }, [itemTypes, updateMenuBulk, createMenuBulk, showToast, closePanel]);
 
   const handleDeleteMenu = useCallback((id: string) => {
     const menu = allMenus.find(m => m.id === id);
@@ -270,12 +277,10 @@ export function useMenuPage() {
     if (activeTab !== 'tous') return undefined;
     const sections: { title: string; data: any[] }[] = [];
 
-    // Menus (déjà filtrés via filteredMenus)
     if (filteredMenus.length > 0) {
       sections.push({ title: 'Menus', data: filteredMenus.map(m => ({ ...m, _type: 'menu' as const })) });
     }
 
-    // Items par type, triés par priorité puis alpha
     const sortedTypes = [...itemTypes].sort((a, b) => {
       if (a.priorityOrder !== b.priorityOrder) return a.priorityOrder - b.priorityOrder;
       return a.name.localeCompare(b.name);
@@ -385,12 +390,15 @@ export function useMenuPage() {
     loading, menusLoading,
     filteredItems, filteredMenus, tousSections,
 
+    // Panel state
+    panelType, currentItem, currentMenu, closePanel,
+
     // Items CRUD
-    itemFormView, currentItem, handleCreateItem, handleEditItem, handleCloseItemModal, handleSaveItem,
+    handleCreateItem, handleEditItem, handleSaveItem,
     isDeleteItemModalVisible, itemToDelete, isDeleting, confirmDeleteItem, handleCloseDeleteItemModal,
 
     // Menus CRUD
-    menuFormView, currentMenu, handleCreateMenu, handleEditMenu, handleCloseMenuModal, handleBulkMenuSave,
+    handleCreateMenu, handleEditMenu, handleBulkMenuSave,
     isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
     createMenuCategoryItem, loadMenuCategoryItems,
 

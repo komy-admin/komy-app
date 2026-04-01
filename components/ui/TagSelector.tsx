@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
-    minHeight: 36,
+    minHeight: 44,
   },
   iconContainer: {
     width: 12,

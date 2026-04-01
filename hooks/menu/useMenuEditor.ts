@@ -3,11 +3,11 @@ import {
   MenuFormData,
   MenuCategoryFormData,
   LocalMenuCategoryItem,
-  CategoryItemFormData
 } from '@/components/admin/MenuForm/MenuEditor/MenuEditor.types';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
+import { AdminConfirmationContext } from '@/components/admin/AdminForm/AdminFormView';
 import { useToast } from '~/components/ToastProvider';
 import { centsToEuros, eurosToCents } from '~/lib/utils';
 
@@ -19,36 +19,30 @@ interface UseMenuEditorProps {
   onCreateMenuCategoryItem?: (data: Partial<MenuCategoryItem>) => Promise<MenuCategoryItem>;
 }
 
+interface CategorySelection {
+  value: string;
+  label: string;
+  id: string;
+}
+
 interface UseMenuEditorReturn {
   formData: MenuFormData;
-  errors: Record<string, string>;
   localCategoryItems: Record<number, LocalMenuCategoryItem[]>;
-  categorySelections: Record<number, any>;
-  showAddItemForm: Record<string, boolean>;
-  itemFormData: Record<string, CategoryItemFormData>;
-  editingItem: { categoryIndex: number; tempId: string } | null;
-  editItemData: { supplement: string; isAvailable: boolean };
-  
-  updateFormField: (field: keyof MenuFormData, value: any) => void;
-  updateCategory: (index: number, field: keyof MenuCategoryFormData, value: any) => void;
+  categorySelections: Record<number, CategorySelection>;
+
+  updateFormField: (field: keyof MenuFormData, value: MenuFormData[keyof MenuFormData]) => void;
+  updateCategory: (index: number, field: keyof MenuCategoryFormData, value: string | boolean) => void;
   addCategory: () => void;
-  removeCategory: (index: number, confirmationContext: any) => void;
-  validateForm: () => Record<string, string>;
-  
-  toggleAddItemForm: (categoryIndex: number) => void;
-  updateItemFormData: (categoryIndex: number, field: keyof CategoryItemFormData, value: any) => void;
-  addItemToCategory: (categoryIndex: number) => void;
+  removeCategory: (index: number, confirmationContext: AdminConfirmationContext | null) => void;
+
   addItemToCategoryDirect: (categoryIndex: number, itemId: string, supplement: number, isAvailable: boolean) => void;
   removeItemFromCategory: (categoryIndex: number, tempId: string) => void;
   updateItemInCategory: (categoryIndex: number, tempId: string, supplement: number, isAvailable: boolean) => void;
-  startEditingItem: (categoryIndex: number, tempId: string) => void;
-  updateEditItemData: (field: 'supplement' | 'isAvailable', value: any) => void;
-  saveEditedItem: () => void;
-  cancelEditingItem: () => void;
   toggleItemAvailability: (categoryIndex: number, tempId: string) => void;
-  
-  getMenuData: () => Menu | null;
+
+  getMenuData: () => Menu;
   resetForm: () => void;
+  restoreCategoryItems: (categoryIndex: number, snapshot: LocalMenuCategoryItem[]) => void;
 }
 
 export const useMenuEditor = ({
@@ -77,17 +71,9 @@ export const useMenuEditor = ({
     })) || []
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [localCategoryItems, setLocalCategoryItems] = useState<Record<number, LocalMenuCategoryItem[]>>({});
 
-  const [showAddItemForm, setShowAddItemForm] = useState<Record<string, boolean>>({});
-  const [itemFormData, setItemFormData] = useState<Record<string, CategoryItemFormData>>({});
-  const [categorySelections, setCategorySelections] = useState<Record<number, any>>({});
-  const [editingItem, setEditingItem] = useState<{ categoryIndex: number; tempId: string } | null>(null);
-  const [editItemData, setEditItemData] = useState<{ supplement: string; isAvailable: boolean }>({ 
-    supplement: '0', 
-    isAvailable: true 
-  });
+  const [categorySelections, setCategorySelections] = useState<Record<number, CategorySelection>>({});
 
 
   // Charger les items une seule fois au montage si on est en mode édition
@@ -123,10 +109,10 @@ export const useMenuEditor = ({
   }, [menu?.id]); // Uniquement quand l'ID du menu change
 
   useEffect(() => {
-    const selections: Record<number, any> = {};
+    const selections: Record<number, CategorySelection> = {};
     formData.categories.forEach((cat, index) => {
       const itemType = itemTypes.find(type => type.id === cat.itemTypeId);
-      if (itemType) {
+      if (itemType && itemType.id) {
         selections[index] = {
           value: itemType.name,
           label: itemType.name,
@@ -137,64 +123,26 @@ export const useMenuEditor = ({
     setCategorySelections(selections);
   }, [formData.categories, itemTypes]);
 
-  const validateForm = useCallback((): Record<string, string> => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Le nom est obligatoire';
-    }
-
-    const basePrice = parseFloat(formData.basePrice);
-    if (!formData.basePrice || isNaN(basePrice) || basePrice < 0) {
-      newErrors.basePrice = 'Le prix de base doit être un nombre positif';
-    }
-
-    if (formData.categories.length === 0) {
-      newErrors.categories = 'Au moins une catégorie est requise';
-    }
-
-    formData.categories.forEach((category, index) => {
-      if (!category.itemTypeId) {
-        newErrors[`category_${index}_type`] = 'Type d\'item requis';
-      }
-
-      const maxSelections = parseInt(category.maxSelections);
-      if (!category.maxSelections.trim() || isNaN(maxSelections) || maxSelections < 1) {
-        newErrors[`category_${index}_max`] = 'Au moins 1 sélection requise';
-      }
-
-      const priceModifier = parseFloat(category.priceModifier);
-      if (isNaN(priceModifier) || priceModifier < 0) {
-        newErrors[`category_${index}_price`] = 'Le modificateur de prix doit être un nombre positif ou zéro';
-      }
-    });
-
-    setErrors(newErrors);
-    return newErrors;
-  }, [formData]);
-
-  const updateFormField = useCallback((field: keyof MenuFormData, value: any) => {
+  const updateFormField = useCallback((field: keyof MenuFormData, value: MenuFormData[keyof MenuFormData]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const updateCategory = useCallback((index: number, field: keyof MenuCategoryFormData, value: any) => {
+  const updateCategory = useCallback((index: number, field: keyof MenuCategoryFormData, value: string | boolean) => {
     // Si on change le type de catégorie, on doit marquer tous les items comme supprimés
     if (field === 'itemTypeId') {
-      const oldItemTypeId = formData.categories[index].itemTypeId;
+      const oldItemTypeId = formData.categories[index]?.itemTypeId;
       if (oldItemTypeId !== value && oldItemTypeId) {
         setLocalCategoryItems(prev => {
           const currentItems = prev[index] || [];
-          // Marquer tous les items existants comme supprimés et retirer les nouveaux
           const clearedItems = currentItems
-            .filter(item => item.originalId) // Garder seulement ceux qui existent en base
-            .map(item => ({ ...item, isDeleted: true })); // Les marquer comme supprimés
+            .filter(item => item.originalId)
+            .map(item => ({ ...item, isDeleted: true }));
 
           return {
             ...prev,
             [index]: clearedItems
           };
         });
-        showToast('Articles de la catégorie précédente retirés', 'info');
       }
     }
 
@@ -204,7 +152,7 @@ export const useMenuEditor = ({
         i === index ? { ...cat, [field]: value } : cat
       )
     }));
-  }, [formData.categories, showToast]);
+  }, [formData.categories]);
 
   const addCategory = useCallback(() => {
     const newCategory: MenuCategoryFormData = {
@@ -230,142 +178,42 @@ export const useMenuEditor = ({
     showToast('Nouvelle catégorie ajoutée', 'success');
   }, [showToast, formData.categories.length]);
 
-  const removeCategory = useCallback((index: number, confirmationContext: any) => {
+  const removeCategory = useCallback((index: number, confirmationContext: AdminConfirmationContext | null) => {
     const categoryToRemove = formData.categories[index];
+    if (!categoryToRemove || !confirmationContext) return;
+
     const itemType = itemTypes.find(type => type.id === categoryToRemove.itemTypeId);
     const categoryName = itemType?.name || `Catégorie ${index + 1}`;
-
-    if (!confirmationContext) {
-      return;
-    }
 
     confirmationContext.showConfirmation({
       entityName: categoryName,
       entityType: 'la catégorie',
+      onCancel: () => confirmationContext.hideConfirmation(),
       onConfirm: async () => {
         setFormData(prev => ({
           ...prev,
           categories: prev.categories.filter((_, i) => i !== index)
         }));
 
-        const newSelections: Record<number, any> = {};
-        Object.entries(categorySelections).forEach(([key, value]) => {
-          const idx = parseInt(key);
-          if (idx < index) {
-            newSelections[idx] = value;
-          } else if (idx > index) {
-            newSelections[idx - 1] = value;
-          }
-        });
-        setCategorySelections(newSelections);
+        const reindexRecord = <T,>(record: Record<number, T>, removedIndex: number): Record<number, T> => {
+          const result: Record<number, T> = {};
+          Object.entries(record).forEach(([key, value]) => {
+            const idx = parseInt(key);
+            if (idx < removedIndex) result[idx] = value;
+            else if (idx > removedIndex) result[idx - 1] = value;
+          });
+          return result;
+        };
 
-        const newLocalItems: Record<number, LocalMenuCategoryItem[]> = {};
-        Object.entries(localCategoryItems).forEach(([key, value]) => {
-          const idx = parseInt(key);
-          if (idx < index) {
-            newLocalItems[idx] = value;
-          } else if (idx > index) {
-            newLocalItems[idx - 1] = value;
-          }
-        });
-        setLocalCategoryItems(newLocalItems);
+        setCategorySelections(prev => reindexRecord(prev, index));
+        setLocalCategoryItems(prev => reindexRecord(prev, index));
 
         showToast('Catégorie supprimée', 'success');
       }
     });
-  }, [formData.categories, itemTypes, categorySelections, localCategoryItems, showToast]);
+  }, [formData.categories, itemTypes, showToast]);
 
-  const toggleAddItemForm = useCallback((categoryIndex: number) => {
-    const key = `category_${categoryIndex}`;
-    setShowAddItemForm(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-
-    if (!itemFormData[key]) {
-      setItemFormData(prev => ({
-        ...prev,
-        [key]: {
-          itemId: '',
-          supplement: '0',
-          isAvailable: true
-        }
-      }));
-    }
-  }, [itemFormData]);
-
-  const updateItemFormData = useCallback((categoryIndex: number, field: keyof CategoryItemFormData, value: any) => {
-    const key = `category_${categoryIndex}`;
-    setItemFormData(prev => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        [field]: value
-      }
-    }));
-  }, []);
-
-  const addItemToCategory = useCallback(async (categoryIndex: number) => {
-    const key = `category_${categoryIndex}`;
-    const formItem = itemFormData[key];
-
-    if (!formItem?.itemId) {
-      showToast('Veuillez sélectionner un article', 'error');
-      return;
-    }
-
-    const existing = localCategoryItems[categoryIndex]?.find(item =>
-      item.itemId === formItem.itemId && !item.isDeleted
-    );
-
-    if (existing) {
-      showToast('Cet article est déjà dans la catégorie', 'error');
-      return;
-    }
-
-    const selectedItem = items.find(i => i.id === formItem.itemId);
-    const supplement = parseFloat(formItem.supplement) || 0;
-
-    // Toujours travailler en mode draft jusqu'à la validation finale
-    // Ajouter l'item localement (mode draft)
-    const newItem: LocalMenuCategoryItem = {
-      tempId: `new-${categoryIndex}-${Date.now()}`,
-      itemId: formItem.itemId,
-      supplement,
-      isAvailable: formItem.isAvailable,
-      item: selectedItem,
-      isModified: false,
-      isDeleted: false
-    };
-
-    setLocalCategoryItems(prev => {
-      // Créer une nouvelle référence pour forcer le re-render
-      const newItems = [...(prev[categoryIndex] || []), newItem];
-      const updated = {
-        ...prev,
-        [categoryIndex]: newItems
-      };
-      return updated;
-    });
-
-    showToast('Article ajouté (sera sauvegardé à la validation)', 'success');
-
-    setShowAddItemForm(prev => ({
-      ...prev,
-      [key]: false
-    }));
-
-    setItemFormData(prev => ({
-      ...prev,
-      [key]: {
-        itemId: '',
-        supplement: '0',
-        isAvailable: true
-      }
-    }));
-  }, [itemFormData, localCategoryItems, items, showToast, formData.categories, menu, onCreateMenuCategoryItem]);
-
-  const removeItemFromCategory = useCallback(async (categoryIndex: number, tempId: string) => {
+  const removeItemFromCategory = useCallback((categoryIndex: number, tempId: string) => {
     const item = localCategoryItems[categoryIndex]?.find(i => i.tempId === tempId);
 
     // Toujours travailler en mode draft
@@ -387,55 +235,7 @@ export const useMenuEditor = ({
       }));
     }
 
-    showToast('Article retiré (sera sauvegardé à la validation)', 'success');
-  }, [localCategoryItems, showToast]);
-
-  const startEditingItem = useCallback((categoryIndex: number, tempId: string) => {
-    const item = localCategoryItems[categoryIndex]?.find(i => i.tempId === tempId);
-    if (item) {
-      setEditingItem({ categoryIndex, tempId });
-      setEditItemData({
-        supplement: item.supplement.toString(),
-        isAvailable: item.isAvailable
-      });
-    }
   }, [localCategoryItems]);
-
-  const updateEditItemData = useCallback((field: 'supplement' | 'isAvailable', value: any) => {
-    setEditItemData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  }, []);
-
-  const saveEditedItem = useCallback(() => {
-    if (!editingItem) return;
-
-    const { categoryIndex, tempId } = editingItem;
-
-    setLocalCategoryItems(prev => ({
-      ...prev,
-      [categoryIndex]: prev[categoryIndex]?.map(item =>
-        item.tempId === tempId
-          ? {
-              ...item,
-              supplement: parseFloat(editItemData.supplement) || 0,
-              isAvailable: editItemData.isAvailable,
-              isModified: true
-            }
-          : item
-      ) || []
-    }));
-
-    setEditingItem(null);
-    setEditItemData({ supplement: '0', isAvailable: true });
-    showToast('Article modifié avec succès', 'success');
-  }, [editingItem, editItemData, showToast]);
-
-  const cancelEditingItem = useCallback(() => {
-    setEditingItem(null);
-    setEditItemData({ supplement: '0', isAvailable: true });
-  }, []);
 
   const addItemToCategoryDirect = useCallback((categoryIndex: number, itemId: string, supplement: number, isAvailable: boolean) => {
     const existing = localCategoryItems[categoryIndex]?.find(item =>
@@ -467,8 +267,7 @@ export const useMenuEditor = ({
       };
     });
 
-    showToast('Article ajouté (sera sauvegardé à la validation)', 'success');
-  }, [localCategoryItems, items, showToast]);
+  }, [localCategoryItems, items]);
 
   const updateItemInCategory = useCallback((categoryIndex: number, tempId: string, supplement: number, isAvailable: boolean) => {
     setLocalCategoryItems(prev => ({
@@ -485,8 +284,7 @@ export const useMenuEditor = ({
       ) || []
     }));
 
-    showToast('Article modifié avec succès', 'success');
-  }, [showToast]);
+  }, []);
 
   const toggleItemAvailability = useCallback((categoryIndex: number, tempId: string) => {
     setLocalCategoryItems(prev => ({
@@ -503,12 +301,7 @@ export const useMenuEditor = ({
     }));
   }, []);
 
-  const getMenuData = useCallback((): Menu | null => {
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      return null;
-    }
-
+  const getMenuData = useCallback((): Menu => {
     return {
       id: menu?.id,
       name: formData.name,
@@ -525,7 +318,7 @@ export const useMenuEditor = ({
         maxSelections: parseInt(cat.maxSelections) || 1,
         // 💰 Convertir euros -> centimes pour l'envoi API
         priceModifier: eurosToCents(parseFloat(cat.priceModifier) || 0),
-        itemType: itemTypes.find(type => type.id === cat.itemTypeId)!,
+        itemType: itemTypes.find(type => type.id === cat.itemTypeId) ?? null,
         // 💰 Convertir les suppléments euros -> centimes pour l'envoi API
         localItems: (localCategoryItems[index] || []).map(item => ({
           ...item,
@@ -533,7 +326,7 @@ export const useMenuEditor = ({
         }))
       } as any))
     } as Menu;
-  }, [menu, formData, localCategoryItems, itemTypes, validateForm]);
+  }, [menu, formData, localCategoryItems, itemTypes]);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -545,39 +338,33 @@ export const useMenuEditor = ({
       categories: []
     });
     setLocalCategoryItems({});
-    setErrors({});
     setCategorySelections({});
+  }, []);
+
+  const restoreCategoryItems = useCallback((categoryIndex: number, snapshot: LocalMenuCategoryItem[]) => {
+    setLocalCategoryItems(prev => ({
+      ...prev,
+      [categoryIndex]: snapshot,
+    }));
   }, []);
 
   return {
     formData,
-    errors,
     localCategoryItems,
     categorySelections,
-    showAddItemForm,
-    itemFormData,
-    editingItem,
-    editItemData,
-    
+
     updateFormField,
     updateCategory,
     addCategory,
     removeCategory,
-    validateForm,
-    
-    toggleAddItemForm,
-    updateItemFormData,
-    addItemToCategory,
+
     addItemToCategoryDirect,
     removeItemFromCategory,
     updateItemInCategory,
-    startEditingItem,
-    updateEditItemData,
-    saveEditedItem,
-    cancelEditingItem,
     toggleItemAvailability,
-    
+
     getMenuData,
-    resetForm
+    resetForm,
+    restoreCategoryItems,
   };
 };

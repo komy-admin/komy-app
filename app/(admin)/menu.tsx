@@ -1,4 +1,4 @@
-import { useWindowDimensions, View, Text, Pressable, Platform, StyleSheet } from "react-native";
+import { useWindowDimensions, View, Text, Pressable, TouchableOpacity, Platform, StyleSheet } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, ForkTable } from "~/components/ui";
 import { TabsHeader } from '~/components/ui/TabsHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
@@ -6,12 +6,12 @@ import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
 import { usePanelPortal } from '~/hooks/usePanelPortal';
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { MenuFilters } from '~/components/filters/MenuFilters';
-import { X, Tag, LayoutList } from 'lucide-react-native';
+import { X, PlusCircle, Layers, Lock } from 'lucide-react-native';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
-import { ItemFormModal } from '@/components/admin/ItemForm/ItemFormModal';
-import { MenuFormModal } from '@/components/admin/MenuForm/MenuFormModal';
+import { ItemFormPanel } from '@/components/admin/ItemForm/ItemFormPanel';
+import { MenuFormPanel } from '@/components/admin/MenuForm/MenuFormPanel';
 import { useMenuPage } from '~/hooks/useMenuPage';
 
 export default function MenuPage() {
@@ -25,9 +25,10 @@ export default function MenuPage() {
     items, itemTypes, tags,
     loading, menusLoading,
     filteredItems, filteredMenus, tousSections,
-    itemFormView, currentItem, handleCreateItem, handleEditItem, handleCloseItemModal, handleSaveItem,
+    panelType, currentItem, currentMenu, closePanel,
+    handleCreateItem, handleEditItem, handleSaveItem,
     isDeleteItemModalVisible, itemToDelete, isDeleting, confirmDeleteItem, handleCloseDeleteItemModal,
-    menuFormView, currentMenu, handleCreateMenu, handleEditMenu, handleCloseMenuModal, handleBulkMenuSave,
+    handleCreateMenu, handleEditMenu, handleBulkMenuSave,
     isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
     createMenuCategoryItem, loadMenuCategoryItems,
     getItemActions, getMenuActions, getTousActions, handleTousRowPress,
@@ -40,71 +41,69 @@ export default function MenuPage() {
     counts['menus'] = filteredMenus.length;
     let total = filteredMenus.length;
     for (const type of itemTypes) {
+      if (!type.id) continue;
       const count = items.filter(i => i.itemTypeId === type.id).length;
-      counts[type.id!] = count;
+      counts[type.id] = count;
       total += count;
     }
     counts['tous'] = total;
     return counts;
   }, [items, itemTypes, filteredMenus]);
 
-  // Panel de création — appel direct sans état intermédiaire
+  // Close panel helper (ferme le panel + reset state)
+  const handleClosePanel = useCallback(() => {
+    closePanel();
+    clearPanel();
+  }, [closePanel, clearPanel]);
+
+  // ============================================================
+  // Sync panel type → usePanelPortal
+  // ============================================================
+
+  useEffect(() => {
+    if (panelType === 'item') {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleClosePanel} width={420}>
+          <ItemFormPanel
+            item={currentItem}
+            itemTypes={itemTypes}
+            tags={tags}
+            activeTab={activeTab}
+            onSave={handleSaveItem}
+            onCancel={handleClosePanel}
+          />
+        </SlidePanel>
+      );
+    } else if (panelType === 'menu') {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleClosePanel} width={420}>
+          <MenuFormPanel
+            menu={currentMenu}
+            items={items}
+            itemTypes={itemTypes}
+            onSave={handleBulkMenuSave}
+            onCancel={handleClosePanel}
+            onLoadMenuCategoryItems={loadMenuCategoryItems}
+            onCreateMenuCategoryItem={createMenuCategoryItem}
+          />
+        </SlidePanel>
+      );
+    } else {
+      clearPanel();
+    }
+  }, [panelType, currentItem, currentMenu, handleClosePanel, renderPanel, clearPanel, itemTypes, tags, activeTab, items, handleSaveItem, handleBulkMenuSave, loadMenuCategoryItems, createMenuCategoryItem]);
+
+  // Panel de création — choix Article / Menu
   const openCreatePanel = useCallback(() => {
-    const closePanel = () => clearPanel();
     renderPanel(
       <CreatePanel
-        onClose={closePanel}
-        onCreateItem={() => { closePanel(); handleCreateItem(); }}
-        onCreateMenu={() => { closePanel(); handleCreateMenu(); }}
+        onClose={() => clearPanel()}
+        onCreateItem={() => handleCreateItem()}
+        onCreateMenu={() => handleCreateMenu()}
+        hasItemTypes={itemTypes.length > 0}
       />
     );
-  }, [renderPanel, clearPanel, handleCreateItem, handleCreateMenu]);
-
-  // Modals — early return quand visibles
-  if (itemFormView.isVisible) {
-    return (
-      <ItemFormModal
-        visible={itemFormView.isVisible}
-        mode={itemFormView.mode}
-        item={currentItem}
-        itemTypes={itemTypes}
-        tags={tags}
-        activeTab={activeTab}
-        onClose={handleCloseItemModal}
-        onSave={async (getFormData) => {
-          const formData = getFormData();
-          if (!formData.isValid) return false;
-          try {
-            await handleSaveItem(formData.data);
-            return true;
-          } catch { return false; }
-        }}
-      />
-    );
-  }
-
-  if (menuFormView.isVisible) {
-    return (
-      <MenuFormModal
-        visible={menuFormView.isVisible}
-        mode={menuFormView.mode}
-        menu={currentMenu}
-        items={items}
-        itemTypes={itemTypes}
-        onClose={handleCloseMenuModal}
-        onCreateMenuCategoryItem={createMenuCategoryItem}
-        onLoadMenuCategoryItems={loadMenuCategoryItems}
-        onSave={async (getFormData) => {
-          const formData = getFormData();
-          if (!formData.isValid) return false;
-          try {
-            await handleBulkMenuSave(formData.data);
-            return true;
-          } catch { return false; }
-        }}
-      />
-    );
-  }
+  }, [renderPanel, clearPanel, handleCreateItem, handleCreateMenu, itemTypes.length]);
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -149,7 +148,7 @@ export default function MenuPage() {
                   isActive={activeTab === 'menus'}
                 />
               </TabsTrigger>
-              {itemTypes.map((type) => (
+              {itemTypes.filter(type => type.id).map((type) => (
                 <TabsTrigger key={type.id} value={type.id!} className="">
                   <TabBadgeItem
                     name={type.name}
@@ -227,10 +226,11 @@ export default function MenuPage() {
 // Composant — Panel de création (Article / Menu)
 // ============================================================
 
-function CreatePanel({ onClose, onCreateItem, onCreateMenu }: {
+function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
   onClose: () => void;
   onCreateItem: () => void;
   onCreateMenu: () => void;
+  hasItemTypes: boolean;
 }) {
   return (
     <SlidePanel visible={true} onClose={onClose} width={420}>
@@ -243,24 +243,43 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu }: {
         </View>
         <View style={styles.createPanelContent}>
           <Text style={styles.createPanelSubtitle}>Choisissez le type de création</Text>
-          <Pressable style={styles.createPanelCard} onPress={onCreateItem}>
-            <View style={styles.createPanelIconArticle}>
-              <Tag size={32} color="#6366F1" strokeWidth={2} />
+          <TouchableOpacity
+            style={[styles.createPanelCardArticle, !hasItemTypes && styles.createPanelCardDisabled]}
+            onPress={hasItemTypes ? onCreateItem : undefined}
+            activeOpacity={hasItemTypes ? 0.7 : 1}
+          >
+            <View style={[styles.createPanelIconArticle, !hasItemTypes && styles.createPanelIconDisabled]}>
+              {hasItemTypes
+                ? <PlusCircle size={22} color="#6366F1" strokeWidth={2.5} />
+                : <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+              }
             </View>
             <View style={styles.createPanelCardContent}>
-              <Text style={styles.createPanelCardTitle}>Article</Text>
-              <Text style={styles.createPanelCardDesc}>Ajouter un nouvel article au catalogue</Text>
+              <Text style={[styles.createPanelCardTitleArticle, !hasItemTypes && styles.createPanelCardTitleDisabled]}>Article</Text>
+              <Text style={[styles.createPanelCardDescArticle, !hasItemTypes && styles.createPanelCardDescDisabled]}>Ajouter un nouvel article au catalogue</Text>
             </View>
-          </Pressable>
-          <Pressable style={styles.createPanelCard} onPress={onCreateMenu}>
-            <View style={styles.createPanelIconMenu}>
-              <LayoutList size={32} color="#F59E0B" strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.createPanelCardMenu, !hasItemTypes && styles.createPanelCardDisabled]}
+            onPress={hasItemTypes ? onCreateMenu : undefined}
+            activeOpacity={hasItemTypes ? 0.7 : 1}
+          >
+            <View style={[styles.createPanelIconMenu, !hasItemTypes && styles.createPanelIconDisabled]}>
+              {hasItemTypes
+                ? <Layers size={22} color="#16A34A" strokeWidth={2.5} />
+                : <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+              }
             </View>
             <View style={styles.createPanelCardContent}>
-              <Text style={styles.createPanelCardTitle}>Menu</Text>
-              <Text style={styles.createPanelCardDesc}>Composer un menu avec des catégories d'articles</Text>
+              <Text style={[styles.createPanelCardTitleMenu, !hasItemTypes && styles.createPanelCardTitleDisabled]}>Menu</Text>
+              <Text style={[styles.createPanelCardDescMenu, !hasItemTypes && styles.createPanelCardDescDisabled]}>Composer un menu avec des catégories d'articles</Text>
             </View>
-          </Pressable>
+          </TouchableOpacity>
+          {!hasItemTypes && (
+            <Text style={styles.createPanelHint}>
+              Créez des types d'articles avant de pouvoir ajouter des articles ou des menus.
+            </Text>
+          )}
         </View>
       </View>
     </SlidePanel>
@@ -299,47 +318,86 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 20,
   },
-  createPanelCard: {
+  createPanelCardArticle: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EEF2FF',
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#C7D2FE',
+    gap: 14,
+  },
+  createPanelCardMenu: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    gap: 14,
   },
   createPanelIconArticle: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#E0E7FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
   },
   createPanelIconMenu: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: '#FEF3C7',
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
   },
   createPanelCardContent: {
     flex: 1,
   },
-  createPanelCardTitle: {
-    fontSize: 16,
+  createPanelCardTitleArticle: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
+    color: '#4338CA',
+    marginBottom: 2,
   },
-  createPanelCardDesc: {
-    fontSize: 13,
-    color: '#64748B',
+  createPanelCardDescArticle: {
+    fontSize: 12,
+    color: '#6366F1',
+  },
+  createPanelCardTitleMenu: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#15803D',
+    marginBottom: 2,
+  },
+  createPanelCardDescMenu: {
+    fontSize: 12,
+    color: '#16A34A',
+  },
+  createPanelCardDisabled: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed' as const,
+  },
+  createPanelIconDisabled: {
+    backgroundColor: '#F1F5F9',
+  },
+  createPanelCardTitleDisabled: {
+    color: '#9CA3AF',
+  },
+  createPanelCardDescDisabled: {
+    color: '#CBD5E1',
+  },
+  createPanelHint: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 4,
     lineHeight: 18,
   },
 });

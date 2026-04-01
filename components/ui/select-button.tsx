@@ -67,7 +67,7 @@ export const SelectButton = memo<SelectButtonProps>(({
       fontFamily: 'system-ui, -apple-system, sans-serif',
       fontWeight: isActive
         ? (variant === 'main' ? '700' : variant === 'tab' ? '600' : variant === 'pill' ? '600' : '600')
-        : (variant === 'compact' ? '500' : variant === 'tab' ? '500' : variant === 'pill' ? '500' : '500')
+        : (variant === 'compact' ? '500' : variant === 'tab' ? '500' : variant === 'pill' ? '500' : '600')
     },
     textStyle
   ].filter(Boolean) as TextStyle[];
@@ -138,13 +138,13 @@ const styles = StyleSheet.create({
   subButton: {
     paddingVertical: 8,
     paddingHorizontal: 20,
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 36,
+    minHeight: 44,
     minWidth: 80,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
 
   subButtonText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#6b7280',
     textAlign: 'center',
     ...(Platform.OS === 'web' && {

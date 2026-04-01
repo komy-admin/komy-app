@@ -12,6 +12,7 @@ interface NumberInputProps {
   placeholderTextColor?: string;
   currency?: string;
   style?: object;
+  containerStyle?: object;
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export function NumberInput({
   placeholderTextColor = "#D7D7D7",
   currency,
   style,
+  containerStyle,
   className,
   ...props
 }: NumberInputProps) {
@@ -98,7 +100,7 @@ export function NumberInput({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <TextInput
         keyboardType={Platform.select({
           ios: 'decimal-pad',
@@ -112,13 +114,14 @@ export function NumberInput({
         placeholder={placeholder}
         placeholderTextColor={placeholderTextColor}
         className={cn(
-          'web:flex h-10 native:h-12 web:w-full rounded-md border border-input bg-background px-3 web:py-2 lg:text-sm native:text-lg native:leading-[1.25] text-foreground placeholder:text-muted-foreground web:ring-offset-background file:border-0 file:bg-transparent file:font-medium web:focus-visible:outline-none web:focus-visible:ring-2 web:focus-visible:ring-ring web:focus-visible:ring-offset-2',
+          'web:flex native:h-12 web:w-full px-3 web:py-2 native:text-lg native:leading-[1.25] text-foreground placeholder:text-muted-foreground web:ring-offset-background file:border-0 file:bg-transparent file:font-medium web:focus-visible:outline-none web:focus-visible:ring-2 web:focus-visible:ring-ring web:focus-visible:ring-offset-2',
           isFocused && 'web:ring-2 web:ring-ring web:ring-offset-2',
           className
         )}
         style={[
           Platform.OS !== 'web' && styles.mobileInput,
-          style
+          { height: 44 },
+          style,
         ]}
         {...props}
       />
@@ -134,7 +137,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: Platform.OS === 'web' ? 40 : 48,
+    minHeight: Platform.OS === 'web' ? 44 : 48,
   },
   mobileInput: {
     paddingRight: Platform.OS === 'ios' ? 8 : 32,
