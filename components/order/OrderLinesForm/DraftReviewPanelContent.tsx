@@ -81,6 +81,11 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
   const [pendingDeleteIndices, setPendingDeleteIndices] = useState<number[]>([]);
 
+  // Flash detection: track previous fingerprint quantities and menu IDs
+  const prevFingerprintsRef = useRef<Map<string, number>>(new Map());
+  const prevMenuIdsRef = useRef<Set<string>>(new Set());
+  const isFirstRenderRef = useRef(true);
+
   const handleDeleteRequest = useCallback((index: number, allIndices?: number[]) => {
     setPendingDeleteIndex(index);
     setPendingDeleteIndices(allIndices || [index]);
@@ -193,6 +198,41 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
     return { itemSections: sorted, menuLines: menus };
   }, [draftLines, itemTypes]);
 
+  // Detect which rows should flash (new items or quantity increase)
+  const { flashFingerprints, flashMenuIds, currentFpMap, currentMenuIds } = useMemo(() => {
+    const flashFp = new Set<string>();
+    const flashMenus = new Set<string>();
+
+    const fpMap = new Map<string, number>();
+    itemSections.forEach(section => {
+      section.groupedLines.forEach(group => {
+        const fp = getLineFingerprint(group.line);
+        fpMap.set(fp, group.quantity);
+      });
+    });
+
+    const menuIds = new Set(menuLines.map(m => m.line.id));
+
+    if (!isFirstRenderRef.current) {
+      fpMap.forEach((qty, fp) => {
+        const prevQty = prevFingerprintsRef.current.get(fp) || 0;
+        if (qty > prevQty) flashFp.add(fp);
+      });
+      menuIds.forEach(id => {
+        if (!prevMenuIdsRef.current.has(id)) flashMenus.add(id);
+      });
+    }
+
+    return { flashFingerprints: flashFp, flashMenuIds: flashMenus, currentFpMap: fpMap, currentMenuIds: menuIds };
+  }, [itemSections, menuLines]);
+
+  // Update refs after render (side effects outside useMemo)
+  useEffect(() => {
+    isFirstRenderRef.current = false;
+    prevFingerprintsRef.current = currentFpMap;
+    prevMenuIdsRef.current = currentMenuIds;
+  }, [currentFpMap, currentMenuIds]);
+
   const totalLines = draftLines.length;
 
   return (
@@ -249,6 +289,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         isDeleteLocked={isLineDeleteLocked(group.line, hasAllocations)}
                         paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
+                        shouldFlash={flashFingerprints.has(getLineFingerprint(group.line))}
                         onEdit={onEdit}
                         onEditGroup={onEditGroup}
                         onDeleteRequest={handleDeleteRequest}
@@ -281,6 +322,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         isDeleteLocked={isLineDeleteLocked(line, hasAllocations)}
                         paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
+                        shouldFlash={flashMenuIds.has(line.id)}
                         onEditMenu={onEditMenu}
                         onDeleteRequest={handleDeleteRequest}
                         onConfirmDelete={handleConfirmDelete}
@@ -345,6 +387,26 @@ const DeleteConfirmOverlay: React.FC<{
 };
 
 
+// ========================================
+// FLASH OVERLAY (green pulse on add)
+// ========================================
+
+const FlashOverlay: React.FC = () => {
+  const opacity = useRef(new Animated.Value(0.30)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 0,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[styles.flashOverlay, { opacity }]} pointerEvents="none" />
+  );
+};
+
 const formatTagValue = (tag: any): string => {
   if (tag.value === null || tag.value === undefined) return '';
   if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
@@ -402,6 +464,7 @@ interface ReceiptItemRowProps {
   isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
+  shouldFlash?: boolean;
   onEdit: (index: number) => void;
   onEditGroup?: (indices: number[]) => void;
   onDeleteRequest: (index: number, allIndices?: number[]) => void;
@@ -421,6 +484,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   isDeleteLocked,
   paymentStatus,
   showStatusBadge,
+  shouldFlash,
   onEdit,
   onEditGroup,
   onDeleteRequest,
@@ -493,6 +557,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
         )}
       </Pressable>
 
+      {shouldFlash && <FlashOverlay />}
       {isPendingDelete && (
         <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
       )}
@@ -513,6 +578,7 @@ interface ReceiptMenuRowProps {
   isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
+  shouldFlash?: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
   onDeleteRequest: (index: number) => void;
   onConfirmDelete: () => void;
@@ -528,6 +594,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   isDeleteLocked,
   paymentStatus,
   showStatusBadge,
+  shouldFlash,
   onEditMenu,
   onDeleteRequest,
   onConfirmDelete,
@@ -623,6 +690,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
         )}
       </Pressable>
 
+      {shouldFlash && <FlashOverlay />}
       {isPendingDelete && (
         <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
       )}
@@ -770,6 +838,18 @@ const styles = StyleSheet.create({
     color: '#92400E',
     marginTop: 3,
     paddingLeft: 4,
+  },
+
+  // Flash overlay (green pulse on add)
+  flashOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#10B981',
+    zIndex: 5,
+    elevation: 5,
   },
 
   // Inline delete confirmation overlay

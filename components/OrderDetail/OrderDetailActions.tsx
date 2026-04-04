@@ -60,18 +60,21 @@ const ActionButton = memo<ActionButtonProps>(({ icon: Icon, label, onPress, colo
     {({ pressed }) => (
       <View style={[
         styles.card,
-        compact && styles.cardCompact,
-        { backgroundColor: bg, borderColor: border },
-        disabled && { opacity: 0.5 },
+        disabled
+          ? { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }
+          : { backgroundColor: bg, borderColor: border },
         pressed && !disabled && { opacity: 0.7, transform: [{ scale: 0.97 }] },
       ]}>
-        <Icon size={compact ? 16 : 20} color={color} strokeWidth={1.8} />
-        <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact, { color }]} numberOfLines={1}>{label}</RNText>
+        <View style={[styles.glassOverlay, compact && styles.glassOverlayCompact]}>
+          <Icon size={compact ? 16 : 20} color={disabled ? '#9CA3AF' : color} strokeWidth={1.8} />
+          <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact, { color: disabled ? '#9CA3AF' : color }]} numberOfLines={1}>{label}</RNText>
+        </View>
         {disabled && (
           <View style={[styles.lockOverlay, compact && styles.lockOverlayCompact]}>
-            <Lock size={compact ? 16 : 20} color="#2A2E33" strokeWidth={2} />
+            <Lock size={compact ? 16 : 20} color="#9CA3AF" strokeWidth={1.8} />
+            <RNText style={[styles.lockLabel, compact && styles.lockLabelCompact]} numberOfLines={1}>{label}</RNText>
             {disabledReason && (
-              <RNText style={[styles.disabledReason, compact && { fontSize: 8 }]} numberOfLines={1}>{disabledReason}</RNText>
+              <RNText style={[styles.disabledReason, compact && styles.disabledReasonCompact]} numberOfLines={1}>({disabledReason})</RNText>
             )}
           </View>
         )}
@@ -387,20 +390,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
-      transition: 'all 0.12s ease',
+      transition: 'all 0.15s ease',
     } as any : {}),
   },
-  // Boutons — mode compact (horizontal)
-  cardCompact: {
+  // Glass overlay iso item cards
+  glassOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 10,
+  },
+  glassOverlayCompact: {
     flexDirection: 'row',
     gap: 6,
+    padding: 8,
   },
   cardLabel: {
     fontSize: 12,
@@ -408,44 +422,49 @@ const styles = StyleSheet.create({
     color: '#374151',
     textAlign: 'center',
     textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   cardLabelCompact: {
     fontSize: 11,
   },
 
-  // Lock overlay
+  // Lock overlay — gris discret
   lockOverlay: {
     position: 'absolute',
-    top: -1,
-    left: -1,
-    right: -1,
-    bottom: -1,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        backgroundColor: 'rgba(255, 255, 255, 0.5)',
-        backdropFilter: 'blur(2px)',
-        WebkitBackdropFilter: 'blur(2px)',
-      },
-      default: {
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      },
-    }),
+    gap: 4,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
   },
   lockOverlayCompact: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 5,
   },
-  disabledReason: {
+  lockLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: '#9CA3AF',
     textAlign: 'center',
     textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  lockLabelCompact: {
+    fontSize: 11,
+  },
+  disabledReason: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#2A2E33',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  disabledReasonCompact: {
+    fontSize: 7,
   },
 
   // Info tiles — mode normal

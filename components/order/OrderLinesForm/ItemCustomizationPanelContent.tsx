@@ -7,14 +7,16 @@ import {
   Switch,
   Platform,
   Text as RNText,
+  TextInput,
 } from 'react-native';
-import { TextInput, NumberInput } from '~/components/ui';
+import { NumberInput } from '~/components/ui';
 import { Item } from '~/types/item.types';
 import { Tag } from '~/types/tag.types';
 import { SelectedTag } from '~/types/order-line.types';
-import { StickyNote, Tag as TagIcon, X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash } from 'lucide-react-native';
+import { X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash, ArrowLeftToLine } from 'lucide-react-native';
 import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { useToast } from '~/components/ToastProvider';
 
 // Type pour les valeurs des tags (union de tous les types possibles)
 type TagValue = string | number | boolean | string[] | null | undefined;
@@ -28,6 +30,12 @@ interface ItemCustomizationPanelContentProps {
   initialData?: { note?: string; tags?: SelectedTag[] };
   onConfirm: (data: { note?: string; tags: SelectedTag[] }) => void;
   onCancel: () => void;
+  /** Titre custom du header (ex: "Catégorie 1 - Boissons") */
+  headerTitle?: string;
+  /** Sous-titre custom du header */
+  headerSubtitle?: string;
+  /** Si fourni, affiche une flèche retour au lieu du X */
+  onBack?: () => void;
 }
 
 // ========================================
@@ -120,8 +128,12 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
   availableTags,
   initialData,
   onConfirm,
-  onCancel
+  onCancel,
+  headerTitle,
+  headerSubtitle,
+  onBack,
 }) => {
+  const { showToast } = useToast();
   const [note, setNote] = useState(initialData?.note || '');
   const [tagValues, setTagValues] = useState<TagValuesRecord>({});
 
@@ -152,6 +164,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
       ...prev,
       [tagId]: value
     }));
+    setShowErrors(false);
   }, []);
 
   // Calculer les SelectedTag à partir des valeurs actuelles
@@ -197,46 +210,62 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
     return tags;
   }, [tagValues, availableTags]);
 
-  const totalPrice = useMemo(() => {
-    const tagsPrice = selectedTags.reduce((sum, t) => sum + (t.priceModifier || 0), 0);
-    return item.price + tagsPrice;
-  }, [item.price, selectedTags]);
+  const [showErrors, setShowErrors] = useState(false);
 
-  // Validation : vérifier que tous les tags requis ont une valeur
-  const isValid = useMemo(() => {
-    return availableTags.every(tag => {
-      if (!tag.isRequired) return true;
-      const value = tagValues[tag.id];
-      if (value === undefined || value === null || value === '') return false;
-      if (Array.isArray(value) && value.length === 0) return false;
-      return true;
-    });
-  }, [tagValues, availableTags]);
+  // Vérifie si un tag requis n'a pas de valeur
+  const isTagMissing = useCallback((tag: Tag): boolean => {
+    if (!tag.isRequired) return false;
+    const value = tagValues[tag.id];
+    if (value === undefined || value === null || value === '' || value === false) return true;
+    if (Array.isArray(value) && value.length === 0) return true;
+    return false;
+  }, [tagValues]);
 
   const handleConfirm = useCallback(() => {
-    if (!isValid) return;
+    const hasMissingRequired = availableTags.some(isTagMissing);
+    if (hasMissingRequired) {
+      setShowErrors(true);
+      showToast('Veuillez remplir les options requises', 'error');
+      return;
+    }
     onConfirm({
       note: note.trim() || undefined,
       tags: selectedTags
     });
-  }, [isValid, note, selectedTags, onConfirm]);
+  }, [note, selectedTags, onConfirm, availableTags, isTagMissing, showToast]);
 
   return (
     <View style={styles.panelContent}>
       {/* Header - FIXED at top */}
-      <View style={styles.panelHeader}>
-        <View>
-          <RNText style={[styles.panelTitle, { fontWeight: '600' }]}>
-            {initialData ? 'Modifier l\'article' : 'Personnaliser l\'article'}
-          </RNText>
-          <RNText style={[styles.panelSubtitle, { lineHeight: 18 }]}>
-            Ajoutez vos préférences et options
-          </RNText>
+      {onBack ? (
+        <View style={styles.panelHeaderBack}>
+          <Pressable onPress={onBack} style={styles.backButton}>
+            <ArrowLeftToLine size={20} color="#2A2E33" />
+          </Pressable>
+          <View style={styles.backTitleContainer}>
+            <RNText style={styles.backTitle} numberOfLines={1}>
+              {headerTitle || 'Retour'}
+            </RNText>
+            {headerSubtitle && (
+              <RNText style={styles.backSubtitle} numberOfLines={1}>{headerSubtitle}</RNText>
+            )}
+          </View>
         </View>
-        <Pressable onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <X size={24} color="#64748B" strokeWidth={2} />
-        </Pressable>
-      </View>
+      ) : (
+        <View style={styles.panelHeader}>
+          <View style={{ flex: 1 }}>
+            <RNText style={styles.panelTitle}>
+              {headerTitle || (initialData ? 'Modifier l\'article' : 'Personnaliser l\'article')}
+            </RNText>
+            <RNText style={styles.panelSubtitle}>
+              {headerSubtitle || 'Ajoutez vos préférences et options'}
+            </RNText>
+          </View>
+          <Pressable onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <X size={24} color="#64748B" strokeWidth={2} />
+          </Pressable>
+        </View>
+      )}
 
       {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
       <KeyboardAwareScrollViewWrapper
@@ -255,18 +284,10 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
           }
         ]}>
           <View style={styles.selectedItemInfo}>
-            <RNText style={[
-              styles.selectedItemLabel,
-              {
-                textTransform: 'uppercase',
-                fontWeight: '600',
-                letterSpacing: 0.5,
-                color: itemColor
-              }
-            ]}>
+            <RNText style={[styles.selectedItemLabel, { color: itemColor }]}>
               Article sélectionné
             </RNText>
-            <RNText style={[styles.selectedItemName, { fontWeight: '700' }]}>{item.name}</RNText>
+            <RNText style={styles.selectedItemName}>{item.name}</RNText>
             <RNText style={styles.selectedItemPrice}>
               Prix de base : {formatPrice(item.price)}
             </RNText>
@@ -279,10 +300,10 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
             <View style={styles.divider} />
 
             <View style={styles.formGroup}>
-              <View style={styles.labelRow}>
-                <StickyNote size={16} color="#F59E0B" strokeWidth={2} />
-                <RNText style={[styles.formLabel, { fontWeight: '600' }]}>Notes & Instructions</RNText>
-              </View>
+              <RNText style={styles.formLabel}>Notes & Instructions</RNText>
+              <RNText style={styles.formHint}>
+                Ajoutez des instructions spéciales pour la cuisine
+              </RNText>
               <TextInput
                 value={note}
                 onChangeText={setNote}
@@ -293,9 +314,6 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
                 numberOfLines={3}
                 textAlignVertical="top"
               />
-              <RNText style={[styles.formHint, { lineHeight: 16 }]}>
-                Ajoutez des instructions spéciales pour la cuisine
-              </RNText>
             </View>
           </>
         )}
@@ -306,16 +324,14 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
         {/* Section Options/Tags */}
         {availableTags.length > 0 && (
           <View style={styles.formGroup}>
-            <View style={styles.labelRow}>
-              <TagIcon size={16} color="#8B5CF6" strokeWidth={2} />
-              <RNText style={[styles.formLabel, { fontWeight: '600' }]}>Options & Personnalisation</RNText>
-            </View>
+            <RNText style={styles.formLabel}>Options & Personnalisation</RNText>
             {availableTags.map(tag => (
               <TagField
                 key={tag.id}
                 tag={tag}
                 value={tagValues[tag.id]}
                 onChange={(value) => handleTagValueChange(tag.id, value)}
+                hasError={showErrors && isTagMissing(tag)}
               />
             ))}
           </View>
@@ -328,16 +344,14 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
         {/* Boutons */}
         <View style={styles.footerActions}>
           <Pressable style={styles.cancelButton} onPress={onCancel}>
-            <RNText style={[styles.cancelButtonText, { fontWeight: '600' }]}>Annuler</RNText>
+            <RNText style={styles.cancelButtonText}>Annuler</RNText>
           </Pressable>
           <Pressable
-            key={`save-button-${isValid ? 'enabled' : 'disabled'}`}
-            style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
+            style={styles.saveButton}
             onPress={handleConfirm}
-            disabled={!isValid}
           >
-            <RNText style={[styles.saveButtonText, { fontWeight: '600' }]}>
-              {initialData ? 'Modifier' : 'Ajouter'} : {formatPrice(totalPrice)}
+            <RNText style={styles.saveButtonText}>
+              {initialData ? 'Modifier' : 'Ajouter'}
             </RNText>
           </Pressable>
         </View>
@@ -357,6 +371,7 @@ interface TagFieldProps {
   tag: Tag;
   value: TagValue;
   onChange: (value: TagValue) => void;
+  hasError?: boolean;
 }
 
 /**
@@ -371,19 +386,19 @@ const TagCardHeader: React.FC<{ tag: Tag }> = ({ tag }) => {
     <View style={styles.tagCardHeader}>
       {/* Ligne unique : Nom + badges inline */}
       <View style={styles.tagHeaderRow}>
-        <RNText style={[styles.tagCardTitle, { fontWeight: '600' }]}>
+        <RNText style={styles.tagCardTitle}>
           {tag.label}
         </RNText>
         <View style={styles.tagHeaderBadges}>
           <View style={[styles.fieldTypeBadge, { backgroundColor: colorConfig.bgColor }]}>
             <Icon size={10} color={colorConfig.textColor} strokeWidth={2.5} />
-            <RNText style={[styles.fieldTypeBadgeText, { color: colorConfig.textColor, fontWeight: '600' }]}>
+            <RNText style={[styles.fieldTypeBadgeText, { color: colorConfig.textColor }]}>
               {label}
             </RNText>
           </View>
           {tag.isRequired && (
             <View style={styles.requiredBadge}>
-              <RNText style={[styles.requiredBadgeText, { fontWeight: '600' }]}>
+              <RNText style={styles.requiredBadgeText}>
                 Requis
               </RNText>
             </View>
@@ -397,7 +412,7 @@ const TagCardHeader: React.FC<{ tag: Tag }> = ({ tag }) => {
 /**
  * TagCard - Wrapper de card avec fond coloré selon le type de tag
  */
-const TagCard: React.FC<{ tag: Tag; children: ReactNode }> = ({ tag, children }) => {
+const TagCard: React.FC<{ tag: Tag; children: ReactNode; hasError?: boolean }> = ({ tag, children, hasError }) => {
   const bgColor = getFieldTypeLightBgColor(tag.fieldType);
   const borderColor = getFieldTypeIconColor(tag.fieldType);
 
@@ -405,8 +420,8 @@ const TagCard: React.FC<{ tag: Tag; children: ReactNode }> = ({ tag, children })
     <View style={[
       styles.tagCard,
       {
-        backgroundColor: bgColor,
-        borderColor: borderColor,
+        backgroundColor: hasError ? '#FEF2F2' : bgColor,
+        borderColor: hasError ? '#EF4444' : borderColor,
       }
     ]}>
       <View style={styles.tagCardContent}>
@@ -414,6 +429,9 @@ const TagCard: React.FC<{ tag: Tag; children: ReactNode }> = ({ tag, children })
         <View style={styles.tagCardBody}>
           {children}
         </View>
+        {hasError && (
+          <RNText style={styles.tagErrorText}>Ce champ est requis</RNText>
+        )}
       </View>
     </View>
   );
@@ -422,18 +440,18 @@ const TagCard: React.FC<{ tag: Tag; children: ReactNode }> = ({ tag, children })
 /**
  * TagField - Routeur vers le bon composant selon le type de tag
  */
-const TagField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+const TagField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }) => {
   switch (tag.fieldType) {
     case 'select':
-      return <SelectField tag={tag} value={value} onChange={onChange} />;
+      return <SelectField tag={tag} value={value} onChange={onChange} hasError={hasError} />;
     case 'multi-select':
-      return <MultiSelectField tag={tag} value={value || []} onChange={onChange} />;
+      return <MultiSelectField tag={tag} value={value || []} onChange={onChange} hasError={hasError} />;
     case 'number':
-      return <NumberField tag={tag} value={value} onChange={onChange} />;
+      return <NumberField tag={tag} value={value} onChange={onChange} hasError={hasError} />;
     case 'text':
-      return <TextField tag={tag} value={value} onChange={onChange} />;
+      return <TextField tag={tag} value={value} onChange={onChange} hasError={hasError} />;
     case 'toggle':
-      return <ToggleField tag={tag} value={value} onChange={onChange} />;
+      return <ToggleField tag={tag} value={value} onChange={onChange} hasError={hasError} />;
     default:
       return null;
   }
@@ -442,11 +460,11 @@ const TagField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
 /**
  * SelectField - Champ de sélection unique (radio buttons)
  */
-const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }) => {
   const options = tag.options || [];
 
   return (
-    <TagCard tag={tag}>
+    <TagCard tag={tag} hasError={hasError}>
       <View style={styles.radioGroup}>
         {options.map(option => {
           const isSelected = value === option.value;
@@ -492,7 +510,7 @@ const SelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
 /**
  * MultiSelectField - Champ de sélection multiple (checkboxes)
  */
-const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }) => {
   const options = tag.options || [];
   const selectedValues = Array.isArray(value) ? value : [];
 
@@ -505,7 +523,7 @@ const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => 
   };
 
   return (
-    <TagCard tag={tag}>
+    <TagCard tag={tag} hasError={hasError}>
       <View style={styles.radioGroup}>
         {options.map(option => {
           const isSelected = selectedValues.includes(option.value);
@@ -551,19 +569,21 @@ const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => 
 /**
  * NumberField - Champ numérique avec validation (0-100)
  */
-const NumberField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+const NumberField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }) => {
   // Convertir TagValue vers number pour NumberInput
   const numValue = typeof value === 'number' ? value : null;
 
   return (
-    <TagCard tag={tag}>
+    <TagCard tag={tag} hasError={hasError}>
       <NumberInput
         value={numValue}
         onChangeText={onChange}
         min={0}
         max={100}
         placeholder="0"
+        placeholderTextColor="#94A3B8"
         decimalPlaces={0}
+        style={styles.numberInput}
       />
     </TagCard>
   );
@@ -572,12 +592,12 @@ const NumberField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
 /**
  * TextField - Champ de texte libre
  */
-const TextField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+const TextField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }) => {
   // Convertir TagValue vers string pour TextInput
   const textValue = typeof value === 'string' ? value : '';
 
   return (
-    <TagCard tag={tag}>
+    <TagCard tag={tag} hasError={hasError}>
       <TextInput
         value={textValue}
         onChangeText={onChange}
@@ -592,7 +612,7 @@ const TextField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
 /**
  * ToggleField - Champ booléen avec switch (Oui/Non)
  */
-const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
+const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }) => {
   const defaultOption = tag.options?.find(o => o.isDefault);
   const priceModifier = defaultOption?.priceModifier || 0;
 
@@ -600,7 +620,7 @@ const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange }) => {
   const boolValue = Boolean(value);
 
   return (
-    <TagCard tag={tag}>
+    <TagCard tag={tag} hasError={hasError}>
       <Pressable
         style={[
           styles.toggleOption,
@@ -656,14 +676,52 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E2E8F0',
     gap: 16,
   },
+  // Header avec bouton retour (iso DraftReviewPanelContent)
+  panelHeaderBack: {
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 89,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    marginBottom: 10,
+  },
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#F3F4F6',
+    height: '100%',
+  },
+  backTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  backTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2A2E33',
+    letterSpacing: 0.3,
+  },
+  backSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 1,
+  },
   panelTitle: {
     fontSize: 18,
+    fontWeight: '600',
     color: '#1E293B',
     marginBottom: 4,
   },
   panelSubtitle: {
     fontSize: 13,
     color: '#64748B',
+    lineHeight: 18,
   },
   scrollView: {
     flex: 1,
@@ -685,10 +743,14 @@ const styles = StyleSheet.create({
   },
   selectedItemLabel: {
     fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   selectedItemName: {
     fontSize: 16,
+    fontWeight: '700',
     color: '#1E293B',
     marginBottom: 2,
   },
@@ -702,17 +764,12 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   formGroup: {
-    marginBottom: 16,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
   },
   formLabel: {
     fontSize: 14,
+    fontWeight: '600',
     color: '#1E293B',
+    marginBottom: 4,
   },
   noteInput: {
     borderWidth: 1,
@@ -720,7 +777,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
+    fontSize: 13,
     color: '#1E293B',
     backgroundColor: '#F8FAFC',
     minHeight: 44,
@@ -729,7 +786,7 @@ const styles = StyleSheet.create({
   formHint: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 6,
+    marginBottom: 8,
   },
   // ========================================
   // TAG CARD STYLES - Compact & Pro avec fond coloré
@@ -754,6 +811,7 @@ const styles = StyleSheet.create({
   },
   tagCardTitle: {
     fontSize: 13,
+    fontWeight: '600',
     color: '#1E293B',
     flex: 1,
   },
@@ -772,6 +830,7 @@ const styles = StyleSheet.create({
   },
   fieldTypeBadgeText: {
     fontSize: 9,
+    fontWeight: '600',
     letterSpacing: 0.2,
   },
   requiredBadge: {
@@ -782,11 +841,18 @@ const styles = StyleSheet.create({
   },
   requiredBadgeText: {
     fontSize: 9,
+    fontWeight: '600',
     color: '#DC2626',
     letterSpacing: 0.2,
   },
   tagCardBody: {
     // Le contenu du champ
+  },
+  tagErrorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginTop: 8,
   },
   // Radio group - Plus compact
   radioGroup: {
@@ -795,11 +861,12 @@ const styles = StyleSheet.create({
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 6,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     gap: 10,
   },
   radioOptionActive: {
@@ -858,11 +925,20 @@ const styles = StyleSheet.create({
     borderColor: '#3B82F6',
   },
   textInput: {
-    height: 40,
-    backgroundColor: '#FFFFFF',
+    height: 44,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 6,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#1E293B',
+  },
+  numberInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
     color: '#1E293B',
@@ -873,11 +949,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    height: 40,
+    backgroundColor: '#F8FAFC',
+    height: 44,
   },
   toggleOptionActive: {
     borderColor: '#3B82F6',
@@ -916,31 +992,29 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 12,
+    height: 44,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
     color: '#64748B',
   },
   saveButton: {
     flex: 1,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
-    gap: 8,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: '#2A2E33',
   },
   saveButtonText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });

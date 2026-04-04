@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
@@ -15,6 +15,7 @@ import { Menu, MenuCategory } from '~/types/menu.types';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { MenuCategoryItem, MenuItemWithCustomization } from '~/types/menu-configuration.types';
+import { MenuItemSelection } from '~/components/order/OrderLinesForm/MenuConfiguration';
 
 /**
  * OrderLinesForm - Version refactorisée (composant présentationnel)
@@ -104,13 +105,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     item: Item;
     lineId?: string; // Si édition
     initialData?: { tags: SelectedTag[]; note?: string };
-  } | null>(null);
-
-  // Customisation d'item de menu (via SlidePanel)
-  const [menuItemPanelVisible, setMenuItemPanelVisible] = useState(false);
-  const [menuItemToCustomize, setMenuItemToCustomize] = useState<{
-    item: Item;
-    categoryId: string;
   } | null>(null);
 
   // ====================================================================
@@ -293,69 +287,22 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   );
 
   /**
-   * Sélectionner un item de menu (avec customisation)
+   * Sélectionner un item de menu (appelé par MenuConfiguration après customisation ou sélection directe)
    */
-  const handleOpenMenuItemCustomization = useCallback(
-    (item: Item, categoryId: string) => {
-      const fullItem = items.find((i) => i.id === item.id) || item;
-
-      // Vérifier maxSelections pour cette catégorie
-      const category = menuBeingConfigured?.categories?.find((c: any) => c.id === categoryId);
-      const maxSelections = category?.maxSelections || 1;
-      const currentSelections = tempMenuSelections[categoryId] || [];
-
-      // Si déjà au max et max > 1, ne rien faire
-      // Si max = 1, remplacer la sélection (comportement radio)
-      if (currentSelections.length >= maxSelections && maxSelections > 1) return;
-
-      // Si pas de notes et pas de tags, sélectionner directement sans panel
-      const hasTags = fullItem.tags && fullItem.tags.length > 0;
-      if (!fullItem.hasNote && !hasTags) {
-        setTempMenuSelections((prev) => ({
-          ...prev,
-          [categoryId]: maxSelections === 1
-            ? [{ itemId: fullItem.id, tags: [], note: undefined }]
-            : [...(prev[categoryId] || []), { itemId: fullItem.id, tags: [], note: undefined }],
-        }));
-        return;
-      }
-
-      setMenuItemToCustomize({ item: fullItem, categoryId });
-      setMenuItemPanelVisible(true);
-    },
-    [items, menuBeingConfigured, tempMenuSelections]
-  );
-
-  /**
-   * Confirmer la sélection d'un item de menu
-   */
-  const handleConfirmMenuItemCustomization = useCallback(
-    (customization: { tags: SelectedTag[]; note?: string }) => {
-      if (!menuItemToCustomize) return;
-
-      const { item, categoryId } = menuItemToCustomize;
-
-      // Vérifier maxSelections pour comportement radio vs multi
+  const handleMenuItemSelected = useCallback(
+    (categoryId: string, selection: MenuItemSelection) => {
       const category = menuBeingConfigured?.categories?.find((c: any) => c.id === categoryId);
       const maxSelections = category?.maxSelections || 1;
 
       setTempMenuSelections((prev) => ({
         ...prev,
         [categoryId]: maxSelections === 1
-          ? [{ itemId: item.id, tags: customization.tags, note: customization.note }]
-          : [...(prev[categoryId] || []), { itemId: item.id, tags: customization.tags, note: customization.note }],
+          ? [selection]
+          : [...(prev[categoryId] || []), selection],
       }));
-
-      setMenuItemPanelVisible(false);
-      setMenuItemToCustomize(null);
     },
-    [menuItemToCustomize, menuBeingConfigured]
+    [menuBeingConfigured]
   );
-
-  const handleCancelMenuItemCustomization = useCallback(() => {
-    setMenuItemPanelVisible(false);
-    setMenuItemToCustomize(null);
-  }, []);
 
   /**
    * Désélectionner un item de menu
@@ -385,15 +332,11 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, [onConfigurationModeChange]);
 
   /**
-   * Bouton retour du SidePanel : annule la config menu si active, sinon sort du formulaire
+   * Bouton retour du SidePanel
    */
   const handleBackPress = useCallback(() => {
-    if (isConfiguringMenu) {
-      handleCancelMenuConfiguration();
-    } else {
-      onCancel?.();
-    }
-  }, [isConfiguringMenu, handleCancelMenuConfiguration, onCancel]);
+    onCancel?.();
+  }, [onCancel]);
 
   /**
    * Confirmer la configuration de menu
@@ -419,27 +362,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
     onUpdateMenu,
     handleCancelMenuConfiguration,
   ]);
-
-  /**
-   * Validation : vérifier si toutes les catégories obligatoires sont sélectionnées
-   */
-  const isMenuConfigurationValid = useMemo(() => {
-    if (!menuBeingConfigured?.categories) return false;
-
-    // Toutes les catégories obligatoires doivent avoir au moins 1 sélection
-    const requiredSatisfied = menuBeingConfigured.categories.every((category: MenuCategory) => {
-      if (!category.isRequired) return true;
-      const selections = tempMenuSelections[category.id];
-      return selections && selections.length >= 1;
-    });
-
-    // Au moins 1 article sélectionné au total (évite un menu vide si tout est optionnel)
-    const totalSelections = Object.values(tempMenuSelections).reduce(
-      (sum, selections) => sum + (selections?.length || 0), 0
-    );
-
-    return requiredSatisfied && totalSelections >= 1;
-  }, [menuBeingConfigured, tempMenuSelections]);
 
   // ====================================================================
   // HANDLERS POUR DRAFTREVIEWPANEL (mémoïsés pour éviter re-renders)
@@ -471,10 +393,10 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
   /**
    * Gestion unifiée des panels avec priorités :
-   * 1. Panel customisation d'item normal
-   * 2. Panel customisation d'item de menu
+   * 1. Panel customisation d'item standalone (priorité haute)
+   * 2. Panel configuration de menu (la customisation d'item de menu est gérée en interne)
    *
-   * Note: Le récapitulatif de commande est maintenant un side panel permanent (pas dans le portal)
+   * Note: Le récapitulatif de commande est un side panel permanent (pas dans le portal)
    */
   useEffect(() => {
     if (customizationPanelVisible && itemToCustomize) {
@@ -489,15 +411,18 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
           />
         </SlidePanel>
       );
-    } else if (menuItemPanelVisible && menuItemToCustomize) {
+    } else if (isConfiguringMenu && menuBeingConfigured) {
       renderPanel(
-        <SlidePanel visible={true} onClose={handleCancelMenuItemCustomization} width="35%" minWidth={350} maxWidth={600}>
-          <ItemCustomizationPanelContent
-            item={menuItemToCustomize.item}
-            availableTags={menuItemToCustomize.item.tags || []}
-            initialData={undefined}
-            onConfirm={handleConfirmMenuItemCustomization}
-            onCancel={handleCancelMenuItemCustomization}
+        <SlidePanel visible={true} onClose={handleCancelMenuConfiguration} width="35%" minWidth={350} maxWidth={600}>
+          <MenuConfiguration
+            menu={menuBeingConfigured}
+            tempMenuSelections={tempMenuSelections}
+            onItemSelected={handleMenuItemSelected}
+            onDeselectMenuItem={handleDeselectMenuItem}
+            items={items}
+            itemTypes={itemTypes}
+            onCancel={handleCancelMenuConfiguration}
+            onConfirm={handleConfirmMenuConfiguration}
           />
         </SlidePanel>
       );
@@ -507,36 +432,20 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   }, [
     customizationPanelVisible,
     itemToCustomize,
-    menuItemPanelVisible,
-    menuItemToCustomize,
+    isConfiguringMenu,
+    menuBeingConfigured,
+    tempMenuSelections,
     handleConfirmCustomization,
     handleCancelCustomization,
-    handleConfirmMenuItemCustomization,
-    handleCancelMenuItemCustomization,
+    handleCancelMenuConfiguration,
+    handleConfirmMenuConfiguration,
+    handleMenuItemSelected,
+    handleDeselectMenuItem,
+    items,
+    itemTypes,
     renderPanel,
     clearPanel,
   ]);
-
-  // ====================================================================
-  // HELPERS
-  // ====================================================================
-
-  const getMenuCategoryItems = useCallback(
-    (categoryId: string) => {
-      const category = menuBeingConfigured?.categories?.find((cat: MenuCategory) => cat.id === categoryId);
-      if (category && category.items) {
-        return category.items.map((menuCategoryItem: MenuCategoryItem) => {
-          if (!menuCategoryItem.item && menuCategoryItem.itemId) {
-            const fullItem = items.find((i) => i.id === menuCategoryItem.itemId);
-            return { ...menuCategoryItem, item: fullItem };
-          }
-          return menuCategoryItem;
-        });
-      }
-      return [];
-    },
-    [menuBeingConfigured, items]
-  );
 
   // ====================================================================
   // RENDER
@@ -564,71 +473,56 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
               hasChanges={hasChanges}
               isProcessing={isProcessing}
               cancelDeleteRef={cancelDeleteRef}
-              hideFooter={isConfiguringMenu}
               itemTypes={itemTypes}
             />
           </View>
         </SidePanel>
 
-        {/* Contenu principal droite : config menu OU items/menus + navigation */}
+        {/* Contenu principal droite : items/menus + navigation */}
         <View style={styles.mainContent}>
-          {isConfiguringMenu && menuBeingConfigured ? (
-            <MenuConfiguration
-              menu={menuBeingConfigured}
-              tempMenuSelections={tempMenuSelections}
-              onSelectMenuItem={handleOpenMenuItemCustomization}
-              onDeselectMenuItem={handleDeselectMenuItem}
-              getMenuCategoryItems={getMenuCategoryItems}
-              itemTypes={itemTypes}
-              onCancel={handleCancelMenuConfiguration}
-              onConfirm={handleConfirmMenuConfiguration}
-              isValid={isMenuConfigurationValid}
-            />
-          ) : (
-            <View style={styles.contentWithNav}>
-              {/* Zone de contenu (menus + articles dans un seul scroll) */}
-              <View style={styles.contentArea}>
-                {viewMode === 'card' && (
-                  <OrderItemsCardView
-                    items={activeItems}
-                    itemsByType={itemsByType}
-                    activeItemType={activeItemType}
-                    onActiveItemTypeChange={setActiveItemType}
-                    onOpenCustomization={handleOpenCustomization}
-                    activeMenus={activeMenus}
-                    handleMenuAdd={startMenuConfiguration}
-                    activeMainTab={activeMainTab}
-                    onMainTabChange={setActiveMainTab}
-                  />
-                )}
+          <View style={styles.contentWithNav}>
+            {/* Zone de contenu (menus + articles dans un seul scroll) */}
+            <View style={styles.contentArea}>
+              {viewMode === 'card' && (
+                <OrderItemsCardView
+                  items={activeItems}
+                  itemsByType={itemsByType}
+                  activeItemType={activeItemType}
+                  onActiveItemTypeChange={setActiveItemType}
+                  onOpenCustomization={handleOpenCustomization}
+                  activeMenus={activeMenus}
+                  handleMenuAdd={startMenuConfiguration}
+                  activeMainTab={activeMainTab}
+                  onMainTabChange={setActiveMainTab}
+                />
+              )}
 
-                {viewMode === 'list' && (
-                  <OrderItemsTableView
-                    items={activeItems}
-                    itemsByType={itemsByType}
-                    activeItemType={activeItemType}
-                    onActiveItemTypeChange={setActiveItemType}
-                    onOpenCustomization={handleOpenCustomization}
-                    activeMenus={activeMenus}
-                    handleMenuAdd={startMenuConfiguration}
-                    activeMainTab={activeMainTab}
-                    onMainTabChange={setActiveMainTab}
-                  />
-                )}
-              </View>
-
-              {/* Navigation verticale à droite */}
-              <OrderLinesNavigation
-                activeMainTab={activeMainTab}
-                onMainTabChange={setActiveMainTab}
-                activeItemType={activeItemType}
-                onItemTypeChange={setActiveItemType}
-                itemTypes={allItemTypes}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-              />
+              {viewMode === 'list' && (
+                <OrderItemsTableView
+                  items={activeItems}
+                  itemsByType={itemsByType}
+                  activeItemType={activeItemType}
+                  onActiveItemTypeChange={setActiveItemType}
+                  onOpenCustomization={handleOpenCustomization}
+                  activeMenus={activeMenus}
+                  handleMenuAdd={startMenuConfiguration}
+                  activeMainTab={activeMainTab}
+                  onMainTabChange={setActiveMainTab}
+                />
+              )}
             </View>
-          )}
+
+            {/* Navigation verticale à droite */}
+            <OrderLinesNavigation
+              activeMainTab={activeMainTab}
+              onMainTabChange={setActiveMainTab}
+              activeItemType={activeItemType}
+              onItemTypeChange={setActiveItemType}
+              itemTypes={allItemTypes}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+            />
+          </View>
         </View>
       </View>
     </View>

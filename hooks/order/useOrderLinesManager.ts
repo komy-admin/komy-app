@@ -17,7 +17,7 @@ import { useOrderLines } from "~/hooks/useOrderLines";
 import { useOrders } from "~/hooks/useOrders";
 import { useToast } from "~/components/ToastProvider";
 import { usePayments } from "~/hooks/usePayments";
-import { extractApiError, showApiError } from "~/lib/apiErrorHandler";
+import { extractApiError } from "~/lib/apiErrorHandler";
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -273,9 +273,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       };
 
       setOrderLines((prev) => [...prev, newLine]);
-      showToast(`${item.name} ajouté`, "success");
     },
-    [showToast],
+    [],
   );
 
   /**
@@ -345,9 +344,8 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       };
 
       setOrderLines((prev) => [...prev, newLine]);
-      showToast(`${menu.name} ajouté`, "success");
     },
-    [showToast],
+    [],
   );
 
   /**

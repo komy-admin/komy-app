@@ -1,10 +1,13 @@
-import React, { memo, useCallback } from 'react';
-import { View, Pressable, Platform, StyleSheet, ScrollView, Text as RNText } from 'react-native';
-import { Menu as MenuIcon } from 'lucide-react-native';
+import React, { memo, useCallback, useState } from 'react';
+import { View, Pressable, TouchableOpacity, StyleSheet, ScrollView, Text as RNText } from 'react-native';
+import { X } from 'lucide-react-native';
 import { Menu } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
+import { SelectedTag } from '~/types/order-line.types';
 import { formatPrice } from '~/lib/utils';
+import { useToast } from '~/components/ToastProvider';
+import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm/ItemCustomizationPanelContent';
 
 /**
  * Type pour une catégorie de menu
@@ -15,14 +18,16 @@ interface MenuCategoryType {
   priceModifier?: number;
   isRequired?: boolean;
   maxSelections?: number;
+  items?: MenuCategoryItemType[];
 }
 
 /**
  * Type pour un item de catégorie de menu
  */
-interface MenuCategoryItem {
+interface MenuCategoryItemType {
   id: string;
   item?: Item;
+  itemId?: string;
   supplement?: number;
   isAvailable?: boolean;
 }
@@ -42,47 +47,55 @@ export interface MenuItemSelection {
 export interface MenuConfigurationProps {
   menu: Menu;
   tempMenuSelections: Record<string, MenuItemSelection[]>;
-  onSelectMenuItem: (item: Item, categoryId: string) => void;
+  onItemSelected: (categoryId: string, selection: MenuItemSelection) => void;
   onDeselectMenuItem: (categoryId: string, itemId: string) => void;
-  getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
-  getCategoryNameFromItemTypeId?: (itemTypeId: string) => string;
+  items: Item[];
   itemTypes: ItemType[];
   onCancel?: () => void;
   onConfirm?: () => void;
-  isValid?: boolean;
+}
+
+/**
+ * État interne de navigation : vue catégories ou vue customisation d'un item
+ */
+interface CustomizingItemState {
+  item: Item;
+  categoryId: string;
+  categoryIndex: number;
+  categoryName: string;
 }
 
 /**
  * Composant pour afficher une catégorie de menu en configuration
  */
-interface MenuCategoryProps {
+interface MenuCategoryCardProps {
   category: MenuCategoryType;
   index: number;
   selectedItems: MenuItemSelection[];
   onToggleItem: (categoryId: string, item: Item) => void;
-  getMenuCategoryItems: (categoryId: string) => MenuCategoryItem[];
-  getCategoryName: (itemTypeId: string) => string;
+  categoryItems: MenuCategoryItemType[];
+  categoryName: string;
+  hasError?: boolean;
 }
 
-const MenuCategory = memo<MenuCategoryProps>(({
+const MenuCategoryCard = memo<MenuCategoryCardProps>(({
   category,
   index,
   selectedItems,
   onToggleItem,
-  getMenuCategoryItems,
-  getCategoryName
+  categoryItems,
+  categoryName,
+  hasError,
 }) => {
-  const categoryName = getCategoryName(category.itemTypeId);
   const hasSupplementPrice = (category.priceModifier || 0) > 0;
-  const menuCategoryItems = getMenuCategoryItems(category.id);
 
   const handleToggleItem = useCallback((item: Item) => {
     onToggleItem(category.id, item);
   }, [category.id, onToggleItem]);
 
-  if (!menuCategoryItems || menuCategoryItems.length === 0) {
+  if (!categoryItems || categoryItems.length === 0) {
     return (
-      <View key={category.id} style={styles.categoryCard}>
+      <View style={styles.categoryCard}>
         <View style={styles.categoryHeader}>
           <View style={styles.categoryHeaderContent}>
             <View style={styles.categoryNumberBadge}>
@@ -101,11 +114,11 @@ const MenuCategory = memo<MenuCategoryProps>(({
   }
 
   return (
-    <View key={category.id} style={styles.categoryCard}>
+    <View style={[styles.categoryCard, hasError && styles.categoryCardError]}>
       {/* Header de catégorie */}
-      <View style={styles.categoryHeader}>
+      <View style={[styles.categoryHeader, hasError && styles.categoryHeaderError]}>
         <View style={styles.categoryHeaderContent}>
-          <View style={styles.categoryNumberBadge}>
+          <View style={[styles.categoryNumberBadge, hasError && styles.categoryNumberBadgeError]}>
             <RNText style={styles.categoryNumberText}>{index + 1}</RNText>
           </View>
 
@@ -113,8 +126,11 @@ const MenuCategory = memo<MenuCategoryProps>(({
             <RNText style={styles.categoryHeaderTitle}>
               {categoryName}
             </RNText>
-            <RNText style={styles.categoryHeaderSubtitle}>
-              {category.isRequired ? 'Obligatoire' : 'Optionnel'} • {selectedItems.length} / {category.maxSelections || 1} sélection{(category.maxSelections || 1) > 1 ? 's' : ''}
+            <RNText style={[styles.categoryHeaderSubtitle, hasError && styles.categoryHeaderSubtitleError]}>
+              {hasError
+                ? 'Ce champ est requis'
+                : `${category.isRequired ? 'Obligatoire' : 'Optionnel'} • ${selectedItems.length} / ${category.maxSelections || 1} sélection${(category.maxSelections || 1) > 1 ? 's' : ''}`
+              }
             </RNText>
           </View>
 
@@ -130,15 +146,14 @@ const MenuCategory = memo<MenuCategoryProps>(({
 
       {/* Articles de la catégorie */}
       <View style={styles.categoryItemsList}>
-        {menuCategoryItems
-          .filter((item: MenuCategoryItem) => item.isAvailable)
-          .map((menuCategoryItem: MenuCategoryItem) => {
+        {categoryItems
+          .filter((mci: MenuCategoryItemType) => mci.isAvailable)
+          .map((menuCategoryItem: MenuCategoryItemType) => {
             const item = menuCategoryItem?.item;
             if (!item) return null;
 
             const supplement = menuCategoryItem.supplement || 0;
             const isSelected = selectedItems.some(s => s.itemId === item.id);
-            const hasSupplementPrice = supplement > 0;
 
             return (
               <MenuItemCard
@@ -146,7 +161,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
                 item={item}
                 isSelected={isSelected}
                 supplement={supplement}
-                hasSupplementPrice={hasSupplementPrice}
+                hasSupplementPrice={supplement > 0}
                 onToggle={() => handleToggleItem(item)}
               />
             );
@@ -156,7 +171,7 @@ const MenuCategory = memo<MenuCategoryProps>(({
   );
 });
 
-MenuCategory.displayName = 'MenuCategory';
+MenuCategoryCard.displayName = 'MenuCategoryCard';
 
 /**
  * Composant pour afficher un item de menu dans la configuration
@@ -220,67 +235,160 @@ MenuItemCard.displayName = 'MenuItemCard';
 
 /**
  * Composant principal de configuration de menu
- * Interface complète pour configurer un menu avec ses catégories et articles
- *
- * @param props - Props du composant
- * @returns Composant de configuration de menu mémorisé
+ * Gère deux vues internes :
+ * 1. Liste des catégories (par défaut)
+ * 2. Customisation d'un item (tags/notes) avec retour arrière
  */
-export const MenuConfiguration = memo<MenuConfigurationProps>(({
+export const MenuConfiguration: React.FC<MenuConfigurationProps> = ({
   menu,
   tempMenuSelections,
-  onSelectMenuItem,
+  onItemSelected,
   onDeselectMenuItem,
-  getMenuCategoryItems,
-  getCategoryNameFromItemTypeId,
+  items,
   itemTypes,
   onCancel,
   onConfirm,
-  isValid,
 }) => {
+  const { showToast } = useToast();
 
-  // Fonction pour obtenir le nom d'une catégorie
+  // Navigation interne : null = vue catégories, sinon = vue customisation
+  const [customizingItem, setCustomizingItem] = useState<CustomizingItemState | null>(null);
+
+  // Validation visuelle des catégories requises
+  const [showErrors, setShowErrors] = useState(false);
+
+  // Fonction pour obtenir le nom d'une catégorie depuis son itemTypeId
   const getCategoryName = useCallback((itemTypeId: string): string => {
-    if (getCategoryNameFromItemTypeId) {
-      return getCategoryNameFromItemTypeId(itemTypeId);
-    }
-
-    // Fallback: chercher dans itemTypes
     const itemType = itemTypes.find(type => type.id === itemTypeId);
     return itemType?.name || 'Catégorie inconnue';
-  }, [getCategoryNameFromItemTypeId, itemTypes]);
+  }, [itemTypes]);
 
+  // Résoudre les items d'une catégorie (remplacer les itemId par des items complets)
+  const getCategoryItems = useCallback((category: MenuCategoryType): MenuCategoryItemType[] => {
+    if (!category.items) return [];
+    return category.items.map((mci: MenuCategoryItemType) => {
+      if (!mci.item && mci.itemId) {
+        const fullItem = items.find((i) => i.id === mci.itemId);
+        return { ...mci, item: fullItem };
+      }
+      return mci;
+    });
+  }, [items]);
+
+  // Toggle item : gère sélection directe ou ouverture de la customisation
   const handleToggleItem = useCallback((categoryId: string, item: Item) => {
     const selections = tempMenuSelections[categoryId] || [];
     const isSelected = selections.some(s => s.itemId === item.id);
 
     if (isSelected) {
-      // Désélectionner l'item
       onDeselectMenuItem(categoryId, item.id);
-    } else {
-      // Sélectionner l'item -> ouvrir la modale de customisation
-      onSelectMenuItem(item, categoryId);
+      return;
     }
-  }, [tempMenuSelections, onSelectMenuItem, onDeselectMenuItem]);
+
+    // Vérifier maxSelections
+    const category = menu.categories?.find((c: any) => c.id === categoryId);
+    const maxSelections = category?.maxSelections || 1;
+    if (selections.length >= maxSelections && maxSelections > 1) return;
+
+    // Récupérer l'item complet avec ses tags
+    const fullItem = items.find(i => i.id === item.id) || item;
+    const hasTags = fullItem.tags && fullItem.tags.length > 0;
+
+    if (!fullItem.hasNote && !hasTags) {
+      // Sélection directe sans customisation
+      onItemSelected(categoryId, { itemId: fullItem.id, tags: [], note: undefined });
+      setShowErrors(false);
+    } else {
+      // Ouvrir la sous-vue de customisation
+      const catIndex = (menu.categories?.findIndex((c: any) => c.id === categoryId) ?? 0) + 1;
+      const catName = getCategoryName(category?.itemTypeId || '');
+      setCustomizingItem({
+        item: fullItem,
+        categoryId,
+        categoryIndex: catIndex,
+        categoryName: catName,
+      });
+    }
+  }, [tempMenuSelections, onDeselectMenuItem, onItemSelected, menu, items, getCategoryName]);
+
+  // Confirmer la customisation d'un item de menu
+  const handleCustomizationConfirm = useCallback((customization: { tags: SelectedTag[]; note?: string }) => {
+    if (!customizingItem) return;
+    onItemSelected(customizingItem.categoryId, {
+      itemId: customizingItem.item.id,
+      tags: customization.tags,
+      note: customization.note,
+    });
+    setCustomizingItem(null);
+    setShowErrors(false);
+  }, [customizingItem, onItemSelected]);
+
+  // Retour à la vue catégories
+  const handleCustomizationBack = useCallback(() => {
+    setCustomizingItem(null);
+  }, []);
+
+  // Vérifier si une catégorie requise n'a pas de sélection
+  const isCategoryMissing = useCallback((category: MenuCategoryType): boolean => {
+    if (!category.isRequired) return false;
+    const selections = tempMenuSelections[category.id];
+    return !selections || selections.length === 0;
+  }, [tempMenuSelections]);
+
+  // Valider et confirmer le menu
+  const handleConfirm = useCallback(() => {
+    const categories = menu.categories || [];
+    const hasMissing = categories.some(isCategoryMissing);
+    // Au moins 1 article sélectionné au total
+    const totalSelections = Object.values(tempMenuSelections).reduce(
+      (sum, s) => sum + (s?.length || 0), 0
+    );
+
+    if (hasMissing || totalSelections === 0) {
+      setShowErrors(true);
+      showToast('Veuillez remplir les catégories requises', 'error');
+      return;
+    }
+    onConfirm?.();
+  }, [menu, tempMenuSelections, isCategoryMissing, onConfirm, showToast]);
 
   if (!menu) return null;
 
+  // ====================================================================
+  // VUE CUSTOMISATION D'UN ITEM
+  // ====================================================================
+  if (customizingItem) {
+    return (
+      <ItemCustomizationPanelContent
+        item={customizingItem.item}
+        availableTags={customizingItem.item.tags || []}
+        onConfirm={handleCustomizationConfirm}
+        onCancel={handleCustomizationBack}
+        headerTitle={`Catégorie ${customizingItem.categoryIndex} - ${customizingItem.categoryName}`}
+        headerSubtitle={customizingItem.item.name}
+        onBack={handleCustomizationBack}
+      />
+    );
+  }
+
+  // ====================================================================
+  // VUE CATÉGORIES (par défaut)
+  // ====================================================================
   return (
     <View style={styles.container}>
-      {/* Header de configuration */}
-      <View style={styles.configHeader}>
-        <View style={styles.sectionHeaderInline}>
-          <View style={styles.sectionIconContainer}>
-            <MenuIcon size={20} color="#2A2E33" />
-          </View>
-          <View style={styles.sectionHeaderText}>
-            <RNText style={styles.sectionHeaderTitle}>
-              Configuration "{menu.name}"
-            </RNText>
-            <RNText style={styles.sectionHeaderSubtitle}>
-              Personnalisez votre sélection d'articles
-            </RNText>
-          </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <RNText style={styles.title}>Configuration "{menu.name}"</RNText>
+          <RNText style={styles.subtitle}>Personnalisez votre sélection d'articles</RNText>
         </View>
+        <TouchableOpacity
+          onPress={onCancel}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.closeButton}
+        >
+          <X size={24} color="#64748B" strokeWidth={2} />
+        </TouchableOpacity>
       </View>
 
       {/* Configuration content */}
@@ -296,15 +404,18 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
           <View style={styles.categoriesContainer}>
             {menu.categories.map((category: MenuCategoryType, index: number) => {
               const selectedItems = tempMenuSelections[category.id] || [];
+              const categoryItems = getCategoryItems(category);
+              const categoryName = getCategoryName(category.itemTypeId);
               return (
-                <MenuCategory
+                <MenuCategoryCard
                   key={category.id}
                   category={category}
                   index={index}
                   selectedItems={selectedItems}
                   onToggleItem={handleToggleItem}
-                  getMenuCategoryItems={getMenuCategoryItems}
-                  getCategoryName={getCategoryName}
+                  categoryItems={categoryItems}
+                  categoryName={categoryName}
+                  hasError={showErrors && isCategoryMissing(category)}
                 />
               );
             })}
@@ -319,28 +430,21 @@ export const MenuConfiguration = memo<MenuConfigurationProps>(({
         )}
       </ScrollView>
 
-      {/* Footer avec boutons Annuler / Valider */}
-      {(onCancel || onConfirm) && (
-        <View style={styles.configFooter}>
-          <Pressable style={styles.configCancelButton} onPress={onCancel}>
-            <RNText style={styles.configCancelButtonText}>Annuler</RNText>
-          </Pressable>
-          <Pressable
-            style={[styles.configConfirmButton, !isValid && styles.configConfirmButtonDisabled]}
-            onPress={onConfirm}
-            disabled={!isValid}
-          >
-            <RNText style={styles.configConfirmButtonText}>
-              Valider le menu
-            </RNText>
-          </Pressable>
-        </View>
-      )}
+      {/* Footer */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <RNText style={styles.cancelButtonText}>Annuler</RNText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.confirmButton}
+          onPress={handleConfirm}
+        >
+          <RNText style={styles.confirmButtonText}>Valider le menu</RNText>
+        </TouchableOpacity>
+      </View>
     </View>
   );
-});
-
-MenuConfiguration.displayName = 'MenuConfiguration';
+};
 
 const COLORS = {
   primary: '#2A2E33',
@@ -349,10 +453,10 @@ const COLORS = {
   text: '#2A2E33',
   textSecondary: '#6B7280',
   background: '#FFFFFF',
-  border: '#E5E7EB',
+  border: '#E2E8F0',
   backgroundGray: '#F3F4F6',
-  selectedBackground: '#FEF3C7',
-  selectedBorder: '#F59E0B'
+  selectedBackground: '#ECFDF5',
+  selectedBorder: '#059669'
 };
 
 const styles = StyleSheet.create({
@@ -361,52 +465,37 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     paddingBottom: 24,
   },
 
-  // Configuration Header
-  configHeader: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
+  // Header (iso with other panel forms)
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    backgroundColor: '#FAFAFA',
   },
-
-  sectionHeaderInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  sectionIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: COLORS.backgroundGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-
-  sectionHeaderText: {
+  headerText: {
     flex: 1,
   },
-
-  sectionHeaderTitle: {
+  title: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.primary,
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    color: '#1E293B',
   },
-
-  sectionHeaderSubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
+  subtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  closeButton: {
+    padding: 4,
   },
 
   // Categories Container
@@ -429,6 +518,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  categoryCardError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
 
   categoryHeader: {
     backgroundColor: COLORS.backgroundGray,
@@ -436,6 +529,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+  },
+  categoryHeaderError: {
+    backgroundColor: '#FEE2E2',
+    borderBottomColor: '#FECACA',
   },
 
   categoryHeaderContent: {
@@ -451,6 +548,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+  },
+  categoryNumberBadgeError: {
+    backgroundColor: '#EF4444',
   },
 
   categoryNumberText: {
@@ -475,6 +575,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textSecondary,
     fontWeight: '500',
+  },
+  categoryHeaderSubtitleError: {
+    color: '#EF4444',
+    fontWeight: '600',
   },
 
   categorySupplementTag: {
@@ -595,42 +699,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Footer
-  configFooter: {
+  // Footer (iso with other panel forms)
+  footer: {
     flexDirection: 'row',
     gap: 12,
-    padding: 16,
+    padding: 20,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    backgroundColor: COLORS.background,
   },
-  configCancelButton: {
+  cancelButton: {
     flex: 1,
-    paddingVertical: 12,
+    height: 44,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  configCancelButtonText: {
-    fontSize: 14,
+  cancelButtonText: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
-  configConfirmButton: {
+  confirmButton: {
     flex: 1,
-    paddingVertical: 12,
+    height: 44,
     borderRadius: 8,
-    backgroundColor: COLORS.success,
+    backgroundColor: '#2A2E33',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  configConfirmButtonDisabled: {
-    opacity: 0.5,
-  },
-  configConfirmButtonText: {
-    fontSize: 14,
+  confirmButtonText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.background,
+    color: '#FFFFFF',
   },
 });
