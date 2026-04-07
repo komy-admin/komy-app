@@ -54,7 +54,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         shape: formData.shape,
       });
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
+      formErrors.handleError({ error, showToast, fallback: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }

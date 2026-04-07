@@ -65,7 +65,7 @@ export default function LoginScreen() {
 
       showToast('Erreur de configuration. Contactez un administrateur.', 'error');
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Échec de connexion');
+      formErrors.handleError({ error, showToast, fallback: 'Échec de connexion' });
     }
   };
 

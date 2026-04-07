@@ -108,7 +108,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
         vatRate
       });
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
+      formErrors.handleError({ error, showToast, fallback: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsProcessing(false);
     }

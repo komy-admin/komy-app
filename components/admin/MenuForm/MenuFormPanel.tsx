@@ -237,7 +237,7 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
     try {
       await onSave(menuData);
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde du menu');
+      formErrors.handleError({ error, showToast, fallback: 'Erreur lors de la sauvegarde du menu' });
     } finally {
       setIsSaving(false);
     }

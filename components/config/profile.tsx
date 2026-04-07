@@ -159,7 +159,7 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
       }));
       showToast('Nom du restaurant mis à jour', 'success');
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Impossible de mettre à jour le nom');
+      formErrors.handleError({ error, showToast, fallback: 'Impossible de mettre à jour le nom' });
     } finally {
       setIsSaving(false);
     }

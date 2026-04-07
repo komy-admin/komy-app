@@ -56,7 +56,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
     try {
       await onSave(selectedProfileId as UserProfile, displayName.trim() || '', user?.id);
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
+      formErrors.handleError({ error, showToast, fallback: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }

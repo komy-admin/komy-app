@@ -115,7 +115,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         optionsPayload
       );
     } catch (error) {
-      formErrors.handleError(error, showToast, tag ? 'Erreur lors de la modification du tag' : 'Erreur lors de la création du tag');
+      formErrors.handleError({ error, showToast, fallback: tag ? 'Erreur lors de la modification du tag' : 'Erreur lors de la création du tag' });
     } finally {
       setIsSaving(false);
     }

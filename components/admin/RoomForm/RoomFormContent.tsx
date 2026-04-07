@@ -170,7 +170,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         isActive: formData.isActive,
       });
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
+      formErrors.handleError({ error, showToast, fallback: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }

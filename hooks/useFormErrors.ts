@@ -13,11 +13,11 @@ export interface UseFormErrorsReturn {
   clearError: (field: string) => void
   clearAll: () => void
   setError: (field: string, message: string) => void
-  handleError: (
-    error: unknown,
-    showToast: (message: string, type: 'error') => void,
-    fallbackMessage?: string
-  ) => void
+  handleError: (opts: {
+    error: unknown
+    showToast: (message: string, type: 'error') => void
+    fallback?: string
+  }) => void
 }
 
 /**
@@ -106,11 +106,11 @@ export function useFormErrors(fieldMap?: Record<string, string>): UseFormErrorsR
   }, [])
 
   const handleError = useCallback(
-    (
-      error: unknown,
-      showToast: (message: string, type: 'error') => void,
-      fallbackMessage?: string
-    ) => {
+    ({ error, showToast, fallback }: {
+      error: unknown
+      showToast: (message: string, type: 'error') => void
+      fallback?: string
+    }) => {
       const validationErrors = extractValidationErrors(error)
 
       if (validationErrors) {
@@ -123,7 +123,7 @@ export function useFormErrors(fieldMap?: Record<string, string>): UseFormErrorsR
         showToast('Erreur de validation', 'error')
       } else {
         // Non-validation error: fallback to toast
-        showApiError(error, showToast, fallbackMessage)
+        showApiError(error, showToast, fallback)
       }
     },
     [mapField]

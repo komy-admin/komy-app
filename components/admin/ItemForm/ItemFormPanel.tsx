@@ -112,7 +112,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
 
       await onSave(itemData);
     } catch (error) {
-      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
+      formErrors.handleError({ error, showToast, fallback: 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }
