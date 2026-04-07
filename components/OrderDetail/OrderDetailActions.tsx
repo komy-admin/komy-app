@@ -11,8 +11,8 @@ import {
   ShoppingBag,
   MapPin,
   Lock,
+  LucideIcon,
 } from 'lucide-react-native';
-import { LucideIcon } from 'lucide-react-native';
 import { Order } from '~/types/order.types';
 import { Status } from '~/types/status.enum';
 import {
@@ -137,6 +137,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
       onNoteChange?.(trimmed);
     }
   }, [noteText, order.note, onNoteChange]);
+
   const summary = useMemo(() => {
     const lines = order.lines || [];
     const totalItems = lines.reduce((count, l) => count + (l.type === 'MENU' && l.items ? l.items.length : 1), 0);
@@ -155,20 +156,20 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
     duration: formatDuration(order.createdAt),
   }), [order]);
 
-  const [rowH, setRowH] = useState(80);
-  const onRowLayout = useCallback((e: LayoutChangeEvent) => {
-    setRowH(e.nativeEvent.layout.height);
+  // Measure the container (flex:1 = stable height from parent, no feedback loop)
+  const [containerH, setContainerH] = useState(0);
+  const onContainerLayout = useCallback((e: LayoutChangeEvent) => {
+    setContainerH(e.nativeEvent.layout.height);
   }, []);
 
-  // Seuils adaptatifs
-  const compactButtons = rowH < 55;
-  const compactTiles = rowH < 65;
+  // Single compact threshold — all elements switch together
+  const compact = containerH > 0 && containerH < 540;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={onContainerLayout}>
       {/* Actions */}
       <RNText style={styles.sectionLabel}>Actions</RNText>
-      <View style={styles.row} onLayout={onRowLayout}>
+      <View style={styles.row}>
         {(hasDraftItems || hasReadyItems) && (
           <ActionButton
             icon={Send}
@@ -177,7 +178,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             border={hasReadyItems ? '#6EE7B7' : '#FBBF24'}
             label={hasReadyItems ? 'Servir' : 'Réclamer'}
             onPress={hasReadyItems ? onServe : onClaim}
-            compact={compactButtons}
+            compact={compact}
           />
         )}
         <ActionButton
@@ -187,7 +188,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           border="#A5B4FC"
           label="Ajouter"
           onPress={onAddItem}
-          compact={compactButtons}
+          compact={compact}
         />
       </View>
       <View style={styles.row}>
@@ -199,7 +200,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             border="#93C5FD"
             label="Changer table"
             onPress={onReassignTable}
-            compact={compactButtons}
+            compact={compact}
           />
         )}
         <ActionButton
@@ -211,7 +212,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           onPress={onPayment}
           disabled={order.paymentStatus === 'paid'}
           disabledReason="Commande déjà payée"
-          compact={compactButtons}
+          compact={compact}
         />
       </View>
 
@@ -228,7 +229,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             onPress={onTerminate}
             disabled={order.paymentStatus !== 'paid'}
             disabledReason="Paiement requis"
-            compact={compactButtons}
+            compact={compact}
           />
         )}
         <ActionButton
@@ -240,7 +241,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           onPress={onDelete}
           disabled={hasPayments}
           disabledReason="Paiement enregistré"
-          compact={compactButtons}
+          compact={compact}
         />
       </View>
 
@@ -264,40 +265,40 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
       {/* Informations */}
       <RNText style={styles.sectionLabel}>Informations</RNText>
       <View style={styles.row}>
-        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
-          <MapPin size={compactTiles ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
-          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{orderInfo.tableName}</RNText>
-          {!compactTiles && <RNText style={styles.infoTileLabel}>Table</RNText>}
+        <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
+          <MapPin size={compact ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
+          <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{orderInfo.tableName}</RNText>
+          {!compact && <RNText style={styles.infoTileLabel}>Table</RNText>}
         </View>
-        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
-          <ShoppingBag size={compactTiles ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
-          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{summary.totalItems}</RNText>
-          {!compactTiles && <RNText style={styles.infoTileLabel}>Article{summary.totalItems > 1 ? 's' : ''}</RNText>}
+        <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
+          <ShoppingBag size={compact ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
+          <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{summary.totalItems}</RNText>
+          {!compact && <RNText style={styles.infoTileLabel}>Article{summary.totalItems > 1 ? 's' : ''}</RNText>}
         </View>
-        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact, { backgroundColor: getStatusColor(globalStatus), borderColor: darkenColor(getStatusColor(globalStatus), 0.2) }]}>
-          {!compactTiles && <View style={[styles.infoTileStatusDot, { backgroundColor: getStatusTextColor(globalStatus) }]} />}
-          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact, { color: getStatusTextColor(globalStatus) }]}>
+        <View style={[styles.infoTile, compact && styles.infoTileCompact, { backgroundColor: getStatusColor(globalStatus), borderColor: darkenColor(getStatusColor(globalStatus), 0.2) }]}>
+          {!compact && <View style={[styles.infoTileStatusDot, { backgroundColor: getStatusTextColor(globalStatus) }]} />}
+          <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact, { color: getStatusTextColor(globalStatus) }]}>
             {getStatusText(globalStatus)}
           </RNText>
-          {!compactTiles && <RNText style={[styles.infoTileLabel, { color: getStatusTextColor(globalStatus), opacity: 0.7 }]}>Statut</RNText>}
+          {!compact && <RNText style={[styles.infoTileLabel, { color: getStatusTextColor(globalStatus), opacity: 0.7 }]}>Statut</RNText>}
         </View>
       </View>
 
       {/* Récap */}
       <View style={styles.row}>
-        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
-          {!compactTiles && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
-          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{formatDate(order.createdAt, DateFormat.TIME)}</RNText>
-          <RNText style={[styles.infoTileLabel, compactTiles && styles.infoTileLabelCompact]}>Début</RNText>
+        <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
+          {!compact && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
+          <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{formatDate(order.createdAt, DateFormat.TIME)}</RNText>
+          <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact]}>Début</RNText>
         </View>
-        <View style={[styles.infoTile, compactTiles && styles.infoTileCompact]}>
-          {!compactTiles && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
-          <RNText style={[styles.infoTileValue, compactTiles && styles.infoTileValueCompact]}>{orderInfo.duration}</RNText>
-          <RNText style={[styles.infoTileLabel, compactTiles && styles.infoTileLabelCompact]}>Durée</RNText>
+        <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
+          {!compact && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
+          <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{orderInfo.duration}</RNText>
+          <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact]}>Durée</RNText>
         </View>
         <View style={[
           styles.infoTile,
-          compactTiles && styles.infoTileCompact,
+          compact && styles.infoTileCompact,
           summary.remaining > 0 && summary.paidAmount > 0 && {
             backgroundColor: '#FFFBEB',
             borderColor: '#FBBF24',
@@ -307,27 +308,27 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             borderColor: '#6EE7B7',
           },
         ]}>
-          {!compactTiles && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? '#D97706' : summary.remaining === 0 && summary.paidAmount > 0 ? '#059669' : '#9CA3AF'} strokeWidth={1.8} />}
+          {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? '#D97706' : summary.remaining === 0 && summary.paidAmount > 0 ? '#059669' : '#9CA3AF'} strokeWidth={1.8} />}
           {summary.paidAmount > 0 && summary.remaining > 0 ? (
             <>
               <View style={styles.remainingRow}>
-                <RNText style={[styles.remainingValue, compactTiles && { fontSize: 13 }]}>{formatPrice(summary.remaining)}</RNText>
+                <RNText style={[styles.remainingValue, compact && { fontSize: 13 }]}>{formatPrice(summary.remaining)}</RNText>
                 <RNText style={styles.totalStrikethrough}>{formatPrice(summary.totalAmount)}</RNText>
               </View>
-              <RNText style={[styles.infoTileLabel, compactTiles && styles.infoTileLabelCompact, { color: '#D97706' }]}>À payer</RNText>
+              <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact, { color: '#D97706' }]}>À payer</RNText>
             </>
           ) : (
             <>
               <RNText style={[
                 styles.infoTileValue,
-                compactTiles && styles.infoTileValueCompact,
+                compact && styles.infoTileValueCompact,
                 summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
               ]}>
                 {formatPrice(summary.totalAmount)}
               </RNText>
               <RNText style={[
                 styles.infoTileLabel,
-                compactTiles && styles.infoTileLabelCompact,
+                compact && styles.infoTileLabelCompact,
                 summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
               ]}>
                 {summary.remaining === 0 && summary.paidAmount > 0 ? 'Payé' : 'Total'}
@@ -372,12 +373,13 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
 
-  // Row — hauteur fixe, shrink si viewport trop petit
+  // Rows: fixed base height, never grow, shrink AFTER note reaches minHeight
   row: {
-    minHeight: 50,
-    maxHeight: 105,
-    flexGrow: 1,
+    flexBasis: 80,
+    flexGrow: 0,
     flexShrink: 1,
+    minHeight: 46,
+    maxHeight: 95,
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: 8,
@@ -408,13 +410,15 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    padding: 10,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   glassOverlayCompact: {
     flexDirection: 'row',
     gap: 6,
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   cardLabel: {
     fontSize: 12,
@@ -438,12 +442,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: '#F3F4F6',
   },
   lockOverlayCompact: {
     flexDirection: 'row',
     gap: 5,
+    paddingVertical: 4,
   },
   lockLabel: {
     fontSize: 12,
@@ -478,12 +484,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 3,
     paddingHorizontal: 6,
+    paddingVertical: 6,
     overflow: 'hidden',
   },
   // Info tiles — mode compact (icône + valeur sur une ligne, pas de label)
   infoTileCompact: {
     flexDirection: 'row',
     gap: 6,
+    paddingVertical: 4,
   },
   infoTileValue: {
     fontSize: 14,
@@ -510,11 +518,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  // Note
+  // Note: only element that grows, shrinks FIRST (10x faster than rows)
   noteWrapper: {
     flexGrow: 1,
     flexShrink: 10,
-    minHeight: 40,
+    flexBasis: 60,
+    minHeight: 37,
   },
   noteCard: {
     flex: 1,
