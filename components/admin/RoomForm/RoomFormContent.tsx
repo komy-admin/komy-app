@@ -4,6 +4,9 @@ import Svg, { Rect, Defs, ClipPath } from 'react-native-svg';
 import { X, ArrowLeft } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { useToast } from '~/components/ToastProvider';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
 interface RoomFormContentProps {
   room: Room | null;
@@ -119,6 +122,8 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
     isActive: true,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const { showToast } = useToast();
+  const formErrors = useFormErrors();
 
   useEffect(() => {
     if (room) {
@@ -154,6 +159,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
 
   const handleSave = async () => {
     if (isSaving) return;
+    formErrors.clearAll();
     setIsSaving(true);
     try {
       await onSave({
@@ -163,8 +169,8 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         color: formData.color,
         isActive: formData.isActive,
       });
-    } catch {
-      // Error handled by parent via showApiError
+    } catch (error) {
+      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
     }
@@ -208,12 +214,13 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
             <Text style={styles.formLabel}>Nom de la salle</Text>
             <TextInput
               value={formData.name}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+              onChangeText={(text) => { setFormData(prev => ({ ...prev, name: text })); formErrors.clearError('name'); }}
               placeholder="Entrez le nom de la salle"
               placeholderTextColor="#94A3B8"
-              style={styles.formInput}
+              style={[styles.formInput, formErrors.hasError('name') && styles.formInputError]}
               autoComplete="off"
             />
+            <FormFieldError message={formErrors.getError('name')} />
           </View>
 
           {/* Room Status */}
@@ -442,6 +449,10 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     paddingHorizontal: 12,
     fontSize: 13,
+  },
+  formInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
 
   // Status toggle

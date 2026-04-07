@@ -4,6 +4,9 @@ import { X } from 'lucide-react-native';
 import { Table } from '~/types/table.types';
 import { NumberInput } from '~/components/ui';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { useToast } from '~/components/ToastProvider';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
 interface TableFormContentProps {
   table: Table;
@@ -29,6 +32,8 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
     shape: 'square',
   });
   const [isSaving, setIsSaving] = useState(false);
+  const { showToast } = useToast();
+  const formErrors = useFormErrors();
 
   useEffect(() => {
     setFormData({
@@ -40,6 +45,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
 
   const handleSave = async () => {
     if (isSaving) return;
+    formErrors.clearAll();
     setIsSaving(true);
     try {
       await onSave({
@@ -47,8 +53,8 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
         seats: parseInt(formData.seats, 10),
         shape: formData.shape,
       });
-    } catch {
-      // Error handled by parent via showApiError
+    } catch (error) {
+      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
     }
@@ -83,12 +89,13 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
             <RNText style={styles.formLabel}>Nom de la table</RNText>
             <TextInput
               value={formData.name}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+              onChangeText={(text) => { setFormData(prev => ({ ...prev, name: text })); formErrors.clearError('name'); }}
               maxLength={3}
               placeholder="Ex: A01, T1..."
               placeholderTextColor="#94A3B8"
-              style={styles.formInput}
+              style={[styles.formInput, formErrors.hasError('name') && styles.formInputError]}
             />
+            <FormFieldError message={formErrors.getError('name')} />
             <RNText style={styles.formHelpText}>3 caractères maximum</RNText>
           </View>
 
@@ -98,13 +105,15 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
               value={parseInt(formData.seats)}
               onChangeText={(value) => {
                 setFormData(prev => ({ ...prev, seats: value?.toString() || '1' }));
+                formErrors.clearError('seats');
               }}
               placeholder="Nombre max de couverts"
               decimalPlaces={0}
               min={1}
               max={20}
-              style={styles.formInput}
+              style={[styles.formInput, formErrors.hasError('seats') && styles.formInputError]}
             />
+            <FormFieldError message={formErrors.getError('seats')} />
             <RNText style={styles.formHelpText}>Entre 1 et 20 couverts</RNText>
           </View>
 
@@ -211,6 +220,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 13,
     color: '#1E293B',
+  },
+  formInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   footer: {
     flexDirection: 'row',

@@ -11,6 +11,9 @@ import { TagSelector } from '~/components/ui';
 import { SelectButton } from '~/components/ui/select-button';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { centsToEuros, eurosToCents, getContrastColor } from '~/lib/utils';
+import { useToast } from '~/components/ToastProvider';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
 interface ItemFormPanelProps {
   item: Item | null;
@@ -56,6 +59,8 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>(item?.tags?.map(t => t.id) || []);
   const [isSaving, setIsSaving] = useState(false);
   const [isSelectingColor, setIsSelectingColor] = useState(false);
+  const { showToast } = useToast();
+  const formErrors = useFormErrors();
 
   // ItemType horizontal scroll
   const itemTypeScrollRef = useRef<ScrollView>(null);
@@ -69,12 +74,13 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
 
   const handleCategorySelect = useCallback((id: string) => {
     setItemTypeId(id);
+    formErrors.clearError('itemTypeId');
     const selectedType = itemTypes.find(t => t.id === id);
     const newVatRate = selectedType?.vatRate
       ? (typeof selectedType.vatRate === 'string' ? parseFloat(selectedType.vatRate) : selectedType.vatRate)
       : 20;
     setVatRate(newVatRate);
-  }, [itemTypes]);
+  }, [itemTypes, formErrors]);
 
   const handleTagToggle = useCallback((tagId: string) => {
     setSelectedTags(prev =>
@@ -84,6 +90,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
 
   const handleSave = useCallback(async () => {
     if (isSaving) return;
+    formErrors.clearAll();
     setIsSaving(true);
 
     try {
@@ -104,12 +111,12 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
       };
 
       await onSave(itemData);
-    } catch {
-      // Error toast handled by parent (useMenuPage.handleSaveItem via showApiError)
+    } catch (error) {
+      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, itemTypes, itemTypeId, tags, selectedTags, item?.id, name, price, color, isActive, hasNote, vatRate, onSave]);
+  }, [isSaving, itemTypes, itemTypeId, tags, selectedTags, item?.id, name, price, color, isActive, hasNote, vatRate, onSave, formErrors, showToast]);
 
   // Vue sélection couleur (full-screen dans le panel)
   if (isSelectingColor) {
@@ -215,7 +222,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
           {/* Catégorie */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Catégorie</Text>
-            <View style={styles.itemTypeScrollContainer}>
+            <View style={[styles.itemTypeScrollContainer, formErrors.hasError('itemTypeId') && styles.scrollContainerError]}>
               {Platform.OS === 'web' && (
                 <Pressable
                   style={styles.scrollArrow}
@@ -257,6 +264,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
                 </Pressable>
               )}
             </View>
+            <FormFieldError message={formErrors.getError('itemTypeId')} />
           </View>
 
           {/* Nom + Couleur */}
@@ -264,9 +272,9 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
             <Text style={styles.formLabel}>Nom & Couleur</Text>
             <View style={styles.nameColorRow}>
               <TextInput
-                style={[styles.formInput, styles.nameInput]}
+                style={[styles.formInput, styles.nameInput, formErrors.hasError('name') && styles.formInputError]}
                 value={name}
-                onChangeText={setName}
+                onChangeText={(text) => { setName(text); formErrors.clearError('name'); }}
                 placeholder="Ex: Steak frites, Coca-Cola..."
                 placeholderTextColor="#94A3B8"
               />
@@ -287,6 +295,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
                 )}
               </TouchableOpacity>
             </View>
+            <FormFieldError message={formErrors.getError('name')} />
           </View>
 
           {/* Prix + Statut + Notes */}
@@ -295,14 +304,15 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
               <Text style={styles.formLabel}>Prix (€)</Text>
               <NumberInput
                 value={price}
-                onChangeText={setPrice}
+                onChangeText={(v) => { setPrice(v); formErrors.clearError('price'); }}
                 decimalPlaces={2}
                 min={0}
                 max={1000}
                 currency="€"
                 placeholder="0.00"
-                style={styles.formInput}
+                style={[styles.formInput, formErrors.hasError('price') && styles.formInputError]}
               />
+              <FormFieldError message={formErrors.getError('price')} />
             </View>
             <View style={styles.formRowItem}>
               <Text style={styles.formLabel}>Statut</Text>
@@ -351,11 +361,14 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
               <View style={styles.divider} />
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Tags</Text>
-                <TagSelector
-                  tags={tags}
-                  selectedTagIds={selectedTags}
-                  onTagToggle={handleTagToggle}
-                />
+                <View style={formErrors.hasError('tags') ? styles.scrollContainerError : undefined}>
+                  <TagSelector
+                    tags={tags}
+                    selectedTagIds={selectedTags}
+                    onTagToggle={(tagId) => { handleTagToggle(tagId); formErrors.clearError('tags'); }}
+                  />
+                </View>
+                <FormFieldError message={formErrors.getError('tags')} />
               </View>
             </>
           )}
@@ -454,6 +467,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1E293B',
   },
+  formInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
   itemTypeScrollContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,6 +497,13 @@ const styles = StyleSheet.create({
       cursor: 'pointer',
       transition: 'all 0.2s ease',
     } as any),
+  },
+  scrollContainerError: {
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    padding: 4,
   },
   divider: {
     height: 1,

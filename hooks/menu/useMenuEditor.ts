@@ -175,8 +175,7 @@ export const useMenuEditor = ({
       [newCategoryIndex]: []
     }));
 
-    showToast('Nouvelle catégorie ajoutée', 'success');
-  }, [showToast, formData.categories.length]);
+  }, [formData.categories.length]);
 
   const removeCategory = useCallback((index: number, confirmationContext: AdminConfirmationContext | null) => {
     const categoryToRemove = formData.categories[index];

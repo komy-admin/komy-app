@@ -81,28 +81,23 @@ export function useMenuPage() {
   }, [items]);
 
   const handleSaveItem = useCallback(async (item: Item) => {
-    try {
-      const itemType = itemTypes.find(type => type.id === item.itemType?.id);
+    const itemType = itemTypes.find(type => type.id === item.itemType?.id);
 
-      const itemData: any = {
-        ...item,
-        color: item.color || undefined,
-        itemType: itemType || undefined,
-        tags: item.tags?.map(t => t.id) || [],
-      };
+    const itemData: any = {
+      ...item,
+      color: item.color || undefined,
+      itemType: itemType || undefined,
+      tags: item.tags?.map(t => t.id) || [],
+    };
 
-      if (item.id) {
-        await updateMenuItem(item.id, itemData);
-        showToast('Article modifié avec succès', 'success');
-      } else {
-        await createMenuItem(itemData);
-        showToast('Article créé avec succès', 'success');
-      }
-      closePanel();
-    } catch (error) {
-      showApiError(error, showToast, "Erreur lors de la sauvegarde de l'article");
-      throw error;
+    if (item.id) {
+      await updateMenuItem(item.id, itemData);
+      showToast('Article modifié avec succès', 'success');
+    } else {
+      await createMenuItem(itemData);
+      showToast('Article créé avec succès', 'success');
     }
+    closePanel();
   }, [itemTypes, updateMenuItem, createMenuItem, showToast, closePanel]);
 
   const handleDeleteItem = useCallback((id: string) => {
@@ -171,57 +166,52 @@ export function useMenuPage() {
   }, [allMenus, updateMenu, showToast]);
 
   const handleBulkMenuSave = useCallback(async (menuData: any) => {
-    try {
-      const mapCategories = (categories: any[], includeIds: boolean) =>
-        categories?.map((cat: any) => ({
-          ...(includeIds && cat.id ? { id: cat.id } : {}),
-          itemTypeId: cat.itemTypeId,
-          isRequired: Boolean(cat.isRequired),
-          maxSelections: Number(cat.maxSelections),
-          priceModifier: Number(cat.priceModifier),
-          items: cat.localItems
-            ?.filter((li: any) => !li.isDeleted)
-            .map((li: any) => ({
-              ...(includeIds && li.originalId ? { id: li.originalId } : {}),
-              itemId: li.itemId,
-              supplement: Number(li.supplement) || 0,
-              isAvailable: Boolean(li.isAvailable),
-            })) || [],
-        })) || [];
+    const mapCategories = (categories: any[], includeIds: boolean) =>
+      categories?.map((cat: any) => ({
+        ...(includeIds && cat.id ? { id: cat.id } : {}),
+        itemTypeId: cat.itemTypeId,
+        isRequired: Boolean(cat.isRequired),
+        maxSelections: Number(cat.maxSelections),
+        priceModifier: Number(cat.priceModifier),
+        items: cat.localItems
+          ?.filter((li: any) => !li.isDeleted)
+          .map((li: any) => ({
+            ...(includeIds && li.originalId ? { id: li.originalId } : {}),
+            itemId: li.itemId,
+            supplement: Number(li.supplement) || 0,
+            isAvailable: Boolean(li.isAvailable),
+          })) || [],
+      })) || [];
 
-      // Trier les catégories par priorityOrder de l'itemType, puis alphabétiquement
-      const sortedCategories = [...(menuData.categories || [])].sort((a: any, b: any) => {
-        const priorityA = itemTypes.find(t => t.id === a.itemTypeId)?.priorityOrder ?? 999;
-        const priorityB = itemTypes.find(t => t.id === b.itemTypeId)?.priorityOrder ?? 999;
-        if (priorityA !== priorityB) return priorityA - priorityB;
-        const nameA = itemTypes.find(t => t.id === a.itemTypeId)?.name || '';
-        const nameB = itemTypes.find(t => t.id === b.itemTypeId)?.name || '';
-        return nameA.localeCompare(nameB);
-      });
+    // Trier les catégories par priorityOrder de l'itemType, puis alphabétiquement
+    const sortedCategories = [...(menuData.categories || [])].sort((a: any, b: any) => {
+      const priorityA = itemTypes.find(t => t.id === a.itemTypeId)?.priorityOrder ?? 999;
+      const priorityB = itemTypes.find(t => t.id === b.itemTypeId)?.priorityOrder ?? 999;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      const nameA = itemTypes.find(t => t.id === a.itemTypeId)?.name || '';
+      const nameB = itemTypes.find(t => t.id === b.itemTypeId)?.name || '';
+      return nameA.localeCompare(nameB);
+    });
 
-      const menuPayload = {
-        menu: {
-          name: menuData.name,
-          description: menuData.description || '',
-          basePrice: Number(menuData.basePrice),
-          isActive: Boolean(menuData.isActive),
-          vatRate: Number(menuData.vatRate) || 10,
-        },
-        categories: mapCategories(sortedCategories, Boolean(menuData.id)),
-      };
+    const menuPayload = {
+      menu: {
+        name: menuData.name,
+        description: menuData.description || '',
+        basePrice: Number(menuData.basePrice),
+        isActive: Boolean(menuData.isActive),
+        vatRate: Number(menuData.vatRate) || 10,
+      },
+      categories: mapCategories(sortedCategories, Boolean(menuData.id)),
+    };
 
-      if (menuData.id) {
-        await updateMenuBulk(menuData.id, menuPayload);
-      } else {
-        await createMenuBulk(menuPayload);
-      }
-
-      showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
-      closePanel();
-    } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la sauvegarde du menu');
-      throw error;
+    if (menuData.id) {
+      await updateMenuBulk(menuData.id, menuPayload);
+    } else {
+      await createMenuBulk(menuPayload);
     }
+
+    showToast(menuData.id ? 'Menu modifié avec succès' : 'Menu créé avec succès', 'success');
+    closePanel();
   }, [itemTypes, updateMenuBulk, createMenuBulk, showToast, closePanel]);
 
   const handleDeleteMenu = useCallback((id: string) => {

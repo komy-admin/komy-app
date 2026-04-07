@@ -96,6 +96,25 @@ export function extractApiError(error: unknown): ApiErrorInfo {
  * Show an API error as a toast notification.
  * Silent errors (session expiry) are skipped — already handled globally.
  */
+/**
+ * Extract field-level validation errors from an API error.
+ * Returns a map of field -> { message, rule } or null if not a validation error.
+ */
+export function extractValidationErrors(
+  error: unknown
+): Record<string, { message: string; rule?: string }> | null {
+  const info = extractApiError(error)
+  if (!info.isValidation || !Array.isArray(info.details)) return null
+
+  const errors: Record<string, { message: string; rule?: string }> = {}
+  for (const detail of info.details) {
+    if (detail.field && detail.message) {
+      errors[detail.field] = { message: detail.message, rule: detail.rule }
+    }
+  }
+  return Object.keys(errors).length > 0 ? errors : null
+}
+
 export function showApiError(
   error: unknown,
   showToast: (message: string, type: 'error') => void,

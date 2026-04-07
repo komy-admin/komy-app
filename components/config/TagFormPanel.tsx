@@ -1,42 +1,45 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform } from 'react-native';
-import { X, Check, Plus, Trash2 } from 'lucide-react-native';
+import { X, Plus, Trash2 } from 'lucide-react-native';
 import { Tag, TagFieldType, TagOption } from '~/types/tag.types';
 import { eurosToCents, centsToEuros } from '~/lib/utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
-import { showApiError } from '~/lib/apiErrorHandler';
 import { useToast } from '~/components/ToastProvider';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
 interface TagFormPanelProps {
   tag: Tag | null;
   onSave: (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => Promise<void>;
   onCancel: () => void;
-  onBulkDeleteOptions: (tagId: string, optionIds: string[]) => Promise<void>;
 }
 
-export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel, onBulkDeleteOptions }) => {
+export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCancel }) => {
   const { showToast } = useToast();
   const [label, setLabel] = useState(tag?.label || '');
-  const [fieldType, setFieldType] = useState<TagFieldType | null>(tag?.fieldType || null); // null = aucune sélection
+  const [fieldType, setFieldType] = useState<TagFieldType | null>(tag?.fieldType || null);
   const [isRequired, setIsRequired] = useState(tag?.isRequired || false);
-  // 💰 Convertir centimes -> euros pour l'affichage
   const [options, setOptions] = useState<Partial<TagOption>[]>(
     tag?.options?.map(opt => ({
       ...opt,
       priceModifier: opt.priceModifier != null ? centsToEuros(opt.priceModifier) : null
     })) || []
   );
-  const [optionsToDelete, setOptionsToDelete] = useState<string[]>([]); // IDs des options à supprimer
-  const [newOptionLabel, setNewOptionLabel] = useState('');
-  const [newOptionPrice, setNewOptionPrice] = useState('');
-  const [showConfiguration, setShowConfiguration] = useState(!!tag); // true si mode édition, false si création
-  const [error, setError] = useState<string | null>(null);
+  const [showConfiguration, setShowConfiguration] = useState(!!tag);
+  const formErrors = useFormErrors({ 'name': 'label' });
   const [isSaving, setIsSaving] = useState(false);
 
   const needsOptions = fieldType === 'select' || fieldType === 'multi-select';
 
+  const generateValue = (text: string) =>
+    text.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
   const handleFieldTypeSelect = (type: TagFieldType) => {
     setFieldType(type);
+    formErrors.clearError('fieldType');
     setShowConfiguration(true);
   };
 
@@ -45,107 +48,83 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
   };
 
   const handleAddOption = () => {
-    if (!newOptionLabel.trim()) return;
-
-    const generatedValue = newOptionLabel.trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-
-    const newOption: Partial<TagOption> = {
-      value: generatedValue,
-      label: newOptionLabel.trim(),
-      priceModifier: newOptionPrice ? parseFloat(newOptionPrice) : null,
+    setOptions([...options, {
+      value: '',
+      label: '',
+      priceModifier: null,
       isDefault: options.length === 0,
       position: options.length,
-    };
+    }]);
+    formErrors.clearError('options');
+  };
 
-    setOptions([...options, newOption]);
-    setNewOptionLabel('');
-    setNewOptionPrice('');
+  const handleUpdateOptionLabel = (index: number, text: string) => {
+    const updated = [...options];
+    updated[index] = { ...updated[index], label: text, value: generateValue(text) };
+    setOptions(updated);
+  };
+
+  const handleUpdateOptionPrice = (index: number, text: string) => {
+    const updated = [...options];
+    updated[index] = { ...updated[index], priceModifier: text ? parseFloat(text) : null };
+    setOptions(updated);
   };
 
   const handleDeleteOption = (index: number) => {
-    const option = options[index];
-
-    // Si l'option a un ID, on la marque pour suppression au save
-    if (option.id) {
-      setOptionsToDelete([...optionsToDelete, option.id]);
-    }
-
-    // On retire l'option de l'état local pour l'UI
     setOptions(options.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
-    if (!label.trim() || !fieldType) return;
-
-    setError(null);
+    formErrors.clearAll();
     setIsSaving(true);
 
     try {
-      const generatedName = label.trim().toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '');
-
-      if (tag?.id && optionsToDelete.length > 0) {
-        try {
-          await onBulkDeleteOptions(tag.id, optionsToDelete);
-        } catch (error) {
-          showApiError(error, showToast, 'Erreur lors de la suppression des options');
+      // Vérifier les options vides avant envoi
+      if (needsOptions) {
+        let hasEmptyOption = false;
+        options.forEach((opt, index) => {
+          if (!opt.label || !opt.label.trim()) {
+            formErrors.setError(`options.${index}`, 'Ce champ est requis');
+            hasEmptyOption = true;
+          }
+        });
+        if (hasEmptyOption) {
+          setIsSaving(false);
+          return;
         }
       }
 
-      // 🎯 AUTO-AJOUT: Si des champs sont remplis mais non validés, les ajouter automatiquement
-      let finalOptions = [...options];
-      if (needsOptions && newOptionLabel.trim()) {
-        const generatedValue = newOptionLabel.trim().toLowerCase()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '_')
-          .replace(/^_+|_+$/g, '');
-
-        const autoAddedOption: Partial<TagOption> = {
-          value: generatedValue,
-          label: newOptionLabel.trim(),
-          priceModifier: newOptionPrice ? parseFloat(newOptionPrice) : null,
-          isDefault: finalOptions.length === 0,
-          position: finalOptions.length,
-        };
-
-        finalOptions = [...finalOptions, autoAddedOption];
-      }
-
-      // 💰 Convertir euros -> centimes pour l'envoi API
-      const optionsInCents = needsOptions
-        ? finalOptions.map(opt => ({
-            ...opt,
-            priceModifier: opt.priceModifier != null ? eurosToCents(Number(opt.priceModifier)) : null
+      const optionsPayload = needsOptions
+        ? options.map(opt => ({
+            ...(opt.id ? { id: opt.id } : {}),
+            value: opt.value || generateValue(opt.label || ''),
+            label: (opt.label || '').trim(),
+            priceModifier: opt.priceModifier != null ? eurosToCents(Number(opt.priceModifier)) : null,
+            isDefault: opt.isDefault,
+            position: opt.position,
           }))
         : undefined;
 
       await onSave(
         {
-          name: generatedName,
+          name: generateValue(label),
           label: label.trim(),
-          fieldType,
+          fieldType: fieldType!,
           isRequired,
         },
-        optionsInCents
+        optionsPayload
       );
-    } catch (err) {
-      setError(tag ? 'Erreur lors de la modification du tag' : 'Erreur lors de la création du tag');
+    } catch (error) {
+      formErrors.handleError(error, showToast, tag ? 'Erreur lors de la modification du tag' : 'Erreur lors de la création du tag');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const fieldTypes: { value: TagFieldType; label: string }[] = [
-    { value: 'select', label: 'Sélection simple' },
-    { value: 'multi-select', label: 'Sélection multiple' },
-    { value: 'number', label: 'Nombre' },
-    { value: 'text', label: 'Texte libre' },
-    { value: 'toggle', label: 'Oui/Non' },
+  const fieldTypes: { value: TagFieldType; label: string; description: string }[] = [
+    { value: 'select', label: 'Sélection simple', description: 'Un seul choix parmi une liste — ex: Cuisson (Saignant, À point, Bien cuit)' },
+    { value: 'multi-select', label: 'Sélection multiple', description: 'Plusieurs choix possibles — ex: Garnitures (Salade, Frites, Riz)' },
+    { value: 'toggle', label: 'Oui/Non', description: 'Activer ou non une option — ex: Sans gluten, Sans lactose' },
   ];
 
   const getFieldTypeLabel = (type: TagFieldType | null): string => {
@@ -173,13 +152,6 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         </TouchableOpacity>
       </View>
 
-      {error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      {/* KeyboardAwareScrollView - auto-scrolls to focused input */}
       <KeyboardAwareScrollViewWrapper
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -187,11 +159,11 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
         scrollEventThrottle={16}
       >
         <Pressable style={{ flex: 1 }} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
-        {/* Étape 1: Sélection du type de champ (avant configuration) */}
+        {/* Étape 1: Sélection du type de champ */}
         {!showConfiguration && (
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Type de champ</Text>
-            <View style={styles.radioGroup}>
+            <View style={[styles.radioGroup, formErrors.hasError('fieldType') && styles.selectorError]}>
               {fieldTypes.map((type) => (
                 <TouchableOpacity
                   key={type.value}
@@ -208,19 +180,21 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                   <View style={styles.radio}>
                     {fieldType === type.value && <View style={styles.radioInner} />}
                   </View>
-                  <Text style={[styles.radioLabel, fieldType === type.value && styles.radioLabelActive]}>
-                    {type.label}
-                  </Text>
+                  <View style={styles.radioTextContainer}>
+                    <Text style={[styles.radioLabel, fieldType === type.value && styles.radioLabelActive]}>
+                      {type.label}
+                    </Text>
+                    <Text style={styles.radioDescription}>{type.description}</Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
         )}
 
-        {/* Étape 2: Configuration (affichée après sélection) */}
+        {/* Étape 2: Configuration */}
         {showConfiguration && (
           <>
-            {/* Type de champ sélectionné avec option de changement */}
             <View style={styles.selectedItemBanner}>
               <View style={styles.selectedItemInfo}>
                 <Text style={styles.selectedItemLabel}>Type de champ sélectionné</Text>
@@ -237,28 +211,35 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
             <View style={styles.divider} />
 
             {/* Nom du tag */}
-            <View style={styles.formGroup}>
+            <View style={[styles.formGroup, { marginBottom: 12 }]}>
               <Text style={styles.formLabel}>Nom du tag</Text>
               <TextInput
-                style={styles.formInput}
+                style={[styles.formInput, formErrors.hasError('label') && styles.formInputError]}
                 value={label}
-                onChangeText={setLabel}
+                onChangeText={(text) => { setLabel(text); formErrors.clearError('label'); }}
                 placeholder="Ex: Cuisson, Garnitures..."
                 placeholderTextColor="#94A3B8"
               />
+              <FormFieldError message={formErrors.getError('label')} />
             </View>
 
             {/* Obligatoire */}
-            <TouchableOpacity
-              style={styles.checkbox}
-              onPress={() => setIsRequired(!isRequired)}
-              activeOpacity={1}
-            >
-              <View style={[styles.checkboxBox, isRequired && styles.checkboxBoxChecked]}>
-                {isRequired && <Check size={16} color="#FFFFFF" strokeWidth={3} />}
-              </View>
-              <Text style={styles.checkboxLabel}>Champ obligatoire</Text>
-            </TouchableOpacity>
+            <View style={{ marginBottom: 10 }}>
+              <Text style={[styles.formLabel, { marginBottom: 4 }]}>Saisie en commande</Text>
+              <Text style={styles.formHelpText}>
+                Si obligatoire, ce tag devra être renseigné avant de valider l'article en commande
+              </Text>
+              <TouchableOpacity
+                style={[styles.toggleOption, isRequired && styles.toggleOptionActive]}
+                onPress={() => setIsRequired(!isRequired)}
+                activeOpacity={1}
+              >
+                <View style={[styles.toggleIndicator, isRequired && styles.toggleIndicatorActive]} />
+                <Text style={[styles.toggleText, isRequired && styles.toggleTextActive]}>
+                  {isRequired ? 'Obligatoire' : 'Optionnel'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             {/* Options */}
             {needsOptions && (
@@ -267,66 +248,52 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                 <Text style={styles.formLabel}>Options</Text>
 
                 {options.map((option, index) => (
-                  <View key={index} style={styles.optionRow}>
-                    <View style={styles.optionInputs}>
-                      <TextInput
-                        style={[styles.formInput, styles.optionLabelInput]}
-                        value={option.label}
-                        editable={false}
-                        placeholderTextColor="#94A3B8"
-                      />
-                      <TextInput
-                        style={[styles.formInput, styles.optionPriceInput]}
-                        value={option.priceModifier?.toString() || '0'}
-                        editable={false}
-                        placeholder="€"
-                        placeholderTextColor="#94A3B8"
-                      />
+                  <View key={index} style={{ marginBottom: 8 }}>
+                    <View style={styles.optionRow}>
+                      <View style={styles.optionInputs}>
+                        <TextInput
+                          style={[styles.formInput, styles.optionLabelInput, formErrors.hasError(`options.${index}`) && styles.formInputError]}
+                          value={option.label}
+                          onChangeText={(text) => { handleUpdateOptionLabel(index, text); formErrors.clearError(`options.${index}`); }}
+                          placeholder="Nom de l'option"
+                          placeholderTextColor="#94A3B8"
+                        />
+                        <TextInput
+                          style={[styles.formInput, styles.optionPriceInput]}
+                          value={option.priceModifier != null && option.priceModifier !== 0 ? option.priceModifier.toString() : ''}
+                          onChangeText={(text) => handleUpdateOptionPrice(index, text)}
+                          placeholder="0 €"
+                          keyboardType="decimal-pad"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={styles.deleteOptionButton}
+                        onPress={() => handleDeleteOption(index)}
+                      >
+                        <Trash2 size={20} color="#EF4444" strokeWidth={1.5} />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.deleteOptionButton}
-                      onPress={() => handleDeleteOption(index)}
-                    >
-                      <Trash2 size={20} color="#EF4444" strokeWidth={1.5} />
-                    </TouchableOpacity>
+                    <FormFieldError message={formErrors.getError(`options.${index}`)} />
                   </View>
                 ))}
 
-                <View style={styles.optionRow}>
-                  <View style={styles.optionInputs}>
-                    <TextInput
-                      style={[styles.formInput, styles.optionLabelInput]}
-                      value={newOptionLabel}
-                      onChangeText={setNewOptionLabel}
-                      placeholder="Nom de l'option"
-                      placeholderTextColor="#94A3B8"
-                      onSubmitEditing={handleAddOption}
-                      returnKeyType="done"
-                    />
-                    <TextInput
-                      style={[styles.formInput, styles.optionPriceInput]}
-                      value={newOptionPrice}
-                      onChangeText={setNewOptionPrice}
-                      placeholder="Prix €"
-                      keyboardType="decimal-pad"
-                      placeholderTextColor="#94A3B8"
-                      onSubmitEditing={handleAddOption}
-                      returnKeyType="done"
-                    />
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.addOptionButton,
-                      newOptionLabel.trim() && styles.addOptionButtonActive,
-                      !newOptionLabel.trim() && styles.addOptionButtonDisabled
-                    ]}
-                    onPress={handleAddOption}
-                    disabled={!newOptionLabel.trim()}
-                    activeOpacity={0.7}
-                  >
-                    <Plus size={20} color={newOptionLabel.trim() ? '#FFFFFF' : '#CBD5E1'} strokeWidth={2.5} />
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.addOptionButton,
+                    formErrors.errors['options'] && styles.addOptionButtonError,
+                  ]}
+                  onPress={handleAddOption}
+                >
+                  <Plus size={18} color={formErrors.errors['options'] ? '#EF4444' : '#64748B'} strokeWidth={2} />
+                  <Text style={[
+                    styles.addOptionButtonText,
+                    formErrors.errors['options'] && styles.addOptionButtonTextError,
+                  ]}>Ajouter une option</Text>
+                </TouchableOpacity>
+                {formErrors.errors['options'] && (
+                  <FormFieldError message={formErrors.errors['options'].message} />
+                )}
               </>
             )}
           </>
@@ -339,11 +306,10 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.saveButton, (!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0 && !newOptionLabel.trim())) && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (!showConfiguration || isSaving) && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={!label.trim() || !showConfiguration || isSaving || (needsOptions && options.length === 0 && !newOptionLabel.trim())}
+          disabled={!showConfiguration || isSaving}
         >
-          <Check size={20} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.saveButtonText}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</Text>
         </TouchableOpacity>
       </View>
@@ -400,6 +366,11 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 12,
   },
+  formHelpText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 8,
+  },
   formInput: {
     height: 44,
     backgroundColor: '#F8FAFC',
@@ -410,8 +381,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1E293B',
   },
+  formInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
   radioGroup: {
     gap: 8,
+  },
+  selectorError: {
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    padding: 4,
   },
   radioOption: {
     flexDirection: 'row',
@@ -438,37 +420,55 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#A855F7',
   },
+  radioTextContainer: {
+    flex: 1,
+  },
   radioLabel: {
     fontSize: 14,
     color: '#64748B',
-    flex: 1,
   },
   radioLabelActive: {
     color: '#1E293B',
     fontWeight: '500',
   },
-  checkbox: {
+  radioDescription: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  toggleOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
-  checkboxBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
-    justifyContent: 'center',
-    alignItems: 'center',
+  toggleOptionActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#34D399',
   },
-  checkboxBoxChecked: {
-    backgroundColor: '#A855F7',
-    borderColor: '#A855F7',
+  toggleIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#9CA3AF',
+    marginRight: 12,
   },
-  checkboxLabel: {
-    fontSize: 14,
-    color: '#1E293B',
+  toggleIndicatorActive: {
+    backgroundColor: '#10B981',
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  toggleTextActive: {
+    color: '#047857',
   },
   divider: {
     height: 1,
@@ -480,7 +480,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
   },
   optionInputs: {
     flex: 1,
@@ -492,7 +491,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   optionPriceInput: {
-    width: 100,
+    width: 80,
     flex: 0,
   },
   deleteOptionButton: {
@@ -504,18 +503,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   addOptionButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: '#F8F4FF',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed' as any,
+    gap: 8,
+    marginTop: 4,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
-  addOptionButtonActive: {
-    backgroundColor: '#A855F7',
+  addOptionButtonError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
-  addOptionButtonDisabled: {
-    backgroundColor: '#F1F5F9',
+  addOptionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  addOptionButtonTextError: {
+    color: '#EF4444',
   },
   panelFooter: {
     flexDirection: 'row',
@@ -543,8 +554,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#A855F7',
-    gap: 8,
+    backgroundColor: '#2A2E33',
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -590,19 +600,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
-  },
-  errorBanner: {
-    backgroundColor: '#FEE2E2',
-    borderLeftWidth: 4,
-    borderLeftColor: '#DC2626',
-    padding: 12,
-    marginHorizontal: 20,
-    marginVertical: 8,
-    borderRadius: 8,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#991B1B',
-    fontWeight: '500',
   },
 });

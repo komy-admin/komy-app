@@ -6,8 +6,9 @@ import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { QrCode } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
-import { showApiError } from '~/lib/apiErrorHandler';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
 const BREAKPOINT = 768;
 const APP_VERSION = 'Komy - v3.7.1';
@@ -36,6 +37,7 @@ export default function LoginScreen() {
   const { showToast } = useToast();
   const params = useLocalSearchParams();
   const { width } = useWindowDimensions();
+  const formErrors = useFormErrors();
 
   const isWide = width >= BREAKPOINT;
 
@@ -47,6 +49,7 @@ export default function LoginScreen() {
   }, [params.qrToken]);
 
   const handleLogin = async () => {
+    formErrors.clearAll();
     try {
       const response = await sessionService.login(loginId, password);
 
@@ -62,7 +65,7 @@ export default function LoginScreen() {
 
       showToast('Erreur de configuration. Contactez un administrateur.', 'error');
     } catch (error) {
-      showApiError(error, showToast, 'Échec de connexion');
+      formErrors.handleError(error, showToast, 'Échec de connexion');
     }
   };
 
@@ -105,31 +108,37 @@ export default function LoginScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        <RNTextInput
-          id="LoginId"
-          value={loginId}
-          onChangeText={setLoginId}
-          placeholder="Identifiant"
-          style={styles.input}
-          placeholderTextColor="#9CA3AF"
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="next"
-        />
+        <View style={styles.fieldGroup}>
+          <RNTextInput
+            id="LoginId"
+            value={loginId}
+            onChangeText={(text) => { setLoginId(text); formErrors.clearError('loginId'); }}
+            placeholder="Identifiant"
+            style={[styles.input, formErrors.hasError('loginId') && styles.inputError]}
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
+          <FormFieldError message={formErrors.getError('loginId')} />
+        </View>
 
-        <RNTextInput
-          id="LoginPassword"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Mot de passe"
-          secureTextEntry
-          style={styles.input}
-          placeholderTextColor="#9CA3AF"
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="done"
-          onSubmitEditing={handleLogin}
-        />
+        <View style={styles.fieldGroup}>
+          <RNTextInput
+            id="LoginPassword"
+            value={password}
+            onChangeText={(text) => { setPassword(text); formErrors.clearError('password'); }}
+            placeholder="Mot de passe"
+            secureTextEntry
+            style={[styles.input, formErrors.hasError('password') && styles.inputError]}
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
+          />
+          <FormFieldError message={formErrors.getError('password')} />
+        </View>
 
         <View style={styles.forgotPasswordContainer}>
           <Link href="/forgot-credentials?type=password" asChild>
@@ -298,6 +307,10 @@ const styles = StyleSheet.create({
   },
 
   // === Inputs ===
+  fieldGroup: {
+    width: '100%',
+    marginBottom: 14,
+  },
   input: {
     width: '100%',
     height: 48,
@@ -307,13 +320,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     backgroundColor: '#F9FAFB',
-    marginBottom: 14,
     color: '#2A2E33',
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
       textAlignVertical: 'center' as const,
     }),
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
 
   // === Forgot password ===

@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable,
-  Keyboard, Platform, ScrollView,
+  Keyboard, Platform, ScrollView, Animated,
 } from 'react-native';
 import {
-  X, ArrowLeft, Plus, Trash2, Package, Eye, EyeOff, Lock, ChevronLeft, ChevronRight,
+  X, ArrowLeftToLine, Plus, Trash2, Package, Eye, EyeOff, Lock, ChevronLeft, ChevronRight,
 } from 'lucide-react-native';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
@@ -16,7 +16,8 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useMenuEditor } from '~/hooks/menu/useMenuEditor';
 import { useToast } from '~/components/ToastProvider';
 import { getColorWithOpacity, darkenColor } from '~/lib/color-utils';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 import { LocalMenuCategoryItem, MenuCategoryFormData } from './MenuEditor/MenuEditor.types';
 
 // ============================================================
@@ -43,6 +44,31 @@ const supplementContainerStyle = { minHeight: 32 };
 const flexStyle = { flex: 1 };
 
 // ============================================================
+// Inline delete overlay (second-click to confirm)
+// ============================================================
+
+const InlineDeleteOverlay: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[styles.inlineDeleteOverlay, { opacity }]}>
+      <Pressable onPress={onConfirm} style={styles.inlineDeleteOverlayButton}>
+        <Trash2 size={16} color="#FFFFFF" strokeWidth={2} />
+        <Text style={styles.inlineDeleteOverlayText}>Supprimer</Text>
+      </Pressable>
+    </Animated.View>
+  );
+};
+
+// ============================================================
 // Component
 // ============================================================
 
@@ -64,9 +90,16 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
 
   // Save state
   const [isSaving, setIsSaving] = useState(false);
+  const formErrors = useFormErrors({
+    'menu.name': 'name',
+    'menu.basePrice': 'basePrice',
+    'menu.description': 'description',
+    'menu.vatRate': 'vatRate',
+  });
 
-  // Delete confirmation
-  const [categoryDeleteIndex, setCategoryDeleteIndex] = useState<number | null>(null);
+  // Inline delete confirmation (category + article)
+  const [pendingDeleteCategoryIndex, setPendingDeleteCategoryIndex] = useState<number | null>(null);
+  const [pendingDeleteItemTempId, setPendingDeleteItemTempId] = useState<string | null>(null);
 
   // Track if current category is newly added (not yet validated)
   const [isNewCategory, setIsNewCategory] = useState(false);
@@ -118,6 +151,7 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
 
   const handleAddCategory = useCallback(() => {
     editor.addCategory();
+    formErrors.clearError('categories');
     const newIndex = editor.formData.categories.length;
     setIsNewCategory(true);
     setOpenSupplements(new Set());
@@ -175,25 +209,20 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
   // ============================================================
 
   const handleRequestDeleteCategory = useCallback((index: number) => {
-    setCategoryDeleteIndex(index);
+    setPendingDeleteCategoryIndex(prev => prev === index ? null : index);
   }, []);
 
-  const handleConfirmDeleteCategory = useCallback(() => {
-    if (categoryDeleteIndex === null) return;
-
-    // Reproduce the core logic of removeCategory without confirmationContext
+  const handleConfirmDeleteCategory = useCallback((index: number) => {
     editor.updateFormField('categories',
-      editor.formData.categories.filter((_, i: number) => i !== categoryDeleteIndex)
+      editor.formData.categories.filter((_, i: number) => i !== index)
     );
-    showToast('Catégorie supprimée', 'success');
+    formErrors.clearError('categories');
+    setPendingDeleteCategoryIndex(null);
 
-    setCategoryDeleteIndex(null);
-
-    // If we were viewing this category, go back to main
-    if (activeCategoryIndex === categoryDeleteIndex) {
+    if (activeCategoryIndex === index) {
       navigateBackToMain();
     }
-  }, [categoryDeleteIndex, editor, showToast, activeCategoryIndex, navigateBackToMain]);
+  }, [editor, formErrors, activeCategoryIndex, navigateBackToMain]);
 
   // ============================================================
   // Save handler
@@ -201,17 +230,18 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
 
   const handleSave = useCallback(async () => {
     if (isSaving) return;
+    formErrors.clearAll();
 
     const menuData = editor.getMenuData();
     setIsSaving(true);
     try {
       await onSave(menuData);
-    } catch {
-      // Error toast handled by parent (useMenuPage.handleBulkMenuSave via showApiError)
+    } catch (error) {
+      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde du menu');
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, editor, onSave]);
+  }, [isSaving, editor, onSave, formErrors, showToast]);
 
   // ============================================================
   // RENDER: Items selection view
@@ -225,23 +255,22 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
 
     return (
       <View style={styles.panelContent}>
-        <View style={styles.panelHeader}>
-          <TouchableOpacity onPress={navigateBackToCategory} style={styles.backButton}>
-            <ArrowLeft size={24} color="#64748B" strokeWidth={2} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onCancel}>
-            <X size={24} color="#64748B" strokeWidth={2} />
-          </TouchableOpacity>
+        <View style={styles.panelHeaderBack}>
+          <Pressable onPress={navigateBackToCategory} style={styles.backButtonIcon}>
+            <ArrowLeftToLine size={20} color="#2A2E33" />
+          </Pressable>
+          <View style={styles.backTitleContainer}>
+            <Text style={styles.backTitle} numberOfLines={1}>Sélectionner des articles</Text>
+            <Text style={styles.backSubtitle} numberOfLines={1}>
+              Sélection des articles
+            </Text>
+          </View>
         </View>
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          <Text style={styles.viewTitle}>Sélectionner des articles</Text>
-          <Text style={styles.viewSubtitle}>
-            Appuyez sur un article pour l'ajouter ou le retirer
-          </Text>
 
           {allTypeItems.length > 0 ? (
             <View style={styles.itemsGrid}>
@@ -323,13 +352,18 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
 
     return (
       <View style={styles.panelContent}>
-        <View style={styles.panelHeader}>
-          <TouchableOpacity onPress={navigateBackToMain} style={styles.backButton}>
-            <ArrowLeft size={24} color="#64748B" strokeWidth={2} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onCancel}>
-            <X size={24} color="#64748B" strokeWidth={2} />
-          </TouchableOpacity>
+        <View style={styles.panelHeaderBack}>
+          <Pressable onPress={navigateBackToMain} style={styles.backButtonIcon}>
+            <ArrowLeftToLine size={20} color="#2A2E33" />
+          </Pressable>
+          <View style={styles.backTitleContainer}>
+            <Text style={styles.backTitle} numberOfLines={1}>
+              {`Catégorie ${activeCategoryIndex + 1}${itemType ? ` - ${itemType.name}` : ''}`}
+            </Text>
+            <Text style={styles.backSubtitle} numberOfLines={1}>
+              Configuration de la catégorie
+            </Text>
+          </View>
         </View>
 
         <KeyboardAwareScrollViewWrapper
@@ -338,14 +372,7 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
           bottomOffset={20}
           scrollEventThrottle={16}
         >
-          <Pressable style={flexStyle} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
-            <Text style={styles.viewTitle}>
-              {`Catégorie ${activeCategoryIndex + 1}${itemType ? ` - ${itemType.name}` : ''}`}
-            </Text>
-            <Text style={styles.viewSubtitle}>
-              Configurez le type d'articles et les options de cette catégorie
-            </Text>
-
+          <Pressable style={flexStyle} onPress={() => { setPendingDeleteItemTempId(null); if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
             {/* Type d'article */}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Type d'article</Text>
@@ -485,7 +512,7 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
                           key={ci.tempId}
                           style={[
                             styles.assignedItemCard,
-                            { borderColor: itemColor },
+                            { borderColor: itemColor, position: 'relative', overflow: 'hidden' },
                           ]}
                         >
                           <Text style={styles.assignedItemName} numberOfLines={1}>
@@ -512,7 +539,6 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
                                 style={styles.supplementButton}
                                 onPress={() => setOpenSupplements(() => {
                                   const next = new Set<string>();
-                                  // Keep open only items with actual supplement > 0
                                   categoryItems.forEach(item => {
                                     if (item.supplement > 0) next.add(item.tempId);
                                   });
@@ -539,11 +565,17 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
                             </Pressable>
                             <Pressable
                               style={styles.assignedItemRemove}
-                              onPress={() => editor.removeItemFromCategory(activeCategoryIndex, ci.tempId)}
+                              onPress={() => setPendingDeleteItemTempId(prev => prev === ci.tempId ? null : ci.tempId)}
                             >
                               <X size={16} color="#EF4444" strokeWidth={2} />
                             </Pressable>
                           </View>
+                          {pendingDeleteItemTempId === ci.tempId && (
+                            <InlineDeleteOverlay onConfirm={() => {
+                              editor.removeItemFromCategory(activeCategoryIndex, ci.tempId);
+                              setPendingDeleteItemTempId(null);
+                            }} />
+                          )}
                         </View>
                       );
                     })}
@@ -617,17 +649,18 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
         bottomOffset={20}
         scrollEventThrottle={16}
       >
-        <Pressable style={flexStyle} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
+        <Pressable style={flexStyle} onPress={() => { setPendingDeleteCategoryIndex(null); if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Nom */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Nom du menu</Text>
             <TextInput
-              style={styles.formInput}
+              style={[styles.formInput, formErrors.hasError('name') && styles.formInputError]}
               value={editor.formData.name}
-              onChangeText={(text) => editor.updateFormField('name', text)}
+              onChangeText={(text) => { editor.updateFormField('name', text); formErrors.clearError('name'); }}
               placeholder="Ex: Menu Déjeuner"
               placeholderTextColor="#94A3B8"
             />
+            <FormFieldError message={formErrors.getError('name')} />
           </View>
 
           {/* Prix + Statut */}
@@ -636,12 +669,13 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
               <Text style={styles.formLabel}>Prix de base (€)</Text>
               <NumberInput
                 value={editor.formData.basePrice ? parseFloat(editor.formData.basePrice) : null}
-                onChangeText={(val) => editor.updateFormField('basePrice', val !== null ? val.toString() : '')}
+                onChangeText={(val) => { editor.updateFormField('basePrice', val !== null ? val.toString() : ''); formErrors.clearError('basePrice'); }}
                 decimalPlaces={2}
                 min={0}
                 placeholder="0.00"
-                style={styles.formInput}
+                style={[styles.formInput, formErrors.hasError('basePrice') && styles.formInputError]}
               />
+              <FormFieldError message={formErrors.getError('basePrice')} />
             </View>
             <View style={styles.formRowField}>
               <Text style={styles.formLabel}>Statut</Text>
@@ -694,53 +728,72 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
               const typeName = getCategoryName(cat);
               const itemCount = getCategoryItemCount(index);
 
+              const hasError = formErrors.hasError(`categories.${index}`);
               return (
-                <View key={cat.id || `new-${index}`} style={styles.categoryCard}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{index + 1}</Text>
-                  </View>
-                  <View style={styles.categoryCardInfo}>
-                    <Text style={styles.categoryCardTitle} numberOfLines={1}>{typeName}</Text>
-                    <View style={styles.categoryCardTags}>
-                      <View style={[
-                        styles.categoryTag,
-                        cat.isRequired ? styles.categoryTagRequired : styles.categoryTagOptional,
-                      ]}>
-                        <Text style={[
-                          styles.categoryTagText,
-                          cat.isRequired ? styles.categoryTagTextRequired : styles.categoryTagTextOptional,
+                <View key={cat.id || `new-${index}`} style={styles.categoryCardWrapper}>
+                  <View style={[styles.categoryCard, hasError && styles.categoryCardError, { position: 'relative', overflow: 'hidden' }]}>
+                    <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>{index + 1}</Text>
+                    </View>
+                    <View style={styles.categoryCardInfo}>
+                      <Text style={styles.categoryCardTitle} numberOfLines={1}>{typeName}</Text>
+                      <View style={styles.categoryCardTags}>
+                        <View style={[
+                          styles.categoryTag,
+                          cat.isRequired ? styles.categoryTagRequired : styles.categoryTagOptional,
                         ]}>
-                          {cat.isRequired ? 'Obligatoire' : 'Optionnel'}
+                          <Text style={[
+                            styles.categoryTagText,
+                            cat.isRequired ? styles.categoryTagTextRequired : styles.categoryTagTextOptional,
+                          ]}>
+                            {cat.isRequired ? 'Obligatoire' : 'Optionnel'}
+                          </Text>
+                        </View>
+                        <Text style={styles.categoryCardItemCount}>
+                          {itemCount} article{itemCount > 1 ? 's' : ''}
                         </Text>
                       </View>
-                      <Text style={styles.categoryCardItemCount}>
-                        {itemCount} article{itemCount > 1 ? 's' : ''}
-                      </Text>
                     </View>
+                    <View style={styles.categoryCardActions}>
+                      <Pressable
+                        style={styles.categoryEditButton}
+                        onPress={() => navigateToCategory(index)}
+                      >
+                        <Text style={styles.categoryEditButtonText}>Modifier</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.categoryDeleteButton}
+                        onPress={() => handleRequestDeleteCategory(index)}
+                      >
+                        <Trash2 size={16} color="#EF4444" strokeWidth={2} />
+                      </Pressable>
+                    </View>
+                    {pendingDeleteCategoryIndex === index && (
+                      <InlineDeleteOverlay onConfirm={() => handleConfirmDeleteCategory(index)} />
+                    )}
                   </View>
-                  <View style={styles.categoryCardActions}>
-                    <Pressable
-                      style={styles.categoryEditButton}
-                      onPress={() => navigateToCategory(index)}
-                    >
-                      <Text style={styles.categoryEditButtonText}>Modifier</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.categoryDeleteButton}
-                      onPress={() => handleRequestDeleteCategory(index)}
-                    >
-                      <Trash2 size={16} color="#EF4444" strokeWidth={2} />
-                    </Pressable>
-                  </View>
+                  <FormFieldError message={hasError ? formErrors.getError(`categories.${index}`) : undefined} />
                 </View>
               );
             })}
 
             {/* Ajouter une catégorie */}
-            <TouchableOpacity style={styles.addCategoryButton} onPress={handleAddCategory}>
-              <Plus size={18} color="#64748B" strokeWidth={2} />
-              <Text style={styles.addCategoryText}>Ajouter une catégorie</Text>
+            <TouchableOpacity
+              style={[
+                styles.addCategoryButton,
+                formErrors.hasError('categories') && editor.formData.categories.length === 0 && styles.addCategoryButtonError,
+              ]}
+              onPress={handleAddCategory}
+            >
+              <Plus size={18} color={formErrors.hasError('categories') && editor.formData.categories.length === 0 ? '#EF4444' : '#64748B'} strokeWidth={2} />
+              <Text style={[
+                styles.addCategoryText,
+                formErrors.hasError('categories') && editor.formData.categories.length === 0 && styles.addCategoryTextError,
+              ]}>Ajouter une catégorie</Text>
             </TouchableOpacity>
+            {formErrors.hasError('categories') && editor.formData.categories.length === 0 && (
+              <FormFieldError message={formErrors.getError('categories')} />
+            )}
           </View>
         </Pressable>
       </KeyboardAwareScrollViewWrapper>
@@ -759,15 +812,6 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Delete confirmation */}
-      <DeleteConfirmationModal
-        isVisible={categoryDeleteIndex !== null}
-        onClose={() => setCategoryDeleteIndex(null)}
-        onConfirm={handleConfirmDeleteCategory}
-        entityName={categoryDeleteIndex !== null ? getCategoryName(editor.formData.categories[categoryDeleteIndex]) : ''}
-        entityType="la catégorie"
-        isLoading={false}
-      />
     </View>
   );
 };
@@ -804,11 +848,46 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     flexShrink: 0,
+    marginTop: 4,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  panelHeaderBack: {
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 89,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  backButtonIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#F3F4F6',
+    height: '100%',
+  },
+  backTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  backTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2A2E33',
+    letterSpacing: 0.3,
+  },
+  backSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 1,
   },
   panelTitle: {
     fontSize: 18,
@@ -820,18 +899,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     lineHeight: 18,
-  },
-  viewTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 6,
-  },
-  viewSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 24,
-    lineHeight: 20,
   },
   formGroup: {
     marginBottom: 20,
@@ -851,6 +918,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 13,
     color: '#1E293B',
+  },
+  formInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   textArea: {
     textAlignVertical: 'top',
@@ -954,6 +1025,9 @@ const styles = StyleSheet.create({
   },
 
   // Category cards (main view) — iso RoomModeSelection
+  categoryCardWrapper: {
+    marginBottom: 8,
+  },
   categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -963,7 +1037,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    marginBottom: 8,
     gap: 12,
   },
   categoryBadge: {
@@ -1048,6 +1121,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
+  categoryCardError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+
+  // Inline delete overlay
+  inlineDeleteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(239, 68, 68, 0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+    elevation: 30,
+  },
+  inlineDeleteOverlayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    flex: 1,
+    width: '100%',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  inlineDeleteOverlayText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
   addCategoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1061,10 +1167,17 @@ const styles = StyleSheet.create({
     gap: 8,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
+  addCategoryButtonError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
   addCategoryText: {
     fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
+  },
+  addCategoryTextError: {
+    color: '#EF4444',
   },
 
   // Articles section (category view)

@@ -99,10 +99,6 @@ export const useRestaurant = () => {
     createTag: tagsHook.createTag,
     updateTag: tagsHook.updateTag,
     deleteTag: tagsHook.deleteTag,
-    getTagOptions: tagsHook.getOptions,
-    createTagOption: tagsHook.createOption,
-    updateTagOption: tagsHook.updateOption,
-    deleteTagOption: tagsHook.deleteOption,
 
     // === ACTIONS CRUD UTILISATEURS ===
     loadUsers: usersHook.loadUsers,

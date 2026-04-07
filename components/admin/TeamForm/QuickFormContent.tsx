@@ -5,6 +5,9 @@ import { User, UserProfile } from '~/types/user.types';
 import { getUserProfileText } from '~/lib/utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { SelectButton } from '~/components/ui';
+import { useToast } from '~/components/ToastProvider';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
 // Profils affichables (exclure superadmin et admin)
 const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
@@ -27,6 +30,8 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { showToast } = useToast();
+  const formErrors = useFormErrors();
 
   useEffect(() => {
     if (user) {
@@ -41,15 +46,17 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
 
   const handleProfileSelect = (profile: UserProfile) => {
     setSelectedProfileId(profile);
+    formErrors.clearError('profil');
   };
 
   const handleSave = async () => {
     if (isSaving) return;
+    formErrors.clearAll();
     setIsSaving(true);
     try {
       await onSave(selectedProfileId as UserProfile, displayName.trim() || '', user?.id);
-    } catch {
-      // Error toast handled by parent (team.tsx via showApiError)
+    } catch (error) {
+      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
     }
@@ -77,7 +84,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
           {/* Section Rôle */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Rôle</Text>
-            <View style={styles.profileButtons}>
+            <View style={[styles.profileButtons, formErrors.hasError('profil') && styles.selectorError]}>
               {DISPLAYABLE_PROFILES.map((profile) => (
                 <SelectButton
                   key={profile}
@@ -88,6 +95,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
                 />
               ))}
             </View>
+            <FormFieldError message={formErrors.getError('profil')} />
           </View>
 
           {/* Nom d'affichage */}
@@ -98,12 +106,13 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
             </Text>
             <TextInput
               value={displayName}
-              onChangeText={setDisplayName}
+              onChangeText={(text) => { setDisplayName(text); formErrors.clearError('firstName'); }}
               placeholder="Ex: Jean Dupont, Chef Principal, etc."
               placeholderTextColor="#94A3B8"
-              style={styles.formInput}
+              style={[styles.formInput, formErrors.hasError('firstName') && styles.formInputError]}
               autoComplete="off"
             />
+            <FormFieldError message={formErrors.getError('firstName')} />
           </View>
         </Pressable>
       </KeyboardAwareScrollViewWrapper>
@@ -174,10 +183,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1E293B',
   },
+  formInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
   profileButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  selectorError: {
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    padding: 4,
   },
   panelFooter: {
     flexDirection: 'row',

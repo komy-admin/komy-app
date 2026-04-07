@@ -8,6 +8,8 @@ import { useToast } from '~/components/ToastProvider';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { IconSelector, AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 import { VatRateSelector } from '~/components/ui/vat-rate-selector';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
 // Filtres de catégories pré-calculés (constants - pas besoin de recalculer à chaque render)
 const DRINKS_ICONS = AVAILABLE_ICONS.filter(i => i.category === 'drinks');
@@ -34,8 +36,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
   const [isSelectingIcon, setIsSelectingIcon] = useState(false); // Navigation vers vue sélection icône
 
   // États d'erreur et de traitement
-  const [nameError, setNameError] = useState(false);
-  const [iconError, setIconError] = useState(false);
+  const formErrors = useFormErrors();
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Récupérer les icônes déjà utilisées par d'autres itemTypes (pour éviter les doublons)
@@ -82,60 +83,36 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
   // Callback explicite pour la sélection d'icône (force le re-render)
   const handleIconSelect = useCallback((iconName: string) => {
     setIcon(iconName);
-    setIconError(false); // Réinitialiser l'erreur quand on sélectionne une icône
+    formErrors.clearError('icon');
     setIsSelectingIcon(false); // Retour au formulaire après sélection
-  }, []);
+  }, [formErrors]);
 
   // Réinitialiser l'erreur du nom quand on tape
   const handleNameChange = useCallback((text: string) => {
     setName(text);
-    if (text.trim().length > 0) {
-      setNameError(false);
-    }
-  }, []);
+    formErrors.clearError('name');
+  }, [formErrors]);
 
   const handleSave = useCallback(async () => {
     if (isProcessing) return;
 
-    // Réinitialiser les erreurs
-    setNameError(false);
-    setIconError(false);
+    formErrors.clearAll();
 
-    // Valider les champs
-    const trimmedName = name.trim();
-    const hasNameError = trimmedName.length === 0;
-    const hasIconError = icon.length === 0;
-
-    // Si erreurs, afficher le toast et marquer les champs
-    if (hasNameError || hasIconError) {
-      if (hasNameError && hasIconError) {
-        showToast('Nom du type et icône manquants', 'error');
-        setNameError(true);
-        setIconError(true);
-      } else if (hasNameError) {
-        showToast('Nom du type manquant', 'error');
-        setNameError(true);
-      } else if (hasIconError) {
-        showToast('Icône manquante', 'error');
-        setIconError(true);
-      }
-      return;
-    }
-
-    // Si tout est valide, sauvegarder
     setIsProcessing(true);
     try {
       await onSave({
-        name: trimmedName,
+        name: name.trim(),
         type,
         icon,
         priorityOrder,
         vatRate
       });
+    } catch (error) {
+      formErrors.handleError(error, showToast, 'Erreur lors de la sauvegarde');
     } finally {
       setIsProcessing(false);
     }
-  }, [onSave, name, type, icon, priorityOrder, vatRate, showToast, isProcessing]);
+  }, [onSave, name, type, icon, priorityOrder, vatRate, showToast, isProcessing, formErrors]);
 
   // Vue de sélection d'icône (full-screen dans le panel)
   if (isSelectingIcon) {
@@ -241,7 +218,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               style={[
                 styles.formInput,
                 styles.nameInput,
-                nameError && styles.formInputError
+                formErrors.hasError('name') && styles.formInputError
               ]}
               value={name}
               onChangeText={handleNameChange}
@@ -255,7 +232,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
                 styles.iconButton,
                 !icon && styles.iconButtonEmpty,
                 icon && styles.iconButtonSelected,
-                iconError && styles.iconButtonError
+                formErrors.hasError('icon') && styles.iconButtonError
               ]}
               onPress={() => setIsSelectingIcon(true)}
             >
@@ -266,19 +243,20 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               )}
             </TouchableOpacity>
           </View>
+          <FormFieldError message={formErrors.getError('name') || formErrors.getError('icon')} />
         </View>
 
         {/* Département */}
         <View style={styles.formGroup}>
           <Text style={styles.formLabel}>Département</Text>
-          <View style={styles.radioGroup}>
+          <View style={[styles.radioGroup, formErrors.hasError('type') && styles.selectorError]}>
             <TouchableOpacity
               style={[
                 styles.radioOption,
                 type === 'kitchen' && styles.radioOptionActive,
                 type === 'kitchen' && { borderColor: '#10B981', backgroundColor: '#F0FDF4' }
               ]}
-              onPress={() => setType('kitchen')}
+              onPress={() => { setType('kitchen'); formErrors.clearError('type'); }}
               activeOpacity={1}
             >
               <View style={styles.radio}>
@@ -296,7 +274,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
                 type === 'bar' && styles.radioOptionActive,
                 type === 'bar' && { borderColor: '#A855F7', backgroundColor: '#FAF5FF' }
               ]}
-              onPress={() => setType('bar')}
+              onPress={() => { setType('bar'); formErrors.clearError('type'); }}
               activeOpacity={1}
             >
               <View style={styles.radio}>
@@ -308,6 +286,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               </Text>
             </TouchableOpacity>
           </View>
+          <FormFieldError message={formErrors.getError('type')} />
         </View>
 
         {/* Taux de TVA */}
@@ -417,7 +396,6 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           onPress={handleSave}
           disabled={isProcessing}
         >
-          <Check size={20} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.saveButtonText}>{isProcessing ? 'Enregistrement...' : 'Enregistrer'}</Text>
         </TouchableOpacity>
       </View>
@@ -510,7 +488,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 44,
     borderRadius: 8,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
@@ -555,6 +533,13 @@ const styles = StyleSheet.create({
   },
   radioGroup: {
     gap: 8,
+  },
+  selectorError: {
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    padding: 4,
   },
   radioOption: {
     flexDirection: 'row',
@@ -709,8 +694,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#A855F7',
-    gap: 8,
+    backgroundColor: '#2A2E33',
   },
   saveButtonDisabled: {
     opacity: 0.5,

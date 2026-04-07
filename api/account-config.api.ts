@@ -10,6 +10,10 @@ export class AccountConfigApiService extends BaseApiService<AccountConfig> {
   }
   
   // La méthode update est héritée de BaseApiService et utilise PUT /account-config/:id
+
+  async updateAccountName(name: string): Promise<void> {
+    await this.axiosInstance.put('/account/name', { name });
+  }
 }
 
 export const accountConfigApiService = new AccountConfigApiService();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, Switch, TouchableOpacity, Pressable } from 'react-native';
-import { Clock, Check, Bell } from 'lucide-react-native';
+import { Clock, Bell } from 'lucide-react-native';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
 import { showApiError } from '~/lib/apiErrorHandler';
@@ -14,12 +14,9 @@ export default function NotificationsPage() {
   const {
     isAlertEnabled,
     alertValue,
-    isLoading,
     error,
     updateConfig,
   } = useAccountConfig();
-
-  const { showToast } = useToast();
 
   const handleLayoutChange = useCallback((event: any) => {
     const { width } = event.nativeEvent.layout;
@@ -55,7 +52,6 @@ export default function NotificationsPage() {
             <AlertsTab
               isAlertEnabled={isAlertEnabled}
               alertValue={alertValue}
-              isLoading={isLoading}
               error={error}
               updateConfig={updateConfig}
             />
@@ -70,7 +66,6 @@ export default function NotificationsPage() {
 interface AlertsTabProps {
   isAlertEnabled: boolean;
   alertValue: number;
-  isLoading: boolean;
   error: string | null;
   updateConfig: (updates: {
     reminderNotificationsEnabled?: boolean;
@@ -81,7 +76,6 @@ interface AlertsTabProps {
 const AlertsTab: React.FC<AlertsTabProps> = ({
   isAlertEnabled,
   alertValue,
-  isLoading,
   error,
   updateConfig,
 }) => {
@@ -135,16 +129,17 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
           <Text style={styles.tabTitle}>Alertes</Text>
           <Text style={styles.tabSubtitle}>Configurer les alertes et rappels</Text>
         </View>
-        {hasChanges && (
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: '#10B981' }]}
-            onPress={handleSaveChanges}
-            disabled={isLoading}
-          >
-            <Check size={20} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.createButtonText}>Enregistrer</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={[
+            styles.createButton,
+            { backgroundColor: '#6366F1' },
+            (!hasChanges || (localEnabled && !isValidTime)) && styles.createButtonDisabled
+          ]}
+          onPress={handleSaveChanges}
+          disabled={!hasChanges || (localEnabled && !isValidTime)}
+        >
+          <Text style={styles.createButtonText}>Enregistrer</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -168,7 +163,6 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                 onValueChange={handleToggleEnabled}
                 trackColor={{ false: '#D1D5DB', true: '#10B981' }}
                 thumbColor={localEnabled ? '#FFFFFF' : '#F3F4F6'}
-                disabled={isLoading}
               />
             </View>
 
@@ -184,12 +178,11 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                   <Text style={styles.viewModeTitle}>Délai d'alerte</Text>
                   <View style={styles.inputWrapper}>
                     <TextInput
-                      style={[styles.textInput, isLoading && { opacity: 0.6 }]}
+                      style={styles.textInput}
                       value={localTimeValue}
                       onChangeText={handleTimeChange}
                       placeholder="15"
                       keyboardType="numeric"
-                      editable={!isLoading}
                     />
                     <Text style={styles.inputSuffix}>min</Text>
                   </View>
@@ -300,6 +293,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     gap: 8,
+  },
+  createButtonDisabled: {
+    opacity: 0.5,
   },
   createButtonText: {
     fontSize: 14,

@@ -178,23 +178,17 @@ export default function TeamPage() {
   }, [isManager, users]);
 
   const handleQuickSave = useCallback(async (profil: UserProfile, displayName: string, userId?: string) => {
-    try {
-      if (userId) {
-        // Mode édition
-        await updateUser(userId, {
-          profil,
-          firstName: displayName || undefined
-        });
-        showToast('Utilisateur modifié avec succès', 'success');
-      } else {
-        // Mode création
-        await createQuickUser(profil, displayName);
-        showToast('Utilisateur créé avec succès', 'success');
-      }
-      handleCloseFormPanel();
-    } catch (err) {
-      showApiError(err, showToast, userId ? 'Erreur lors de la modification de l\'utilisateur' : 'Erreur lors de la création de l\'utilisateur');
+    if (userId) {
+      await updateUser(userId, {
+        profil,
+        firstName: displayName || undefined
+      });
+      showToast('Utilisateur modifié avec succès', 'success');
+    } else {
+      await createQuickUser(profil, displayName);
+      showToast('Utilisateur créé avec succès', 'success');
     }
+    handleCloseFormPanel();
   }, [createQuickUser, updateUser, showToast, handleCloseFormPanel]);
 
   const handleDeleteUser = useCallback((id: string) => {

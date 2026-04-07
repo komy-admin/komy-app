@@ -41,7 +41,7 @@ export default function ConfigurationRestoPage() {
 
   const { renderPanel, clearPanel } = usePanelPortal();
   const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
-  const { tags, createTag, updateTag, deleteTag, bulkCreateOptions, bulkDeleteOptions } = useTags();
+  const { tags, createTag, updateTag, deleteTag } = useTags();
   const {
     teamEnabled,
     kitchenEnabled,
@@ -126,38 +126,28 @@ export default function ConfigurationRestoPage() {
   }, []);
 
   const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
+    const payload = {
+      ...tagData,
+      ...(options !== undefined ? { options } : {}),
+    } as Partial<Tag>;
+
     if (editingTag) {
-      await updateTag(editingTag.id, tagData);
-
-      if (options && options.length > 0) {
-        const newOptions = options.filter(opt => !opt.id);
-        if (newOptions.length > 0) {
-          await bulkCreateOptions(editingTag.id, newOptions);
-        }
-      }
+      await updateTag(editingTag.id, payload);
     } else {
-      const createdTag = await createTag(tagData);
-
-      if (options && options.length > 0 && createdTag.id) {
-        await bulkCreateOptions(createdTag.id, options);
-      }
+      await createTag(payload);
     }
     showToast(editingTag ? 'Tag modifié' : 'Tag créé', 'success');
     closeSidePanel();
-  }, [editingTag, createTag, updateTag, bulkCreateOptions, showToast, closeSidePanel]);
+  }, [editingTag, createTag, updateTag, showToast, closeSidePanel]);
 
   const handleSaveItemType = useCallback(async (itemTypeData: Partial<ItemType>) => {
-    try {
-      if (editingItemType) {
-        await updateItemType(editingItemType.id, itemTypeData);
-      } else {
-        await createItemType(itemTypeData);
-      }
-      showToast(editingItemType ? 'Type d\'article modifié' : 'Type d\'article créé', 'success');
-      closeSidePanel();
-    } catch (error) {
-      showApiError(error, showToast, editingItemType ? 'Erreur lors de la modification du type d\'article' : 'Erreur lors de la création du type d\'article');
+    if (editingItemType) {
+      await updateItemType(editingItemType.id, itemTypeData);
+    } else {
+      await createItemType(itemTypeData);
     }
+    showToast(editingItemType ? 'Type d\'article modifié' : 'Type d\'article créé', 'success');
+    closeSidePanel();
   }, [editingItemType, updateItemType, createItemType, showToast, closeSidePanel]);
 
   // Synchroniser le panel avec le portal global
@@ -170,7 +160,6 @@ export default function ConfigurationRestoPage() {
               tag={editingTag}
               onSave={handleSaveTag}
               onCancel={closeSidePanel}
-              onBulkDeleteOptions={bulkDeleteOptions}
             />
           ) : (
             <ItemTypeFormPanel
@@ -323,7 +312,6 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
           <Text style={styles.tabSubtitle}>Gérer les catégories de votre menu</Text>
         </View>
         <TouchableOpacity style={[styles.createButton, { backgroundColor: '#6366F1' }]} onPress={onCreateItemType}>
-          <Plus size={20} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.createButtonText}>Nouveau type</Text>
         </TouchableOpacity>
       </View>
@@ -374,7 +362,6 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
           <Text style={styles.tabSubtitle}>Créer des modificateurs pour vos articles</Text>
         </View>
         <TouchableOpacity style={styles.createButton} onPress={onCreateTag}>
-          <Plus size={20} color="#FFFFFF" strokeWidth={2} />
           <Text style={styles.createButtonText}>Nouveau tag</Text>
         </TouchableOpacity>
       </View>

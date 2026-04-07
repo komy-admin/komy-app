@@ -142,14 +142,10 @@ export default function RoomEditionMode() {
   const handleSaveTable = useCallback(async (updates: Partial<Table>) => {
     if (!selectedTable?.id) return;
 
-    try {
-      await updateTableFast(selectedTable.id, updates);
-      setIsEditPanelVisible(false);
-      setSelectedTable(null);
-      showToast('Table modifiée avec succès', 'success');
-    } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la sauvegarde de la table');
-    }
+    await updateTableFast(selectedTable.id, updates);
+    setIsEditPanelVisible(false);
+    setSelectedTable(null);
+    showToast('Table modifiée avec succès', 'success');
   }, [selectedTable?.id, updateTableFast, setSelectedTable, showToast]);
 
   const handleAddTable = useCallback(async () => {
@@ -218,14 +214,10 @@ export default function RoomEditionMode() {
   }, []);
 
   const handleSaveNewRoom = useCallback(async (roomData: Partial<Room>) => {
-    try {
-      const newRoom = await createRoom(roomData);
-      setCurrentRoom(newRoom.id);
-      setRoomPanelMode('closed');
-      showToast('Salle créée avec succès', 'success');
-    } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la création');
-    }
+    const newRoom = await createRoom(roomData);
+    setCurrentRoom(newRoom.id);
+    setRoomPanelMode('closed');
+    showToast('Salle créée avec succès', 'success');
   }, [createRoom, setCurrentRoom, showToast]);
 
   const handleDeleteRoom = useCallback((room: Room) => {
@@ -259,14 +251,10 @@ export default function RoomEditionMode() {
 
   const handleSaveRoomSettings = useCallback(async (roomData: Partial<Room>) => {
     if (!roomToEdit?.id) return;
-    try {
-      await updateRoom(roomToEdit.id, roomData);
-      setRoomPanelMode('closed');
-      setRoomToEdit(null);
-      showToast('Salle mise à jour', 'success');
-    } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la mise à jour');
-    }
+    await updateRoom(roomToEdit.id, roomData);
+    setRoomPanelMode('closed');
+    setRoomToEdit(null);
+    showToast('Salle mise à jour', 'success');
   }, [roomToEdit?.id, updateRoom, showToast]);
 
   // Sync selection panel (dépend de rooms)
