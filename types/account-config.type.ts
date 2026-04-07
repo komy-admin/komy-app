@@ -3,6 +3,7 @@ export type ViewMode = 'columns' | 'tickets';
 
 export type AccountConfig = {
   id: string;
+  accountName: string;
   reminderNotificationsEnabled: boolean;
   reminderMinutes: number;
   teamEnabled: boolean;

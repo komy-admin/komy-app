@@ -96,6 +96,7 @@ export const useAppInit = () => {
         const accountConfig = await accountConfigApiService.getAccountConfig();
         dispatch(sessionActions.setAccountConfig({
           id: accountConfig.id,
+          accountName: accountConfig.accountName ?? '',
           reminderMinutes: accountConfig.reminderMinutes,
           reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
           teamEnabled: accountConfig.teamEnabled,

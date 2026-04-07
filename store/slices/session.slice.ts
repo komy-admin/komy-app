@@ -8,6 +8,7 @@ type ViewMode = 'columns' | 'tickets';
 
 interface AccountConfigPayload {
   id: string;
+  accountName: string;
   reminderMinutes: number;
   reminderNotificationsEnabled: boolean;
   teamEnabled: boolean;
@@ -76,6 +77,7 @@ export interface SessionState {
   // Account Config
   accountConfig: {
     id: string;
+    accountName: string;
     reminderMinutes: number;
     reminderNotificationsEnabled: boolean;
     teamEnabled: boolean;

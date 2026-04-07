@@ -23,13 +23,13 @@ export const useAccountConfig = () => {
       const accountConfig = await accountConfigApiService.getAccountConfig();
       dispatch(sessionActions.setAccountConfig({
         id: accountConfig.id,
+        accountName: accountConfig.accountName ?? '',
         reminderMinutes: accountConfig.reminderMinutes,
         reminderNotificationsEnabled: accountConfig.reminderNotificationsEnabled,
         teamEnabled: accountConfig.teamEnabled,
         kitchenEnabled: accountConfig.kitchenEnabled,
         barEnabled: accountConfig.barEnabled,
         roomEnabled: accountConfig.roomEnabled ?? true,
-        // View modes avec valeurs par défaut si absents
         kitchenViewMode: accountConfig.kitchenViewMode || 'tickets',
         barViewMode: accountConfig.barViewMode || 'tickets',
         twoFactorEnabled: accountConfig.twoFactorEnabled ?? false,
@@ -69,6 +69,7 @@ export const useAccountConfig = () => {
       const updatedConfig = await accountConfigApiService.update(config.id, updates);
       dispatch(sessionActions.setAccountConfig({
         id: updatedConfig.id,
+        accountName: updatedConfig.accountName ?? config?.accountName ?? '',
         reminderMinutes: updatedConfig.reminderMinutes,
         reminderNotificationsEnabled: updatedConfig.reminderNotificationsEnabled,
         teamEnabled: updatedConfig.teamEnabled,
@@ -90,21 +91,9 @@ export const useAccountConfig = () => {
     }
   }, [dispatch]);
 
-  // Fonctions pour compatibilité avec l'ancien code
+  // Valeurs directes pour compatibilité
   const isAlertEnabled = config?.reminderNotificationsEnabled ?? false;
   const alertValue = config?.reminderMinutes ?? 15;
-  
-  const updateAlertTime = useCallback(async (minutes: number) => {
-    return updateConfig({ reminderMinutes: minutes });
-  }, [updateConfig]);
-  
-  const toggleAlertEnabled = useCallback(async (enabled: boolean) => {
-    return updateConfig({ reminderNotificationsEnabled: enabled });
-  }, [updateConfig]);
-  
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
 
   return {
     // État
@@ -131,7 +120,5 @@ export const useAccountConfig = () => {
     // Compatibilité avec l'ancien code
     isAlertEnabled,
     alertValue,
-    updateAlertTime,
-    clearError,
   };
 };

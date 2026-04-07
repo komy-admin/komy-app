@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Pressable } from 'react-native';
-import { User, Lock, KeyRound, Eye, EyeOff } from 'lucide-react-native';
+import { User, Lock, KeyRound, Eye, EyeOff, Landmark } from 'lucide-react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '~/store';
 import { sessionActions } from '~/store/slices/session.slice';
@@ -9,11 +9,14 @@ import { authApiService } from '~/api/auth.api';
 import { useToast } from '~/components/ToastProvider';
 import type { ToastType } from '~/components/ui/toast';
 import { showApiError } from '~/lib/apiErrorHandler';
+import { accountConfigApiService } from '~/api/account-config.api';
+import { useFormErrors } from '~/hooks/useFormErrors';
+import { FormFieldError } from '~/components/ui/FormFieldError';
 
-type TabType = 'info' | 'password' | 'pin';
+type TabType = 'restaurant' | 'info' | 'password' | 'pin';
 
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState<TabType>('info');
+  const [activeTab, setActiveTab] = useState<TabType>('restaurant');
   const [isCompactSidebar, setIsCompactSidebar] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.session);
@@ -34,15 +37,15 @@ export default function ProfilePage() {
             style={[
               styles.sidebarTab,
               isCompactSidebar && styles.sidebarTabCompact,
-              activeTab === 'info' && styles.sidebarTabActive
+              activeTab === 'restaurant' && styles.sidebarTabActive
             ]}
-            onPress={() => setActiveTab('info')}
+            onPress={() => setActiveTab('restaurant')}
             activeOpacity={1}
           >
-            <User size={20} color={activeTab === 'info' ? '#11B981' : '#64748B'} strokeWidth={2} />
+            <Landmark size={20} color={activeTab === 'restaurant' ? '#6366F1' : '#64748B'} strokeWidth={2} />
             {!isCompactSidebar && (
-              <Text style={[styles.sidebarTabText, activeTab === 'info' && styles.sidebarTabTextActive]}>
-                Informations
+              <Text style={[styles.sidebarTabText, activeTab === 'restaurant' && styles.sidebarTabTextActive]}>
+                Restaurant
               </Text>
             )}
           </TouchableOpacity>
@@ -81,10 +84,30 @@ export default function ProfilePage() {
             )}
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[
+              styles.sidebarTab,
+              isCompactSidebar && styles.sidebarTabCompact,
+              activeTab === 'info' && styles.sidebarTabActive
+            ]}
+            onPress={() => setActiveTab('info')}
+            activeOpacity={1}
+          >
+            <User size={20} color={activeTab === 'info' ? '#11B981' : '#64748B'} strokeWidth={2} />
+            {!isCompactSidebar && (
+              <Text style={[styles.sidebarTabText, activeTab === 'info' && styles.sidebarTabTextActive]}>
+                Informations
+              </Text>
+            )}
+          </TouchableOpacity>
+
         </View>
 
         {/* Main Content */}
         <View style={styles.mainContent}>
+          {activeTab === 'restaurant' && (
+            <RestaurantTab dispatch={dispatch} showToast={showToast} />
+          )}
           {activeTab === 'info' && (
             <InfoTab user={user} dispatch={dispatch} showToast={showToast} />
           )}
@@ -99,6 +122,109 @@ export default function ProfilePage() {
     </View>
   );
 }
+
+// ====================================================================
+// Restaurant Tab
+// ====================================================================
+
+interface RestaurantTabProps {
+  dispatch: any;
+  showToast: (message: string, type?: ToastType) => void;
+}
+
+const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) => {
+  const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+  const [name, setName] = useState(accountConfig?.accountName ?? '');
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const formErrors = useFormErrors();
+
+  const trimmedName = name.trim();
+  const originalName = accountConfig?.accountName ?? '';
+
+  useEffect(() => {
+    setHasChanges(trimmedName !== originalName);
+  }, [trimmedName, originalName]);
+
+  const canSave = hasChanges && trimmedName.length > 0 && !isSaving;
+
+  const handleSave = async () => {
+    formErrors.clearAll();
+    setIsSaving(true);
+    try {
+      await accountConfigApiService.updateAccountName(trimmedName);
+      dispatch(sessionActions.setAccountConfig({
+        ...accountConfig!,
+        accountName: trimmedName,
+      }));
+      showToast('Nom du restaurant mis à jour', 'success');
+    } catch (error) {
+      formErrors.handleError(error, showToast, 'Impossible de mettre à jour le nom');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <View style={styles.tabContent}>
+      <View style={styles.tabHeader}>
+        <View>
+          <Text style={styles.tabTitle}>Restaurant</Text>
+          <Text style={styles.tabSubtitle}>Informations de votre établissement</Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.createButton,
+            { backgroundColor: '#6366F1' },
+            !canSave && styles.createButtonDisabled
+          ]}
+          onPress={handleSave}
+          disabled={!canSave}
+        >
+          <Text style={styles.createButtonText}>
+            {isSaving ? 'Sauvegarde...' : 'Enregistrer'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.viewsScrollContainer}
+        contentContainerStyle={styles.viewsContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable style={styles.viewsCardsWrapper}>
+          <View style={styles.viewCard}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                <Landmark size={24} color="#6366F1" strokeWidth={2} />
+              </View>
+              <View style={styles.viewCardContent}>
+                <Text style={styles.viewCardTitle}>Établissement</Text>
+                <Text style={styles.viewCardDescription}>Nom affiché de votre restaurant</Text>
+              </View>
+            </View>
+
+            <View style={styles.viewModeSection}>
+              <View style={styles.formGroupInRow}>
+                <Text style={styles.formLabel}>Nom du restaurant</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={(text) => { setName(text); formErrors.clearError('name'); }}
+                  placeholder="Ex: Le Petit Bistrot"
+                  placeholderTextColor="#A0A0A0"
+                  style={[styles.formInput, formErrors.hasError('name') && styles.formInputError]}
+                  autoComplete="off"
+                  editable={!isSaving}
+                />
+                <FormFieldError message={formErrors.getError('name')} />
+              </View>
+            </View>
+          </View>
+        </Pressable>
+      </ScrollView>
+    </View>
+  );
+};
 
 // ====================================================================
 // Info Tab

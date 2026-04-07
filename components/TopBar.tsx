@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { View, Image, Text, Pressable, Platform, StyleSheet } from 'react-native'
-import { Calendar, LogOut, Lock } from 'lucide-react-native'
+import { Calendar, LogOut, Lock, Landmark } from 'lucide-react-native'
 import { Href, useRouter, usePathname } from 'expo-router'
 import { useAppSelector } from '~/store/hooks';
 import { sessionService } from '~/services/SessionService';
@@ -15,6 +15,7 @@ interface TopBarProps {
 
 export function Topbar({ enableConfigClick = true }: TopBarProps) {
   const user = useAppSelector((state) => state.session.user);
+  const accountName = useAppSelector((state) => state.session.accountConfig?.accountName);
   const router = useRouter();
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState('')
@@ -130,11 +131,19 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
       )}
 
       <View onLayout={handleLayout} style={containerZStyle}>
-        <View style={styles.containerLogo}>
-          <Image
-            source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
-            style={styles.logo}
-          />
+        <View style={styles.leftSection}>
+          <View style={styles.containerLogo}>
+            <Image
+              source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
+              style={styles.logo}
+            />
+          </View>
+          {accountName ? (
+            <View style={styles.badge}>
+              <Landmark size={24} color="#2A2E33" strokeWidth={1} />
+              <Text style={styles.badgeText}>{accountName}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.rightSection}>
@@ -209,6 +218,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingRight: 20,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   containerLogo: {
     width: 100,
