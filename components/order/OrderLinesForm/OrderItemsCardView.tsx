@@ -8,7 +8,7 @@ import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
 import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
 import { formatPrice } from '~/lib/utils';
 import { getColorWithOpacity, getMenuPrice, darkenColor } from '~/lib/color-utils';
-import { calculateOptimalCardWidth } from '~/lib/card-layout-utils';
+import { calculateOptimalColumns, chunkArray } from '~/lib/card-layout-utils';
 
 // Constantes de couleurs
 const MENU_COLOR = '#10B981';
@@ -36,13 +36,11 @@ export interface OrderItemsCardViewProps {
 interface OrderItemCardProps {
   item: Item;
   onOpenCustomization: (item: Item) => void;
-  cardWidth: number;
 }
 
 const OrderItemCard = memo<OrderItemCardProps>(({
   item,
   onOpenCustomization,
-  cardWidth,
 }) => {
   const handleAdd = useCallback(() => {
     onOpenCustomization(item);
@@ -58,14 +56,11 @@ const OrderItemCard = memo<OrderItemCardProps>(({
   }, [item.color]);
 
   return (
-    <Pressable onPress={handleAdd}>
+    <Pressable onPress={handleAdd} style={styles.cardPressable}>
       <View
         style={[
           styles.card,
           {
-            width: cardWidth,
-            minWidth: cardWidth,
-            maxWidth: cardWidth,
             backgroundColor: colors.bgColor,
             borderColor: colors.borderColor,
           },
@@ -100,29 +95,22 @@ OrderItemCard.displayName = 'OrderItemCard';
 interface MenuCardProps {
   menu: Menu;
   onMenuAdd: (menu: Menu) => void;
-  cardWidth: number;
 }
 
 const MenuCard = memo<MenuCardProps>(({
   menu,
   onMenuAdd,
-  cardWidth,
 }) => {
   const handleAdd = useCallback(() => {
     onMenuAdd(menu);
   }, [menu, onMenuAdd]);
 
   return (
-    <Pressable onPress={handleAdd}>
+    <Pressable onPress={handleAdd} style={styles.cardPressable}>
       <View
         style={[
           styles.card,
           styles.menuCard,
-          {
-            width: cardWidth,
-            minWidth: cardWidth,
-            maxWidth: cardWidth,
-          },
         ]}
       >
         <View style={styles.glassOverlay}>
@@ -158,6 +146,8 @@ MenuCard.displayName = 'MenuCard';
 
 /**
  * Vue cartes unifiée : menus + articles dans un seul scroll
+ * Utilise des rows explicites avec flex:1 pour éviter les problèmes
+ * de flexWrap + largeur fixe (sub-pixel rendering, colonne fantôme).
  */
 export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
   items,
@@ -212,8 +202,8 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
     scrollToSection,
   });
 
-  const cardWidth = useMemo(() => {
-    return calculateOptimalCardWidth({
+  const numColumns = useMemo(() => {
+    return calculateOptimalColumns({
       containerWidth,
       padding: 0,
       gap: 12,
@@ -254,14 +244,20 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
         {filteredMenus.length > 0 && (
           <View onLayout={(e) => handleSectionLayout(MENUS_SECTION_KEY, e)}>
             <SectionDivider title="Menus" borderRadius={6} style={{ marginBottom: 12 }} />
-            <View style={styles.itemsGrid}>
-              {filteredMenus.map((menu) => (
-                <MenuCard
-                  key={menu.id}
-                  menu={menu}
-                  onMenuAdd={handleMenuAdd}
-                  cardWidth={cardWidth}
-                />
+            <View style={styles.sectionGrid}>
+              {chunkArray(filteredMenus, numColumns).map((row, rowIdx) => (
+                <View key={rowIdx} style={styles.gridRow}>
+                  {row.map((menu) => (
+                    <MenuCard
+                      key={menu.id}
+                      menu={menu}
+                      onMenuAdd={handleMenuAdd}
+                    />
+                  ))}
+                  {row.length < numColumns && Array.from({ length: numColumns - row.length }, (_, i) => (
+                    <View key={`spacer-${i}`} style={styles.cardPressable} />
+                  ))}
+                </View>
               ))}
             </View>
           </View>
@@ -274,14 +270,20 @@ export const OrderItemsCardView = memo<OrderItemsCardViewProps>(({
             onLayout={(e) => handleSectionLayout(group.itemType.id, e)}
           >
             <SectionDivider title={group.itemType.name} borderRadius={6} style={{ marginBottom: 12 }} />
-            <View style={styles.itemsGrid}>
-              {group.items.map((item) => (
-                <OrderItemCard
-                  key={item.id}
-                  item={item}
-                  onOpenCustomization={onOpenCustomization}
-                  cardWidth={cardWidth}
-                />
+            <View style={styles.sectionGrid}>
+              {chunkArray(group.items, numColumns).map((row, rowIdx) => (
+                <View key={rowIdx} style={styles.gridRow}>
+                  {row.map((item) => (
+                    <OrderItemCard
+                      key={item.id}
+                      item={item}
+                      onOpenCustomization={onOpenCustomization}
+                    />
+                  ))}
+                  {row.length < numColumns && Array.from({ length: numColumns - row.length }, (_, i) => (
+                    <View key={`spacer-${i}`} style={styles.cardPressable} />
+                  ))}
+                </View>
               ))}
             </View>
           </View>
@@ -305,13 +307,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
-  itemsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  sectionGrid: {
     gap: 12,
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
     marginBottom: 16,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   emptyContainer: {
     flex: 1,
@@ -326,6 +328,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Card pressable wrapper — flex:1 fills row evenly
+  cardPressable: {
+    flex: 1,
+  },
 
   // Card base
   card: {
@@ -341,7 +347,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
-      transition: 'all 0.15s ease',
+      transition: 'opacity 0.15s ease, transform 0.15s ease',
     } as any : {}),
   },
   // Menu Card overrides
