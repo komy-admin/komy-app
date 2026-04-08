@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, Switch, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity, Pressable, Platform, Keyboard } from 'react-native';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { Clock, Bell } from 'lucide-react-native';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
@@ -142,12 +143,14 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
         style={styles.viewsScrollContainer}
         contentContainerStyle={styles.viewsContainer}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable style={styles.viewsCardsWrapper}>
+        <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Alertes temporelles */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
@@ -207,7 +210,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
             )}
           </View>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 };

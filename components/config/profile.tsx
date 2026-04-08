@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Platform, Keyboard } from 'react-native';
+import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { User, Lock, KeyRound, Eye, EyeOff, Landmark } from 'lucide-react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '~/store';
@@ -187,12 +188,14 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
         style={styles.viewsScrollContainer}
         contentContainerStyle={styles.viewsContainer}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable style={styles.viewsCardsWrapper}>
+        <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
@@ -221,7 +224,7 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
             </View>
           </View>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 };
@@ -344,12 +347,14 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
         style={styles.viewsScrollContainer}
         contentContainerStyle={styles.viewsContainer}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable style={styles.viewsCardsWrapper}>
+        <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
@@ -412,7 +417,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
             </View>
           </View>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 };
@@ -514,12 +519,14 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
         style={styles.viewsScrollContainer}
         contentContainerStyle={styles.viewsContainer}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable style={styles.viewsCardsWrapper}>
+        <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           {/* Mot de passe */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
@@ -621,7 +628,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
             </View>
           </View>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 };
@@ -695,12 +702,14 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollViewWrapper
         style={styles.viewsScrollContainer}
         contentContainerStyle={styles.viewsContainer}
         showsVerticalScrollIndicator={false}
+        bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable style={styles.viewsCardsWrapper}>
+        <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
@@ -806,7 +815,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
             </View>
           </View>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollViewWrapper>
     </View>
   );
 };

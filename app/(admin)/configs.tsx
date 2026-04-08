@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { ConfigSidebar } from '~/components/admin/ConfigSideBar';
 import ProfilePage from '~/components/config/profile';
 import NotificationsPage from '~/components/config/notifications';
@@ -60,17 +60,9 @@ export default function ConfigPage() {
         currentSection={currentSection}
         onSectionChange={setCurrentSection}
       />
-      {currentSection === 'configuration' || currentSection === 'security' ? (
-        <View style={{ flex: 1, height: '100%' }}>
-          {renderSection()}
-        </View>
-      ) : (
-        <ScrollView style={{ flex: 1, height: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
-          <View style={{ flex: 1, minHeight: '100%' }}>
-            {renderSection()}
-          </View>
-        </ScrollView>
-      )}
+      <View style={{ flex: 1, height: '100%' }}>
+        {renderSection()}
+      </View>
 
       <PinConfirmationModal
         isVisible={!isUnlocked}
