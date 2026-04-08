@@ -18,6 +18,7 @@ import { useOrders } from "~/hooks/useOrders";
 import { useToast } from "~/components/ToastProvider";
 import { usePayments } from "~/hooks/usePayments";
 import { extractApiError } from "~/lib/apiErrorHandler";
+import { normalizeOrderLines } from "~/lib/order-line-utils";
 
 export interface UseOrderLinesManagerOptions {
   initialLines?: OrderLine[];
@@ -472,9 +473,11 @@ export const useOrderLinesManager = (options: UseOrderLinesManagerOptions) => {
       }
 
       // Mettre à jour les lignes initiales après sauvegarde réussie
+      // Normaliser les lignes API (tagSnapshot.id → tagId, payment defaults)
       if (result?.lines) {
-        setInitialOrderLines(result.lines);
-        setOrderLines(result.lines);
+        const normalized = normalizeOrderLines(result.lines);
+        setInitialOrderLines(normalized);
+        setOrderLines(normalized);
       }
 
       onSuccessRef.current?.(result);

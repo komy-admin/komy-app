@@ -15,10 +15,11 @@ const getLineFingerprint = (line: OrderLine): string => {
   const note = line.note || '';
   const status = getOrderLineStatus(line);
   const hasPaiement = line.paymentStatus !== 'unpaid' && line.paymentStatus !== undefined;
+
   const tags = (line.tags || [])
     .filter(t => t && t.tagSnapshot)
-    .sort((a, b) => a.tagId.localeCompare(b.tagId))
-    .map(t => `${t.tagId}:${JSON.stringify(t.value)}`)
+    .sort((a, b) => (a.tagId || a.tagSnapshot?.id || '').localeCompare(b.tagId || b.tagSnapshot?.id || ''))
+    .map(t => `${t.tagId || t.tagSnapshot?.id}:${JSON.stringify(t.value)}`)
     .join('|');
   return `${status}__${itemId}__${tags}__${note}__${hasPaiement}`;
 };
