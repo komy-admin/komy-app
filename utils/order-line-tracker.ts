@@ -256,7 +256,8 @@ export const generateBulkPayload = (lineStates: OrderLineState[]): BulkUpdatePay
             }
             selectedItems[item.categoryId].push({
               itemId: item.item.id,
-              tags: Object.keys(tags).length > 0 ? tags : undefined
+              tags: Object.keys(tags).length > 0 ? tags : undefined,
+              note: item.note
             });
           }
         });
