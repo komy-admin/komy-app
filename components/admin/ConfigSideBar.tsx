@@ -356,6 +356,21 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingVertical: 35,
     paddingHorizontal: 24,
+    zIndex: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 4, height: 0 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 5,
+      },
+      web: {
+        boxShadow: '4px 0 12px rgba(0, 0, 0, 0.08)',
+      } as any,
+    }),
   },
   profileSection: {
     alignItems: 'center',
