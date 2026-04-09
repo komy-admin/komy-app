@@ -492,8 +492,8 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   onConfirmDelete,
   onCancelDelete,
 }) => {
-  const hasNote = line.note && line.note.trim().length > 0;
-  const hasTags = line.tags && line.tags.length > 0;
+  const hasNote = !!line.note && line.note.trim().length > 0;
+  const hasTags = !!(line.tags && line.tags.length > 0);
   const itemName = line.item?.name || 'Article';
   const canDelete = !isLocked && !isDeleteLocked;
 
@@ -603,7 +603,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
 }) => {
   if (!line.menu || !line.items) return null;
 
-  const hasNote = line.note && line.note.trim().length > 0;
+  const hasNote = !!line.note && line.note.trim().length > 0;
   const menuName = line.menu.name || 'Menu';
   const canDelete = !isLocked && !isDeleteLocked;
 

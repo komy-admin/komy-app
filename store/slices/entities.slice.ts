@@ -466,11 +466,30 @@ const entitiesSlice = createSlice({
     updateTag: (state, action: PayloadAction<{ tag: Partial<Tag> & { id: string } }>) => {
       const { tag } = action.payload;
       if (state.tags[tag.id]) {
-        state.tags[tag.id] = { ...state.tags[tag.id], ...tag };
+        const updatedTag = { ...state.tags[tag.id], ...tag };
+        state.tags[tag.id] = updatedTag;
+
+        // Propager la mise à jour du tag dans les items qui le référencent
+        Object.values(state.items).forEach((item) => {
+          if (item.tags && item.tags.length > 0) {
+            const idx = item.tags.findIndex((t) => t.id === tag.id);
+            if (idx !== -1) {
+              item.tags[idx] = updatedTag;
+            }
+          }
+        });
       }
     },
     deleteTag: (state, action: PayloadAction<{ tagId: string }>) => {
-      delete state.tags[action.payload.tagId];
+      const { tagId } = action.payload;
+      delete state.tags[tagId];
+
+      // Retirer le tag supprimé des items qui le référencent
+      Object.values(state.items).forEach((item) => {
+        if (item.tags && item.tags.length > 0) {
+          item.tags = item.tags.filter((t) => t.id !== tagId);
+        }
+      });
     },
 
     // === USERS ===

@@ -724,7 +724,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, onEdit, onDel
                 </View>
               )}
             </View>
-            {optionsPreview && (
+            {!!optionsPreview && (
               <Text style={styles.tagItemOptions}>
                 {optionsPreview}{hasMore ? '...' : ''}
               </Text>
