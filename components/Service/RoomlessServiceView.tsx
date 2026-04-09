@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
   // Header — matches RoomTabsHeader height (auto, dictated by content)
   header: {
     flexDirection: 'row',
-    height: 60,
+    height: 61,
     backgroundColor: '#FBFBFB',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
   } as any,
   editModeBtn: {
     backgroundColor: '#2A2E33',
-    paddingHorizontal: 24,
+    width: 175,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
