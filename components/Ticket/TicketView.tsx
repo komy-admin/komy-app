@@ -19,7 +19,7 @@ interface TicketViewProps {
  */
 export function TicketView({ itemGroups, onStatusChange }: TicketViewProps) {
   const [notifiedIds, setNotifiedIds] = useState<Set<string>>(new Set());
-  const [containerHeight, setContainerHeight] = useState<number>(600);
+  const [containerHeight, setContainerHeight] = useState<number | null>(null);
 
   const handleLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
@@ -87,7 +87,7 @@ export function TicketView({ itemGroups, onStatusChange }: TicketViewProps) {
       onLayout={handleLayout}
     >
       <Pressable style={styles.ticketsRow}>
-        {groupedByOrder.map((itemGroup) => {
+        {containerHeight != null && groupedByOrder.map((itemGroup) => {
           const isNotified = notifiedIds.has(itemGroup.id);
           return (
             <View key={itemGroup.orderId} style={[styles.cardContainer, { height: containerHeight }]}>
