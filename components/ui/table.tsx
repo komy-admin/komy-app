@@ -73,7 +73,7 @@ const TableRow = React.forwardRef<
   <View
     ref={ref}
     className={cn(
-      'flex flex-row transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+      'flex flex-row data-[state=selected]:bg-muted',
       className
     )}
     {...props}
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#ECEEF0',
     minHeight: 52,
     alignItems: 'center',
   },
