@@ -63,7 +63,7 @@ export default function MenuPage() {
   useEffect(() => {
     if (panelType === 'item') {
       renderPanel(
-        <SlidePanel visible={true} onClose={handleClosePanel} width={420}>
+        <SlidePanel visible={true} onClose={handleClosePanel} width={430}>
           <ItemFormPanel
             item={currentItem}
             itemTypes={itemTypes}
@@ -76,7 +76,7 @@ export default function MenuPage() {
       );
     } else if (panelType === 'menu') {
       renderPanel(
-        <SlidePanel visible={true} onClose={handleClosePanel} width={420}>
+        <SlidePanel visible={true} onClose={handleClosePanel} width={430}>
           <MenuFormPanel
             menu={currentMenu}
             items={items}
@@ -233,7 +233,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
   hasItemTypes: boolean;
 }) {
   return (
-    <SlidePanel visible={true} onClose={onClose} width={420}>
+    <SlidePanel visible={true} onClose={onClose} width={430}>
       <View style={styles.createPanel}>
         <View style={styles.createPanelHeader}>
           <Text style={styles.createPanelTitle}>Ajouter</Text>

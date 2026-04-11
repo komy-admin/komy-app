@@ -98,9 +98,7 @@ function GroupDeletePickerContent({
     <SlidePanel
       visible={true}
       onClose={onClose}
-      width="35%"
-      minWidth={350}
-      maxWidth={460}
+      width={430}
     >
       <View style={styles.container}>
         {/* Banner */}

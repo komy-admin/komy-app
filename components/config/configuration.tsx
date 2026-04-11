@@ -145,7 +145,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
   useEffect(() => {
     if (sidePanelVisible) {
       renderPanel(
-        <SlidePanel visible={true} onClose={closeSidePanel} width="35%" minWidth={350} maxWidth={600}>
+        <SlidePanel visible={true} onClose={closeSidePanel} width={430}>
           {activeTab === 'tags' ? (
             <TagFormPanel
               tag={editingTag}

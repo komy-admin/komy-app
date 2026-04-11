@@ -30,7 +30,7 @@ import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { showApiError } from '~/lib/apiErrorHandler';
 
 // Constantes
-const SLIDE_PANEL_WIDTH = 450;
+const SLIDE_PANEL_WIDTH = 430;
 
 export default function RoomEditionMode() {
   const { openCreate } = useLocalSearchParams<{ openCreate?: string }>();

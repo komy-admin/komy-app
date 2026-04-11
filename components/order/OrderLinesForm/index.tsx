@@ -401,7 +401,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   useEffect(() => {
     if (customizationPanelVisible && itemToCustomize) {
       renderPanel(
-        <SlidePanel visible={true} onClose={handleCancelCustomization} width="35%" minWidth={350} maxWidth={600}>
+        <SlidePanel visible={true} onClose={handleCancelCustomization} width={430}>
           <ItemCustomizationPanelContent
             item={itemToCustomize.item}
             availableTags={itemToCustomize.item.tags || []}
@@ -413,7 +413,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
       );
     } else if (isConfiguringMenu && menuBeingConfigured) {
       renderPanel(
-        <SlidePanel visible={true} onClose={handleCancelMenuConfiguration} width="35%" minWidth={350} maxWidth={600}>
+        <SlidePanel visible={true} onClose={handleCancelMenuConfiguration} width={430}>
           <MenuConfiguration
             menu={menuBeingConfigured}
             tempMenuSelections={tempMenuSelections}

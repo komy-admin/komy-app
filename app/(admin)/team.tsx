@@ -231,7 +231,7 @@ export default function TeamPage() {
     );
 
     renderPanel(
-      <SlidePanel visible={true} onClose={handleCloseFormPanel} width={500}>
+      <SlidePanel visible={true} onClose={handleCloseFormPanel} width={430}>
         {panelContent}
       </SlidePanel>
     );

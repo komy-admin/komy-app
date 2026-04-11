@@ -60,9 +60,7 @@ export const ActionConfirmModal = memo<ActionConfirmModalProps>(({
         <SlidePanel
           visible={true}
           onClose={handleClose}
-          width="35%"
-          minWidth={350}
-          maxWidth={500}
+          width={430}
         >
           <View style={styles.container}>
             {/* Banner coloré */}
