@@ -64,7 +64,7 @@ export function ActionButtons({
   return (
     <>
       <TouchableOpacity style={styles.readyButton} onPress={handleReady} activeOpacity={0.7}>
-        <Bell size={15} color="#2A2E33" strokeWidth={2.5} />
+        <Bell size={15} color="#FFFFFF" strokeWidth={2.5} />
         <RNText style={styles.readyButtonText}>Prêt à servir</RNText>
       </TouchableOpacity>
 
@@ -119,9 +119,7 @@ const styles = StyleSheet.create({
   readyButton: {
     flexDirection: 'row',
     gap: 8,
-    backgroundColor: '#E2E8F0',
-    borderWidth: 1.5,
-    borderColor: '#2A2E33',
+    backgroundColor: '#2A2E33',
     paddingVertical: 12,
     paddingHorizontal: 16,
     margin: 12,
@@ -133,7 +131,7 @@ const styles = StyleSheet.create({
   readyButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   modalOverlay: {
