@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { KitchenItem } from '../types/kitchen-card.types';
+import { TicketItem } from '../types/ticket.types';
 
 /**
  * Hook qui groupe et trie les items par catégorie selon leur priorité
@@ -17,11 +17,11 @@ import { KitchenItem } from '../types/kitchen-card.types';
  * // Retourne: [['Entrée', [...]], ['Plat', [...]], ['Dessert', [...]]]
  */
 export function useItemsByCategory(
-  items: KitchenItem[],
+  items: TicketItem[],
   priorityMap: Map<string, number>
-): Array<[string, KitchenItem[]]> {
+): Array<[string, TicketItem[]]> {
   return useMemo(() => {
-    const groups = new Map<string, KitchenItem[]>();
+    const groups = new Map<string, TicketItem[]>();
 
     // Grouper par catégorie
     items.forEach(item => {

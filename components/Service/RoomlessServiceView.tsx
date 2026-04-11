@@ -34,11 +34,10 @@ import PaymentView from '~/components/Service/PaymentView';
 const STATUS_PRIORITY: Record<string, number> = {
   [Status.READY]: 0,
   [Status.PENDING]: 1,
-  [Status.INPROGRESS]: 2,
-  [Status.DRAFT]: 3,
-  [Status.SERVED]: 4,
-  [Status.ERROR]: 5,
-  [Status.TERMINATED]: 6,
+  [Status.DRAFT]: 2,
+  [Status.SERVED]: 3,
+  [Status.ERROR]: 4,
+  [Status.TERMINATED]: 5,
 };
 
 /**

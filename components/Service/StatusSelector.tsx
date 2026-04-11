@@ -13,8 +13,6 @@ interface StatusSelectorProps {
 const AVAILABLE_STATUSES = [
   Status.DRAFT,
   Status.PENDING,
-  // Status.INPROGRESS, // Commenté car non utile pour la view service (utile seulement pour kitchen)
-  Status.READY,
   Status.SERVED,
 ];
 

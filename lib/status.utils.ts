@@ -14,7 +14,6 @@ export const getMostImportantStatus = (statuses: Status[]): Status => {
     Status.TERMINATED,
     Status.SERVED,
     Status.DRAFT,
-    Status.INPROGRESS,
     Status.PENDING,
     Status.READY,
     Status.ERROR,
@@ -71,8 +70,7 @@ export const getTableStatus = (table: Table): Status | undefined => {
 export const getNextStatus = (currentStatus: Status): Status | null => {
   const statusProgression: Partial<Record<Status, Status>> = {
     [Status.DRAFT]: Status.PENDING,
-    [Status.PENDING]: Status.INPROGRESS,
-    [Status.INPROGRESS]: Status.READY,
+    [Status.PENDING]: Status.READY,
     [Status.READY]: Status.SERVED,
     [Status.SERVED]: Status.TERMINATED,
   };
@@ -86,12 +84,11 @@ export const getNextStatus = (currentStatus: Status): Status | null => {
 export const getStatusText = (status: Status) => {
   const texts = {
     [Status.READY]: "Prêt",
-    [Status.PENDING]: "En attente",
-    [Status.INPROGRESS]: "En préparation",
+    [Status.PENDING]: "Réclamé",
     [Status.ERROR]: "Erreur",
     [Status.SERVED]: "Servi",
     [Status.TERMINATED]: "Terminé",
-    [Status.DRAFT]: "Brouillon",
+    [Status.DRAFT]: "En attente",
   };
   return texts[status];
 };
@@ -100,7 +97,6 @@ export const getStatusColor = (status: Status) => {
   const colors = {
     [Status.READY]: "#D7E3FC",
     [Status.PENDING]: "#F9F1C8",
-    [Status.INPROGRESS]: "#FFD1AD",
     [Status.SERVED]: "#B7E1CC",
     [Status.ERROR]: "#F7BFB5",
     [Status.TERMINATED]: "#EBEBEB",
@@ -113,7 +109,6 @@ export const getStatusBackgroundColor = (status: Status): string => {
   const colors = {
     [Status.READY]: "#F5F8FE",
     [Status.PENDING]: "#FEFAF1",
-    [Status.INPROGRESS]: "#FFF5EE",
     [Status.SERVED]: "#F0FAF5",
     [Status.ERROR]: "#FEF5F4",
     [Status.TERMINATED]: "#FAFAFA",
@@ -127,7 +122,6 @@ export const getStatusTextColor = (status: Status): string => {
   const colors = {
     [Status.READY]: "#1E3A5F",
     [Status.PENDING]: "#92400E",
-    [Status.INPROGRESS]: "#9A3412",
     [Status.SERVED]: "#065F46",
     [Status.ERROR]: "#991B1B",
     [Status.TERMINATED]: "#374151",

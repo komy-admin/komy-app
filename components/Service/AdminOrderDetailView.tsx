@@ -877,7 +877,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
 
     // Trier les groupes : d'abord par itemType, puis par priorité de statut
     const getStatusPriority = (status: Status): number => {
-      const statusOrder = [Status.TERMINATED, Status.DRAFT, Status.INPROGRESS, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
+      const statusOrder = [Status.TERMINATED, Status.DRAFT, Status.PENDING, Status.READY, Status.SERVED, Status.ERROR];
       return statusOrder.indexOf(status);
     };
 

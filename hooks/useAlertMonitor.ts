@@ -66,7 +66,7 @@ export const useAlertMonitor = () => {
 
     orders.forEach((order: Order) => {
       // Vérifier si la commande est en retard
-      if ([Status.PENDING, Status.INPROGRESS, Status.READY].includes(order.status)) {
+      if ([Status.PENDING, Status.READY].includes(order.status)) {
         // Utiliser updatedAt si disponible, sinon createdAt
         const dateToCheck = order.updatedAt || order.createdAt;
         if (dateToCheck) {
@@ -82,7 +82,7 @@ export const useAlertMonitor = () => {
       // Vérifier les items de la commande (OrderLines)
       if (order.lines && order.lines.length > 0) {
         order.lines.forEach(line => {
-          if (line.status && [Status.PENDING, Status.INPROGRESS, Status.READY].includes(line.status)) {
+          if (line.status && [Status.PENDING, Status.READY].includes(line.status)) {
             // Utiliser updatedAt si disponible, sinon createdAt
             const dateToCheck = line.updatedAt || line.createdAt;
             if (dateToCheck) {
@@ -98,7 +98,7 @@ export const useAlertMonitor = () => {
           // Vérifier aussi les items de menu (OrderLineItems) si c'est un menu
           if (line.type === 'MENU' && line.items && line.items.length > 0) {
             line.items.forEach(menuItem => {
-              if (menuItem.status && [Status.PENDING, Status.INPROGRESS, Status.READY].includes(menuItem.status)) {
+              if (menuItem.status && [Status.PENDING, Status.READY].includes(menuItem.status)) {
                 // Utiliser updatedAt si disponible, sinon la date de la ligne parente
                 const dateToCheck = menuItem.updatedAt || line.createdAt;
                 if (dateToCheck) {

@@ -4,8 +4,6 @@ import { storageService } from '~/lib/storageService';
 import { uploadProfileImage } from '../thunks/uploadProfileImage.thunk';
 
 // Types pour les payloads des actions
-type ViewMode = 'columns' | 'tickets';
-
 interface AccountConfigPayload {
   id: string;
   accountName: string;
@@ -15,9 +13,6 @@ interface AccountConfigPayload {
   kitchenEnabled: boolean;
   barEnabled: boolean;
   roomEnabled: boolean;
-  // View modes
-  kitchenViewMode: ViewMode;
-  barViewMode: ViewMode;
   // 2FA
   twoFactorEnabled: boolean;
   twoFactorMethod: string | null;
@@ -84,8 +79,6 @@ export interface SessionState {
     kitchenEnabled: boolean;
     barEnabled: boolean;
     roomEnabled: boolean;
-    kitchenViewMode: ViewMode;
-    barViewMode: ViewMode;
     twoFactorEnabled: boolean;
     twoFactorMethod: string | null;
   } | null;

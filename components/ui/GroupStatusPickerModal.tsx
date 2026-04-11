@@ -9,7 +9,6 @@ import { getStatusColor, getStatusText, getStatusTextColor, getStatusBackgroundC
 const AVAILABLE_STATUSES = [
   Status.DRAFT,
   Status.PENDING,
-  Status.READY,
   Status.SERVED,
 ];
 

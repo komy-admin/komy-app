@@ -7,7 +7,7 @@ import RoomComponent from '~/components/Room/Room';
 import { Status } from '~/types/status.enum';
 import { Table } from '~/types/table.types';
 import { Room } from '~/types/room.types';
-import { Clock, CheckCircle2, AlertCircle, Package, RefreshCw, Plus } from 'lucide-react-native';
+import { Clock, CheckCircle2, AlertCircle, Package, Plus } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
 import { useRooms, useTables, useOrders } from '~/hooks/useRestaurant';
 import { getStatusColor, getStatusText, getMostImportantStatus, getOrderGlobalStatus } from '~/lib/utils';
@@ -86,8 +86,6 @@ export default function ServerHomePage() {
     switch (status) {
       case Status.PENDING:
         return <Clock {...iconProps} color={getStatusColor(status)} />;
-      case Status.INPROGRESS:
-        return <RefreshCw {...iconProps} color={getStatusColor(status)} />;
       case Status.READY:
         return <Package {...iconProps} color={getStatusColor(status)} />;
       case Status.SERVED:
@@ -106,7 +104,7 @@ export default function ServerHomePage() {
       .sort((a, b) => {
         const statusA = getMostImportantStatus(a.lines?.map(l => l.status || Status.PENDING) || []);
         const statusB = getMostImportantStatus(b.lines?.map(l => l.status || Status.PENDING) || []);
-        const priorityOrder = [Status.READY, Status.INPROGRESS, Status.PENDING, Status.SERVED, Status.TERMINATED];
+        const priorityOrder = [Status.READY, Status.PENDING, Status.SERVED, Status.TERMINATED];
         const priorityA = priorityOrder.indexOf(statusA);
         const priorityB = priorityOrder.indexOf(statusB);
         if (priorityA !== priorityB) {

@@ -30,8 +30,6 @@ export const useAccountConfig = () => {
         kitchenEnabled: accountConfig.kitchenEnabled,
         barEnabled: accountConfig.barEnabled,
         roomEnabled: accountConfig.roomEnabled ?? true,
-        kitchenViewMode: accountConfig.kitchenViewMode || 'tickets',
-        barViewMode: accountConfig.barViewMode || 'tickets',
         twoFactorEnabled: accountConfig.twoFactorEnabled ?? false,
         twoFactorMethod: accountConfig.twoFactorMethod ?? null,
       }));
@@ -55,8 +53,6 @@ export const useAccountConfig = () => {
     kitchenEnabled?: boolean;
     barEnabled?: boolean;
     roomEnabled?: boolean;
-    kitchenViewMode?: 'columns' | 'tickets';
-    barViewMode?: 'columns' | 'tickets';
   }) => {
     setIsLoading(true);
     setError(null);
@@ -76,8 +72,6 @@ export const useAccountConfig = () => {
         kitchenEnabled: updatedConfig.kitchenEnabled,
         barEnabled: updatedConfig.barEnabled,
         roomEnabled: updatedConfig.roomEnabled ?? true,
-        kitchenViewMode: updatedConfig.kitchenViewMode || 'tickets',
-        barViewMode: updatedConfig.barViewMode || 'tickets',
         twoFactorEnabled: updatedConfig.twoFactorEnabled ?? false,
         twoFactorMethod: updatedConfig.twoFactorMethod ?? null,
       }));
@@ -112,10 +106,6 @@ export const useAccountConfig = () => {
     kitchenEnabled: config?.kitchenEnabled ?? true,
     barEnabled: config?.barEnabled ?? true,
     roomEnabled: config?.roomEnabled ?? true,
-
-    // View modes simplifiés
-    kitchenViewMode: config?.kitchenViewMode ?? 'tickets',
-    barViewMode: config?.barViewMode ?? 'tickets',
 
     // Compatibilité avec l'ancien code
     isAlertEnabled,
