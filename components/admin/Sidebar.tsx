@@ -1,6 +1,6 @@
 // components/admin/Sidebar.tsx
 import { Href, router, usePathname } from 'expo-router';
-import { View, Pressable, Platform, StyleSheet } from 'react-native';
+import { View, Pressable, Platform, StyleSheet, ScrollView } from 'react-native';
 import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, CreditCard, CalendarDays } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../ui';
@@ -50,6 +50,7 @@ export function AdminSidebar() {
 
  return (
    <View style={styles.container}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
      {visibleNavItems.map(({ href, icon: Icon, label }) => {
        const isActive = pathname.includes(href);
 
@@ -79,6 +80,7 @@ export function AdminSidebar() {
          </Pressable>
        );
      })}
+    </ScrollView>
    </View>
  );
 }
@@ -92,5 +94,8 @@ const styles = StyleSheet.create({
     ...Platform.select({
       android: { elevation: 20 },
     }),
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
 });
