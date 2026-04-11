@@ -29,7 +29,7 @@ const getTagFieldTypeLabel = (fieldType: TagFieldType): string => {
   return labels[fieldType] || fieldType;
 };
 
-export default function ConfigurationRestoPage() {
+export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompactSidebar?: boolean | null }) {
   const [activeTab, setActiveTab] = useState<TabType>('item-types');
   const [sidePanelVisible, setSidePanelVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
@@ -37,7 +37,6 @@ export default function ConfigurationRestoPage() {
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
   const [itemTypeToDelete, setItemTypeToDelete] = useState<ItemType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isCompactSidebar, setIsCompactSidebar] = useState(false);
 
   const { renderPanel, clearPanel } = usePanelPortal();
   const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
@@ -117,12 +116,6 @@ export default function ConfigurationRestoPage() {
     setItemTypeToDelete(null);
   }, []);
 
-  const handleLayoutChange = useCallback((event: any) => {
-    const { width } = event.nativeEvent.layout;
-    // Basculer en mode compact si la largeur est inférieure à 700px
-    setIsCompactSidebar(width < 700);
-  }, []);
-
   const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
     const payload = {
       ...tagData,
@@ -175,21 +168,21 @@ export default function ConfigurationRestoPage() {
   }, [sidePanelVisible, activeTab, editingTag, editingItemType]);
 
   return (
-    <View style={styles.container} onLayout={handleLayoutChange}>
+    <View style={styles.container}>
       <View style={styles.content}>
         {/* Sidebar Navigation */}
-        <View style={[styles.sidebar, isCompactSidebar && styles.sidebarCompact]}>
+        <View style={[styles.sidebar, isCompactSidebar !== false && styles.sidebarCompact]}>
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'item-types' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('item-types')}
             activeOpacity={1}
           >
             <Utensils size={20} color={activeTab === 'item-types' ? '#6366F1' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'item-types' && styles.sidebarTabTextActive]}>
                 Types d'articles
               </Text>
@@ -199,14 +192,14 @@ export default function ConfigurationRestoPage() {
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'tags' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('tags')}
             activeOpacity={1}
           >
             <TagsIcon size={20} color={activeTab === 'tags' ? '#A855F7' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'tags' && styles.sidebarTabTextActive]}>
                 Tags personnalisés
               </Text>
@@ -216,14 +209,14 @@ export default function ConfigurationRestoPage() {
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'views' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('views')}
             activeOpacity={1}
           >
             <Eye size={20} color={activeTab === 'views' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
                 Gestion Module
               </Text>

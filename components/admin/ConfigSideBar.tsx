@@ -138,19 +138,19 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
     const screenWidth = dimensions.width;
     const calculatedSidebarWidth = screenWidth * 0.25; // 25% de l'écran
 
-    if (calculatedSidebarWidth < 220) return 'sm'; // Petit - textes tronqués
-    if (calculatedSidebarWidth < 280) return 'md'; // Moyen - textes complets mais avatar réduit
-    return 'lg'; // Large - tout affiché normalement
+    if (calculatedSidebarWidth < 220) return 'sm';
+    if (calculatedSidebarWidth < 280) return 'md';
+    return 'lg';
   };
 
   // Calculer les breakpoints basés sur la hauteur disponible
   const getHeightBreakpoint = () => {
     const screenHeight = dimensions.height;
 
-    if (screenHeight < 500) return 'xs'; // Très compact - avatar mini, espacements réduits
-    if (screenHeight < 650) return 'sm'; // Compact - avatar petit, marges réduites
-    if (screenHeight < 800) return 'md'; // Moyen - avatar moyen
-    return 'lg'; // Large - avatar complet
+    if (screenHeight < 500) return 'xs';
+    if (screenHeight < 650) return 'sm';
+    if (screenHeight < 800) return 'md';
+    return 'lg';
   };
 
   const widthBreakpoint = getWidthBreakpoint();

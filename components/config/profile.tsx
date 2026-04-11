@@ -16,35 +16,29 @@ import { FormFieldError } from '~/components/ui/FormFieldError';
 
 type TabType = 'restaurant' | 'info' | 'password' | 'pin';
 
-export default function ProfilePage() {
+export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: boolean | null }) {
   const [activeTab, setActiveTab] = useState<TabType>('restaurant');
-  const [isCompactSidebar, setIsCompactSidebar] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.session);
   const dispatch = useDispatch();
   const { showToast } = useToast();
 
-  const handleLayoutChange = useCallback((event: any) => {
-    const { width } = event.nativeEvent.layout;
-    setIsCompactSidebar(width < 700);
-  }, []);
-
   return (
-    <View style={styles.container} onLayout={handleLayoutChange}>
+    <View style={styles.container}>
       <View style={styles.content}>
         {/* Sidebar Navigation */}
-        <View style={[styles.sidebar, isCompactSidebar && styles.sidebarCompact]}>
+        <View style={[styles.sidebar, isCompactSidebar !== false && styles.sidebarCompact]}>
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'restaurant' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('restaurant')}
             activeOpacity={1}
           >
             <Landmark size={20} color={activeTab === 'restaurant' ? '#6366F1' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'restaurant' && styles.sidebarTabTextActive]}>
                 Restaurant
               </Text>
@@ -54,14 +48,14 @@ export default function ProfilePage() {
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'password' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('password')}
             activeOpacity={1}
           >
             <Lock size={20} color={activeTab === 'password' ? '#F59E0B' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'password' && styles.sidebarTabTextActive]}>
                 Mot de passe
               </Text>
@@ -71,14 +65,14 @@ export default function ProfilePage() {
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'pin' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('pin')}
             activeOpacity={1}
           >
             <KeyRound size={20} color={activeTab === 'pin' ? '#8B5CF6' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'pin' && styles.sidebarTabTextActive]}>
                 Code PIN
               </Text>
@@ -88,14 +82,14 @@ export default function ProfilePage() {
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'info' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('info')}
             activeOpacity={1}
           >
             <User size={20} color={activeTab === 'info' ? '#11B981' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'info' && styles.sidebarTabTextActive]}>
                 Informations
               </Text>

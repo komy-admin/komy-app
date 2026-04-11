@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ConfigSidebar } from '~/components/admin/ConfigSideBar';
 import ProfilePage from '~/components/config/profile';
@@ -16,8 +16,14 @@ type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration'
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isCompactSidebar, setIsCompactSidebar] = useState<boolean | null>(null);
   const { user } = useSelector((state: RootState) => state.session);
   const router = useRouter();
+
+  const handleContentLayout = useCallback((event: any) => {
+    const { width } = event.nativeEvent.layout;
+    setIsCompactSidebar(width < 700);
+  }, []);
 
   // Bloquer l'accès aux managers
   useEffect(() => {
@@ -40,15 +46,15 @@ export default function ConfigPage() {
   const renderSection = () => {
     switch (currentSection) {
       case 'profile':
-        return <ProfilePage/>;
+        return <ProfilePage isCompactSidebar={isCompactSidebar}/>;
       case 'notifications':
-        return <NotificationsPage/>;
+        return <NotificationsPage isCompactSidebar={isCompactSidebar}/>;
       case 'dashboard':
         return <DashboardPage/>;
       case 'security':
-        return <SecurityPage/>;
+        return <SecurityPage isCompactSidebar={isCompactSidebar}/>;
       case 'configuration':
-        return <ConfigurationRestoPage/>;
+        return <ConfigurationRestoPage isCompactSidebar={isCompactSidebar}/>;
       default:
         return <DashboardPage/>;
     }
@@ -60,7 +66,7 @@ export default function ConfigPage() {
         currentSection={currentSection}
         onSectionChange={setCurrentSection}
       />
-      <View style={{ flex: 1, height: '100%' }}>
+      <View style={{ flex: 1, height: '100%' }} onLayout={handleContentLayout}>
         {renderSection()}
       </View>
 

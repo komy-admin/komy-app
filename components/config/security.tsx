@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Platform, Keyboard } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { ShieldCheck, Smartphone, Mail, Monitor } from 'lucide-react-native';
@@ -15,32 +15,26 @@ import { showApiError } from '~/lib/apiErrorHandler';
 
 type SecurityTab = '2fa-account' | 'devices';
 
-export default function SecurityPage() {
+export default function SecurityPage({ isCompactSidebar }: { isCompactSidebar?: boolean | null }) {
   const [activeTab, setActiveTab] = useState<SecurityTab>('2fa-account');
-  const [isCompactSidebar, setIsCompactSidebar] = useState(false);
   const { showToast } = useToast();
 
-  const handleLayoutChange = useCallback((event: any) => {
-    const { width } = event.nativeEvent.layout;
-    setIsCompactSidebar(width < 700);
-  }, []);
-
   return (
-    <View style={styles.container} onLayout={handleLayoutChange}>
+    <View style={styles.container}>
       <View style={styles.content}>
         {/* Sidebar Navigation */}
-        <View style={[styles.sidebar, isCompactSidebar && styles.sidebarCompact]}>
+        <View style={[styles.sidebar, isCompactSidebar !== false && styles.sidebarCompact]}>
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === '2fa-account' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('2fa-account')}
             activeOpacity={1}
           >
             <ShieldCheck size={20} color={activeTab === '2fa-account' ? '#475569' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === '2fa-account' && styles.sidebarTabTextActive]}>
                 2FA
               </Text>
@@ -50,14 +44,14 @@ export default function SecurityPage() {
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'devices' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('devices')}
             activeOpacity={1}
           >
             <Monitor size={20} color={activeTab === 'devices' ? '#475569' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'devices' && styles.sidebarTabTextActive]}>
                 Appareils
               </Text>

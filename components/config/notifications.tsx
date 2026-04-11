@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity, Pressable, Platform, Keyboard } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { Clock, Bell } from 'lucide-react-native';
@@ -8,9 +8,8 @@ import { showApiError } from '~/lib/apiErrorHandler';
 
 type TabType = 'alerts';
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ isCompactSidebar }: { isCompactSidebar?: boolean | null }) {
   const [activeTab, setActiveTab] = useState<TabType>('alerts');
-  const [isCompactSidebar, setIsCompactSidebar] = useState(false);
 
   const {
     isAlertEnabled,
@@ -19,27 +18,22 @@ export default function NotificationsPage() {
     updateConfig,
   } = useAccountConfig();
 
-  const handleLayoutChange = useCallback((event: any) => {
-    const { width } = event.nativeEvent.layout;
-    setIsCompactSidebar(width < 700);
-  }, []);
-
   return (
-    <View style={styles.container} onLayout={handleLayoutChange}>
+    <View style={styles.container}>
       <View style={styles.content}>
         {/* Sidebar Navigation */}
-        <View style={[styles.sidebar, isCompactSidebar && styles.sidebarCompact]}>
+        <View style={[styles.sidebar, isCompactSidebar !== false && styles.sidebarCompact]}>
           <TouchableOpacity
             style={[
               styles.sidebarTab,
-              isCompactSidebar && styles.sidebarTabCompact,
+              isCompactSidebar !== false && styles.sidebarTabCompact,
               activeTab === 'alerts' && styles.sidebarTabActive
             ]}
             onPress={() => setActiveTab('alerts')}
             activeOpacity={1}
           >
             <Bell size={20} color={activeTab === 'alerts' ? '#6366F1' : '#64748B'} strokeWidth={2} />
-            {!isCompactSidebar && (
+            {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'alerts' && styles.sidebarTabTextActive]}>
                 Alerte visuelle
               </Text>
