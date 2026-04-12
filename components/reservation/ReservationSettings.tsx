@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Switch, ActivityIndicator, Platform, ScrollView, useWindowDimensions } from 'react-native';
-import { Store, Settings, Bell, Mail, CreditCard, Info } from 'lucide-react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Switch, ActivityIndicator, Platform, ScrollView, useWindowDimensions, Linking } from 'react-native';
+import { Store, Settings, Bell, Mail, Info, Link2, Shield, ChevronDown } from 'lucide-react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useToast } from '~/components/ToastProvider';
-import type { ReservationSettings, ReservationProfessionalProfile, UpdateReservationSettingsDto } from '~/types/reservation.types';
+import type { ReservationProfessionalProfile, UpdateReservationSettingsDto, StripeConnectStatus } from '~/types/reservation.types';
 
 interface ReservationSettingsPageProps {
   reservation: {
     profile: ReservationProfessionalProfile | null;
+    stripeStatus: StripeConnectStatus | null;
     loadProfile: () => Promise<ReservationProfessionalProfile>;
     updateProfile: (data: { businessName?: string; email?: string; phone?: string; address?: string }) => Promise<ReservationProfessionalProfile>;
     updateSettings: (data: UpdateReservationSettingsDto) => Promise<ReservationProfessionalProfile>;
+    loadStripeStatus: () => Promise<StripeConnectStatus>;
+    getStripeConnectLink: (returnUrl: string) => Promise<{ url: string }>;
+    disconnectStripe: () => Promise<void>;
   };
 }
 
@@ -28,7 +33,6 @@ const SETTINGS_TOOLTIPS: Record<string, { title: string; items: string[] }> = {
       'Délai minimum : temps minimum avant lequel un client peut réserver (ex: 2h = pas de réservation dans les 2 prochaines heures).',
       'Réservation max à l\'avance : jusqu\'à combien de jours un client peut réserver à l\'avance.',
       'Taille du groupe : nombre de convives min/max acceptés par réservation.',
-      'Confirmation auto : si activé, la réservation est confirmée directement sans que le client ait besoin de valider par email.',
       'Délai d\'annulation : temps avant la réservation où le client ne peut plus annuler.',
     ],
   },
@@ -43,7 +47,22 @@ const SETTINGS_TOOLTIPS: Record<string, { title: string; items: string[] }> = {
     title: 'Personnalisation',
     items: [
       'Le message personnalisé est inclus dans tous les emails envoyés aux clients (confirmation, rappel, annulation).',
-      'Empreinte CB : si activée, le client doit fournir une carte bancaire pour confirmer sa réservation. Utile pour limiter les no-shows.',
+    ],
+  },
+  stripe: {
+    title: 'Compte Stripe',
+    items: [
+      'Connectez votre compte Stripe pour encaisser les frais no-show depuis Komy.',
+      'Une fois connecté, activez l\'empreinte bancaire dans le bloc "Garantie no-show".',
+      'Les paiements sont traités par Stripe de façon sécurisée.',
+    ],
+  },
+  noshow: {
+    title: 'Garantie no-show',
+    items: [
+      'Si activée, le client doit fournir une carte bancaire pour confirmer sa réservation.',
+      'En cas de no-show, vous pouvez débiter le montant configuré depuis la page des réservations.',
+      'Nécessite un compte Stripe connecté.',
     ],
   },
 };
@@ -53,6 +72,7 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [visibleTooltip, setVisibleTooltip] = useState<string | null>(null);
+  const [isStripeActionLoading, setIsStripeActionLoading] = useState(false);
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isCompact = width < 1100;
@@ -66,20 +86,23 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
     maxAdvanceDays: '30',
     minPartySize: '1',
     maxPartySize: '20',
-    autoConfirm: true,
     cancellationDeadlineHours: '24',
     reminderEnabled: false,
     reminderHoursBefore: '24',
     customEmailMessage: '',
     notifyProfessionalOnNewReservation: true,
-    notifyProfessionalOnConfirmation: true,
     notifyProfessionalOnCancellation: true,
     requireCardGuarantee: false,
+    noShowFeeAmountEur: '',
+    noShowFeeCurrency: 'eur',
   });
 
   useEffect(() => {
-    reservation.loadProfile()
-      .then((profile) => {
+    Promise.all([
+      reservation.loadProfile(),
+      reservation.loadStripeStatus(),
+    ])
+      .then(([profile]) => {
         if (profile) {
           const s = profile.settings;
           setForm({
@@ -91,15 +114,15 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
             maxAdvanceDays: String(s.maxAdvanceDays ?? 30),
             minPartySize: String(s.minPartySize ?? 1),
             maxPartySize: String(s.maxPartySize ?? 20),
-            autoConfirm: s.autoConfirm ?? true,
             cancellationDeadlineHours: String(s.cancellationDeadlineHours ?? 24),
             reminderEnabled: s.reminderEnabled ?? false,
             reminderHoursBefore: String(s.reminderHoursBefore ?? 24),
             customEmailMessage: s.customEmailMessage ?? '',
             notifyProfessionalOnNewReservation: s.notifyProfessionalOnNewReservation ?? true,
-            notifyProfessionalOnConfirmation: s.notifyProfessionalOnConfirmation ?? true,
             notifyProfessionalOnCancellation: s.notifyProfessionalOnCancellation ?? true,
             requireCardGuarantee: s.requireCardGuarantee ?? false,
+            noShowFeeAmountEur: s.noShowFeeAmount ? String(s.noShowFeeAmount / 100) : '',
+            noShowFeeCurrency: s.noShowFeeCurrency || 'eur',
           });
         }
       })
@@ -123,20 +146,23 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
       if (Object.keys(profileUpdate).length > 0) {
         await reservation.updateProfile(profileUpdate);
       }
+      const feeAmount = form.requireCardGuarantee && form.noShowFeeAmountEur
+        ? Math.round(parseFloat(form.noShowFeeAmountEur) * 100) || null
+        : null;
       await reservation.updateSettings({
         minNoticeHours: parseInt(form.minNoticeHours) || 2,
         maxAdvanceDays: parseInt(form.maxAdvanceDays) || 30,
         minPartySize: parseInt(form.minPartySize) || 1,
         maxPartySize: parseInt(form.maxPartySize) || 20,
-        autoConfirm: form.autoConfirm,
         cancellationDeadlineHours: parseInt(form.cancellationDeadlineHours) || 24,
         reminderEnabled: form.reminderEnabled,
         reminderHoursBefore: parseInt(form.reminderHoursBefore) || 24,
         customEmailMessage: form.customEmailMessage.trim() || null,
         notifyProfessionalOnNewReservation: form.notifyProfessionalOnNewReservation,
-        notifyProfessionalOnConfirmation: form.notifyProfessionalOnConfirmation,
         notifyProfessionalOnCancellation: form.notifyProfessionalOnCancellation,
         requireCardGuarantee: form.requireCardGuarantee,
+        noShowFeeAmount: feeAmount,
+        noShowFeeCurrency: form.noShowFeeCurrency,
       });
       showToast('Paramètres sauvegardés', 'success');
       setHasChanges(false);
@@ -147,6 +173,37 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
     }
   };
 
+  const handleStripeConnect = async () => {
+    setIsStripeActionLoading(true);
+    try {
+      const returnUrl = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}`
+        : '';
+      const { url } = await reservation.getStripeConnectLink(returnUrl);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.href = url;
+      } else {
+        await Linking.openURL(url);
+        setIsStripeActionLoading(false);
+      }
+    } catch (error: any) {
+      showToast(error?.response?.data?.error || 'Erreur de connexion Stripe', 'error');
+      setIsStripeActionLoading(false);
+    }
+  };
+
+  const handleStripeDisconnect = async () => {
+    setIsStripeActionLoading(true);
+    try {
+      await reservation.disconnectStripe();
+      showToast('Compte Stripe déconnecté', 'success');
+    } catch (error: any) {
+      showToast(error?.response?.data?.error || 'Erreur lors de la déconnexion', 'error');
+    } finally {
+      setIsStripeActionLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -154,6 +211,11 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
       </View>
     );
   }
+
+  const stripe = reservation.stripeStatus;
+  const isStripeConnected = stripe?.connected ?? false;
+  const isStripeProfileIncomplete = isStripeConnected && (!stripe?.chargesEnabled || !stripe?.payoutsEnabled);
+  const isStripeFullyConnected = isStripeConnected && !!stripe?.chargesEnabled && !!stripe?.payoutsEnabled;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -308,15 +370,6 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
               </View>
             </View>
 
-            <View style={styles.divider} />
-
-            <SettingSwitch
-              label="Confirmation automatique"
-              description="Les réservations sont confirmées sans action manuelle"
-              value={form.autoConfirm}
-              onChange={(v) => updateField('autoConfirm', v)}
-            />
-
             <View style={styles.inlineRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.constraintLabel}>Délai d'annulation</Text>
@@ -359,12 +412,6 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
               description="Recevoir un email à chaque nouvelle réservation"
               value={form.notifyProfessionalOnNewReservation}
               onChange={(v) => updateField('notifyProfessionalOnNewReservation', v)}
-            />
-            <SettingSwitch
-              label="Confirmation"
-              description="Recevoir un email quand une réservation est confirmée"
-              value={form.notifyProfessionalOnConfirmation}
-              onChange={(v) => updateField('notifyProfessionalOnConfirmation', v)}
             />
             <SettingSwitch
               label="Annulation"
@@ -432,23 +479,144 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
               maxLength={2000}
             />
             <Text style={styles.charCount}>{form.customEmailMessage.length} / 2000</Text>
+          </View>
+        </View>
+      </View>
 
-            <View style={styles.divider} />
+      {/* Row 3: Stripe Connect + Garantie no-show */}
+      <View style={[styles.row, isCompact && styles.rowCompact]}>
 
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionIconWrap}>
-                <CreditCard size={18} color="#10B981" />
-              </View>
-              <View>
-                <Text style={styles.groupLabel}>Paiement</Text>
-              </View>
+        {/* Compte Stripe */}
+        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconWrap, { backgroundColor: '#F0F0FF' }]}>
+              <Link2 size={18} color="#6366F1" />
             </View>
+            <View>
+              <View style={tooltipStyles.titleRow}>
+                <Text style={styles.sectionTitle}>Compte Stripe</Text>
+                <SettingsTooltip tooltipKey="stripe" visible={visibleTooltip} onToggle={setVisibleTooltip} />
+              </View>
+              <Text style={styles.sectionSubtitle}>Encaissez les frais no-show via Stripe</Text>
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            {isStripeActionLoading ? (
+              <ActivityIndicator size="small" color="#6366F1" style={{ alignSelf: 'flex-start' }} />
+            ) : (
+              <>
+                <View style={styles.stripeStatusRow}>
+                  <View style={[
+                    styles.stripeStatusBadge,
+                    isStripeFullyConnected && { backgroundColor: '#F0FDF4' },
+                    isStripeProfileIncomplete && { backgroundColor: '#FFFBEB' },
+                    !isStripeConnected && { backgroundColor: '#F1F5F9' },
+                  ]}>
+                    <View style={[
+                      styles.stripeStatusDot,
+                      isStripeFullyConnected && { backgroundColor: '#10B981' },
+                      isStripeProfileIncomplete && { backgroundColor: '#F59E0B' },
+                      !isStripeConnected && { backgroundColor: '#94A3B8' },
+                    ]} />
+                    <Text style={[
+                      styles.stripeStatusText,
+                      isStripeFullyConnected && { color: '#10B981' },
+                      isStripeProfileIncomplete && { color: '#D97706' },
+                      !isStripeConnected && { color: '#64748B' },
+                    ]}>
+                      {isStripeFullyConnected ? 'Connecté' : isStripeProfileIncomplete ? 'Profil incomplet' : 'Non connecté'}
+                    </Text>
+                  </View>
+                </View>
+
+                {isStripeConnected && stripe?.accountId && (
+                  <Text style={styles.stripeAccountId}>ID : {stripe.accountId}</Text>
+                )}
+
+                {isStripeFullyConnected && (
+                  <Pressable style={styles.stripeDisconnectButton} onPress={handleStripeDisconnect}>
+                    <Text style={styles.stripeDisconnectText}>Déconnecter</Text>
+                  </Pressable>
+                )}
+
+                {isStripeProfileIncomplete && (
+                  <Pressable style={styles.stripeConnectButton} onPress={handleStripeConnect}>
+                    <Text style={styles.stripeConnectText}>Compléter mon profil Stripe</Text>
+                  </Pressable>
+                )}
+
+                {!isStripeConnected && (
+                  <Pressable style={styles.stripeConnectButton} onPress={handleStripeConnect}>
+                    <Text style={styles.stripeConnectText}>Relier mon compte Stripe</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Garantie no-show */}
+        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconWrap, { backgroundColor: '#FFF7ED' }]}>
+              <Shield size={18} color="#F97316" />
+            </View>
+            <View>
+              <View style={tooltipStyles.titleRow}>
+                <Text style={styles.sectionTitle}>Garantie no-show</Text>
+                <SettingsTooltip tooltipKey="noshow" visible={visibleTooltip} onToggle={setVisibleTooltip} />
+              </View>
+              <Text style={styles.sectionSubtitle}>Protégez-vous contre les absences</Text>
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
             <SettingSwitch
               label="Empreinte CB requise"
-              description="Demander une empreinte de carte bancaire pour confirmer la réservation"
+              description="Demander une carte bancaire pour confirmer la réservation"
               value={form.requireCardGuarantee}
               onChange={(v) => updateField('requireCardGuarantee', v)}
             />
+
+            {form.requireCardGuarantee && !isStripeConnected && (
+              <View style={styles.stripeWarning}>
+                <Text style={styles.stripeWarningText}>
+                  Reliez d'abord votre compte Stripe pour activer cette fonctionnalité.
+                </Text>
+              </View>
+            )}
+
+            {form.requireCardGuarantee && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.inlineRow}>
+                  <View style={styles.inlineFieldHalf}>
+                    <Text style={styles.fieldLabel}>Montant en cas de no-show</Text>
+                    <View style={styles.amountInputRow}>
+                      <TextInput
+                        style={[styles.textInput, { flex: 1 }]}
+                        value={form.noShowFeeAmountEur}
+                        onChangeText={(v) => updateField('noShowFeeAmountEur', v.replace(',', '.'))}
+                        placeholder="00.00"
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="decimal-pad"
+                      />
+                      <Text style={styles.constraintUnit}>€</Text>
+                    </View>
+                  </View>
+                  <View style={styles.inlineFieldHalf}>
+                    <Text style={styles.fieldLabel}>Devise</Text>
+                    <StyledSelect
+                      value={form.noShowFeeCurrency}
+                      onChange={(v) => updateField('noShowFeeCurrency', v)}
+                      options={[{ label: 'EUR — Euro', value: 'eur' }]}
+                      disabled
+                    />
+                  </View>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </View>
@@ -458,6 +626,42 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
 }
 
 // === Sub-components ===
+
+interface SelectOption { label: string; value: string; }
+
+function StyledSelect({ value, onChange, options, disabled }: { value: string; onChange: (v: string) => void; options: SelectOption[]; disabled?: boolean }) {
+  if (Platform.OS === 'web') {
+    if (disabled) {
+      const label = options.find(o => o.value === value)?.label ?? value;
+      return (
+        <View style={{ height: 38, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#F8FAFC', paddingHorizontal: 10, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 13, color: '#64748B' }}>{label}</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={{ position: 'relative' }}>
+        <select
+          value={value}
+          onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
+          style={{ height: 38, width: '100%', paddingLeft: 10, paddingRight: 32, fontSize: 13, color: '#1E293B', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, outline: 'none', appearance: 'none', cursor: 'pointer' } as any}
+        >
+          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' } as any}>
+          <ChevronDown size={14} color="#64748B" />
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#F8FAFC', overflow: 'hidden' }}>
+      <Picker selectedValue={value} onValueChange={onChange} enabled={!disabled} style={{ height: 40 }}>
+        {options.map(o => <Picker.Item key={o.value} label={o.label} value={o.value} />)}
+      </Picker>
+    </View>
+  );
+}
 
 function LabeledInput({ label, value, onChange, placeholder, keyboardType, autoCapitalize }: {
   label: string;
@@ -610,6 +814,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#475569',
+    marginBottom: 6,
   },
   textInput: {
     backgroundColor: '#F8FAFC',
@@ -701,6 +906,94 @@ const styles = StyleSheet.create({
   },
   charCount: { fontSize: 11, color: '#94A3B8', textAlign: 'right', marginTop: 4 },
 
+  // Stripe Connect
+  stripeStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stripeStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  stripeStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  stripeStatusText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  stripeAccountId: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
+  },
+  stripeConnectButton: {
+    backgroundColor: '#6366F1',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignSelf: 'flex-start',
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  stripeConnectText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  stripeDisconnectButton: {
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  stripeDisconnectText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  stripeWarning: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  stripeWarningText: {
+    fontSize: 13,
+    color: '#D97706',
+  },
+
+  // No-show fee
+  amountInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pickerContainer: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 40,
+    ...(Platform.OS === 'web' && {
+      paddingHorizontal: 8,
+      fontSize: 13,
+      borderWidth: 0,
+    }),
+  },
 });
 
 // === Tooltip ===

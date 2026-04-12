@@ -18,6 +18,7 @@ import {
   ReservationApiListResponse,
   ReservationActivationResponse,
   ReservationTokenResponse,
+  StripeConnectStatus,
 } from '~/types/reservation.types';
 import { BaseApiService } from './base.api';
 
@@ -278,9 +279,10 @@ class ReservationApiService {
     return response.data.data;
   }
 
-  async noShowReservation(id: string): Promise<Reservation> {
+  async noShowReservation(id: string, charge?: boolean): Promise<Reservation> {
     const response = await this.axiosInstance.post<ReservationApiResponse<Reservation>>(
-      `/professionals/me/reservations/${id}/no-show`
+      `/professionals/me/reservations/${id}/no-show`,
+      charge !== undefined ? { charge } : undefined
     );
     return response.data.data;
   }
@@ -290,6 +292,27 @@ class ReservationApiService {
       `/professionals/me/reservations/${id}/complete`
     );
     return response.data.data;
+  }
+
+  // === Stripe Connect ===
+
+  async getStripeStatus(): Promise<StripeConnectStatus> {
+    const response = await this.axiosInstance.get<ReservationApiResponse<StripeConnectStatus>>(
+      '/professionals/me/stripe/connect/status'
+    );
+    return response.data.data;
+  }
+
+  async getStripeConnectLink(returnUrl: string): Promise<{ url: string }> {
+    const response = await this.axiosInstance.post<ReservationApiResponse<{ url: string }>>(
+      '/professionals/me/stripe/connect/link',
+      { returnUrl }
+    );
+    return response.data.data;
+  }
+
+  async disconnectStripe(): Promise<void> {
+    await this.axiosInstance.delete('/professionals/me/stripe/connect');
   }
 }
 

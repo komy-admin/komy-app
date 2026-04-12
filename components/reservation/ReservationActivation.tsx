@@ -45,7 +45,7 @@ export function ReservationActivation({ reservation }: ReservationActivationProp
             'Page de réservation en ligne pour vos clients',
             'Gestion des services (déjeuner, dîner...)',
             'Horaires et fermetures exceptionnelles',
-            'Confirmation automatique ou manuelle',
+            'Gestion des confirmations par email',
           ].map((feature, index) => (
             <View key={index} style={styles.featureItem}>
               <CheckCircle size={16} color="#10B981" />

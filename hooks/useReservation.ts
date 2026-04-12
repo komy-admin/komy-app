@@ -8,7 +8,6 @@ import {
   ReservationService,
   ReservationSchedule,
   ReservationOverride,
-  ReservationSettings,
   ReservationProfessionalProfile,
   Reservation,
   CreateReservationServiceDto,
@@ -20,6 +19,7 @@ import {
   UpdateReservationSettingsDto,
   ReservationApiListResponse,
   ReservationWebSocketEvent,
+  StripeConnectStatus,
 } from '~/types/reservation.types';
 
 const RESERVATION_EVENT = 'reservation_event';
@@ -37,6 +37,16 @@ function getToastForEvent(event: ReservationWebSocketEvent): { message: string; 
       return { message: `No-show : ${name}`, type: 'error' };
     case 'reservation.completed':
       return { message: `Réservation de ${name} terminée`, type: 'success' };
+    case 'reservation.updated': {
+      const cardStatus = event.reservation.cardImprint?.status;
+      if (cardStatus === 'failed') {
+        return { message: `Échec empreinte bancaire pour ${name}`, type: 'error' };
+      }
+      if (cardStatus === 'authorized') {
+        return { message: `Empreinte bancaire autorisée pour ${name}`, type: 'success' };
+      }
+      return { message: `Réservation de ${name} mise à jour`, type: 'info' };
+    }
     default:
       return { message: `Événement réservation : ${name}`, type: 'info' };
   }
@@ -49,6 +59,7 @@ interface ReservationState {
   professionalId: string | null;
   slug: string | null;
   profile: ReservationProfessionalProfile | null;
+  stripeStatus: StripeConnectStatus | null;
   services: ReservationService[];
   schedules: ReservationSchedule[];
   overrides: ReservationOverride[];
@@ -58,6 +69,7 @@ interface ReservationState {
 
 export const useReservation = () => {
   const user = useSelector((state: RootState) => state.session.user);
+  const sessionToken = useSelector((state: RootState) => state.session.sessionToken);
   const restaurantId = user?.accountId || '';
   const { showToast } = useToast();
   const socketContext = useContext(SocketContext);
@@ -69,6 +81,7 @@ export const useReservation = () => {
     professionalId: null,
     slug: null,
     profile: null,
+    stripeStatus: null,
     services: [],
     schedules: [],
     overrides: [],
@@ -76,7 +89,6 @@ export const useReservation = () => {
     reservationsMeta: null,
   });
 
-  const initialized = useRef(false);
   const lastReservationParams = useRef<{ date?: string; status?: string; serviceId?: string; page?: number; limit?: number } | undefined>(undefined);
 
   // === INITIALIZATION: Fetch token from fork-it-api ===
@@ -115,11 +127,10 @@ export const useReservation = () => {
   }, [restaurantId]);
 
   useEffect(() => {
-    if (!initialized.current && restaurantId) {
-      initialized.current = true;
+    if (restaurantId && sessionToken) {
       initialize();
     }
-  }, [initialize, restaurantId]);
+  }, [initialize, restaurantId, sessionToken]);
 
   // === ACTIVATION ===
 
@@ -148,6 +159,7 @@ export const useReservation = () => {
         professionalId: null,
         slug: null,
         profile: null,
+        stripeStatus: null,
         services: [],
         schedules: [],
         overrides: [],
@@ -323,7 +335,7 @@ export const useReservation = () => {
     const reservation = await reservationApiService.confirmReservation(id);
     setState(prev => ({
       ...prev,
-      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation } : r),
+      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation, cardImprint: reservation.cardImprint ?? r.cardImprint } : r),
     }));
     return reservation;
   }, []);
@@ -332,16 +344,16 @@ export const useReservation = () => {
     const reservation = await reservationApiService.cancelReservation(id, reason);
     setState(prev => ({
       ...prev,
-      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation } : r),
+      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation, cardImprint: reservation.cardImprint ?? r.cardImprint } : r),
     }));
     return reservation;
   }, []);
 
-  const noShowReservation = useCallback(async (id: string) => {
-    const reservation = await reservationApiService.noShowReservation(id);
+  const noShowReservation = useCallback(async (id: string, charge?: boolean) => {
+    const reservation = await reservationApiService.noShowReservation(id, charge);
     setState(prev => ({
       ...prev,
-      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation } : r),
+      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation, cardImprint: reservation.cardImprint ?? r.cardImprint } : r),
     }));
     return reservation;
   }, []);
@@ -350,9 +362,34 @@ export const useReservation = () => {
     const reservation = await reservationApiService.completeReservation(id);
     setState(prev => ({
       ...prev,
-      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation } : r),
+      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation, cardImprint: reservation.cardImprint ?? r.cardImprint } : r),
     }));
     return reservation;
+  }, []);
+
+  // === STRIPE CONNECT ===
+
+  const loadStripeStatus = useCallback(async () => {
+    try {
+      const stripeStatus = await reservationApiService.getStripeStatus();
+      setState(prev => ({ ...prev, stripeStatus }));
+      return stripeStatus;
+    } catch (error) {
+      console.error('Error loading Stripe status:', error);
+      throw error;
+    }
+  }, []);
+
+  const getStripeConnectLink = useCallback(async (returnUrl: string) => {
+    return reservationApiService.getStripeConnectLink(returnUrl);
+  }, []);
+
+  const disconnectStripe = useCallback(async () => {
+    await reservationApiService.disconnectStripe();
+    setState(prev => ({
+      ...prev,
+      stripeStatus: { connected: false, accountId: null, chargesEnabled: false, payoutsEnabled: false },
+    }));
   }, []);
 
   // === WEBSOCKET: écoute temps réel des événements de réservation ===
@@ -398,17 +435,14 @@ export const useReservation = () => {
         notes: resData.notes,
         cancellationReason: resData.cancellationReason,
         cancelledAt: resData.cancelledAt,
+        cardImprint: resData.cardImprint ?? null,
         createdAt: resData.createdAt,
         updatedAt: resData.updatedAt,
       };
 
-
-      // Mise à jour du state
       if (data.event === 'reservation.created') {
-        // Recharger depuis l'API pour respecter les filtres actifs
         loadReservations(lastReservationParams.current).catch(() => {});
       } else {
-        // Mise à jour en place du statut pour les autres events
         setState(prev => ({
           ...prev,
           reservations: prev.reservations.map(r =>
@@ -460,6 +494,11 @@ export const useReservation = () => {
 
     // Settings
     updateSettings,
+
+    // Stripe Connect
+    loadStripeStatus,
+    getStripeConnectLink,
+    disconnectStripe,
 
     // Reservations
     loadReservations,
