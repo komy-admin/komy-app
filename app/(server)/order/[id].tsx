@@ -114,15 +114,15 @@ export default function OrderDetailPage() {
   }, [order, updateOrderStatus, showToast]);
 
   // Gestion de la suppression de lignes
-  const handleDeleteOrderLines = useCallback(async (lineIds: string[]) => {
+  const handleDeleteOrderLines = useCallback(async (lineIds: string[], reason?: string, notes?: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       if (lineIds.length === 1) {
-        await deleteOrderLine(lineIds[0]);
+        await deleteOrderLine(lineIds[0], reason, notes);
         showToast('Article supprimé avec succès', 'success');
       } else {
-        await deleteOrderLines(lineIds);
+        await deleteOrderLines(lineIds, reason, notes);
         showToast(`${lineIds.length} articles supprimés`, 'success');
       }
 

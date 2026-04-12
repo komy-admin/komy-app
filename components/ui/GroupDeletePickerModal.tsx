@@ -1,15 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { Minus, Plus } from 'lucide-react-native';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { Status } from '~/types/status.enum';
 import { getStatusText, getStatusTextColor, getStatusBackgroundColor } from '~/lib/status.utils';
 
+export type VoidReason = 'correction' | 'unpaid' | 'offered' | 'other'
+
+const VOID_REASONS: { value: VoidReason; label: string }[] = [
+  { value: 'correction', label: 'Erreur de commande' },
+  { value: 'unpaid', label: 'Impayé' },
+  { value: 'offered', label: 'Offert' },
+  { value: 'other', label: 'Autre raison' },
+]
+
 interface GroupDeletePickerModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onConfirm: (quantity: number) => void;
+  onConfirm: (quantity: number, reason?: string, notes?: string) => void;
   itemName: string;
   max: number;
   /** Si renseigné, affiche un avertissement avec le statut actuel */
@@ -26,9 +35,17 @@ export function GroupDeletePickerModal({
 }: GroupDeletePickerModalProps) {
   const { renderPanel, clearPanel } = usePanelPortal();
   const [quantity, setQuantity] = useState(max);
+  const [selectedReason, setSelectedReason] = useState<VoidReason | null>(null);
+  const [notes, setNotes] = useState('');
+
+  const requiresReason = status && status !== Status.DRAFT;
 
   useEffect(() => {
-    if (isVisible) setQuantity(max);
+    if (isVisible) {
+      setQuantity(max);
+      setSelectedReason(null);
+      setNotes('');
+    }
   }, [isVisible, max]);
 
   const handleClose = useCallback(() => {
@@ -38,8 +55,12 @@ export function GroupDeletePickerModal({
 
   const handleConfirm = useCallback(() => {
     clearPanel();
-    onConfirm(quantity);
-  }, [clearPanel, onConfirm, quantity]);
+    onConfirm(
+      quantity,
+      requiresReason ? (selectedReason || undefined) : undefined,
+      requiresReason && selectedReason === 'other' ? notes : undefined
+    );
+  }, [clearPanel, onConfirm, quantity, requiresReason, selectedReason, notes]);
 
   const handleDecrement = useCallback(() => {
     setQuantity(prev => Math.max(1, prev - 1));
@@ -49,6 +70,8 @@ export function GroupDeletePickerModal({
     setQuantity(prev => Math.min(max, prev + 1));
   }, [max]);
 
+  const canConfirm = !requiresReason || (selectedReason && (selectedReason !== 'other' || notes.trim()));
+
   useEffect(() => {
     if (isVisible) {
       renderPanel(
@@ -57,6 +80,12 @@ export function GroupDeletePickerModal({
           max={max}
           quantity={quantity}
           status={status}
+          requiresReason={!!requiresReason}
+          selectedReason={selectedReason}
+          notes={notes}
+          canConfirm={!!canConfirm}
+          onReasonSelect={setSelectedReason}
+          onNotesChange={setNotes}
           onClose={handleClose}
           onConfirm={handleConfirm}
           onDecrement={handleDecrement}
@@ -66,7 +95,7 @@ export function GroupDeletePickerModal({
     } else {
       clearPanel();
     }
-  }, [isVisible, itemName, max, quantity, status, handleClose, handleConfirm, handleDecrement, handleIncrement, renderPanel, clearPanel]);
+  }, [isVisible, itemName, max, quantity, status, requiresReason, selectedReason, notes, canConfirm, handleClose, handleConfirm, handleDecrement, handleIncrement, renderPanel, clearPanel]);
 
   useEffect(() => {
     return () => clearPanel();
@@ -80,6 +109,12 @@ function GroupDeletePickerContent({
   max,
   quantity,
   status,
+  requiresReason,
+  selectedReason,
+  notes,
+  canConfirm,
+  onReasonSelect,
+  onNotesChange,
   onClose,
   onConfirm,
   onDecrement,
@@ -89,6 +124,12 @@ function GroupDeletePickerContent({
   max: number;
   quantity: number;
   status?: Status;
+  requiresReason: boolean;
+  selectedReason: VoidReason | null;
+  notes: string;
+  canConfirm: boolean;
+  onReasonSelect: (reason: VoidReason) => void;
+  onNotesChange: (text: string) => void;
   onClose: () => void;
   onConfirm: () => void;
   onDecrement: () => void;
@@ -128,11 +169,55 @@ function GroupDeletePickerContent({
           </View>
         )}
 
+        {/* Reason picker (only for non-draft items) */}
+        {requiresReason && (
+          <View style={styles.reasonSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Motif de suppression</Text>
+            </View>
+            <View style={styles.reasonList}>
+              {VOID_REASONS.map((reason) => {
+                const isSelected = selectedReason === reason.value;
+                return (
+                  <Pressable
+                    key={reason.value}
+                    onPress={() => onReasonSelect(reason.value)}
+                    style={[
+                      styles.reasonButton,
+                      isSelected && styles.reasonButtonSelected,
+                    ]}
+                  >
+                    <Text style={[
+                      styles.reasonText,
+                      isSelected && styles.reasonTextSelected,
+                    ]}>
+                      {reason.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {selectedReason === 'other' && (
+              <View style={styles.notesContainer}>
+                <TextInput
+                  placeholder="Précisez la raison..."
+                  value={notes}
+                  onChangeText={onNotesChange}
+                  style={styles.notesInput}
+                  multiline
+                  numberOfLines={2}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Quantity picker */}
         {max > 1 && (
           <View style={styles.quantitySection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Quantit&#xE9;</Text>
+              <Text style={styles.sectionTitle}>Quantité</Text>
             </View>
             <View style={styles.pickerRow}>
               <Pressable
@@ -163,9 +248,11 @@ function GroupDeletePickerContent({
         <View style={styles.deleteSection}>
           <Pressable
             onPress={onConfirm}
+            disabled={!canConfirm}
             style={({ pressed }) => [
               styles.deleteButton,
-              pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+              !canConfirm && styles.deleteButtonDisabled,
+              pressed && canConfirm && { opacity: 0.8, transform: [{ scale: 0.98 }] },
             ]}
           >
             <Text style={styles.deleteButtonText}>Confirmer la suppression</Text>
@@ -254,12 +341,55 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
   },
-  // Quantity
-  quantitySection: {
+  // Reason
+  reasonSection: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
+  reasonList: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  reasonButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  reasonButtonSelected: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
+  },
+  reasonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  reasonTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  notesContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#374151',
+    backgroundColor: '#FFFFFF',
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  // Section header
   sectionHeader: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -271,6 +401,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  // Quantity
+  quantitySection: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   pickerRow: {
     flexDirection: 'row',
@@ -327,6 +463,10 @@ const styles = StyleSheet.create({
       cursor: 'pointer',
       transition: 'all 0.12s ease',
     } as any : {}),
+  },
+  deleteButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+    ...(Platform.OS === 'web' ? { cursor: 'default' as any } : {}),
   },
   deleteButtonText: {
     fontSize: 16,

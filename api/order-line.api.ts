@@ -92,12 +92,22 @@ export class OrderLineApiService extends BaseApiService<OrderLine> {
   }
 
   /**
+   * Supprimer une ligne avec motif optionnel
+   */
+  async deleteLine(orderLineId: string, reason?: string, notes?: string): Promise<void> {
+    const params: Record<string, string> = {}
+    if (reason) params.reason = reason
+    if (notes) params.notes = notes
+    await this.axiosInstance.delete(`${this.endpoint}/${orderLineId}`, { params })
+  }
+
+  /**
    * Supprimer plusieurs lignes en une fois
    */
-  async deleteLines(orderLineIds: string[]): Promise<{ deletedCount: number; deletedIds: string[] }> {
+  async deleteLines(orderLineIds: string[], reason?: string, notes?: string): Promise<{ deletedCount: number; deletedIds: string[] }> {
     try {
       const response = await this.axiosInstance.delete<{ deletedCount: number; deletedIds: string[] }>(`${this.endpoint}/bulk`, {
-        data: { orderLineIds }
+        data: { orderLineIds, reason, notes }
       });
       return response.data;
     } catch (error) {

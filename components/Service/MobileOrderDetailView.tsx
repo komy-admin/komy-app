@@ -16,7 +16,7 @@ interface MobileOrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
   onStatusUpdate?: (orderLines: OrderLine[], status: Status) => Promise<void>;
-  onDeleteOrderLines?: (orderLineIds: string[]) => Promise<void>;
+  onDeleteOrderLines?: (orderLineIds: string[], reason?: string, notes?: string) => Promise<void>;
 }
 
 // Wrapper mobile qui utilise directement AdminOrderDetailView
@@ -29,10 +29,10 @@ export default function MobileOrderDetailView({
   const { showToast } = useToast();
 
   // Adapter les fonctions pour le format attendu par AdminOrderDetailView
-  const handleDeleteOrderLines = useCallback(async (orderLineIds: string[]) => {
+  const handleDeleteOrderLines = useCallback(async (orderLineIds: string[], reason?: string, notes?: string) => {
     try {
       if (onDeleteOrderLines) {
-        await onDeleteOrderLines(orderLineIds);
+        await onDeleteOrderLines(orderLineIds, reason, notes);
         showToast('Articles supprimés', 'success');
       }
     } catch (error) {
