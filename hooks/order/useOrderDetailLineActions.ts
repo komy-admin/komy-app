@@ -6,8 +6,8 @@ import { Status } from '~/types/status.enum';
 interface UseGroupActionsProps {
   selectedTableOrder: Order | null;
   handleBulkUpdateStatus: (lineIds: string[], itemIds: string[], status: Status) => Promise<void>;
-  handleDeleteLine: (id: string) => Promise<void>;
-  deleteOrderLines: (ids: string[]) => Promise<void>;
+  handleDeleteLine: (id: string, reason?: string, notes?: string) => Promise<void>;
+  deleteOrderLines: (ids: string[], reason?: string, notes?: string) => Promise<void>;
 }
 
 export function useOrderDetailLineActions({
@@ -133,7 +133,7 @@ export function useOrderDetailLineActions({
     });
   }, [selectedTableOrder, handleDeleteLine]);
 
-  const handleConfirmDeleteGroup = useCallback(async (quantity: number) => {
+  const handleConfirmDeleteGroup = useCallback(async (quantity: number, reason?: string, notes?: string) => {
     if (!deleteGroupData || !selectedTableOrder) return;
     const ids = deleteGroupData.indices
       .slice(0, quantity)
@@ -141,9 +141,9 @@ export function useOrderDetailLineActions({
       .filter(Boolean) as string[];
     setDeleteGroupData(null);
     if (ids.length === 1) {
-      await handleDeleteLine(ids[0]);
+      await handleDeleteLine(ids[0], reason, notes);
     } else if (ids.length > 1) {
-      await deleteOrderLines(ids);
+      await deleteOrderLines(ids, reason, notes);
     }
   }, [deleteGroupData, selectedTableOrder, handleDeleteLine, deleteOrderLines]);
 

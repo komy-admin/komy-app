@@ -262,7 +262,7 @@ const AdminOrderLineItem = ({
         />
       )}
 
-      {/* Modal de confirmation de suppression */}
+      {/* Modal de confirmation de suppression (articles draft) */}
       <DeleteConfirmationModal
         isVisible={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
@@ -274,6 +274,7 @@ const AdminOrderLineItem = ({
         entityType="l'article"
         usePortal={true}
       />
+
     </View>
   );
 };
@@ -298,7 +299,7 @@ const AdminMenuOrderGroup = ({
   isExpanded: boolean,
   onToggle: () => void,
   onDelete: () => void,
-  onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>,
+  onDeleteOrderLines: (orderLineIds: string[], reason?: string, notes?: string) => Promise<void>,
   onUpdateOrderLinesStatus?: (orderLines: any[], status: Status) => void,
   groupId: string,
   isMenuOpen: boolean,
@@ -575,7 +576,7 @@ const AdminOrderItemsGroup = ({
   orderItems: OrderLine[];
   isExpanded: boolean;
   onToggle: () => void;
-  onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>;
+  onDeleteOrderLines: (orderLineIds: string[], reason?: string, notes?: string) => Promise<void>;
   onUpdateOrderLinesStatus?: (orderLines: OrderLine[], status: Status) => void;
   onDeleteGroup?: (orderLines: OrderLine[]) => void;
   groupId: string;
@@ -790,7 +791,7 @@ const AdminOrderItemsGroup = ({
 interface AdminOrderDetailViewProps {
   order: Order;
   itemTypes: ItemType[];
-  onDeleteOrderLines: (orderLineIds: string[]) => Promise<void>;
+  onDeleteOrderLines: (orderLineIds: string[], reason?: string, notes?: string) => Promise<void>;
   onUpdateOrderLinesStatus?: (orderLines: OrderLine[], status: Status) => void;
 }
 

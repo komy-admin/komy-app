@@ -62,7 +62,7 @@ interface UseOrderStatusActionsProps {
     orderLineItemIds?: string[];
   }) => Promise<any>;
   deleteOrder: (orderId: string) => Promise<any>;
-  deleteOrderLine: (orderLineId: string) => Promise<any>;
+  deleteOrderLine: (orderLineId: string, reason?: string, notes?: string) => Promise<any>;
   showToast: (message: string, type: 'success' | 'error' | 'warning') => void;
   onCleanup: () => void;
 }
@@ -268,9 +268,13 @@ export const useOrderStatusActions = ({
 
   // --- Delete line ---
 
-  const handleDeleteLine = useCallback(async (orderLineId: string) => {
+  const handleDeleteLine = useCallback(async (
+    orderLineId: string,
+    reason?: string,
+    notes?: string
+  ) => {
     try {
-      await deleteOrderLine(orderLineId);
+      await deleteOrderLine(orderLineId, reason, notes);
       showToast('Ligne supprimée avec succès', 'success');
     } catch (error) {
       showApiError(error, showToast, 'Erreur lors de la suppression');

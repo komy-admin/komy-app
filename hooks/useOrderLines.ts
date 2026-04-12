@@ -59,9 +59,13 @@ export const useOrderLines = () => {
   /**
    * Supprimer une ligne de commande
    */
-  const deleteOrderLine = useCallback(async (orderLineId: string): Promise<void> => {
+  const deleteOrderLine = useCallback(async (
+    orderLineId: string,
+    reason?: string,
+    notes?: string
+  ): Promise<void> => {
     try {
-      await orderLineApiService.delete(orderLineId);
+      await orderLineApiService.deleteLine(orderLineId, reason, notes);
 
       dispatch(entitiesActions.deleteOrderLine({ orderLineId }));
     } catch (error) {
@@ -72,9 +76,13 @@ export const useOrderLines = () => {
   /**
    * Supprimer plusieurs lignes en une fois
    */
-  const deleteOrderLines = useCallback(async (orderLineIds: string[]): Promise<void> => {
+  const deleteOrderLines = useCallback(async (
+    orderLineIds: string[],
+    reason?: string,
+    notes?: string
+  ): Promise<void> => {
     try {
-      await orderLineApiService.deleteLines(orderLineIds);
+      await orderLineApiService.deleteLines(orderLineIds, reason, notes);
 
       dispatch(entitiesActions.deleteOrderLinesBatch({ orderLineIds }));
     } catch (error) {
