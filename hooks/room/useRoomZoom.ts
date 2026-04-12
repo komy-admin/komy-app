@@ -15,7 +15,7 @@
  *   Bornes symétriques basées sur la taille réelle de la room et du conteneur.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { SharedValue, useSharedValue } from 'react-native-reanimated';
 import { Gesture } from 'react-native-gesture-handler';
@@ -51,12 +51,14 @@ export const useRoomZoom = ({
   const savedTranslateY = useSharedValue(0);
   const savedScale = useSharedValue(initialZoom);
 
-  useEffect(() => {
-    if (initialZoom !== scale.value) {
-      scale.value = initialZoom;
-      savedScale.value = initialZoom;
-    }
-  }, [initialZoom]);
+  // Sync scale avec initialZoom de manière synchrone (avant le premier frame)
+  // Le ref pattern évite le délai d'un useEffect qui causerait un flash
+  const prevInitialZoomRef = useRef(initialZoom);
+  if (prevInitialZoomRef.current !== initialZoom) {
+    scale.value = initialZoom;
+    savedScale.value = initialZoom;
+    prevInitialZoomRef.current = initialZoom;
+  }
 
   // Pan RNGH avec limites
   // Deps : seuls editionMode et hasSelectedTable changent (SharedValues = refs stables)
