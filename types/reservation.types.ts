@@ -1,7 +1,26 @@
 // === RESERVATION TYPES ===
 // Types pour l'intégration avec reservation-api
 
-export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'no_show' | 'completed';
+export type ReservationStatus = 'pending' | 'pending_payment' | 'confirmed' | 'cancelled' | 'no_show' | 'completed';
+
+export type CardImprintStatus = 'pending' | 'authorized' | 'captured' | 'released' | 'failed';
+
+export interface CardImprint {
+  status: CardImprintStatus;
+  amount: number; // in cents
+  currency: string;
+  cardLast4?: string | null;
+  cardBrand?: string | null;
+  authorizedAt?: string | null;
+  capturedAt?: string | null;
+}
+
+export interface StripeConnectStatus {
+  connected: boolean;
+  accountId: string | null;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+}
 
 export interface ReservationService {
   id: string;
@@ -45,14 +64,14 @@ export interface ReservationSettings {
   maxAdvanceDays: number;
   minPartySize: number;
   maxPartySize: number;
-  autoConfirm: boolean;
   cancellationDeadlineHours: number;
   reminderEnabled: boolean;
   reminderHoursBefore: number;
   requireCardGuarantee: boolean;
+  noShowFeeAmount: number | null;
+  noShowFeeCurrency: string;
   customEmailMessage: string | null;
   notifyProfessionalOnNewReservation: boolean;
-  notifyProfessionalOnConfirmation: boolean;
   notifyProfessionalOnCancellation: boolean;
 }
 
@@ -89,6 +108,7 @@ export interface Reservation {
   notes?: string | null;
   cancellationReason?: string | null;
   cancelledAt?: string | null;
+  cardImprint?: CardImprint | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -147,14 +167,14 @@ export interface UpdateReservationSettingsDto {
   maxAdvanceDays?: number;
   minPartySize?: number;
   maxPartySize?: number;
-  autoConfirm?: boolean;
   cancellationDeadlineHours?: number;
   reminderEnabled?: boolean;
   reminderHoursBefore?: number;
   requireCardGuarantee?: boolean;
+  noShowFeeAmount?: number | null;
+  noShowFeeCurrency?: string;
   customEmailMessage?: string | null;
   notifyProfessionalOnNewReservation?: boolean;
-  notifyProfessionalOnConfirmation?: boolean;
   notifyProfessionalOnCancellation?: boolean;
 }
 
@@ -193,7 +213,8 @@ export type ReservationEventType =
   | 'reservation.confirmed'
   | 'reservation.cancelled'
   | 'reservation.no_show'
-  | 'reservation.completed';
+  | 'reservation.completed'
+  | 'reservation.updated';
 
 export interface ReservationWebSocketEvent {
   event: ReservationEventType;
@@ -211,6 +232,7 @@ export interface ReservationWebSocketEvent {
     cancelledAt: string | null;
     createdAt: string;
     updatedAt: string;
+    cardImprint?: CardImprint | null;
   };
   guest: {
     id: string;
