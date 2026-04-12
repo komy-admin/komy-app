@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#2A2E33',
     maxWidth: 280,
     textAlign: 'left',
