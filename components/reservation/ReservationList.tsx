@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
-import { ChevronLeft, ChevronRight, Check, X as XIcon, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, ChevronDown, X as XIcon, AlertTriangle, CheckCircle, CreditCard, MoreHorizontal } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '~/components/ToastProvider';
 import type {
@@ -9,8 +9,58 @@ import type {
   ReservationStatus,
 } from '~/types/reservation.types';
 
+interface FilterOption { label: string; value: string; }
+
+function FilterSelect({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: FilterOption[] }) {
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ position: 'relative' }}>
+        <select
+          value={value}
+          onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
+          style={{
+            height: 38,
+            width: '100%',
+            paddingLeft: 10,
+            paddingRight: 32,
+            fontSize: 13,
+            color: '#1E293B',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: 8,
+            outline: 'none',
+            appearance: 'none',
+            cursor: 'pointer',
+          } as any}
+        >
+          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' } as any}>
+          <ChevronDown size={14} color="#64748B" />
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#FFFFFF', overflow: 'hidden' }}>
+      <Picker selectedValue={value} onValueChange={onChange} style={{ height: 40 }}>
+        {options.map(o => <Picker.Item key={o.value} label={o.label} value={o.value} />)}
+      </Picker>
+    </View>
+  );
+}
+
+const IMPRINT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: 'Empreinte en attente', color: '#F59E0B', bg: '#FFFBEB' },
+  authorized: { label: 'Empreinte autorisée', color: '#6366F1', bg: '#EEF2FF' },
+  captured: { label: 'Débitée', color: '#EF4444', bg: '#FEF2F2' },
+  released: { label: 'Libérée', color: '#10B981', bg: '#F0FDF4' },
+  failed: { label: 'Échec empreinte', color: '#EF4444', bg: '#FEF2F2' },
+};
+
 const STATUS_CONFIG: Record<ReservationStatus, { label: string; color: string; bg: string }> = {
   pending: { label: 'En attente', color: '#F59E0B', bg: '#FFFBEB' },
+  pending_payment: { label: 'Attente paiement', color: '#6366F1', bg: '#EEF2FF' },
   confirmed: { label: 'Confirmée', color: '#10B981', bg: '#F0FDF4' },
   cancelled: { label: 'Annulée', color: '#EF4444', bg: '#FEF2F2' },
   no_show: { label: 'No-show', color: '#64748B', bg: '#F1F5F9' },
@@ -30,9 +80,8 @@ interface ReservationListProps {
     reservationsMeta: any;
     loadServices: () => Promise<ReservationService[]>;
     loadReservations: (params?: any) => Promise<any>;
-    confirmReservation: (id: string) => Promise<Reservation>;
     cancelReservation: (id: string, reason?: string) => Promise<Reservation>;
-    noShowReservation: (id: string) => Promise<Reservation>;
+    noShowReservation: (id: string, charge?: boolean) => Promise<Reservation>;
     completeReservation: (id: string) => Promise<Reservation>;
   };
 }
@@ -43,8 +92,8 @@ export function ReservationList({ reservation }: ReservationListProps) {
   const [cancelModalId, setCancelModalId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [noShowModalId, setNoShowModalId] = useState<string | null>(null);
-  const [confirmModalId, setConfirmModalId] = useState<string | null>(null);
   const [completeModalId, setCompleteModalId] = useState<string | null>(null);
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   // Filters
@@ -88,9 +137,12 @@ export function ReservationList({ reservation }: ReservationListProps) {
   }, [loadData]);
 
   const navigateDate = (direction: number) => {
-    const date = new Date(filterDate);
-    date.setDate(date.getDate() + direction);
-    setFilterDate(date.toISOString().split('T')[0]);
+    const [year, month, day] = filterDate.split('-').map(Number);
+    const date = new Date(year, month - 1, day + direction);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    setFilterDate(`${y}-${m}-${d}`);
     setCurrentPage(1);
   };
 
@@ -131,7 +183,7 @@ export function ReservationList({ reservation }: ReservationListProps) {
     setShowCalendar(true);
   };
 
-  const handleAction = async (id: string, action: 'confirm' | 'cancel' | 'no_show' | 'complete') => {
+  const handleAction = async (id: string, action: 'cancel' | 'no_show' | 'complete') => {
     if (action === 'cancel') {
       setCancelModalId(id);
       setCancelReason('');
@@ -139,10 +191,6 @@ export function ReservationList({ reservation }: ReservationListProps) {
     }
     if (action === 'no_show') {
       setNoShowModalId(id);
-      return;
-    }
-    if (action === 'confirm') {
-      setConfirmModalId(id);
       return;
     }
     if (action === 'complete') {
@@ -167,29 +215,14 @@ export function ReservationList({ reservation }: ReservationListProps) {
     }
   };
 
-  const handleConfirmNoShow = async () => {
+  const handleConfirmNoShow = async (charge: boolean) => {
     if (!noShowModalId) return;
     const id = noShowModalId;
     setNoShowModalId(null);
     setActionLoading(id);
     try {
-      await reservation.noShowReservation(id);
-      showToast('Marqué no-show', 'success');
-    } catch (error: any) {
-      showToast(error?.response?.data?.error || 'Erreur', 'error');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleConfirmConfirm = async () => {
-    if (!confirmModalId) return;
-    const id = confirmModalId;
-    setConfirmModalId(null);
-    setActionLoading(id);
-    try {
-      await reservation.confirmReservation(id);
-      showToast('Réservation confirmée', 'success');
+      await reservation.noShowReservation(id, charge);
+      showToast(charge ? 'No-show enregistré et débit effectué' : 'Marqué no-show', 'success');
     } catch (error: any) {
       showToast(error?.response?.data?.error || 'Erreur', 'error');
     } finally {
@@ -231,6 +264,8 @@ export function ReservationList({ reservation }: ReservationListProps) {
 
       {/* Date navigation with calendar */}
       <View style={styles.dateNavContainer}>
+        <View style={styles.dateNavSide} />
+
         <View style={styles.dateNav}>
           <Pressable onPress={() => navigateDate(-1)} style={styles.dateArrowButton}>
             <ChevronLeft size={20} color="#1E293B" />
@@ -244,15 +279,15 @@ export function ReservationList({ reservation }: ReservationListProps) {
             <ChevronRight size={20} color="#1E293B" />
           </Pressable>
         </View>
-      </View>
 
-      {!isToday && (
-        <View style={styles.todayRow}>
-          <Pressable onPress={() => { setFilterDate(today); setCurrentPage(1); }} style={styles.todayChip}>
-            <Text style={styles.todayChipText}>Revenir à aujourd'hui</Text>
-          </Pressable>
+        <View style={styles.dateNavSide}>
+          {!isToday && (
+            <Pressable onPress={() => { setFilterDate(today); setCurrentPage(1); }} style={styles.todayChip}>
+              <Text style={styles.todayChipText}>Revenir à aujourd'hui</Text>
+            </Pressable>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Calendar dropdown */}
       {showCalendar && (
@@ -308,38 +343,33 @@ export function ReservationList({ reservation }: ReservationListProps) {
 
       {/* Filters */}
       <View style={styles.filtersRow}>
-        <View style={[styles.filterField, { flex: 1 }]}>
+        <View style={styles.filterField}>
           <Text style={styles.filterLabel}>Statut</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={filterStatus}
-              onValueChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}
-              style={styles.picker}
-            >
-              <Picker.Item label="Tous" value="" />
-              <Picker.Item label="En attente" value="pending" />
-              <Picker.Item label="Confirmée" value="confirmed" />
-              <Picker.Item label="Annulée" value="cancelled" />
-              <Picker.Item label="No-show" value="no_show" />
-              <Picker.Item label="Terminée" value="completed" />
-            </Picker>
-          </View>
+          <FilterSelect
+            value={filterStatus}
+            onChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}
+            options={[
+              { label: 'Tous', value: '' },
+              { label: 'En attente', value: 'pending' },
+              { label: 'Attente paiement', value: 'pending_payment' },
+              { label: 'Confirmée', value: 'confirmed' },
+              { label: 'Annulée', value: 'cancelled' },
+              { label: 'No-show', value: 'no_show' },
+              { label: 'Terminée', value: 'completed' },
+            ]}
+          />
         </View>
 
-        <View style={[styles.filterField, { flex: 1 }]}>
+        <View style={styles.filterField}>
           <Text style={styles.filterLabel}>Service</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={filterServiceId}
-              onValueChange={(v) => { setFilterServiceId(v); setCurrentPage(1); }}
-              style={styles.picker}
-            >
-              <Picker.Item label="Tous" value="" />
-              {reservation.services.map(s => (
-                <Picker.Item key={s.id} label={s.name} value={s.id} />
-              ))}
-            </Picker>
-          </View>
+          <FilterSelect
+            value={filterServiceId}
+            onChange={(v) => { setFilterServiceId(v); setCurrentPage(1); }}
+            options={[
+              { label: 'Tous', value: '' },
+              ...reservation.services.map(s => ({ label: s.name, value: s.id })),
+            ]}
+          />
         </View>
 
         <Pressable
@@ -364,12 +394,12 @@ export function ReservationList({ reservation }: ReservationListProps) {
         <View style={styles.tableContainer}>
           {/* Header */}
           <View style={styles.tableHeader}>
-            <Text style={[styles.headerCell, { flex: 1 }]}>Heure</Text>
+            <Text style={[styles.headerCell, { flex: 0.8 }]}>Heure</Text>
             <Text style={[styles.headerCell, { flex: 2 }]}>Client</Text>
-            <Text style={[styles.headerCell, { flex: 1 }]}>Couverts</Text>
-            <Text style={[styles.headerCell, { flex: 1.5 }]}>Service</Text>
-            <Text style={[styles.headerCell, { flex: 1 }]}>Statut</Text>
-            <Text style={[styles.headerCell, { flex: 1.5 }]}>Actions</Text>
+            <Text style={[styles.headerCell, { flex: 0.6, textAlign: 'center' }]}>Cvts</Text>
+            <Text style={[styles.headerCell, { flex: 1.4 }]}>Service</Text>
+            <Text style={[styles.headerCell, { flex: 1.8 }]}>Statut</Text>
+            <Text style={[styles.headerCell, { flex: 1 }]}>Actions</Text>
           </View>
 
           {/* Rows */}
@@ -379,24 +409,27 @@ export function ReservationList({ reservation }: ReservationListProps) {
 
             return (
               <View key={r.id} style={styles.tableRow}>
-                <Text style={[styles.cell, { flex: 1, fontWeight: '600' }]}>
+                <Text style={[styles.cell, { flex: 0.8, fontWeight: '600' }]}>
                   {r.timeSlot}
                 </Text>
                 <View style={{ flex: 2 }}>
                   <Text style={styles.cell} numberOfLines={1}>
                     {r.guest.firstName} {r.guest.lastName}
                   </Text>
+                  {r.guest.phone ? (
+                    <Text style={styles.cellSub} numberOfLines={1}>{r.guest.phone}</Text>
+                  ) : null}
                   <Text style={styles.cellSub} numberOfLines={1}>{r.guest.email}</Text>
                 </View>
-                <Text style={[styles.cell, { flex: 1, textAlign: 'center' }]}>
+                <Text style={[styles.cell, { flex: 0.6, textAlign: 'center' }]}>
                   {r.partySize}
                 </Text>
-                <Text style={[styles.cell, { flex: 1.5 }, !r.serviceId && styles.deletedService]} numberOfLines={1}>
+                <Text style={[styles.cell, { flex: 1.4 }, !r.serviceId && styles.deletedService]} numberOfLines={1}>
                   {getServiceName(r.serviceId)}
                 </Text>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1.8 }}>
                   <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-                    <Text style={[styles.statusBadgeText, { color: status.color }]}>
+                    <Text style={[styles.statusBadgeText, { color: status.color }]} numberOfLines={1}>
                       {status.label}
                     </Text>
                   </View>
@@ -405,45 +438,31 @@ export function ReservationList({ reservation }: ReservationListProps) {
                       {r.cancellationReason}
                     </Text>
                   ) : null}
+                  {r.cardImprint && (() => {
+                    const imp = IMPRINT_STATUS_CONFIG[r.cardImprint.status];
+                    return (
+                      <View style={[styles.imprintBadge, { backgroundColor: imp?.bg || '#F1F5F9' }]}>
+                        <CreditCard size={10} color={imp?.color || '#64748B'} />
+                        <Text style={[styles.imprintBadgeText, { color: imp?.color || '#64748B' }]} numberOfLines={1}>
+                          {imp?.label}
+                        </Text>
+                        {r.cardImprint.cardLast4 ? (
+                          <Text style={styles.imprintCardInfo}>••••{r.cardImprint.cardLast4}</Text>
+                        ) : null}
+                      </View>
+                    );
+                  })()}
                 </View>
-                <View style={[styles.actionsCell, { flex: 1.5 }]}>
+                <View style={[styles.actionsCell, { flex: 1 }]}>
                   {isProcessing ? (
                     <ActivityIndicator size="small" color="#64748B" />
                   ) : (
-                    <>
-                      {r.status === 'pending' && (
-                        <Pressable
-                          style={[styles.actionButton, { backgroundColor: '#F0FDF4' }]}
-                          onPress={() => handleAction(r.id, 'confirm')}
-                        >
-                          <Check size={14} color="#10B981" />
-                        </Pressable>
-                      )}
-                      {(r.status === 'pending' || r.status === 'confirmed') && (
-                        <Pressable
-                          style={[styles.actionButton, { backgroundColor: '#FEF2F2' }]}
-                          onPress={() => handleAction(r.id, 'cancel')}
-                        >
-                          <XIcon size={14} color="#EF4444" />
-                        </Pressable>
-                      )}
-                      {r.status === 'confirmed' && (
-                        <>
-                          <Pressable
-                            style={[styles.actionButton, { backgroundColor: '#F1F5F9' }]}
-                            onPress={() => handleAction(r.id, 'no_show')}
-                          >
-                            <AlertTriangle size={14} color="#64748B" />
-                          </Pressable>
-                          <Pressable
-                            style={[styles.actionButton, { backgroundColor: '#EFF6FF' }]}
-                            onPress={() => handleAction(r.id, 'complete')}
-                          >
-                            <CheckCircle size={14} color="#3B82F6" />
-                          </Pressable>
-                        </>
-                      )}
-                    </>
+                    <Pressable
+                      style={styles.menuButton}
+                      onPress={() => setActionMenuId(r.id)}
+                    >
+                      <MoreHorizontal size={16} color="#64748B" />
+                    </Pressable>
                   )}
                 </View>
               </View>
@@ -493,35 +512,62 @@ export function ReservationList({ reservation }: ReservationListProps) {
       </Modal>
 
       {/* No-show confirmation modal */}
-      <Modal
-        visible={noShowModalId !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setNoShowModalId(null)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setNoShowModalId(null)}>
-          <Pressable style={styles.modalContent} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Marquer no-show</Text>
-            <Text style={styles.modalDescription}>
-              Êtes-vous sûr de vouloir marquer cette réservation comme no-show ?
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                style={styles.modalCancelButton}
-                onPress={() => setNoShowModalId(null)}
-              >
-                <Text style={styles.modalCancelButtonText}>Retour</Text>
+      {(() => {
+        const r = reservation.reservations.find(res => res.id === noShowModalId);
+        const hasImprint = r?.cardImprint?.status === 'authorized';
+        const amount = r?.cardImprint?.amount;
+        const currency = r?.cardImprint?.currency?.toUpperCase() || 'EUR';
+        return (
+          <Modal
+            visible={noShowModalId !== null}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setNoShowModalId(null)}
+          >
+            <Pressable style={styles.modalOverlay} onPress={() => setNoShowModalId(null)}>
+              <Pressable style={styles.modalContent} onPress={() => {}}>
+                <Text style={styles.modalTitle}>Marquer no-show</Text>
+                <Text style={styles.modalDescription}>
+                  {hasImprint
+                    ? `Le client ne s'est pas présenté. Souhaitez-vous débiter ${amount ? `${(amount / 100).toFixed(2)} ${currency}` : "l'empreinte"} enregistrée ?`
+                    : 'Êtes-vous sûr de vouloir marquer cette réservation comme no-show ?'}
+                </Text>
+                <View style={styles.modalActions}>
+                  <Pressable
+                    style={styles.modalCancelButton}
+                    onPress={() => setNoShowModalId(null)}
+                  >
+                    <Text style={styles.modalCancelButtonText}>Retour</Text>
+                  </Pressable>
+                  {hasImprint ? (
+                    <>
+                      <Pressable
+                        style={[styles.modalConfirmButton, { backgroundColor: '#64748B' }]}
+                        onPress={() => handleConfirmNoShow(false)}
+                      >
+                        <Text style={styles.modalConfirmButtonText}>Sans débit</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.modalConfirmButton, { backgroundColor: '#F97316' }]}
+                        onPress={() => handleConfirmNoShow(true)}
+                      >
+                        <Text style={styles.modalConfirmButtonText}>Débiter</Text>
+                      </Pressable>
+                    </>
+                  ) : (
+                    <Pressable
+                      style={[styles.modalConfirmButton, { backgroundColor: '#64748B' }]}
+                      onPress={() => handleConfirmNoShow(false)}
+                    >
+                      <Text style={styles.modalConfirmButtonText}>Confirmer no-show</Text>
+                    </Pressable>
+                  )}
+                </View>
               </Pressable>
-              <Pressable
-                style={[styles.modalConfirmButton, { backgroundColor: '#64748B' }]}
-                onPress={handleConfirmNoShow}
-              >
-                <Text style={styles.modalConfirmButtonText}>Confirmer no-show</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+            </Pressable>
+          </Modal>
+        );
+      })()}
 
       {/* Complete reservation modal */}
       <Modal
@@ -554,36 +600,89 @@ export function ReservationList({ reservation }: ReservationListProps) {
         </Pressable>
       </Modal>
 
-      {/* Confirm reservation modal */}
-      <Modal
-        visible={confirmModalId !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmModalId(null)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setConfirmModalId(null)}>
-          <Pressable style={styles.modalContent} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Confirmer la réservation</Text>
-            <Text style={styles.modalDescription}>
-              Êtes-vous sûr de vouloir confirmer cette réservation ?
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                style={styles.modalCancelButton}
-                onPress={() => setConfirmModalId(null)}
-              >
-                <Text style={styles.modalCancelButtonText}>Retour</Text>
+      {/* Action menu modal */}
+      {(() => {
+        const r = reservation.reservations.find(res => res.id === actionMenuId);
+        if (!r) return null;
+        const hasActions = r.status === 'pending' || r.status === 'confirmed';
+        return (
+          <Modal
+            visible={actionMenuId !== null}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setActionMenuId(null)}
+          >
+            <Pressable style={styles.modalOverlay} onPress={() => setActionMenuId(null)}>
+              <Pressable style={styles.actionMenuContent} onPress={() => {}}>
+                <View style={styles.actionMenuHeader}>
+                  <View>
+                    <Text style={styles.actionMenuName}>{r.guest.firstName} {r.guest.lastName}</Text>
+                    <Text style={styles.actionMenuSub}>{r.timeSlot} · {r.partySize} couvert{r.partySize > 1 ? 's' : ''}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: STATUS_CONFIG[r.status]?.bg }]}>
+                    <Text style={[styles.statusBadgeText, { color: STATUS_CONFIG[r.status]?.color }]}>
+                      {STATUS_CONFIG[r.status]?.label}
+                    </Text>
+                  </View>
+                </View>
+
+                {!hasActions ? (
+                  <Text style={styles.actionMenuEmpty}>Aucune action disponible</Text>
+                ) : (
+                  <View style={styles.actionMenuList}>
+                    {(r.status === 'pending' || r.status === 'confirmed') && (
+                      <Pressable
+                        style={[styles.actionMenuItem, { borderLeftColor: '#EF4444' }]}
+                        onPress={() => { setActionMenuId(null); handleAction(r.id, 'cancel'); }}
+                      >
+                        <View style={[styles.actionMenuIcon, { backgroundColor: '#FEF2F2' }]}>
+                          <XIcon size={16} color="#EF4444" />
+                        </View>
+                        <View style={styles.actionMenuItemText}>
+                          <Text style={styles.actionMenuItemLabel}>Annuler</Text>
+                          <Text style={styles.actionMenuItemDesc}>Annuler et notifier le client</Text>
+                        </View>
+                      </Pressable>
+                    )}
+                    {r.status === 'confirmed' && (
+                      <Pressable
+                        style={[styles.actionMenuItem, { borderLeftColor: '#64748B' }]}
+                        onPress={() => { setActionMenuId(null); handleAction(r.id, 'no_show'); }}
+                      >
+                        <View style={[styles.actionMenuIcon, { backgroundColor: '#F1F5F9' }]}>
+                          <AlertTriangle size={16} color="#64748B" />
+                        </View>
+                        <View style={styles.actionMenuItemText}>
+                          <Text style={styles.actionMenuItemLabel}>No-show</Text>
+                          <Text style={styles.actionMenuItemDesc}>Le client ne s'est pas présenté</Text>
+                        </View>
+                      </Pressable>
+                    )}
+                    {r.status === 'confirmed' && (
+                      <Pressable
+                        style={[styles.actionMenuItem, { borderLeftColor: '#3B82F6' }]}
+                        onPress={() => { setActionMenuId(null); handleAction(r.id, 'complete'); }}
+                      >
+                        <View style={[styles.actionMenuIcon, { backgroundColor: '#EFF6FF' }]}>
+                          <CheckCircle size={16} color="#3B82F6" />
+                        </View>
+                        <View style={styles.actionMenuItemText}>
+                          <Text style={styles.actionMenuItemLabel}>Terminer</Text>
+                          <Text style={styles.actionMenuItemDesc}>Marquer la réservation comme terminée</Text>
+                        </View>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
+
+                <Pressable style={styles.actionMenuClose} onPress={() => setActionMenuId(null)}>
+                  <Text style={styles.actionMenuCloseText}>Fermer</Text>
+                </Pressable>
               </Pressable>
-              <Pressable
-                style={[styles.modalConfirmButton, { backgroundColor: '#10B981' }]}
-                onPress={handleConfirmConfirm}
-              >
-                <Text style={styles.modalConfirmButtonText}>Confirmer</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+            </Pressable>
+          </Modal>
+        );
+      })()}
 
       {/* Pagination */}
       {reservation.reservationsMeta && reservation.reservationsMeta.lastPage > 1 && (
@@ -622,7 +721,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     marginBottom: 20,
-    position: 'relative',
+  },
+  dateNavSide: {
+    width: 160,
+    alignItems: 'flex-start',
   },
   dateNav: {
     flexDirection: 'row',
@@ -655,10 +757,6 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     textTransform: 'capitalize',
     ...(Platform.OS === 'web' && { userSelect: 'none' } as any),
-  },
-  todayRow: {
-    alignItems: 'center',
-    marginBottom: 12,
   },
   todayChip: {
     backgroundColor: '#EFF6FF',
@@ -768,23 +866,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginBottom: 24,
   },
-  filterField: {},
+  filterField: { width: 160 },
   filterLabel: { fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 4 },
-  pickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 40,
-    ...(Platform.OS === 'web' && {
-      paddingHorizontal: 8,
-      fontSize: 13,
-      borderWidth: 0,
-    }),
-  },
   clearButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -842,17 +925,49 @@ const styles = StyleSheet.create({
   actionsCell: {
     flexDirection: 'row',
     gap: 4,
+    alignItems: 'center',
   },
   actionButton: {
-    padding: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderRadius: 6,
     ...(Platform.OS === 'web' && { cursor: 'pointer' }),
   },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  actionButtonConfirm: { backgroundColor: '#F0FDF4' },
+  actionButtonCancel: { backgroundColor: '#FEF2F2' },
+  actionButtonCharge: { backgroundColor: '#FFF7ED' },
+  actionButtonNoShow: { backgroundColor: '#F1F5F9' },
+  actionButtonComplete: { backgroundColor: '#EFF6FF' },
   cancellationReason: {
     fontSize: 11,
     color: '#EF4444',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  imprintBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 5,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  imprintBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  imprintCardInfo: {
+    fontSize: 11,
+    color: '#94A3B8',
   },
 
   // Pagination
@@ -939,5 +1054,102 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+
+  // Menu button (··· in table row)
+  menuButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignSelf: 'center',
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+
+  // Action menu modal
+  actionMenuContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 0,
+    width: '90%',
+    maxWidth: 420,
+    overflow: 'hidden',
+  },
+  actionMenuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+  },
+  actionMenuName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  actionMenuSub: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  actionMenuEmpty: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+    paddingVertical: 24,
+  },
+  actionMenuList: {
+    paddingVertical: 8,
+  },
+  actionMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
+    marginHorizontal: 12,
+    marginVertical: 3,
+    borderRadius: 10,
+    backgroundColor: '#FAFAFA',
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  actionMenuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionMenuItemText: {
+    flex: 1,
+  },
+  actionMenuItemLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  actionMenuItemDesc: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  actionMenuClose: {
+    margin: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  actionMenuCloseText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
   },
 });

@@ -59,13 +59,12 @@ const GUIDE_STEPS = [
     description: 'Personnalisez les règles de réservation et les communications.',
     details: [
       'Dans l\'onglet Paramètres, configurez les contraintes : délai minimum de réservation, taille des groupes acceptés.',
-      'Activez ou non la confirmation automatique. Si désactivée, le client devra confirmer sa réservation via un email de validation.',
       'Définissez le délai d\'annulation : passé ce délai, le client ne peut plus annuler en ligne.',
       'Configurez les notifications : choisissez quels emails vous recevez (nouvelles réservations, confirmations, annulations).',
       'Activez les rappels clients pour réduire les no-shows : un email est envoyé automatiquement avant la réservation.',
       'Personnalisez le message inclus dans les emails envoyés à vos clients.',
     ],
-    tip: 'Avec la confirmation automatique, le client n\'a pas besoin de valider sa réservation par email. Sans elle, un email de confirmation sera envoyé et le client devra cliquer pour valider.',
+    tip: 'Passé le délai d\'annulation, le client ne peut plus annuler en ligne. Pensez à bien configurer ce délai selon votre politique.',
   },
   {
     number: '5',
