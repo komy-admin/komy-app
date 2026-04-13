@@ -1,13 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
-import { ChevronLeft, ChevronRight, ChevronDown, X as XIcon, AlertTriangle, CheckCircle, CreditCard, MoreHorizontal } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, ChevronDown, X as XIcon, AlertTriangle, CheckCircle, CreditCard, MoreHorizontal, Plus, RefreshCw } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '~/components/ToastProvider';
 import type {
   Reservation,
   ReservationService,
+  ReservationSchedule,
   ReservationStatus,
+  CreateManualReservationDto,
 } from '~/types/reservation.types';
+import { CreateReservationModal } from './CreateReservationModal';
 
 interface FilterOption { label: string; value: string; }
 
@@ -76,13 +79,17 @@ const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 interface ReservationListProps {
   reservation: {
     services: ReservationService[];
+    schedules: ReservationSchedule[];
     reservations: Reservation[];
     reservationsMeta: any;
     loadServices: () => Promise<ReservationService[]>;
+    loadSchedules: () => Promise<ReservationSchedule[]>;
     loadReservations: (params?: any) => Promise<any>;
+    createReservation: (data: CreateManualReservationDto) => Promise<Reservation>;
     cancelReservation: (id: string, reason?: string) => Promise<Reservation>;
     noShowReservation: (id: string, charge?: boolean) => Promise<Reservation>;
     completeReservation: (id: string) => Promise<Reservation>;
+    retryCharge: (id: string) => Promise<Reservation>;
   };
 }
 
@@ -94,6 +101,7 @@ export function ReservationList({ reservation }: ReservationListProps) {
   const [noShowModalId, setNoShowModalId] = useState<string | null>(null);
   const [completeModalId, setCompleteModalId] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const { showToast } = useToast();
 
   // Filters
@@ -117,7 +125,7 @@ export function ReservationList({ reservation }: ReservationListProps) {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      await reservation.loadServices();
+      await Promise.all([reservation.loadServices(), reservation.loadSchedules()]);
       await reservation.loadReservations({
         date: filterDate || undefined,
         status: filterStatus || undefined,
@@ -221,10 +229,27 @@ export function ReservationList({ reservation }: ReservationListProps) {
     setNoShowModalId(null);
     setActionLoading(id);
     try {
-      await reservation.noShowReservation(id, charge);
-      showToast(charge ? 'No-show enregistré et débit effectué' : 'Marqué no-show', 'success');
+      const result = await reservation.noShowReservation(id, charge);
+      if (charge && result.cardImprint?.status === 'failed') {
+        showToast('No-show enregistré mais le débit a échoué', 'warning');
+      } else {
+        showToast(charge ? 'No-show enregistré et débit effectué' : 'Marqué no-show', 'success');
+      }
     } catch (error: any) {
       showToast(error?.response?.data?.error || 'Erreur', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRetryCharge = async (id: string) => {
+    setActionMenuId(null);
+    setActionLoading(id);
+    try {
+      await reservation.retryCharge(id);
+      showToast('Débit effectué', 'success');
+    } catch (error: any) {
+      showToast(error?.response?.data?.error?.message || 'Échec du débit', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -260,7 +285,13 @@ export function ReservationList({ reservation }: ReservationListProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.pageTitle}>Réservations</Text>
+      <View style={styles.pageTitleRow}>
+        <Text style={styles.pageTitle}>Réservations</Text>
+        <Pressable style={styles.createButton} onPress={() => setShowCreateModal(true)}>
+          <Plus size={16} color="#FFFFFF" />
+          <Text style={styles.createButtonText}>Nouvelle réservation</Text>
+        </Pressable>
+      </View>
 
       {/* Date navigation with calendar */}
       <View style={styles.dateNavContainer}>
@@ -440,11 +471,14 @@ export function ReservationList({ reservation }: ReservationListProps) {
                   ) : null}
                   {r.cardImprint && (() => {
                     const imp = IMPRINT_STATUS_CONFIG[r.cardImprint.status];
+                    const imprintLabel = r.status === 'no_show' && r.cardImprint.status === 'failed'
+                      ? 'Débit échoué'
+                      : imp?.label;
                     return (
                       <View style={[styles.imprintBadge, { backgroundColor: imp?.bg || '#F1F5F9' }]}>
                         <CreditCard size={10} color={imp?.color || '#64748B'} />
                         <Text style={[styles.imprintBadgeText, { color: imp?.color || '#64748B' }]} numberOfLines={1}>
-                          {imp?.label}
+                          {imprintLabel}
                         </Text>
                         {r.cardImprint.cardLast4 ? (
                           <Text style={styles.imprintCardInfo}>••••{r.cardImprint.cardLast4}</Text>
@@ -604,7 +638,7 @@ export function ReservationList({ reservation }: ReservationListProps) {
       {(() => {
         const r = reservation.reservations.find(res => res.id === actionMenuId);
         if (!r) return null;
-        const hasActions = r.status === 'pending' || r.status === 'confirmed';
+        const hasActions = r.status === 'pending' || r.status === 'confirmed' || (r.status === 'no_show' && r.cardImprint?.status === 'failed');
         return (
           <Modal
             visible={actionMenuId !== null}
@@ -672,6 +706,20 @@ export function ReservationList({ reservation }: ReservationListProps) {
                         </View>
                       </Pressable>
                     )}
+                    {r.status === 'no_show' && r.cardImprint?.status === 'failed' && (
+                      <Pressable
+                        style={[styles.actionMenuItem, { borderLeftColor: '#F97316' }]}
+                        onPress={() => handleRetryCharge(r.id)}
+                      >
+                        <View style={[styles.actionMenuIcon, { backgroundColor: '#FFF7ED' }]}>
+                          <RefreshCw size={16} color="#F97316" />
+                        </View>
+                        <View style={styles.actionMenuItemText}>
+                          <Text style={styles.actionMenuItemLabel}>Retenter le débit</Text>
+                          <Text style={styles.actionMenuItemDesc}>Retenter le débit de l'empreinte bancaire</Text>
+                        </View>
+                      </Pressable>
+                    )}
                   </View>
                 )}
 
@@ -683,6 +731,15 @@ export function ReservationList({ reservation }: ReservationListProps) {
           </Modal>
         );
       })()}
+
+      {/* Create reservation modal */}
+      <CreateReservationModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        services={reservation.services}
+        schedules={reservation.schedules}
+        onSubmit={reservation.createReservation}
+      />
 
       {/* Pagination */}
       {reservation.reservationsMeta && reservation.reservationsMeta.lastPage > 1 && (
@@ -712,7 +769,28 @@ export function ReservationList({ reservation }: ReservationListProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  pageTitle: { fontSize: 22, fontWeight: '700', color: '#1E293B', marginBottom: 16 },
+  pageTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pageTitle: { fontSize: 22, fontWeight: '700', color: '#1E293B' },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#2A2E33',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 8,
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  createButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 
   // Date navigation
   dateNavContainer: {

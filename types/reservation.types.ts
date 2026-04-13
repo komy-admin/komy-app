@@ -162,6 +162,19 @@ export interface UpdateReservationOverrideDto {
   reason?: string;
 }
 
+export interface CreateManualReservationDto {
+  serviceId: string;
+  date: string;       // YYYY-MM-DD
+  timeSlot: string;   // HH:mm
+  partySize: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  notes?: string;
+  forceOverCapacity?: boolean;
+}
+
 export interface UpdateReservationSettingsDto {
   minNoticeHours?: number;
   maxAdvanceDays?: number;
