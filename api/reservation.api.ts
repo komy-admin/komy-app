@@ -14,6 +14,7 @@ import {
   CreateReservationOverrideDto,
   UpdateReservationOverrideDto,
   UpdateReservationSettingsDto,
+  CreateManualReservationDto,
   ReservationApiResponse,
   ReservationApiListResponse,
   ReservationActivationResponse,
@@ -237,6 +238,14 @@ class ReservationApiService {
 
   // === Reservations ===
 
+  async createReservation(data: CreateManualReservationDto): Promise<Reservation> {
+    const response = await this.axiosInstance.post<ReservationApiResponse<Reservation>>(
+      '/professionals/me/reservations',
+      data
+    );
+    return response.data.data;
+  }
+
   async getReservations(params?: {
     date?: string;
     status?: string;
@@ -283,6 +292,13 @@ class ReservationApiService {
     const response = await this.axiosInstance.post<ReservationApiResponse<Reservation>>(
       `/professionals/me/reservations/${id}/no-show`,
       charge !== undefined ? { charge } : undefined
+    );
+    return response.data.data;
+  }
+
+  async retryCharge(id: string): Promise<Reservation> {
+    const response = await this.axiosInstance.post<ReservationApiResponse<Reservation>>(
+      `/professionals/me/reservations/${id}/retry-charge`
     );
     return response.data.data;
   }

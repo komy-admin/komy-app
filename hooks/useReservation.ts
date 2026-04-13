@@ -17,6 +17,7 @@ import {
   CreateReservationOverrideDto,
   UpdateReservationOverrideDto,
   UpdateReservationSettingsDto,
+  CreateManualReservationDto,
   ReservationApiListResponse,
   ReservationWebSocketEvent,
   StripeConnectStatus,
@@ -34,6 +35,9 @@ function getToastForEvent(event: ReservationWebSocketEvent): { message: string; 
     case 'reservation.cancelled':
       return { message: `Réservation de ${name} annulée`, type: 'warning' };
     case 'reservation.no_show':
+      if (event.reservation.cardImprint?.status === 'failed') {
+        return { message: `No-show : ${name} — débit échoué`, type: 'error' };
+      }
       return { message: `No-show : ${name}`, type: 'error' };
     case 'reservation.completed':
       return { message: `Réservation de ${name} terminée`, type: 'success' };
@@ -309,6 +313,12 @@ export const useReservation = () => {
 
   // === RESERVATIONS ===
 
+  const createReservation = useCallback(async (data: CreateManualReservationDto) => {
+    const reservation = await reservationApiService.createReservation(data);
+    await loadReservations(lastReservationParams.current).catch(() => {});
+    return reservation;
+  }, []);
+
   const loadReservations = useCallback(async (params?: {
     date?: string;
     status?: string;
@@ -360,6 +370,15 @@ export const useReservation = () => {
 
   const completeReservation = useCallback(async (id: string) => {
     const reservation = await reservationApiService.completeReservation(id);
+    setState(prev => ({
+      ...prev,
+      reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation, cardImprint: reservation.cardImprint ?? r.cardImprint } : r),
+    }));
+    return reservation;
+  }, []);
+
+  const retryCharge = useCallback(async (id: string) => {
+    const reservation = await reservationApiService.retryCharge(id);
     setState(prev => ({
       ...prev,
       reservations: prev.reservations.map(r => r.id === id ? { ...r, ...reservation, cardImprint: reservation.cardImprint ?? r.cardImprint } : r),
@@ -501,10 +520,12 @@ export const useReservation = () => {
     disconnectStripe,
 
     // Reservations
+    createReservation,
     loadReservations,
     confirmReservation,
     cancelReservation,
     noShowReservation,
     completeReservation,
+    retryCharge,
   };
 };
