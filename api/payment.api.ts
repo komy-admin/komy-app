@@ -1,3 +1,4 @@
+import { randomUUID } from 'expo-crypto'
 import { BaseApiService } from './base.api'
 import type { PaymentHistoryFilters, OrderWithPayments } from '~/types/payment-history.types'
 import type { Payment, LedgerEvent } from '~/types/payment.types'
@@ -74,17 +75,9 @@ class PaymentApiService extends BaseApiService<Payment> {
     }>
   }): Promise<Payment> {
     // Générer un UUID v4 pour l'idempotence
-    const generateUUIDv4 = () => {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = (Math.random() * 16) | 0
-        const v = c === 'x' ? r : (r & 0x3) | 0x8
-        return v.toString(16)
-      })
-    }
-
     const response = await this.axiosInstance.post<Payment>(this.endpoint, data, {
       headers: {
-        'idempotency-key': generateUUIDv4(),
+        'idempotency-key': randomUUID(),
       },
     })
     return response.data
@@ -130,13 +123,26 @@ class PaymentApiService extends BaseApiService<Payment> {
   async refundPayment(paymentId: string, data: {
     amount?: number
     reason: string
-    refundMethod?: 'original' | 'cash' | 'voucher'
+    refundMethod?: 'original' | 'cash'
   }): Promise<{ refundPayment: Payment; originalPayment: Payment }> {
+    const generateUUIDv4 = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0
+        const v = c === 'x' ? r : (r & 0x3) | 0x8
+        return v.toString(16)
+      })
+    }
+
     const response = await this.axiosInstance.post(
       `${this.endpoint}/${paymentId}/refund`,
-      data
+      data,
+      {
+        headers: {
+          'idempotency-key': generateUUIDv4(),
+        },
+      }
     )
-    return response.data.data // L'API retourne { data: { refundPayment, originalPayment } }
+    return response.data.data
   }
 }
 
