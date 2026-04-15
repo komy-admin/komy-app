@@ -39,8 +39,10 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
     };
   }, [isInitialized]);
 
-  // Vérifier si l'écran est trop petit (< 850px)
-  const isScreenTooSmall = dimensions.width < 850;
+  // Vérifier si l'écran est trop petit (largeur < 850px ou hauteur < 500px)
+  const isWidthTooSmall = dimensions.width < 850;
+  const isHeightTooSmall = dimensions.height < 800;
+  const isScreenTooSmall = isWidthTooSmall || isHeightTooSmall;
 
   // Ne pas afficher la modale si on n'est pas encore initialisé
   // Cela évite les faux positifs lors du rafraîchissement
@@ -65,16 +67,16 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
 
           {/* Message */}
           <Text style={styles.blockedMessage}>
-            L'interface d'administration nécessite un écran d'au moins 850px de largeur pour fonctionner correctement.
+            L'interface d'administration nécessite un écran d'au moins 850px de largeur et 500px de hauteur pour fonctionner correctement.
           </Text>
 
           {/* Informations techniques */}
           <View style={styles.dimensionsInfo}>
-            <Text style={styles.dimensionsText}>
-              Largeur actuelle : {Math.round(dimensions.width)}px
+            <Text style={[styles.dimensionsText, isWidthTooSmall && styles.dimensionsTextError]}>
+              Largeur actuelle : {Math.round(dimensions.width)}px (min. 850px)
             </Text>
-            <Text style={styles.dimensionsText}>
-              Largeur minimale : 850px
+            <Text style={[styles.dimensionsText, isHeightTooSmall && styles.dimensionsTextError]}>
+              Hauteur actuelle : {Math.round(dimensions.height)}px (min. 800px)
             </Text>
           </View>
 
@@ -198,6 +200,10 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontWeight: '500',
     marginBottom: 4,
+  },
+  dimensionsTextError: {
+    color: '#DC2626',
+    fontWeight: '700',
   },
   suggestionsContainer: {
     width: '100%',
