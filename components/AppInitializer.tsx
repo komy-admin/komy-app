@@ -127,7 +127,7 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
           <View style={styles.contentContainer}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../assets/images/logo_komy_png/Logo_Komy_blancSF.png')}
+                source={require('../assets/images/logo_komy_png/Logo_Komy_blancSF.webp')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />

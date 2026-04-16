@@ -163,7 +163,7 @@ export default function LoginScreen() {
         <View style={[styles.formPanel, isWide && styles.formPanelWide]}>
           <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered noCard>
             <Image
-              source={require('../../assets/images/logo_komy_png/Logo_Komy_blancSF.png')}
+              source={require('../../assets/images/logo_komy_png/Logo_Komy_blancSF.webp')}
               style={styles.logo}
               resizeMode="contain"
             />
