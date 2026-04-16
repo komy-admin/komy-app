@@ -1,0 +1,20 @@
+name: Mirror to deploy repo
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to deploy repo
+        run: |
+          git remote add deploy https://x-access-token:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/komy-admin/komy-app.git
+          git push deploy master:main --force
