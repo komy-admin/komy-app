@@ -19,3 +19,4 @@ jobs:
         run: |
           git remote add deploy https://x-access-token:${{ secrets.DEPLOY_REPO_TOKEN }}@github.com/komy-admin/komy-app.git
           git push deploy master:main --force
+
