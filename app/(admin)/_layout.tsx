@@ -41,7 +41,7 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
 
   // Vérifier si l'écran est trop petit (largeur < 850px ou hauteur < 500px)
   const isWidthTooSmall = dimensions.width < 850;
-  const isHeightTooSmall = dimensions.height < 800;
+  const isHeightTooSmall = dimensions.height < 700;
   const isScreenTooSmall = isWidthTooSmall || isHeightTooSmall;
 
   // Ne pas afficher la modale si on n'est pas encore initialisé
@@ -76,7 +76,7 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
               Largeur actuelle : {Math.round(dimensions.width)}px (min. 850px)
             </Text>
             <Text style={[styles.dimensionsText, isHeightTooSmall && styles.dimensionsTextError]}>
-              Hauteur actuelle : {Math.round(dimensions.height)}px (min. 800px)
+              Hauteur actuelle : {Math.round(dimensions.height)}px (min. 700)
             </Text>
           </View>
 
