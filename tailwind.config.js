@@ -1,4 +1,5 @@
 const { hairlineWidth } = require('nativewind/theme');
+const { shadowsCss } = require('./theme/shadows.tokens');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -46,6 +47,13 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+      },
+      boxShadow: {
+        left: shadowsCss.left,
+        right: shadowsCss.right,
+        top: shadowsCss.top,
+        bottom: shadowsCss.bottom,
+        all: shadowsCss.all,
       },
       borderWidth: {
         hairline: hairlineWidth(),
