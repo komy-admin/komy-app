@@ -96,21 +96,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#FFFFFF',
-    // Ombres pour profondeur visuelle
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     ...Platform.select({
       web: {
         // Animation smooth sur web
         transition: 'transform 0.3s ease-out',
-      },
-      android: {
-        elevation: 8,
-      },
-      ios: {
-        shadowOpacity: 0.15,
       },
     }),
   },
