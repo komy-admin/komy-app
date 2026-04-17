@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Switch, ActivityIndicator, Platform, ScrollView, useWindowDimensions } from 'react-native';
-import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, CalendarDays, Clock, CalendarOff, Info } from 'lucide-react-native';
+import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Clock, CalendarOff, Info } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '~/components/ToastProvider';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
@@ -73,6 +73,36 @@ const INITIAL_SERVICE_FORM: ServiceFormData = {
   color: '#3B82F6',
   isActive: true,
 };
+
+// === Helpers ===
+
+interface SelectOption { label: string; value: string; }
+
+function StyledSelect({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: SelectOption[] }) {
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ position: 'relative' }}>
+        <select
+          value={value}
+          onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
+          style={{ height: 38, width: '100%', paddingLeft: 10, paddingRight: 32, fontSize: 13, color: '#1E293B', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, outline: 'none', appearance: 'none', cursor: 'pointer' } as any}
+        >
+          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' } as any}>
+          <ChevronDown size={14} color="#64748B" />
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#FFFFFF', overflow: 'hidden' }}>
+      <Picker selectedValue={value} onValueChange={onChange} style={{ height: 38 }}>
+        {options.map(o => <Picker.Item key={o.value} label={o.label} value={o.value} />)}
+      </Picker>
+    </View>
+  );
+}
 
 // === Main Component ===
 
@@ -290,7 +320,8 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
       setShowScheduleForm(false);
     } catch (error: any) {
       const message = error?.response?.data?.errors?.[0]?.message
-        || error?.response?.data?.error
+        || error?.response?.data?.error?.message
+        || (typeof error?.response?.data?.error === 'string' ? error.response.data.error : null)
         || 'Erreur lors de la création';
       showToast(message, 'error');
     } finally {
@@ -629,21 +660,20 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
                 <Text style={styles.sectionSubtitle}>Jours fériés et horaires spéciaux</Text>
               </View>
             </View>
-            <View style={styles.headerActions}>
-              <View style={styles.monthFilter}>
-                <Pressable onPress={() => navigateOverrideMonth(-1)} style={styles.monthFilterBtn}>
-                  <ChevronLeft size={14} color="#64748B" />
-                </Pressable>
-                <Text style={styles.monthFilterText}>{MONTHS[overrideMonth - 1]} {overrideYear}</Text>
-                <Pressable onPress={() => navigateOverrideMonth(1)} style={styles.monthFilterBtn}>
-                  <ChevronRight size={14} color="#64748B" />
-                </Pressable>
-              </View>
-              <Pressable style={styles.addButton} onPress={() => setShowOverrideForm(true)}>
-                <Plus size={16} color="#FFFFFF" />
-                <Text style={styles.addButtonText}>Ajouter</Text>
-              </Pressable>
-            </View>
+            <Pressable style={styles.addButton} onPress={() => setShowOverrideForm(true)}>
+              <Plus size={16} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>Ajouter</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.monthFilterRow}>
+            <Pressable onPress={() => navigateOverrideMonth(-1)} style={styles.monthFilterBtn}>
+              <ChevronLeft size={14} color="#64748B" />
+            </Pressable>
+            <Text style={styles.monthFilterText}>{MONTHS[overrideMonth - 1]} {overrideYear}</Text>
+            <Pressable onPress={() => navigateOverrideMonth(1)} style={styles.monthFilterBtn}>
+              <ChevronRight size={14} color="#64748B" />
+            </Pressable>
           </View>
 
           {/* Override Form */}
@@ -656,9 +686,9 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
                 </Pressable>
               </View>
 
-              <View style={styles.overrideFormRow}>
+              <View style={styles.overrideFormCol}>
                 {/* Mini calendar */}
-                <View style={[styles.miniCalendar, { flex: 1, marginBottom: 0 }]}>
+                <View style={styles.miniCalendar}>
                   <View style={styles.calNav}>
                     <Pressable onPress={() => navigateCalendar(-1)} style={styles.calNavBtn}>
                       <ChevronLeft size={16} color="#64748B" />
@@ -700,7 +730,7 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
                 </View>
 
                 {/* Override fields */}
-                <View style={[styles.overrideFormFields, { flex: 1 }]}>
+                <View style={styles.overrideFormFields}>
                   <View style={styles.switchRow}>
                     <Text style={styles.fieldLabel}>Fermé toute la journée</Text>
                     <Switch
@@ -748,14 +778,14 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
 
                   <View>
                     <Text style={styles.fieldLabel}>Service concerné (optionnel)</Text>
-                    <View style={styles.pickerContainer}>
-                      <Picker selectedValue={overrideServiceId} onValueChange={setOverrideServiceId} style={styles.picker}>
-                        <Picker.Item label="Tous les services" value="" />
-                        {reservation.services.map((s) => (
-                          <Picker.Item key={s.id} label={s.name} value={s.id} />
-                        ))}
-                      </Picker>
-                    </View>
+                    <StyledSelect
+                      value={overrideServiceId}
+                      onChange={setOverrideServiceId}
+                      options={[
+                        { label: 'Tous les services', value: '' },
+                        ...reservation.services.map(s => ({ label: s.name, value: s.id })),
+                      ]}
+                    />
                   </View>
 
                   <View>
@@ -771,7 +801,7 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
                 </View>
               </View>
 
-              <View style={styles.inlineFormActions}>
+              <View style={[styles.inlineFormActions, { marginTop: 4 }]}>
                 <Pressable
                   style={[styles.saveBtn, isSavingOverride && styles.saveBtnDisabled]}
                   onPress={handleCreateOverride}
@@ -1074,20 +1104,16 @@ section: {
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
   sectionSubtitle: { fontSize: 12, color: '#94A3B8', marginTop: 1 },
 
-  // Header actions
-  headerActions: {
+  monthFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  monthFilter: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 4,
     backgroundColor: '#F1F5F9',
     borderRadius: 8,
     paddingHorizontal: 4,
     paddingVertical: 4,
+    marginBottom: 14,
   },
   monthFilterBtn: {
     padding: 4,
@@ -1334,7 +1360,6 @@ section: {
     borderColor: '#E2E8F0',
     borderRadius: 8,
     padding: 10,
-    marginBottom: 12,
   },
   calNav: {
     flexDirection: 'row',
@@ -1372,9 +1397,9 @@ section: {
   calDayText: { fontSize: 12, color: '#1E293B' },
   calDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
   selectedDateText: { fontSize: 11, color: '#64748B', marginTop: 6 },
-  overrideFormRow: {
-    flexDirection: 'row',
-    gap: 16,
+  overrideFormCol: {
+    flexDirection: 'column',
+    gap: 12,
     marginBottom: 12,
   },
   overrideFormFields: { gap: 10 },

@@ -1,7 +1,26 @@
 // === RESERVATION TYPES ===
 // Types pour l'intégration avec reservation-api
 
-export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'no_show' | 'completed';
+export type ReservationStatus = 'pending' | 'pending_payment' | 'confirmed' | 'cancelled' | 'no_show' | 'completed';
+
+export type CardImprintStatus = 'pending' | 'authorized' | 'captured' | 'released' | 'failed';
+
+export interface CardImprint {
+  status: CardImprintStatus;
+  amount: number; // in cents
+  currency: string;
+  cardLast4?: string | null;
+  cardBrand?: string | null;
+  authorizedAt?: string | null;
+  capturedAt?: string | null;
+}
+
+export interface StripeConnectStatus {
+  connected: boolean;
+  accountId: string | null;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+}
 
 export interface ReservationService {
   id: string;
@@ -45,14 +64,14 @@ export interface ReservationSettings {
   maxAdvanceDays: number;
   minPartySize: number;
   maxPartySize: number;
-  autoConfirm: boolean;
   cancellationDeadlineHours: number;
   reminderEnabled: boolean;
   reminderHoursBefore: number;
   requireCardGuarantee: boolean;
+  noShowFeeAmount: number | null;
+  noShowFeeCurrency: string;
   customEmailMessage: string | null;
   notifyProfessionalOnNewReservation: boolean;
-  notifyProfessionalOnConfirmation: boolean;
   notifyProfessionalOnCancellation: boolean;
 }
 
@@ -89,6 +108,7 @@ export interface Reservation {
   notes?: string | null;
   cancellationReason?: string | null;
   cancelledAt?: string | null;
+  cardImprint?: CardImprint | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,19 +162,32 @@ export interface UpdateReservationOverrideDto {
   reason?: string;
 }
 
+export interface CreateManualReservationDto {
+  serviceId: string;
+  date: string;       // YYYY-MM-DD
+  timeSlot: string;   // HH:mm
+  partySize: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  notes?: string;
+  forceOverCapacity?: boolean;
+}
+
 export interface UpdateReservationSettingsDto {
   minNoticeHours?: number;
   maxAdvanceDays?: number;
   minPartySize?: number;
   maxPartySize?: number;
-  autoConfirm?: boolean;
   cancellationDeadlineHours?: number;
   reminderEnabled?: boolean;
   reminderHoursBefore?: number;
   requireCardGuarantee?: boolean;
+  noShowFeeAmount?: number | null;
+  noShowFeeCurrency?: string;
   customEmailMessage?: string | null;
   notifyProfessionalOnNewReservation?: boolean;
-  notifyProfessionalOnConfirmation?: boolean;
   notifyProfessionalOnCancellation?: boolean;
 }
 
@@ -184,4 +217,47 @@ export interface ReservationTokenResponse {
   token: string | null;
   professionalId: string | null;
   slug: string | null;
+}
+
+// === WebSocket Event ===
+
+export type ReservationEventType =
+  | 'reservation.created'
+  | 'reservation.confirmed'
+  | 'reservation.cancelled'
+  | 'reservation.no_show'
+  | 'reservation.completed'
+  | 'reservation.updated';
+
+export interface ReservationWebSocketEvent {
+  event: ReservationEventType;
+  reservation: {
+    id: string;
+    professionalId: string;
+    serviceId: string;
+    guestId: string;
+    date: string;
+    timeSlot: string;
+    partySize: number;
+    status: ReservationStatus;
+    notes: string | null;
+    cancellationReason: string | null;
+    cancelledAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    cardImprint?: CardImprint | null;
+  };
+  guest: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+  };
+  service: {
+    id: string;
+    name: string;
+    serviceDurationMinutes: number;
+    color: string | null;
+  };
 }

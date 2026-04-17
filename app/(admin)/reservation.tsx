@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useReservation } from '~/hooks/useReservation';
 import { ReservationSidebar } from '~/components/reservation/ReservationSidebar';
 import { ReservationActivation } from '~/components/reservation/ReservationActivation';
@@ -12,7 +13,10 @@ import { View as LoadingView, ActivityIndicator } from 'react-native';
 export type ReservationSection = 'reservations' | 'configuration' | 'settings' | 'guide';
 
 export default function ReservationPage() {
-  const [currentSection, setCurrentSection] = useState<ReservationSection>('reservations');
+  const { stripe_connected } = useLocalSearchParams<{ stripe_connected?: string }>();
+  const [currentSection, setCurrentSection] = useState<ReservationSection>(
+    stripe_connected === 'true' ? 'settings' : 'reservations'
+  );
   const reservation = useReservation();
 
   // Loading state
