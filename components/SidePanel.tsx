@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { X, SlidersHorizontal } from 'lucide-react-native';
 import { Text } from './ui';
+import { shadows } from '~/theme';
 
 interface SidePanelProps {
   children: React.ReactNode;
@@ -187,20 +188,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRightWidth: 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 4, height: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 10,
-      },
-      web: {
-        boxShadow: '4px 0 12px rgba(0, 0, 0, 0.08)',
-      },
-    }),
+    ...shadows.right,
   },
   childrenContainer: {
     flex: 1,
@@ -244,17 +232,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#E2E8F0',
     flexDirection: 'column',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 2, height: 0 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      web: {
-        boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
-      },
-    }),
+    ...shadows.right,
   },
   collapsedBarContent: {
     flex: 1,
