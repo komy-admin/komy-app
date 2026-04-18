@@ -713,7 +713,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 53,
     paddingHorizontal: 4,
-    elevation: 0,
   },
   backButton: {
     alignItems: 'center',
@@ -778,7 +777,6 @@ const styles = StyleSheet.create({
   },
   receiptRowWrapperElevated: {
     zIndex: 20,
-    elevation: 20,
   },
 
   // Receipt row
@@ -850,7 +848,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#10B981',
     zIndex: 5,
-    elevation: 5,
   },
 
   // Inline delete confirmation overlay
@@ -864,7 +861,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 30,
-    elevation: 30,
   },
   deleteOverlayButton: {
     flexDirection: 'row',
