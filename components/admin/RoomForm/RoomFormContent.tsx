@@ -466,11 +466,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     height: 44,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
@@ -478,17 +473,6 @@ const styles = StyleSheet.create({
   statusToggleActive: {
     backgroundColor: '#ECFDF5',
     borderColor: '#34D399',
-    shadowColor: '#10B981',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    ...Platform.select({
-      ios: { elevation: 3 },
-      android: { elevation: 0 },
-      web: {
-        elevation: 3,
-        boxShadow: '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)',
-      },
-    }),
   } as ViewStyle,
   statusIconContainer: {
     width: 12,
@@ -520,15 +504,6 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   statusCoreActive: {
     backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    ...Platform.select({
-      ios: { elevation: 2 },
-      android: { elevation: 0 },
-      web: { elevation: 2 },
-    }),
   } as ViewStyle,
   statusTextContainer: {
     flex: 1,

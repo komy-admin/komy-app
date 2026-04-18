@@ -1133,7 +1133,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 30,
-    elevation: 30,
   },
   inlineDeleteOverlayButton: {
     flexDirection: 'row',
