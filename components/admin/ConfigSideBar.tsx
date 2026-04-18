@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
+import { shadows } from '~/theme';
 
 type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
 
@@ -357,20 +358,7 @@ const styles = StyleSheet.create({
     paddingVertical: 35,
     paddingHorizontal: 24,
     zIndex: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 4, height: 0 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 5,
-      },
-      web: {
-        boxShadow: '4px 0 12px rgba(0, 0, 0, 0.08)',
-      } as any,
-    }),
+    ...shadows.right,
   },
   profileSection: {
     alignItems: 'center',
@@ -382,14 +370,6 @@ const styles = StyleSheet.create({
     borderRadius: 70,
     marginBottom: 16,
     position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   editIconContainer: {
     position: 'absolute',
@@ -404,7 +384,6 @@ const styles = StyleSheet.create({
     minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 3,
     ...Platform.select({
       web: {
         cursor: 'pointer',
