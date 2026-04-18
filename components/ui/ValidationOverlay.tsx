@@ -52,12 +52,16 @@ export function ValidationOverlay({
   const confirmBg = isCountingDown ? (confirmColorDisabled ?? confirmColor) : confirmColor;
 
   return (
-    <View style={styles.overlay}>
+    <View
+      style={styles.overlay}
+      onStartShouldSetResponder={() => true}
+      onResponderTerminationRequest={() => false}
+    >
       <View style={styles.message}>
         <RNText style={styles.messageText}>{title}</RNText>
       </View>
       <Pressable
-        onPress={isCountingDown ? undefined : onConfirm}
+        onPress={isCountingDown ? undefined : () => setTimeout(onConfirm, 0)}
         disabled={isCountingDown}
         style={[styles.confirmBtn, { backgroundColor: confirmBg }]}
       >
@@ -65,7 +69,7 @@ export function ValidationOverlay({
           {isCountingDown ? `${countdown}` : confirmLabel}
         </RNText>
       </Pressable>
-      <Pressable onPress={onCancel} style={styles.cancelBtn}>
+      <Pressable onPress={() => setTimeout(onCancel, 0)} style={styles.cancelBtn}>
         <RNText style={styles.cancelBtnText}>ANNULER</RNText>
       </Pressable>
     </View>

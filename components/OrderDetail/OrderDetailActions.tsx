@@ -37,6 +37,7 @@ export interface OrderDetailActionsProps {
   onDelete: () => void;
   onNoteChange?: (note: string) => void;
   order: Order;
+  blockInputs?: boolean;
 }
 
 interface ActionButtonProps {
@@ -117,6 +118,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
   onDelete,
   onNoteChange,
   order,
+  blockInputs,
 }) => {
   const [noteText, setNoteText] = useState(order.note ?? '');
   const lastSavedNote = useRef(order.note ?? '');
@@ -258,6 +260,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             value={noteText}
             onChangeText={setNoteText}
             onBlur={handleNoteBlur}
+            editable={!blockInputs}
           />
         </View>
       </View>
