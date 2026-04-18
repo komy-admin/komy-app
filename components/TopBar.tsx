@@ -5,6 +5,7 @@ import { Href, useRouter, usePathname } from 'expo-router'
 import { useAppSelector } from '~/store/hooks';
 import { sessionService } from '~/services/SessionService';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { shadows } from '~/theme';
 
 const capitalize = (str: string) =>
   str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -95,12 +96,6 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
   const containerZStyle = useMemo(() => ({
     ...styles.container,
     zIndex: showProfileMenu ? 1001 : 25,
-    ...Platform.select({
-      android: {
-        elevation: showProfileMenu ? 1001 : 25,
-        shadowColor: 'transparent',
-      },
-    }),
   }), [showProfileMenu]);
 
   const profileMenuBgStyle = useMemo(() => ([
@@ -300,11 +295,6 @@ const styles = StyleSheet.create({
     marginTop: -20,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.08)',
     minWidth: 180,
