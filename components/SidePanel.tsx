@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { X, SlidersHorizontal } from 'lucide-react-native';
 import { Text } from './ui';
 import { shadows } from '~/theme';
@@ -177,12 +177,7 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'relative',
     backgroundColor: 'transparent',
-    zIndex: 100, // Toujours au-dessus (web/iOS)
-    ...Platform.select({
-      android: {
-        elevation: 15, // Plus élevé que tous les autres composants
-      },
-    }),
+    zIndex: 100,
   },
   content: {
     flex: 1,
