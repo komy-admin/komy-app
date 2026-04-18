@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, Platform, Text as RNText, useWindowDimensions } from "react-native";
+import { View, StyleSheet, Pressable, useWindowDimensions } from "react-native";
 import { Text } from "~/components/ui";
 import RoomComponent from '~/components/Room/Room';
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
@@ -13,6 +13,7 @@ import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
+import { ValidationOverlay } from '~/components/ui/ValidationOverlay';
 import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
 import { ActionConfirmModal } from '~/components/Service/ActionConfirmModal';
 import {
@@ -41,46 +42,6 @@ import { GroupStatusPickerModal } from '~/components/ui/GroupStatusPickerModal';
 import PaymentView from '~/components/Service/PaymentView';
 
 const NOOP = () => {};
-
-const ConfirmDeleteOverlay = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) => {
-  const [countdown, setCountdown] = useState(3);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  return (
-    <View style={styles.confirmOverlay}>
-      <View style={styles.overlayMessage}>
-        <RNText style={styles.overlayMessageText}>Supprimer cette commande ?</RNText>
-      </View>
-      <Pressable
-        onPress={countdown === 0 ? onConfirm : undefined}
-        disabled={countdown > 0}
-        style={[styles.deleteConfirmBtn, countdown > 0 && styles.confirmBtnDisabled]}
-      >
-        <RNText style={styles.confirmBtnText}>
-          {countdown > 0 ? `${countdown}` : 'SUPPRIMER'}
-        </RNText>
-      </Pressable>
-      <Pressable onPress={onCancel} style={styles.cancelBtn}>
-        <RNText style={styles.cancelBtnText}>ANNULER</RNText>
-      </Pressable>
-    </View>
-  );
-};
 
 export default function ServicePage() {
   const [showOrderForm, setShowOrderForm] = useState(false);
@@ -556,20 +517,21 @@ export default function ServicePage() {
 
                     {/* Overlays au niveau orderDetailLayout pour couvrir le SidePanel */}
                     {showTerminateDialog && (
-                      <View style={styles.confirmOverlay}>
-                        <View style={styles.overlayMessage}>
-                          <RNText style={styles.overlayMessageText}>Terminer cette commande ?</RNText>
-                        </View>
-                        <Pressable onPress={handleConfirmTerminate} style={styles.terminateConfirmBtn}>
-                          <RNText style={styles.confirmBtnText}>TERMINER</RNText>
-                        </Pressable>
-                        <Pressable onPress={handleCloseTerminateDialog} style={styles.cancelBtn}>
-                          <RNText style={styles.cancelBtnText}>ANNULER</RNText>
-                        </Pressable>
-                      </View>
+                      <ValidationOverlay
+                        title="Terminer cette commande ?"
+                        confirmLabel="TERMINER"
+                        confirmColor="#2A2E33"
+                        onConfirm={handleConfirmTerminate}
+                        onCancel={handleCloseTerminateDialog}
+                      />
                     )}
                     {showDeleteDialog && (
-                      <ConfirmDeleteOverlay
+                      <ValidationOverlay
+                        title="Supprimer cette commande ?"
+                        confirmLabel="SUPPRIMER"
+                        confirmColor="#DC2626"
+                        confirmColorDisabled="#F4ADAB"
+                        countdownSeconds={3}
                         onConfirm={handleConfirmDelete}
                         onCancel={handleCloseDeleteDialog}
                       />
@@ -692,102 +654,4 @@ const styles = StyleSheet.create({
     zIndex: 1,
     elevation: 0,
   },
-  confirmOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    zIndex: 200,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(1px)',
-        WebkitBackdropFilter: 'blur(1px)',
-      },
-    }),
-  } as any,
-  overlayMessage: {
-    marginBottom: 8,
-  },
-  overlayMessageText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2A2E33',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  } as any,
-  terminateConfirmBtn: {
-    minWidth: 200,
-    paddingVertical: 18,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    backgroundColor: '#2A2E33',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        boxShadow: '0 4px 20px -4px rgba(0, 0, 0, 0.2)',
-      },
-      android: { elevation: 8 },
-    }),
-  } as any,
-  deleteConfirmBtn: {
-    minWidth: 200,
-    paddingVertical: 18,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    backgroundColor: '#DC2626',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        boxShadow: '0 4px 20px -4px rgba(0, 0, 0, 0.2)',
-      },
-      android: { elevation: 8 },
-    }),
-  } as any,
-  confirmBtnDisabled: {
-    opacity: 0.4,
-  },
-  confirmBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 1.5,
-  },
-  cancelBtn: {
-    minWidth: 200,
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      web: { cursor: 'pointer' },
-    }),
-  } as any,
-  cancelBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  } as any,
 });
