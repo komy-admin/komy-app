@@ -1,7 +1,7 @@
 import { memo, useState, useCallback, useMemo } from 'react';
 import { View, Pressable, Text as RNText, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { Text } from '~/components/ui';
-import { TabsHeader } from '~/components/ui/TabsHeader';
+import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import RoomComponent from '~/components/Room/Room';
 import { Room } from '~/types/room.types';
@@ -82,29 +82,31 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
   return (
     <View style={styles.container}>
       {/* Room tabs */}
-      <TabsHeader style={styles.headerWhite}>
-        {rooms.length === 0 ? (
-          <Text style={styles.emptyText}>Aucune room disponible</Text>
-        ) : (
-          rooms.map((room) => {
-            const count = orderCountByRoom[room.id] || 0;
-            return (
-              <Pressable key={room.id} onPress={() => handleRoomChange(room)}>
-                {({ pressed }) => (
-                  <View style={pressed ? styles.pressed : undefined}>
-                    <TabBadgeItem
-                      name={room.name}
-                      stats={`${count} commande${count !== 1 ? 's' : ''}`}
-                      isActive={room.id === reassignRoomId}
-                      activeColor={room.color || '#6366F1'}
-                    />
-                  </View>
-                )}
-              </Pressable>
-            );
-          })
-        )}
-      </TabsHeader>
+      <AppHeader
+        tabs={
+          rooms.length === 0 ? (
+            <Text style={styles.emptyText}>Aucune room disponible</Text>
+          ) : (
+            rooms.map((room) => {
+              const count = orderCountByRoom[room.id] || 0;
+              return (
+                <Pressable key={room.id} onPress={() => handleRoomChange(room)}>
+                  {({ pressed }) => (
+                    <View style={pressed ? styles.pressed : undefined}>
+                      <TabBadgeItem
+                        name={room.name}
+                        stats={`${count} commande${count !== 1 ? 's' : ''}`}
+                        isActive={room.id === reassignRoomId}
+                        activeColor={room.color || '#6366F1'}
+                      />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })
+          )
+        }
+      />
 
       {/* Room canvas + footer overlay */}
       <View style={styles.roomContainer} onLayout={handleLayout}>
@@ -182,9 +184,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderLeftWidth: 1,
     borderLeftColor: '#E5E7EB',
-  },
-  headerWhite: {
-    backgroundColor: '#FFFFFF',
   },
   banner: {
     backgroundColor: '#3B82F6',

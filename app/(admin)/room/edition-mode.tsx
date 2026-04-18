@@ -11,7 +11,7 @@ import { StyleSheet, View, Text, Pressable } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
-import { TabsHeader } from '~/components/ui/TabsHeader';
+import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
@@ -315,8 +315,7 @@ export default function RoomEditionMode() {
 
   return (
     <View style={styles.container}>
-      <TabsHeader
-        style={styles.headerWhite}
+      <AppHeader
         rightSlot={
           <View style={styles.actionButtonsContainer}>
             {currentRoom && (
@@ -333,8 +332,7 @@ export default function RoomEditionMode() {
             />
           </View>
         }
-      >
-        {rooms.map((room) => {
+        tabs={rooms.map((room) => {
           const count = orderCountByRoom[room.id] || 0;
           const isInactive = !room.isActive;
           return (
@@ -353,7 +351,7 @@ export default function RoomEditionMode() {
             </Pressable>
           );
         })}
-      </TabsHeader>
+      />
       {/* État vide : aucune room */}
       {rooms.length === 0 && (
         <View style={styles.emptyContainer}>
@@ -432,9 +430,6 @@ export default function RoomEditionMode() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  headerWhite: {
     backgroundColor: '#FFFFFF',
   },
   pressed: {

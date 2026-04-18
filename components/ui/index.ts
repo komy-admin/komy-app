@@ -20,6 +20,7 @@ export { default as PinInput } from './pin-input';
 export type { PinInputRef } from './pin-input';
 export * from './ConfirmationModal';
 export * from './TabBadgeItem';
-export * from './TabsHeader';
+export * from './AppHeader';
+export * from './ViewModeToggle';
 export * from './HeaderActionButton';
 export * from './SectionDivider';

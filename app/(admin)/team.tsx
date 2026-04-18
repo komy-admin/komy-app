@@ -1,6 +1,6 @@
 import { View, useWindowDimensions, Text } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui";
-import { TabsHeader } from '~/components/ui/TabsHeader';
+import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { ForkTable } from "~/components/ui/table";
@@ -296,33 +296,34 @@ export default function TeamPage() {
             setActiveTab(newTab);
           }}
         >
-          <TabsHeader
+          <AppHeader
             rightSlot={canModifyUsers ? (
               <HeaderActionButton label="AJOUTER" onPress={handleCreateUser} />
             ) : undefined}
-          >
-            <TabsList
-              className="flex-row justify-start h-full"
-              style={{ height: 60 }}
-            >
-              <TabsTrigger value="all" className="">
-                <TabBadgeItem
-                  name="Tous"
-                  stats={`${userCountByProfile['all'] || 0} utilisateur${(userCountByProfile['all'] || 0) !== 1 ? 's' : ''}`}
-                  isActive={activeTab === 'all'}
-                />
-              </TabsTrigger>
-              {DISPLAYABLE_PROFILES.map((type) => (
-                <TabsTrigger key={type} value={type} className="">
+            tabs={
+              <TabsList
+                className="flex-row justify-start h-full"
+                style={{ height: 60 }}
+              >
+                <TabsTrigger value="all" className="">
                   <TabBadgeItem
-                    name={getUserProfileText(type)}
-                    stats={`${userCountByProfile[type] || 0} utilisateur${(userCountByProfile[type] || 0) !== 1 ? 's' : ''}`}
-                    isActive={activeTab === type}
+                    name="Tous"
+                    stats={`${userCountByProfile['all'] || 0} utilisateur${(userCountByProfile['all'] || 0) !== 1 ? 's' : ''}`}
+                    isActive={activeTab === 'all'}
                   />
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </TabsHeader>
+                {DISPLAYABLE_PROFILES.map((type) => (
+                  <TabsTrigger key={type} value={type} className="">
+                    <TabBadgeItem
+                      name={getUserProfileText(type)}
+                      stats={`${userCountByProfile[type] || 0} utilisateur${(userCountByProfile[type] || 0) !== 1 ? 's' : ''}`}
+                      isActive={activeTab === type}
+                    />
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            }
+          />
 
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             {!canManageUsers ? (

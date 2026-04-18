@@ -1,6 +1,6 @@
 import { useWindowDimensions, View, Text, Pressable, TouchableOpacity, Platform, StyleSheet } from "react-native";
 import { Tabs, TabsContent, TabsList, TabsTrigger, ForkTable } from "~/components/ui";
-import { TabsHeader } from '~/components/ui/TabsHeader';
+import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { SidePanel } from "~/components/SidePanel";
@@ -128,37 +128,38 @@ export default function MenuPage() {
           className="w-full mx-auto flex-col"
         >
           {/* Tabs bar */}
-          <TabsHeader
+          <AppHeader
             rightSlot={
               <HeaderActionButton label="AJOUTER" onPress={openCreatePanel} />
             }
-          >
-            <TabsList className="flex-row justify-start h-full" style={{ height: 60 }}>
-              <TabsTrigger value="tous" className="">
-                <TabBadgeItem
-                  name="Tous"
-                  stats={`${menuTabCounts['tous'] || 0} élément${(menuTabCounts['tous'] || 0) !== 1 ? 's' : ''}`}
-                  isActive={activeTab === 'tous'}
-                />
-              </TabsTrigger>
-              <TabsTrigger value="menus" className="">
-                <TabBadgeItem
-                  name="Menus"
-                  stats={`${menuTabCounts['menus'] || 0} menu${(menuTabCounts['menus'] || 0) !== 1 ? 's' : ''}`}
-                  isActive={activeTab === 'menus'}
-                />
-              </TabsTrigger>
-              {itemTypes.filter(type => type.id).map((type) => (
-                <TabsTrigger key={type.id} value={type.id!} className="">
+            tabs={
+              <TabsList className="flex-row justify-start h-full" style={{ height: 60 }}>
+                <TabsTrigger value="tous" className="">
                   <TabBadgeItem
-                    name={type.name}
-                    stats={`${menuTabCounts[type.id!] || 0} article${(menuTabCounts[type.id!] || 0) !== 1 ? 's' : ''}`}
-                    isActive={activeTab === type.id}
+                    name="Tous"
+                    stats={`${menuTabCounts['tous'] || 0} élément${(menuTabCounts['tous'] || 0) !== 1 ? 's' : ''}`}
+                    isActive={activeTab === 'tous'}
                   />
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </TabsHeader>
+                <TabsTrigger value="menus" className="">
+                  <TabBadgeItem
+                    name="Menus"
+                    stats={`${menuTabCounts['menus'] || 0} menu${(menuTabCounts['menus'] || 0) !== 1 ? 's' : ''}`}
+                    isActive={activeTab === 'menus'}
+                  />
+                </TabsTrigger>
+                {itemTypes.filter(type => type.id).map((type) => (
+                  <TabsTrigger key={type.id} value={type.id!} className="">
+                    <TabBadgeItem
+                      name={type.name}
+                      stats={`${menuTabCounts[type.id!] || 0} article${(menuTabCounts[type.id!] || 0) !== 1 ? 's' : ''}`}
+                      isActive={activeTab === type.id}
+                    />
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            }
+          />
 
           {/* Content */}
           <TabsContent style={{ flex: 1 }} value={activeTab}>

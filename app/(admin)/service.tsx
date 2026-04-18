@@ -8,7 +8,11 @@ import { Table } from "~/types/table.types";
 import { router } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { showApiError } from '~/lib/apiErrorHandler';
-import { RoomTabsHeader } from '~/components/Service/RoomTabsHeader';
+import { LayoutDashboard, LayoutGrid } from 'lucide-react-native';
+import { AppHeader } from '~/components/ui/AppHeader';
+import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
+import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
+import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
 import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
 import { ActionConfirmModal } from '~/components/Service/ActionConfirmModal';
 import {
@@ -440,14 +444,39 @@ export default function ServicePage() {
           <View style={styles.mainContentContainer}>
             {/* Header avec tabs des rooms */}
             {roomEnabled && activeRooms.length > 0 && !showOrderDetail && !showOrderForm && serviceViewMode === 'rooms' && (
-              <RoomTabsHeader
-                rooms={activeRooms}
-                currentRoomId={currentRoom?.id}
-                orderCountByRoom={orderCountByRoom}
-                onRoomChange={handleChangeRoom}
-                onEditModePress={navigateToRoomEdit}
-                viewMode={serviceViewMode}
-                onViewModeChange={setServiceViewMode}
+              <AppHeader
+                tabs={activeRooms.map((room) => {
+                  const count = orderCountByRoom[room.id] || 0;
+                  return (
+                    <Pressable key={room.id} onPress={() => handleChangeRoom(room)}>
+                      {({ pressed }) => (
+                        <View style={pressed ? styles.roomTabPressed : undefined}>
+                          <TabBadgeItem
+                            name={room.name}
+                            stats={`${count} commande${count !== 1 ? 's' : ''}`}
+                            isActive={room.id === currentRoom?.id}
+                            activeColor={room.color || '#6366F1'}
+                          />
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+                rightSlot={
+                  <>
+                    <ViewModeToggle
+                      options={[
+                        { value: 'rooms', icon: LayoutDashboard },
+                        { value: 'orders', icon: LayoutGrid },
+                      ]}
+                      value={serviceViewMode}
+                      onChange={setServiceViewMode}
+                      showSeparator
+                      bordered
+                    />
+                    <HeaderActionButton label="MODE ÉDITION" onPress={navigateToRoomEdit} />
+                  </>
+                }
               />
             )}
 
@@ -619,6 +648,9 @@ export default function ServicePage() {
 const styles = StyleSheet.create({
   flex1: {
     flex: 1,
+  },
+  roomTabPressed: {
+    opacity: 0.6,
   },
   columnLayout: {
     flex: 1,

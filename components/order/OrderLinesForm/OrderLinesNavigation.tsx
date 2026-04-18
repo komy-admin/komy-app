@@ -4,6 +4,8 @@ import { ItemType } from '~/types/item-type.types';
 import { LayoutGrid, List, Menu } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
+import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
+import { shadows } from '~/theme';
 
 const ACTIVE_COLOR = '#2A2E33';
 const INACTIVE_COLOR = '#9CA3AF';
@@ -43,34 +45,15 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
   return (
     <View style={styles.sidebar}>
       {/* Switch Card / List en haut */}
-      <View style={styles.viewModeSection}>
-        <Pressable
-          style={[
-            styles.viewModeButton,
-            viewMode === 'card' && styles.viewModeButtonActive
-          ]}
-          onPress={() => onViewModeChange('card')}
-        >
-          <LayoutGrid
-            size={20}
-            color={viewMode === 'card' ? ACTIVE_COLOR : INACTIVE_COLOR}
-            strokeWidth={2}
-          />
-        </Pressable>
-        <Pressable
-          style={[
-            styles.viewModeButton,
-            viewMode === 'list' && styles.viewModeButtonActive
-          ]}
-          onPress={() => onViewModeChange('list')}
-        >
-          <List
-            size={20}
-            color={viewMode === 'list' ? ACTIVE_COLOR : INACTIVE_COLOR}
-            strokeWidth={2}
-          />
-        </Pressable>
-      </View>
+      <ViewModeToggle
+        options={[
+          { value: 'card', icon: LayoutGrid },
+          { value: 'list', icon: List },
+        ]}
+        value={viewMode}
+        onChange={onViewModeChange}
+        orientation="vertical"
+      />
 
       {/* Séparateur */}
       <View style={styles.horizontalDivider} />
@@ -91,7 +74,7 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
         >
           <View style={styles.navIconWrapper}>
             <Menu
-              size={22}
+              size={18}
               color={activeMainTab === 'MENUS' ? ACTIVE_COLOR : INACTIVE_COLOR}
               strokeWidth={2}
             />
@@ -133,7 +116,7 @@ export const OrderLinesNavigation = memo<OrderLinesNavigationProps>(({
               <View style={styles.navIconWrapper}>
                 <MaterialCommunityIcons
                   name={iconName as any}
-                  size={22}
+                  size={18}
                   color={isActive ? ACTIVE_COLOR : INACTIVE_COLOR}
                 />
               </View>
@@ -164,29 +147,7 @@ const styles = {
     borderLeftColor: '#E5E7EB',
     paddingTop: 12,
     alignItems: 'center' as const,
-  },
-
-  // View mode switch
-  viewModeSection: {
-    gap: 4,
-    alignItems: 'center' as const,
-    paddingHorizontal: 8,
-  },
-  viewModeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    backgroundColor: 'transparent',
-  },
-  viewModeButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadows.left,
   },
 
   // Divider
@@ -200,10 +161,11 @@ const styles = {
   // Nav items
   navItem: {
     alignItems: 'center' as const,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingTop: 6,
+    paddingBottom: 10,
+    paddingHorizontal: 8,
     borderRadius: 10,
-    width: 72,
+    width: 68,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     } as any),
@@ -212,8 +174,8 @@ const styles = {
     backgroundColor: 'rgba(59, 130, 246, 0.08)',
   },
   navIconWrapper: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     borderRadius: 10,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
@@ -224,7 +186,7 @@ const styles = {
     fontWeight: '600' as const,
     color: INACTIVE_COLOR,
     textAlign: 'center' as const,
-    marginTop: 2,
+    marginTop: 0,
     letterSpacing: 0.3,
     ...(Platform.OS === 'web' && {
       fontFamily: 'system-ui, -apple-system, sans-serif',

@@ -30,6 +30,9 @@ import { formatPrice } from '~/lib/utils';
 import { GroupDeletePickerModal } from '~/components/ui/GroupDeletePickerModal';
 import { GroupStatusPickerModal } from '~/components/ui/GroupStatusPickerModal';
 import PaymentView from '~/components/Service/PaymentView';
+import { AppHeader } from '~/components/ui/AppHeader';
+import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
+import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
 
 const STATUS_PRIORITY: Record<string, number> = {
   [Status.READY]: 0,
@@ -537,46 +540,36 @@ export default function RoomlessServiceView({ viewModeToggle, onEditModePress }:
   // Main grid view
   return (
     <View style={styles.flex1} onLayout={handleContainerLayout}>
-      {/* Header — same style as menu/team/service tabs bar */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft} />
-        {viewModeToggle && (
+      {/* Header — same AppHeader as service/menu/team/room-edition */}
+      <AppHeader
+        rightSlot={
           <>
-            <View style={styles.headerSeparator} />
-            <View style={styles.toggleContainer}>
-              <Pressable
-                onPress={() => viewModeToggle.onViewModeChange('rooms')}
-                style={[styles.toggleButton, viewModeToggle.viewMode === 'rooms' && styles.toggleButtonActive]}
-              >
-                <LayoutDashboard
-                  size={18}
-                  color={viewModeToggle.viewMode === 'rooms' ? '#2A2E33' : '#9CA3AF'}
-                  strokeWidth={2}
-                />
-              </Pressable>
-              <Pressable
-                onPress={() => viewModeToggle.onViewModeChange('orders')}
-                style={[styles.toggleButton, viewModeToggle.viewMode === 'orders' && styles.toggleButtonActive]}
-              >
-                <LayoutGrid
-                  size={18}
-                  color={viewModeToggle.viewMode === 'orders' ? '#2A2E33' : '#9CA3AF'}
-                  strokeWidth={2}
-                />
-              </Pressable>
-            </View>
+            {viewModeToggle && (
+              <ViewModeToggle
+                options={[
+                  { value: 'rooms', icon: LayoutDashboard },
+                  { value: 'orders', icon: LayoutGrid },
+                ]}
+                value={viewModeToggle.viewMode}
+                onChange={viewModeToggle.onViewModeChange}
+                showSeparator
+                bordered
+              />
+            )}
+            {viewModeToggle && onEditModePress ? (
+              <HeaderActionButton
+                label="MODE ÉDITION"
+                onPress={onEditModePress}
+              />
+            ) : !viewModeToggle ? (
+              <HeaderActionButton
+                label="NOUVELLE COMMANDE"
+                onPress={handleCreateOrder}
+              />
+            ) : null}
           </>
-        )}
-        {viewModeToggle && onEditModePress ? (
-          <Pressable onPress={onEditModePress} style={styles.editModeBtn}>
-            <RNText style={styles.editModeBtnText}>MODE ÉDITION</RNText>
-          </Pressable>
-        ) : !viewModeToggle ? (
-          <Pressable onPress={handleCreateOrder} style={styles.newOrderBtn}>
-            <RNText style={styles.newOrderBtnText}>NOUVELLE COMMANDE</RNText>
-          </Pressable>
-        ) : null}
-      </View>
+        }
+      />
 
       {activeOrders.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -679,101 +672,6 @@ const styles = StyleSheet.create({
   columnLayout: { flex: 1, flexDirection: 'column' },
   orderDetailLayout: { flex: 1, flexDirection: 'row' },
 
-  // Header — matches RoomTabsHeader height (auto, dictated by content)
-  header: {
-    flexDirection: 'row',
-    height: 61,
-    backgroundColor: '#FBFBFB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    zIndex: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 5,
-      },
-      web: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-      },
-    }),
-  },
-  headerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  headerSeparator: {
-    width: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 8,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    gap: 4,
-  },
-  toggleButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    ...Platform.select({
-      web: { cursor: 'pointer' as any },
-    }),
-  } as any,
-  toggleButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  newOrderBtn: {
-    backgroundColor: '#2A2E33',
-    width: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      web: { cursor: 'pointer' as any },
-    }),
-  } as any,
-  newOrderBtnText: {
-    fontSize: 14,
-    color: '#FBFBFB',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-  } as any,
-  editModeBtn: {
-    backgroundColor: '#2A2E33',
-    width: 175,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      web: { cursor: 'pointer' as any },
-    }),
-  } as any,
-  editModeBtnText: {
-    fontSize: 14,
-    color: '#FBFBFB',
-    fontWeight: '500',
-    textAlign: 'center',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  } as any,
 
   // Empty state
   emptyContainer: {
