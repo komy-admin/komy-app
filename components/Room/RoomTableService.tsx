@@ -9,6 +9,7 @@ import { Platform, StyleSheet, View, Text as RNText } from "react-native";
 import { getStatusColor, getPriorityItemTypeDetailsForStatus } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Status } from "~/types/status.enum";
+import { shadows } from "~/theme";
 import { RoomChairs, RoomChairsRounded } from "./RoomChairs";
 import {
   GestureDetector,
@@ -251,11 +252,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    elevation: 3,
+    ...shadows.bottom,
   },
   // --- Contenu des tables ---
   emptyTableContent: {

@@ -23,6 +23,7 @@ import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { isTableInBounds } from "~/hooks/room/useRoomValidation";
 import { Status } from "~/types/status.enum";
+import { shadows } from "~/theme";
 import { RoomChairs, RoomChairsRounded } from "./RoomChairs";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
@@ -652,14 +653,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 3,
+    ...shadows.bottom,
   },
   emptyTableContent: {
     justifyContent: 'center',
