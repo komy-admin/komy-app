@@ -352,20 +352,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     padding: 16,
     gap: 6,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: -4, height: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-      web: {
-        boxShadow: '-4px 0 12px rgba(0, 0, 0, 0.08)',
-      },
-    }),
   },
   sectionLabel: {
     fontSize: 11,
@@ -396,11 +382,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
       transition: 'all 0.15s ease',
