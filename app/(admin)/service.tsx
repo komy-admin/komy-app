@@ -528,6 +528,5 @@ const styles = StyleSheet.create({
   normalLayoutContainer: {
     flex: 1,
     zIndex: 1,
-    elevation: 0,
   },
 });
