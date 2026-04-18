@@ -3,7 +3,7 @@ import { AuthBackground } from '~/components/auth/AuthBackground';
 import { useState, useEffect } from 'react';
 import { sessionService } from '~/services/SessionService';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
-import { QrCode } from 'lucide-react-native';
+import { QrCode, Eye, EyeOff } from 'lucide-react-native';
 import QrCodeScanner from '../../components/auth/QrCodeScanner';
 import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
@@ -33,6 +33,7 @@ export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showQrScanner, setShowQrScanner] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
   const params = useLocalSearchParams();
@@ -124,19 +125,31 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.fieldGroup}>
-          <RNTextInput
-            id="LoginPassword"
-            value={password}
-            onChangeText={(text) => { setPassword(text); formErrors.clearError('password'); }}
-            placeholder="Mot de passe"
-            secureTextEntry
-            style={[styles.input, formErrors.hasError('password') && styles.inputError]}
-            placeholderTextColor="#9CA3AF"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="done"
-            onSubmitEditing={handleLogin}
-          />
+          <View style={styles.passwordContainer}>
+            <RNTextInput
+              id="LoginPassword"
+              value={password}
+              onChangeText={(text) => { setPassword(text); formErrors.clearError('password'); }}
+              placeholder="Mot de passe"
+              secureTextEntry={!showPassword}
+              style={[styles.input, styles.passwordInput, formErrors.hasError('password') && styles.inputError]}
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
+              hitSlop={8}
+            >
+              {showPassword
+                ? <EyeOff size={20} color="#9CA3AF" />
+                : <Eye size={20} color="#9CA3AF" />
+              }
+            </Pressable>
+          </View>
           <FormFieldError message={formErrors.getError('password')} />
         </View>
 
@@ -310,6 +323,20 @@ const styles = StyleSheet.create({
   fieldGroup: {
     width: '100%',
     marginBottom: 14,
+  },
+  passwordContainer: {
+    position: 'relative',
+    width: '100%',
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
   input: {
     width: '100%',

@@ -79,9 +79,6 @@ const styles = StyleSheet.create({
       cursor: 'pointer',
     })
   },
-  buttonIcon: {
-    marginRight: 8,
-  },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
