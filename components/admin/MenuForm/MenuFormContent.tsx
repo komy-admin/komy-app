@@ -26,7 +26,7 @@ import { LocalMenuCategoryItem, MenuCategoryFormData } from './MenuEditor/MenuEd
 
 type PanelView = 'main' | 'category' | 'items';
 
-interface MenuFormPanelProps {
+interface MenuFormContentProps {
   menu: Menu | null;
   items: Item[];
   itemTypes: ItemType[];
@@ -72,7 +72,7 @@ const InlineDeleteOverlay: React.FC<{ onConfirm: () => void }> = ({ onConfirm })
 // Component
 // ============================================================
 
-export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
+export const MenuFormContent: React.FC<MenuFormContentProps> = ({
   menu,
   items,
   itemTypes,
@@ -162,9 +162,7 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
   const navigateBackToMain = useCallback(() => {
     if (isNewCategory && activeCategoryIndex !== null) {
       // Nouvelle catégorie non validée → on la supprime
-      editor.updateFormField('categories',
-        editor.formData.categories.filter((_, i: number) => i !== activeCategoryIndex)
-      );
+      editor.removeCategory(activeCategoryIndex);
     } else if (!isNewCategory && activeCategoryIndex !== null && categorySnapshotRef.current) {
       // Catégorie existante → restaurer le snapshot (annuler les modifications)
       const snapshot = categorySnapshotRef.current;
@@ -213,9 +211,7 @@ export const MenuFormPanel: React.FC<MenuFormPanelProps> = ({
   }, []);
 
   const handleConfirmDeleteCategory = useCallback((index: number) => {
-    editor.updateFormField('categories',
-      editor.formData.categories.filter((_, i: number) => i !== index)
-    );
+    editor.removeCategory(index);
     formErrors.clearError('categories');
     setPendingDeleteCategoryIndex(null);
 

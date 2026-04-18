@@ -7,7 +7,6 @@ import {
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
-import { AdminConfirmationContext } from '@/components/admin/AdminForm/AdminFormView';
 import { useToast } from '~/components/ToastProvider';
 import { centsToEuros, eurosToCents } from '~/lib/utils';
 
@@ -33,7 +32,7 @@ interface UseMenuEditorReturn {
   updateFormField: (field: keyof MenuFormData, value: MenuFormData[keyof MenuFormData]) => void;
   updateCategory: (index: number, field: keyof MenuCategoryFormData, value: string | boolean) => void;
   addCategory: () => void;
-  removeCategory: (index: number, confirmationContext: AdminConfirmationContext | null) => void;
+  removeCategory: (index: number) => void;
 
   addItemToCategoryDirect: (categoryIndex: number, itemId: string, supplement: number, isAvailable: boolean) => void;
   removeItemFromCategory: (categoryIndex: number, tempId: string) => void;
@@ -177,40 +176,21 @@ export const useMenuEditor = ({
 
   }, [formData.categories.length]);
 
-  const removeCategory = useCallback((index: number, confirmationContext: AdminConfirmationContext | null) => {
-    const categoryToRemove = formData.categories[index];
-    if (!categoryToRemove || !confirmationContext) return;
-
-    const itemType = itemTypes.find(type => type.id === categoryToRemove.itemTypeId);
-    const categoryName = itemType?.name || `Catégorie ${index + 1}`;
-
-    confirmationContext.showConfirmation({
-      entityName: categoryName,
-      entityType: 'la catégorie',
-      onCancel: () => confirmationContext.hideConfirmation(),
-      onConfirm: async () => {
-        setFormData(prev => ({
-          ...prev,
-          categories: prev.categories.filter((_, i) => i !== index)
-        }));
-
-        const reindexRecord = <T,>(record: Record<number, T>, removedIndex: number): Record<number, T> => {
-          const result: Record<number, T> = {};
-          Object.entries(record).forEach(([key, value]) => {
-            const idx = parseInt(key);
-            if (idx < removedIndex) result[idx] = value;
-            else if (idx > removedIndex) result[idx - 1] = value;
-          });
-          return result;
-        };
-
-        setCategorySelections(prev => reindexRecord(prev, index));
-        setLocalCategoryItems(prev => reindexRecord(prev, index));
-
-        showToast('Catégorie supprimée', 'success');
-      }
+  const removeCategory = useCallback((index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: prev.categories.filter((_, i) => i !== index),
+    }));
+    setLocalCategoryItems(prev => {
+      const next: Record<number, LocalMenuCategoryItem[]> = {};
+      Object.keys(prev).forEach(key => {
+        const k = Number(key);
+        if (k < index) next[k] = prev[k];
+        else if (k > index) next[k - 1] = prev[k];
+      });
+      return next;
     });
-  }, [formData.categories, itemTypes, showToast]);
+  }, []);
 
   const removeItemFromCategory = useCallback((categoryIndex: number, tempId: string) => {
     const item = localCategoryItems[categoryIndex]?.find(i => i.tempId === tempId);

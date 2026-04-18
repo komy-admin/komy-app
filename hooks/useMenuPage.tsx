@@ -35,10 +35,6 @@ export function useMenuPage() {
   const { allMenus, loading: menusLoading, createMenuBulk, updateMenuBulk, updateMenu, deleteMenu, createMenuCategoryItem, loadMenuCategoryItems } = useMenus();
   const { tags } = useTags();
 
-  // ============================================================
-  // Panel state (remplace useAdminFormView)
-  // ============================================================
-
   const [panelType, setPanelType] = useState<MenuPanelType>('none');
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);

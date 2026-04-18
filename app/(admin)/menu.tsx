@@ -11,7 +11,7 @@ import { MenuFilters } from '~/components/filters/MenuFilters';
 import { X, PlusCircle, Layers, Lock } from 'lucide-react-native';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { ItemFormPanel } from '@/components/admin/ItemForm/ItemFormPanel';
-import { MenuFormPanel } from '@/components/admin/MenuForm/MenuFormPanel';
+import { MenuFormContent } from '@/components/admin/MenuForm/MenuFormContent';
 import { useMenuPage } from '~/hooks/useMenuPage';
 
 export default function MenuPage() {
@@ -77,7 +77,7 @@ export default function MenuPage() {
     } else if (panelType === 'menu') {
       renderPanel(
         <SlidePanel visible={true} onClose={handleClosePanel} width={430}>
-          <MenuFormPanel
+          <MenuFormContent
             menu={currentMenu}
             items={items}
             itemTypes={itemTypes}
