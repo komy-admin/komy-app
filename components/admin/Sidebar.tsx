@@ -1,6 +1,6 @@
 // components/admin/Sidebar.tsx
 import { Href, router, usePathname } from 'expo-router';
-import { View, Pressable, Platform, StyleSheet, ScrollView } from 'react-native';
+import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Users, LayoutDashboard, ChefHat, NotebookText, GlassWater, CreditCard, CalendarDays } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../ui';
@@ -91,9 +91,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2E33',
     paddingTop: 8,
     zIndex: 100,
-    ...Platform.select({
-      android: { elevation: 20 },
-    }),
   },
   scrollContent: {
     flexGrow: 1,
