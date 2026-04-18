@@ -25,7 +25,8 @@ import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { generateTableName, findAvailablePosition } from '~/lib/room-utils';
 import { useContainerLayout } from '~/hooks/room/useContainerLayout';
 import { RoomFormContent, RoomModeSelection } from '~/components/admin/RoomForm';
-import { Trash2, LayoutPanelLeft } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
+import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { showApiError } from '~/lib/apiErrorHandler';
 
@@ -354,16 +355,10 @@ export default function RoomEditionMode() {
       />
       {/* État vide : aucune room */}
       {rooms.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <LayoutPanelLeft size={48} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>Aucune salle configurée</Text>
-          <Text style={styles.emptyDescription}>
-            Créez votre première salle pour commencer à ajouter des tables.
-          </Text>
-          <Pressable onPress={() => setRoomPanelMode('create')} style={styles.emptyButton}>
-            <Text style={styles.emptyButtonText}>Créer une salle</Text>
-          </Pressable>
-        </View>
+        <EmptyRoomsState
+          onCreateFirstRoom={() => setRoomPanelMode('create')}
+          description="Créez votre première salle pour commencer à ajouter des tables."
+        />
       )}
 
       {/* Zone de la grille avec RoomComponent */}
@@ -465,40 +460,6 @@ const styles = StyleSheet.create({
     bottom: 30,
     right: 25,
     zIndex: 1000,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 48,
-    backgroundColor: '#F4F5F7',
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2A2E33',
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  emptyDescription: {
-    fontSize: 15,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-    maxWidth: 320,
-  },
-  emptyButton: {
-    backgroundColor: '#2A2E33',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.4,
   },
   deleteButton: {
     width: 56,

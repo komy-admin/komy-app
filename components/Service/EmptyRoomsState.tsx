@@ -1,15 +1,21 @@
 import { memo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import { LayoutDashboard, Plus } from 'lucide-react-native';
+import { LayoutDashboard } from 'lucide-react-native';
 
 interface EmptyRoomsStateProps {
   onCreateFirstRoom: () => void;
+  description?: string;
+  buttonLabel?: string;
 }
 
 /**
  * Composant mémoïsé pour afficher l'état vide (aucune salle configurée)
  */
-export const EmptyRoomsState = memo<EmptyRoomsStateProps>(({ onCreateFirstRoom }) => {
+export const EmptyRoomsState = memo<EmptyRoomsStateProps>(({
+  onCreateFirstRoom,
+  description = 'Pour commencer à utiliser le service, vous devez d\'abord créer une salle avec des tables.',
+  buttonLabel = 'Créer ma première salle',
+}) => {
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
@@ -19,15 +25,14 @@ export const EmptyRoomsState = memo<EmptyRoomsStateProps>(({ onCreateFirstRoom }
         Aucune salle configurée
       </Text>
       <Text style={styles.description}>
-        Pour commencer à utiliser le service, vous devez d'abord créer une salle avec des tables.
+        {description}
       </Text>
       <Pressable
         onPress={onCreateFirstRoom}
         style={styles.button}
       >
-        <Plus size={20} color="white" style={styles.buttonIcon} />
         <Text style={styles.buttonText}>
-          Créer ma première salle
+          {buttonLabel}
         </Text>
       </Pressable>
     </View>
