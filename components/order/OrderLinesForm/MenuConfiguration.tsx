@@ -508,15 +508,10 @@ const styles = StyleSheet.create({
   categoryCard: {
     backgroundColor: COLORS.background,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
     marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
   },
   categoryCardError: {
     borderColor: '#EF4444',
