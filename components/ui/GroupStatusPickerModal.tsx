@@ -169,30 +169,30 @@ function GroupStatusPickerContent({
               const textColor = getStatusTextColor(status);
 
               return (
-                <Pressable
+                <View
                   key={status}
-                  onPress={() => onStatusSelect(status)}
-                  style={({ pressed }) => [
-                    styles.statusCard,
+                  style={[
+                    styles.statusCardWrapper,
                     {
                       backgroundColor: statusBg,
                       borderColor: isActive ? '#2A2E33' : statusBorder,
                       borderWidth: isActive ? 2.5 : 1.5,
                     },
-                    pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] },
                   ]}
                 >
-                  <View style={[styles.statusDot, { backgroundColor: statusBorder }]} />
-                  <Text style={[
-                    styles.statusText,
-                    { color: textColor },
-                  ]}>
-                    {getStatusText(status)}
-                  </Text>
-                  <Text style={[styles.statusSelectLabel, { color: textColor }]}>
-                    {isActive ? 'ACTUEL' : 'SÉLECTIONNER'}
-                  </Text>
-                </Pressable>
+                  <Pressable
+                    onPress={() => onStatusSelect(status)}
+                    style={styles.statusCard}
+                  >
+                    <View style={[styles.statusDot, { backgroundColor: statusBorder }]} />
+                    <Text style={[styles.statusText, { color: textColor }]}>
+                      {getStatusText(status)}
+                    </Text>
+                    <Text style={[styles.statusSelectLabel, { color: textColor }]}>
+                      {isActive ? 'ACTUEL' : 'SÉLECTIONNER'}
+                    </Text>
+                  </Pressable>
+                </View>
               );
             })}
           </View>
@@ -328,12 +328,15 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+  statusCardWrapper: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
-    borderRadius: 12,
     gap: 12,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
@@ -346,14 +349,14 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     flex: 1,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   statusSelectLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.8,
     opacity: 0.6,
