@@ -9,6 +9,7 @@ import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/ord
 import { formatPrice } from '~/lib/utils';
 import { getColorWithOpacity, getMenuPrice, darkenColor } from '~/lib/color-utils';
 import { calculateOptimalColumns, chunkArray } from '~/lib/card-layout-utils';
+import { shadows } from '~/theme';
 
 // Constantes de couleurs
 const MENU_COLOR = '#10B981';
@@ -340,11 +341,7 @@ const styles = StyleSheet.create({
     minHeight: 130,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden' as const,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    ...shadows.all,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
       transition: 'opacity 0.15s ease, transform 0.15s ease',
