@@ -14,23 +14,27 @@ const ServiceIcon = ({ size, color, style }: { size: number; color: string; styl
 );
 
 const NAV_ITEMS = [
-  { href: '/service', icon: ServiceIcon, label: 'Service', configKey: null },
-  { href: '/payments', icon: CreditCard, label: 'Paiements', configKey: null },
-  { href: '/room/edition-mode', icon: LayoutDashboard, label: 'Salles', configKey: 'roomEnabled' as const },
-  { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null },
-  { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const },
-  { href: '/kitchen', icon: ChefHat, label: 'Cuisine', configKey: 'kitchenEnabled' as const },
-  { href: '/barman', icon: GlassWater, label: 'Bar', configKey: 'barEnabled' as const },
-  { href: '/reservation', icon: CalendarDays, label: 'Réservations', configKey: null }
+  { href: '/service', icon: ServiceIcon, label: 'Service', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
+  { href: '/reservation', icon: CalendarDays, label: 'Réservations', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
+  { href: '/payments', icon: CreditCard, label: 'Paiements', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
+  { href: '/room/edition-mode', icon: LayoutDashboard, label: 'Salles', configKey: 'roomEnabled' as const, roles: ['superadmin', 'admin', 'manager'] },
+  { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
+  { href: '/team', icon: Users, label: 'Équipe', configKey: 'teamEnabled' as const, roles: ['superadmin', 'admin', 'manager'] },
+  { href: '/kitchen', icon: ChefHat, label: 'Cuisine', configKey: 'kitchenEnabled' as const, roles: ['superadmin', 'admin'] },
+  { href: '/barman', icon: GlassWater, label: 'Bar', configKey: 'barEnabled' as const, roles: ['superadmin', 'admin'] },
 ];
 
 export function AdminSidebar() {
  const pathname = usePathname();
  const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
+ const userProfil = useSelector((state: RootState) => state.session.user?.profil);
 
- // Filtrer les items selon la configuration
+ // Filtrer les items selon la configuration et le rôle
  const visibleNavItems = useMemo(() => {
    return NAV_ITEMS.filter(item => {
+     // Vérifier que le rôle de l'utilisateur est autorisé
+     if (!userProfil || !item.roles.includes(userProfil)) return false;
+
      // Si pas de clé de config, toujours visible
      if (!item.configKey) return true;
 
@@ -38,7 +42,7 @@ export function AdminSidebar() {
      if (!accountConfig) return false;
      return accountConfig[item.configKey] === true;
    });
- }, [accountConfig]);
+ }, [accountConfig, userProfil]);
 
  const handleNavPress = useCallback((href: string, isActive: boolean) => {
    if (isActive) {
@@ -57,22 +61,21 @@ export function AdminSidebar() {
        return (
          <Pressable
            key={href}
-           className="py-2 items-center"
+           className="py-0.5 items-center"
            onPress={() => handleNavPress(href, isActive)}
          >
-            <View className="flex items-center justify-center rounded-md w-[70px] h-[70px]" style={isActive ? {backgroundColor: '#54575B', opacity: 1} : {}}>
+            <View className="flex items-center justify-center rounded-md w-[78px] h-[72px] overflow-hidden" style={isActive ? {backgroundColor: '#54575B', opacity: 1} : {}}>
               <Icon
-                size={30}
+                size={26}
                 color={isActive ? 'white' : 'gray'}
-                strokeWidth= {1.5}
+                strokeWidth={1.5}
                 style={{
-                  marginBottom: 2,
                   opacity: isActive ? 1 : 0.8,
                 }}
               />
               <Text
-                className="text-xs mt-1 text-white"
-                style={isActive ? {color: 'white'} : {color: 'gray'}}
+                className="text-white"
+                style={[{ fontSize: 10 }, isActive ? {color: 'white'} : {color: 'gray'}]}
               >
                 {label}
               </Text>
