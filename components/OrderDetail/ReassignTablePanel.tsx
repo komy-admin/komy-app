@@ -141,11 +141,7 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
       <View style={styles.footer}>
         <Pressable
           onPress={onBack}
-          style={({ pressed }) => [
-            styles.actionButton,
-            styles.cancelButton,
-            pressed && { opacity: 0.85 },
-          ]}
+          style={[styles.actionButton, styles.cancelButton]}
         >
           <RNText style={styles.cancelText}>Annuler</RNText>
         </Pressable>
@@ -153,16 +149,14 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
         <Pressable
           onPress={handleConfirm}
           disabled={!selectedTable || isReassigning}
-          style={({ pressed }) => [
+          style={[
             styles.actionButton,
             styles.confirmButton,
-            { backgroundColor: '#2A2E33', borderColor: '#2A2E33' },
             !selectedTable && { opacity: 0.5 },
-            pressed && selectedTable && !isReassigning && { opacity: 0.85 },
           ]}
         >
           {isReassigning ? (
-            <ActivityIndicator size="small" color="#3B82F6" />
+            <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <RNText style={styles.confirmText}>
               {selectedTable
@@ -224,9 +218,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 2,
-    backgroundColor: '#3B82F6',
-    borderWidth: 1,
-    borderColor: '#3B82F6',
+    backgroundColor: '#2A2E33',
   },
   confirmText: {
     fontSize: 14,
@@ -234,14 +226,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   cancelButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#F1F5F9',
   },
   cancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#475569',
   },
   pressed: {
     opacity: 0.6,
