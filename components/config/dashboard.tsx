@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Database, TrendingUp, Users, Activity } from 'lucide-react-native';
+import { shadows } from '~/theme';
 
 export default function DashboardPage() {
   return (
@@ -79,18 +80,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     maxWidth: 400,
     marginHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
     height: 500,
     width: '60%',
-    shadowOpacity: 0.1,
-    shadowRadius: 25,
-    elevation: 10,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.8)',
+    ...shadows.bottom,
   },
   iconContainer: {
     width: 80,
