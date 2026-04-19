@@ -83,16 +83,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
     zIndex: 200,
     ...Platform.select({
       web: {
+        backgroundColor: 'rgba(255, 255, 255, 0.75)',
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
       } as any,
+      android: {
+        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+      },
+      default: {
+        backgroundColor: 'rgba(255, 255, 255, 0.75)',
+      },
     }),
   },
   message: {

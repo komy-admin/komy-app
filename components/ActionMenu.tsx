@@ -8,6 +8,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { LucideIcon, Menu as MenuIcon } from 'lucide-react-native';
+import { shadows } from '~/theme';
 
 export type ActionItem = {
   label?: string;
@@ -172,11 +173,7 @@ const styles = StyleSheet.create({
     minHeight: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadows.bottom,
   },
   backdrop: {
     flex: 1,
@@ -188,14 +185,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.6)',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
-    ...Platform.select({
-      web: { boxShadow: '0 8px 25px -8px rgba(0, 0, 0, 0.15)' }
-    }),
+    ...shadows.bottom,
   },
   item: {
     minHeight: 48,

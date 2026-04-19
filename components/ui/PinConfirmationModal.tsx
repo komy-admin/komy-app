@@ -256,7 +256,6 @@ const styles = StyleSheet.create({
       },
       android: {
         backgroundColor: 'rgba(255, 255, 255, 0.99)',
-        elevation: 2000,
       },
       default: {
         backgroundColor: 'rgba(255, 255, 255, 0.5)',

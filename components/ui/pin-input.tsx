@@ -189,11 +189,6 @@ const styles = StyleSheet.create({
   boxActive: {
     borderColor: '#6366F1',
     backgroundColor: '#F0F9FF',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   boxError: {
     borderColor: '#EF4444',

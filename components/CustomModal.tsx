@@ -137,14 +137,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 20,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 40,
-    elevation: 25,
     position: 'relative',
     zIndex: 1001,
     display: 'flex',

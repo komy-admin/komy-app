@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Modal, ScrollView } from 'react-native';
 import { X } from 'lucide-react-native';
 import { getContrastColor } from '~/lib/utils';
+import { shadows } from '~/theme';
 
 interface ColorPickerComponentProps {
   value?: string;
@@ -219,11 +220,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     minHeight: 44,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadows.bottom,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
@@ -281,11 +278,6 @@ const styles = StyleSheet.create({
     maxWidth: 380,
     maxHeight: 600,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
 
   scrollContent: {
@@ -325,11 +317,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadows.bottom,
   },
 
   previewText: {
@@ -359,20 +347,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
+    ...shadows.bottom,
   },
 
   colorButtonSelected: {
     borderColor: '#2A2E33',
     borderWidth: 3,
     transform: [{ scale: 1.1 }],
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
     zIndex: 10,
   },
 
@@ -433,11 +414,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2E33',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2A2E33',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadows.bottom,
   },
 
   confirmButtonText: {

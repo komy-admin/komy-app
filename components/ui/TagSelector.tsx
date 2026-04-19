@@ -13,22 +13,6 @@ interface TagSelectorProps {
 const getButtonStyle = (isSelected: boolean) => ({
   backgroundColor: isSelected ? '#ECFDF5' : '#FAFAFA',
   borderColor: isSelected ? '#34D399' : '#E5E7EB',
-  ...Platform.select({
-    ios: {
-      shadowColor: isSelected ? '#10B981' : '#000',
-      shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
-      shadowOpacity: isSelected ? 0.15 : 0.04,
-      shadowRadius: isSelected ? 8 : 3,
-    },
-    android: { elevation: 0 }, // Pas de shadow border sur Android
-    web: {
-      cursor: 'pointer',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      boxShadow: isSelected
-        ? '0 0 0 3px rgba(52, 211, 153, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15)'
-        : '0 1px 3px rgba(0, 0, 0, 0.04)',
-    } as any,
-  }),
 });
 
 export const TagSelector: React.FC<TagSelectorProps> = ({
