@@ -91,6 +91,9 @@ export interface ReservationProfessionalProfile {
   slug: string;
   phone?: string | null;
   address?: string | null;
+  // IANA timezone name ("Europe/Paris", "America/Montreal"...) — utilisée pour tout affichage
+  // de date/heure côté front afin de refléter le fuseau réel du resto.
+  timezone: string;
   settings: ReservationSettings;
   createdAt: string;
   updatedAt: string;
