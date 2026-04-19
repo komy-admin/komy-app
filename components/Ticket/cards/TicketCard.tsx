@@ -66,7 +66,6 @@ export function TicketCard({
     <Pressable style={styles.wrapper}>
       <View style={[
         styles.card,
-        itemGroup.isOverdue && styles.cardOverdue,
         isNotified && styles.cardNotified,
       ]}>
         <CardHeader
@@ -124,13 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     overflow: 'hidden',
-  },
-  cardOverdue: {
-    borderColor: '#DC2626',
-    borderWidth: 2,
   },
   cardNotified: {
     opacity: 0.6,

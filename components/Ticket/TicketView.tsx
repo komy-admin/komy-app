@@ -123,9 +123,7 @@ const styles = StyleSheet.create({
     width: 300,
     position: 'relative',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    ...shadows.bottom,
+    ...shadows.all,
   },
   emptyContainer: {
     flex: 1,
