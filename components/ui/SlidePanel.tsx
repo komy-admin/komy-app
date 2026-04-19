@@ -1,5 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
+import { colors } from '~/theme';
 
 interface SlidePanelProps {
   visible: boolean;
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     ...Platform.select({
       web: {
         // Animation smooth sur web

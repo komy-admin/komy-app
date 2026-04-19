@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Pressable, Platform, StyleSheet, ViewStyle, TextStyle, View, Text as RNText } from 'react-native';
+import { colors } from '~/theme';
 
 export interface SelectButtonProps {
   label: string;
@@ -25,7 +26,7 @@ export const SelectButton = memo<SelectButtonProps>(({
   variant = 'sub',
   style,
   textStyle,
-  activeColor = '#2A2E33',
+  activeColor = colors.brand.dark,
   activeBgColor,
   count,
   flex = false
@@ -56,7 +57,7 @@ export const SelectButton = memo<SelectButtonProps>(({
           variant === 'pill' ? styles.pillButtonText :
             styles.subButtonText,
     isActive && variant !== 'tab' && variant !== 'pill' ? {
-      color: '#FFFFFF',
+      color: colors.white,
       fontWeight: variant === 'main' ? '700' as TextStyle['fontWeight'] : '600' as TextStyle['fontWeight']
     } : undefined,
     isActive && variant === 'tab' ? styles.tabButtonTextActive : undefined,
@@ -88,7 +89,7 @@ export const SelectButton = memo<SelectButtonProps>(({
           ]}>
             <RNText style={[
               styles.pillBadgeText,
-              isActive && { color: '#FFFFFF' }
+              isActive && { color: colors.white }
             ]}>
               {count}
             </RNText>
@@ -112,8 +113,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.gray[200],
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   mainButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     letterSpacing: 0.3,
     ...(Platform.OS === 'web' && {
@@ -139,9 +140,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 44,
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   subButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6b7280',
+    color: colors.gray[500],
     textAlign: 'center',
     ...(Platform.OS === 'web' && {
       fontFamily: 'system-ui, -apple-system, sans-serif'
@@ -167,9 +168,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 32,
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   compactButtonText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6b7280',
+    color: colors.gray[500],
     textAlign: 'center',
     ...(Platform.OS === 'web' && {
       fontFamily: 'system-ui, -apple-system, sans-serif'
@@ -210,13 +211,13 @@ const styles = StyleSheet.create({
   },
 
   tabButtonActive: {
-    borderBottomColor: '#2A2E33',
+    borderBottomColor: colors.brand.dark,
   },
 
   tabButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
     letterSpacing: 0.2,
     ...(Platform.OS === 'web' && {
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   },
 
   tabButtonTextActive: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontWeight: '600' as TextStyle['fontWeight'],
   },
 
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     borderWidth: 1,
     borderColor: 'transparent',
     alignItems: 'center',
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
   pillButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     letterSpacing: 0.2,
     ...(Platform.OS === 'web' && {
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.gray[300],
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   pillBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     ...(Platform.OS === 'web' && {
       fontFamily: 'system-ui, -apple-system, sans-serif'
     })

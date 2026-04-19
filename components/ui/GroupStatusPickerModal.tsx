@@ -5,6 +5,7 @@ import { SlidePanel } from '~/components/ui/SlidePanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { Status } from '~/types/status.enum';
 import { getStatusColor, getStatusText, getStatusTextColor, getStatusBackgroundColor } from '~/lib/status.utils';
+import { colors } from '~/theme';
 
 const AVAILABLE_STATUSES = [
   Status.DRAFT,
@@ -137,7 +138,7 @@ function GroupStatusPickerContent({
                 style={[styles.pickerButton, quantity <= 1 && styles.pickerButtonDisabled]}
                 disabled={quantity <= 1}
               >
-                <Minus size={18} color={quantity <= 1 ? '#D1D5DB' : '#374151'} strokeWidth={2.5} />
+                <Minus size={18} color={quantity <= 1 ? colors.gray[300] : colors.gray[700]} strokeWidth={2.5} />
               </Pressable>
 
               <View style={styles.quantityDisplay}>
@@ -150,7 +151,7 @@ function GroupStatusPickerContent({
                 style={[styles.pickerButton, quantity >= max && styles.pickerButtonDisabled]}
                 disabled={quantity >= max}
               >
-                <Plus size={18} color={quantity >= max ? '#D1D5DB' : '#374151'} strokeWidth={2.5} />
+                <Plus size={18} color={quantity >= max ? colors.gray[300] : colors.gray[700]} strokeWidth={2.5} />
               </Pressable>
             </View>
           </View>
@@ -175,7 +176,7 @@ function GroupStatusPickerContent({
                     styles.statusCardWrapper,
                     {
                       backgroundColor: statusBg,
-                      borderColor: isActive ? '#2A2E33' : statusBorder,
+                      borderColor: isActive ? colors.brand.dark : statusBorder,
                       borderWidth: isActive ? 2.5 : 1.5,
                     },
                   ]}
@@ -218,13 +219,13 @@ const styles = StyleSheet.create({
   },
   // Banner
   banner: {
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bannerText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.5,
@@ -242,18 +243,18 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 18,
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   itemName: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#1E293B',
+    color: colors.neutral[800],
     letterSpacing: 0.3,
   },
   countBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -261,23 +262,23 @@ const styles = StyleSheet.create({
   countBadgeText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#64748B',
+    color: colors.neutral[600],
   },
   // Quantity
   quantitySection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   sectionHeader: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.gray[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -292,11 +293,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   pickerButtonDisabled: {
@@ -313,12 +314,12 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   quantityMax: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   // Status cards
   statusSection: {
@@ -369,13 +370,13 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: colors.neutral[200],
+    backgroundColor: colors.white,
   },
   cancelButton: {
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
@@ -383,6 +384,6 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[600],
   },
 });

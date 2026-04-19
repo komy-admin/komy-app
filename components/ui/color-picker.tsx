@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Modal, ScrollView } from 'react-native';
 import { X } from 'lucide-react-native';
 import { getContrastColor } from '~/lib/utils';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface ColorPickerComponentProps {
   value?: string;
@@ -36,12 +36,12 @@ export const COLOR_COLUMNS = [
 
 export function ColorPicker({ value, onChange, label, placeholder = 'Sélectionner une couleur', containerStyle, labelStyle }: ColorPickerComponentProps) {
   const [showModal, setShowModal] = useState(false);
-  const [tempColor, setTempColor] = useState(value || '#2A2E33');
+  const [tempColor, setTempColor] = useState(value || colors.brand.dark);
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
     if (value !== undefined) {
-      setTempColor(value || '#2A2E33');
+      setTempColor(value || colors.brand.dark);
     }
   }, [value]);
 
@@ -55,7 +55,7 @@ export function ColorPicker({ value, onChange, label, placeholder = 'Sélectionn
   };
 
   const handleCancel = () => {
-    setTempColor(value || '#2A2E33');
+    setTempColor(value || colors.brand.dark);
     setShowModal(false);
   };
 
@@ -70,7 +70,7 @@ export function ColorPicker({ value, onChange, label, placeholder = 'Sélectionn
         <Text style={styles.pickerTitle}>Choisir une couleur</Text>
         {Platform.OS !== 'web' && (
           <Pressable onPress={handleCancel} style={styles.closeButton}>
-            <X size={20} color="#6B7280" />
+            <X size={20} color={colors.gray[500]} />
           </Pressable>
         )}
       </View>
@@ -172,7 +172,7 @@ export function ColorPicker({ value, onChange, label, placeholder = 'Sélectionn
         style={styles.triggerButton}
         onPress={() => {
           setShowModal(true);
-          setTempColor(value || '#2A2E33');
+          setTempColor(value || colors.brand.dark);
         }}
       >
         <View style={styles.triggerContent}>
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 8,
     letterSpacing: 0.5,
     ...(Platform.OS === 'web' && {
@@ -214,9 +214,9 @@ const styles = StyleSheet.create({
   // Bouton de déclenchement
   triggerButton: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingHorizontal: 8,
     paddingVertical: 6,
     minHeight: 44,
@@ -238,14 +238,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
   },
 
   colorPreviewEmpty: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.gray[300],
     paddingHorizontal: 6,
 
   },
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
 
   // Modal styles
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
 
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     width: '100%',
     maxWidth: 380,
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   // Picker container
   pickerContainer: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
   },
 
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   pickerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
 
   closeButton: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.bottom,
@@ -351,14 +351,14 @@ const styles = StyleSheet.create({
   },
 
   colorButtonSelected: {
-    borderColor: '#2A2E33',
+    borderColor: colors.brand.dark,
     borderWidth: 3,
     transform: [{ scale: 1.1 }],
     zIndex: 10,
   },
 
   whiteColorButton: {
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderWidth: 1,
   },
 
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   pickerActions: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.gray[100],
   },
 
   mainActions: {
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#DC2626',
+    color: colors.error.text,
   },
 
   cancelButton: {
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
 
   confirmButton: {
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.bottom,
@@ -420,6 +420,6 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

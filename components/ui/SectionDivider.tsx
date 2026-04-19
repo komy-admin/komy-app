@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { View, Text as RNText, StyleSheet, ViewStyle } from 'react-native';
+import { colors } from '~/theme';
 
 interface SectionDividerProps {
   title: string;
@@ -25,7 +26,7 @@ export const SECTION_DIVIDER_HEIGHT = 38;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     height: SECTION_DIVIDER_HEIGHT,
     justifyContent: 'center',
     paddingLeft: 20,
@@ -34,7 +35,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#475569',
+    color: colors.neutral[600],
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { CustomModal } from '~/components/CustomModal';
 import { Button } from '~/components/ui';
 import { Portal } from '@rn-primitives/portal';
+import { colors } from '~/theme';
 
 interface DeleteConfirmationModalProps {
   isVisible: boolean;
@@ -55,7 +56,7 @@ export function DeleteConfirmationModal({
       width={modalWidth}
       height="auto"
       title="Confirmation de suppression"
-      titleColor="#FF4444"
+      titleColor={colors.error.base}
     >
       <View style={styles.deleteModalContent}>
         <View>
@@ -114,17 +115,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 8,
     textAlign: 'center',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   deleteDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 8,
     textAlign: 'center',
   },
   deleteWarning: {
     fontSize: 14,
-    color: '#FF4444',
+    color: colors.error.base,
     marginBottom: 40,
     textAlign: 'center',
   },
@@ -141,12 +142,12 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
   cancelButtonText: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontSize: 14,
     fontWeight: '500',
   },
   deleteButton: {
-    backgroundColor: '#FF4444',
+    backgroundColor: colors.error.base,
     paddingHorizontal: 20,
     paddingVertical: 10,
     width: '100%',

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SelectButton } from './select-button';
+import { colors } from '~/theme';
 
 interface VatRateSelectorProps {
   value: number | null;
@@ -92,6 +93,6 @@ const styles = StyleSheet.create({
   },
   buttonsContainerError: {
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
   },
 });

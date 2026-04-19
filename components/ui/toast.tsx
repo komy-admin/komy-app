@@ -1,6 +1,7 @@
 import { View, Text, Animated, StyleSheet, Pressable } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { CircleCheck, CircleX, TriangleAlert, Info, X } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -23,7 +24,7 @@ const TOAST_COLORS: Record<ToastType, string> = {
   success: '#2D6A4F',
   error: '#D8315B',
   warning: '#FFAA00',
-  info: '#3B82F6',
+  info: colors.info.base,
 };
 
 const TOAST_ICONS: Record<ToastType, React.FC<{ size: number; color: string }>> = {
@@ -78,7 +79,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
         },
       ]}
     >
-      <Icon size={18} color="#FFFFFF" />
+      <Icon size={18} color={colors.white} />
       <Text style={styles.message}>
         {toast.count > 1 && (
           <Text style={styles.count}>{toast.count}x </Text>
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   },
   message: {
     flexShrink: 1,
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '500',
   },

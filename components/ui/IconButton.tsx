@@ -14,6 +14,7 @@ import {
   Search,
   Filter
 } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 export type IconName =
   | 'eye'
@@ -67,64 +68,64 @@ const VARIANT_STYLES = {
   success: {
     transparent: {
       backgroundColor: '#F0FDF4',
-      borderColor: '#10B981',
-      iconColor: '#10B981',
+      borderColor: colors.success.base,
+      iconColor: colors.success.base,
     },
     solid: {
-      backgroundColor: '#10B981',
-      borderColor: '#059669',
-      iconColor: '#FFFFFF',
+      backgroundColor: colors.success.base,
+      borderColor: colors.success.dark,
+      iconColor: colors.white,
     },
   },
   primary: {
     transparent: {
-      backgroundColor: '#EFF6FF',
+      backgroundColor: colors.info.bg,
       borderColor: '#93C5FD',
-      iconColor: '#3B82F6',
+      iconColor: colors.info.base,
     },
     solid: {
-      backgroundColor: '#3B82F6',
+      backgroundColor: colors.info.base,
       borderColor: '#2563EB',
-      iconColor: '#FFFFFF',
+      iconColor: colors.white,
     },
   },
   danger: {
     transparent: {
       backgroundColor: '#FEE2E2',
       borderColor: '#FCA5A5',
-      iconColor: '#EF4444',
+      iconColor: colors.error.base,
     },
     solid: {
-      backgroundColor: '#EF4444',
-      borderColor: '#DC2626',
-      iconColor: '#FFFFFF',
+      backgroundColor: colors.error.base,
+      borderColor: colors.error.text,
+      iconColor: colors.white,
     },
   },
   warning: {
     transparent: {
-      backgroundColor: '#FEF3C7',
+      backgroundColor: colors.warning.border,
       borderColor: '#FDE68A',
-      iconColor: '#F59E0B',
+      iconColor: colors.warning.base,
     },
     solid: {
-      backgroundColor: '#F59E0B',
-      borderColor: '#D97706',
-      iconColor: '#FFFFFF',
+      backgroundColor: colors.warning.base,
+      borderColor: colors.warning.dark,
+      iconColor: colors.white,
     },
   },
   neutral: {
     transparent: {
-      backgroundColor: '#F9FAFB',
-      borderColor: '#D1D5DB',
-      iconColor: '#6B7280',
+      backgroundColor: colors.gray[50],
+      borderColor: colors.gray[300],
+      iconColor: colors.gray[500],
     },
     solid: {
-      backgroundColor: '#6B7280',
-      borderColor: '#4B5563',
-      iconColor: '#FFFFFF',
+      backgroundColor: colors.gray[500],
+      borderColor: colors.gray[600],
+      iconColor: colors.white,
     },
   },
-} as const;
+};
 
 export const IconButton = memo<IconButtonProps>(({
   iconName,

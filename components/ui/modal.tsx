@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { X } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 interface ForkModalProps {
   visible: boolean;
@@ -34,7 +35,7 @@ export const ForkModal = ({
             style={styles.closeButton}
             hitSlop={8}
           >
-            <X size={20} color="#666666" />
+            <X size={20} color={colors.gray[500]} />
           </Pressable>
 
           {title && (

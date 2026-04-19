@@ -1,4 +1,5 @@
 import { Pressable, Text as RNText, StyleSheet, Platform, ViewStyle } from 'react-native';
+import { colors } from '~/theme';
 
 interface HeaderActionButtonProps {
   label: string;
@@ -49,12 +50,12 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { cursor: 'pointer' as any } }),
   },
   dark: {
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   light: {
-    backgroundColor: '#F9F9FA',
+    backgroundColor: colors.gray[50],
     borderLeftWidth: 1,
-    borderLeftColor: '#E5E7EB',
+    borderLeftColor: colors.gray[200],
   },
   label: {
     fontSize: 14,
@@ -63,10 +64,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   labelDark: {
-    color: '#FBFBFB',
+    color: colors.white,
   },
   labelLight: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   pressed: {
     opacity: 0.6,

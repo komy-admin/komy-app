@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { colors } from '~/theme';
 
 // Liste des icônes disponibles pour les types d'articles
 // Organisées par catégorie avec MaterialCommunityIcons
@@ -147,7 +148,7 @@ interface IconSelectorProps {
 export const IconSelector: React.FC<IconSelectorProps> = React.memo(({
   selectedIcon,
   onSelectIcon,
-  color = '#A855F7',
+  color = colors.purple.base,
   disabledIcons = [],
   iconsToShow
 }) => {
@@ -161,7 +162,7 @@ export const IconSelector: React.FC<IconSelectorProps> = React.memo(({
         {iconsToDisplay.map((iconItem) => {
           const isSelected = selectedIcon === iconItem.name;
           const isDisabled = disabledIcons.includes(iconItem.name);
-          const iconColor = isDisabled ? '#CBD5E1' : (isSelected ? color : '#64748B');
+          const iconColor = isDisabled ? colors.neutral[300] : (isSelected ? color : colors.neutral[500]);
 
           return (
             <TouchableOpacity
@@ -206,8 +207,8 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -216,6 +217,6 @@ const styles = StyleSheet.create({
   },
   iconButtonDisabled: {
     opacity: 0.3,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
 });

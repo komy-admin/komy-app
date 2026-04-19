@@ -1,4 +1,5 @@
 import { View, Text as RNText, StyleSheet, Platform } from 'react-native';
+import { colors } from '~/theme';
 
 interface TabBadgeItemProps {
   name: string;
@@ -12,7 +13,7 @@ export function TabBadgeItem({
   name,
   stats,
   isActive,
-  activeColor = '#2A2E33',
+  activeColor = colors.brand.dark,
   isInactive = false,
 }: TabBadgeItemProps) {
   return (
@@ -63,23 +64,23 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   nameInactive: {
-    color: '#C7C7CC',
+    color: colors.gray[300],
     textDecorationLine: 'line-through' as const,
   },
   stats: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#C4C9D1',
+    color: colors.gray[300],
     marginTop: 2,
   },
   statsActive: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   statsInactive: {
-    color: '#D1D5DB',
+    color: colors.gray[300],
   },
   indicator: {
     height: 3,

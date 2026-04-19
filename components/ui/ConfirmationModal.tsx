@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { CustomModal } from '../CustomModal';
 import { Button } from './button';
 import { Portal } from '@rn-primitives/portal';
+import { colors } from '~/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -92,13 +93,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginBottom: 20,
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   description: {
     fontSize: 14,
     textAlign: 'center',
     marginTop: 10,
-    color: '#6B7280',
+    color: colors.gray[500],
     paddingHorizontal: 20,
   },
   buttonContainer: {
