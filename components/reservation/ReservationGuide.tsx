@@ -140,8 +140,8 @@ export function ReservationGuide() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  contentContainer: { paddingBottom: 40 },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  contentContainer: { padding: 24, paddingBottom: 40 },
 
   // Header
   header: {
