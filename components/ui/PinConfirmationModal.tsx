@@ -168,7 +168,9 @@ export function PinConfirmationModal({
 
   return (
     <View style={styles.overlay}>
-      <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+      {Platform.OS !== 'android' && (
+        <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+      )}
       <Pressable style={styles.backdropTouch} onPress={handleClose} />
 
       <KeyboardAwareScrollViewWrapper
@@ -245,14 +247,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     zIndex: 2000,
     ...Platform.select({
       web: {
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
       },
-      android: { elevation: 2000 },
+      android: {
+        backgroundColor: 'rgba(255, 255, 255, 0.99)',
+        elevation: 2000,
+      },
+      default: {
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+      },
     }),
   } as any,
   backdropTouch: {
