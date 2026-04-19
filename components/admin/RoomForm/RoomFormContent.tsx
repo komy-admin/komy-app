@@ -7,6 +7,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { shadows } from '~/theme';
 
 interface RoomFormContentProps {
   room: Room | null;
@@ -466,6 +467,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     height: 44,
+    ...shadows.bottom,
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
     }),
