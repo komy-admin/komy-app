@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View, Text, Pressable, Platform } from 'react-n
 import { TicketCard } from './cards/TicketCard';
 import { ItemGroup } from '~/types/kitchen.types';
 import { Status } from '~/types/status.enum';
+import { shadows } from '~/theme';
 
 interface TicketViewProps {
   itemGroups: ItemGroup[];
@@ -124,20 +125,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-      web: {
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.10)',
-      } as any,
-    }),
+    ...shadows.bottom,
   },
   emptyContainer: {
     flex: 1,

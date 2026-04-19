@@ -131,10 +131,6 @@ const styles = StyleSheet.create({
   cardOverdue: {
     borderColor: '#DC2626',
     borderWidth: 2,
-    shadowColor: '#DC2626',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
   },
   cardNotified: {
     opacity: 0.6,

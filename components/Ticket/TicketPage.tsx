@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Status } from '~/types/status.enum';
 import { ItemGroup } from '~/types/kitchen.types';
 import { TicketView } from '~/components/Ticket/TicketView';
@@ -11,6 +11,7 @@ import { RootState } from '~/store';
 import { showApiError } from '~/lib/apiErrorHandler';
 import { useItemGrouping } from '~/hooks/useItemGrouping';
 import { filterItemsByArea } from '~/lib/itemFilters';
+import { shadows } from '~/theme';
 
 interface TicketPageProps {
   area: 'kitchen' | 'bar';
@@ -94,20 +95,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-      web: {
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.10)',
-      } as any,
-    }),
+    ...shadows.bottom,
   },
   bannerText: {
     color: '#2A2E33',
