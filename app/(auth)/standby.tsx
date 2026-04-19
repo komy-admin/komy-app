@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, StyleSheet, Text as RNText, Pressable, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import { AuthBackground } from '~/components/auth/AuthBackground';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { sessionService } from '~/services/SessionService';
@@ -74,7 +74,7 @@ export default function StandbyScreen() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <RNText style={styles.unlockButtonText}>Déverrouiller</RNText>
               )}
@@ -99,7 +99,7 @@ export default function StandbyScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   formPanel: {
     flex: 1,
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     paddingHorizontal: 32,
     paddingVertical: 36,
@@ -130,9 +130,9 @@ const styles = StyleSheet.create({
   statusBox: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surface.muted,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 20,
@@ -142,20 +142,20 @@ const styles = StyleSheet.create({
   statusBoxTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 1,
   },
   userRole: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   unlockButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   unlockButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -179,28 +179,28 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
   },
   dividerText: {
     paddingHorizontal: 14,
     fontSize: 13,
     fontWeight: '400',
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   logoutButton: {
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surface.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoutButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
