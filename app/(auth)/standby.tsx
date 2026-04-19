@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View, StyleSheet, Text as RNText, Pressable, ActivityIndicator, Image, Platform, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Text as RNText, Pressable, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import { AuthBackground } from '~/components/auth/AuthBackground';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { shadows } from '~/theme';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { sessionService } from '~/services/SessionService';
@@ -133,18 +134,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 36,
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-      } as any,
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 32,
-        elevation: 12,
-      },
-    }),
+    ...shadows.bottom,
   },
   title: {
     fontSize: 26,

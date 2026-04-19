@@ -18,6 +18,7 @@ import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
 import { SessionExpiredError } from '~/api/base.api';
+import { shadows } from '~/theme';
 
 export default function DeviceVerificationScreen() {
   const [code, setCode] = useState('');
@@ -352,11 +353,7 @@ const styles = StyleSheet.create({
   },
   switchOptionActive: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    ...shadows.bottom,
   },
   switchName: {
     fontSize: 13,

@@ -9,6 +9,7 @@ import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { shadows } from '~/theme';
 
 const BREAKPOINT = 768;
 const APP_VERSION = 'Komy - v3.7.1';
@@ -236,18 +237,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 36,
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-      } as any,
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 32,
-        elevation: 12,
-      },
-    }),
+    ...shadows.bottom,
   },
 
   // === Form content ===

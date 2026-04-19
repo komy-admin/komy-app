@@ -1,11 +1,12 @@
 import { Slot } from 'expo-router';
-import { View, Text, Dimensions, StyleSheet, Platform, Pressable } from 'react-native';
+import { View, Text, Dimensions, StyleSheet, Pressable } from 'react-native';
 import { AdminSidebar } from '~/components/admin/Sidebar';
 import { Topbar } from '~/components/TopBar';
 import { Monitor, Smartphone } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { logout } from '~/store';
 import { useAppDispatch } from '~/store/hooks';
+import { shadows } from '~/theme';
 
 
 // Composant pour la vérification de l'écran admin
@@ -143,21 +144,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: 500,
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 25,
-    elevation: 10,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.8)',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-      },
-    }),
+    ...shadows.bottom,
   },
   blockedIconContainer: {
     width: 120,
@@ -226,21 +215,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(226, 232, 240, 0.8)',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-      },
-    }),
+    ...shadows.bottom,
   },
   logoutButtonText: {
     fontSize: 16,

@@ -11,8 +11,9 @@
  */
 
 import React from 'react';
-import { StyleSheet, ViewStyle, View, useWindowDimensions, Platform } from 'react-native';
+import { StyleSheet, ViewStyle, View, useWindowDimensions } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { shadows } from '~/theme';
 
 interface AuthScreenLayoutProps {
   children: React.ReactNode;
@@ -76,17 +77,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 36,
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-      } as any,
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 32,
-        elevation: 12,
-      },
-    }),
+    ...shadows.bottom,
   },
 });
