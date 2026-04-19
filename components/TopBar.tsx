@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { View, Image, Text, Pressable, Platform, StyleSheet } from 'react-native'
-import { Calendar, LogOut, Lock, Landmark } from 'lucide-react-native'
+import { View, Image, Text, Pressable, StyleSheet } from 'react-native'
+import { Calendar, Lock, Landmark } from 'lucide-react-native'
 import { Href, useRouter, usePathname } from 'expo-router'
 import { useAppSelector } from '~/store/hooks';
 import { sessionService } from '~/services/SessionService';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
-import { shadows } from '~/theme';
 
 const capitalize = (str: string) =>
   str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -20,7 +19,6 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState('')
-  const [showProfileMenu, setShowProfileMenu] = useState(false)
   const { setTopBarHeight } = usePanelPortal();
 
   // Les managers ont accès à l'interface admin mais pas à la config
@@ -71,7 +69,6 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
   );
 
   const handleLock = useCallback(() => {
-    setShowProfileMenu(false);
     if (user?.skipPinRequired) {
       sessionService.clearSessionStandby();
       router.replace('/standby' as Href);
@@ -81,34 +78,11 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
     }
   }, [router, user?.skipPinRequired]);
 
-  const handleLogout = useCallback(async () => {
-    try {
-      setShowProfileMenu(false);
-      await sessionService.logout();
-      router.replace('/login');
-    } catch (error) {
-      router.replace('/login');
-    }
-  }, [router]);
-
-  const closeMenu = useCallback(() => setShowProfileMenu(false), []);
-  const toggleProfileMenu = useCallback(() => setShowProfileMenu(prev => !prev), []);
-
   const handleLayout = useCallback((event: { nativeEvent: { layout: { height: number } } }) => {
     setTopBarHeight(event.nativeEvent.layout.height);
   }, [setTopBarHeight]);
 
-  const containerZStyle = useMemo(() => ({
-    ...styles.container,
-    zIndex: showProfileMenu ? 1001 : 25,
-  }), [showProfileMenu]);
-
-  const profileMenuBgStyle = useMemo(() => ([
-    styles.profileRow,
-    showProfileMenu && styles.profileRowActive,
-  ]), [showProfileMenu]);
-
-  // Contenu profil partagé (admin link & manager pressable)
+  // Contenu profil partagé
   const profileContent = (
     <>
       <Image
@@ -124,92 +98,57 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
   );
 
   return (
-    <>
-      {/* Overlay invisible pour fermer le menu */}
-      {showProfileMenu && (
-        <Pressable onPress={closeMenu} style={styles.overlay} />
-      )}
-
-      <View onLayout={handleLayout} style={containerZStyle}>
-        <View style={styles.leftSection}>
-          <View style={styles.containerLogo}>
-            <Image
-              source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
-              style={styles.logo}
-            />
-          </View>
-          {accountName ? (
-            <View style={styles.badge}>
-              <Landmark size={24} color="#2A2E33" strokeWidth={1} />
-              <Text style={styles.badgeText}>{accountName}</Text>
-            </View>
-          ) : null}
+    <View onLayout={handleLayout} style={styles.container}>
+      <View style={styles.leftSection}>
+        <View style={styles.containerLogo}>
+          <Image
+            source={require('../assets/images/logo_komy_png/Logo_Komy_noirSF.png')}
+            style={styles.logo}
+          />
         </View>
-
-        <View style={styles.rightSection}>
-          <View style={styles.badgesRow}>
-            <Pressable onPress={handleLock} style={styles.badge}>
-              <Lock size={24} color="#2A2E33" strokeWidth={1} />
-              <Text style={styles.badgeText}>Verrouiller</Text>
-            </Pressable>
-            <View style={styles.badge}>
-              <Calendar size={24} color="#2A2E33" strokeWidth={1} />
-              <Text style={styles.badgeText}>{currentDate}</Text>
-            </View>
+        {accountName ? (
+          <View style={styles.badge}>
+            <Landmark size={24} color="#2A2E33" strokeWidth={1} />
+            <Text style={styles.badgeText}>{accountName}</Text>
           </View>
-
-          <View style={styles.profileContainer}>
-            {shouldEnableConfigClick ? (
-              <Pressable onPress={() => {
-                if (!pathname.startsWith('/configs')) {
-                  router.push('/(admin)/configs' as Href);
-                }
-              }}>
-                <View style={styles.profileRow}>
-                  {profileContent}
-                </View>
-              </Pressable>
-            ) : (
-              <Pressable onPress={toggleProfileMenu}>
-                <View style={profileMenuBgStyle}>
-                  {profileContent}
-                </View>
-              </Pressable>
-            )}
-
-            {/* Menu dropdown */}
-            {showProfileMenu && !shouldEnableConfigClick && (
-              <View style={styles.dropdown}>
-                <View style={styles.dropdownArrow} />
-                <View style={styles.dropdownContent}>
-                  <Pressable
-                    onPress={handleLogout}
-                    style={styles.logoutButton}
-                    android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
-                  >
-                    <LogOut size={18} color="#EF4444" strokeWidth={2} />
-                    <Text style={styles.logoutText}>Se déconnecter</Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
+        ) : null}
       </View>
 
-    </>
+      <View style={styles.rightSection}>
+        <View style={styles.badgesRow}>
+          <Pressable onPress={handleLock} style={styles.badge}>
+            <Lock size={24} color="#2A2E33" strokeWidth={1} />
+            <Text style={styles.badgeText}>Verrouiller</Text>
+          </Pressable>
+          <View style={styles.badge}>
+            <Calendar size={24} color="#2A2E33" strokeWidth={1} />
+            <Text style={styles.badgeText}>{currentDate}</Text>
+          </View>
+        </View>
+
+        <View style={styles.profileContainer}>
+          {shouldEnableConfigClick ? (
+            <Pressable onPress={() => {
+              if (!pathname.startsWith('/configs')) {
+                router.push('/(admin)/configs' as Href);
+              }
+            }}>
+              <View style={styles.profileRow}>
+                {profileContent}
+              </View>
+            </Pressable>
+          ) : (
+            <View style={styles.profileRow}>
+              {profileContent}
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 999,
-  },
   container: {
     width: '100%',
     height: 90,
@@ -263,9 +202,6 @@ const styles = StyleSheet.create({
   },
   profileContainer: {
     position: 'relative',
-    ...Platform.select({
-      web: { cursor: 'pointer' as any },
-    }),
   },
   profileRow: {
     flexDirection: 'row',
@@ -273,9 +209,6 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 8,
     borderRadius: 8,
-  },
-  profileRowActive: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   avatar: {
     width: 45,
@@ -292,45 +225,5 @@ const styles = StyleSheet.create({
     color: '#64666A',
     fontSize: 14,
     fontWeight: '200',
-  },
-  dropdown: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: -20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    minWidth: 180,
-    zIndex: 1000,
-  },
-  dropdownArrow: {
-    position: 'absolute',
-    top: -6,
-    right: 20,
-    width: 12,
-    height: 12,
-    backgroundColor: '#FFFFFF',
-    borderLeftWidth: 1,
-    borderTopWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    transform: [{ rotate: '45deg' }],
-  },
-  dropdownContent: {
-    padding: 8,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  logoutText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#EF4444',
   },
 });

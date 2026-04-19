@@ -11,7 +11,6 @@ export * from './badge';
 export * from './table';
 export * from './loader';
 export * from './dialog';
-export * from './popover';
 export * from './modal';
 export * from './color-picker';
 export * from './select-button';
