@@ -36,15 +36,21 @@ function getToastForEvent(event: ReservationWebSocketEvent): { message: string; 
       return { message: `Réservation de ${name} annulée`, type: 'warning' };
     case 'reservation.no_show':
       if (event.reservation.cardImprint?.status === 'failed') {
-        return { message: `No-show : ${name} — débit échoué`, type: 'error' };
+        const reason = event.reservation.cardImprint.failureReason;
+        return { message: reason ? `No-show : ${name} — débit échoué (${reason})` : `No-show : ${name} — débit échoué`, type: 'error' };
       }
       return { message: `No-show : ${name}`, type: 'error' };
     case 'reservation.completed':
       return { message: `Réservation de ${name} terminée`, type: 'success' };
+    case 'reservation.dispute_opened': {
+      const reason = event.reservation.cardImprint?.disputeReason;
+      return { message: reason ? `Paiement contesté pour ${name} (${reason})` : `Paiement contesté pour ${name}`, type: 'error' };
+    }
     case 'reservation.updated': {
       const cardStatus = event.reservation.cardImprint?.status;
       if (cardStatus === 'failed') {
-        return { message: `Échec empreinte bancaire pour ${name}`, type: 'error' };
+        const reason = event.reservation.cardImprint?.failureReason;
+        return { message: reason ? `Échec empreinte bancaire pour ${name} (${reason})` : `Échec empreinte bancaire pour ${name}`, type: 'error' };
       }
       if (cardStatus === 'authorized') {
         return { message: `Empreinte bancaire autorisée pour ${name}`, type: 'success' };
@@ -403,12 +409,8 @@ export const useReservation = () => {
     return reservationApiService.getStripeConnectLink(returnUrl);
   }, []);
 
-  const disconnectStripe = useCallback(async () => {
-    await reservationApiService.disconnectStripe();
-    setState(prev => ({
-      ...prev,
-      stripeStatus: { connected: false, accountId: null, chargesEnabled: false, payoutsEnabled: false },
-    }));
+  const getStripeDashboardLink = useCallback(async () => {
+    return reservationApiService.getStripeDashboardLink();
   }, []);
 
   // === WEBSOCKET: écoute temps réel des événements de réservation ===
@@ -517,7 +519,7 @@ export const useReservation = () => {
     // Stripe Connect
     loadStripeStatus,
     getStripeConnectLink,
-    disconnectStripe,
+    getStripeDashboardLink,
 
     // Reservations
     createReservation,

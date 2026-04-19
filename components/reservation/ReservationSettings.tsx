@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Switch, ActivityIndicator, Platform, ScrollView, useWindowDimensions, Linking } from 'react-native';
-import { Store, Settings, Bell, Mail, Info, Link2, Shield, ChevronDown } from 'lucide-react-native';
+import { Store, Settings, Bell, Mail, Info, Link2, Shield, ChevronDown, Copy, ExternalLink } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
+import * as Clipboard from 'expo-clipboard';
 import { useToast } from '~/components/ToastProvider';
 import type { ReservationProfessionalProfile, UpdateReservationSettingsDto, StripeConnectStatus } from '~/types/reservation.types';
 
@@ -14,7 +15,7 @@ interface ReservationSettingsPageProps {
     updateSettings: (data: UpdateReservationSettingsDto) => Promise<ReservationProfessionalProfile>;
     loadStripeStatus: () => Promise<StripeConnectStatus>;
     getStripeConnectLink: (returnUrl: string) => Promise<{ url: string }>;
-    disconnectStripe: () => Promise<void>;
+    getStripeDashboardLink: () => Promise<{ url: string }>;
   };
 }
 
@@ -52,9 +53,9 @@ const SETTINGS_TOOLTIPS: Record<string, { title: string; items: string[] }> = {
   stripe: {
     title: 'Compte Stripe',
     items: [
-      'Connectez votre compte Stripe pour encaisser les frais no-show depuis Komy.',
+      'Créez votre compte Stripe pour encaisser les frais no-show depuis Komy.',
       'Une fois connecté, activez l\'empreinte bancaire dans le bloc "Garantie no-show".',
-      'Les paiements sont traités par Stripe de façon sécurisée.',
+      'Depuis votre tableau de bord Stripe, vous pouvez suivre vos versements, modifier votre RIB et télécharger vos justificatifs fiscaux.',
     ],
   },
   noshow: {
@@ -75,7 +76,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
   const [isStripeActionLoading, setIsStripeActionLoading] = useState(false);
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
-  const isCompact = width < 1100;
+  const isNarrow = width < 720;
+  const isWide = width >= 1100;
 
   const [form, setForm] = useState({
     businessName: '',
@@ -167,7 +169,9 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
       showToast('Paramètres sauvegardés', 'success');
       setHasChanges(false);
     } catch (error: any) {
-      showToast(error?.response?.data?.error || 'Erreur lors de la sauvegarde', 'error');
+      const apiError = error?.response?.data?.error;
+      const message = typeof apiError === 'string' ? apiError : apiError?.message || 'Erreur lors de la sauvegarde';
+      showToast(message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -187,18 +191,26 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
         setIsStripeActionLoading(false);
       }
     } catch (error: any) {
-      showToast(error?.response?.data?.error || 'Erreur de connexion Stripe', 'error');
+      const apiError = error?.response?.data?.error;
+      const message = typeof apiError === 'string' ? apiError : apiError?.message || 'Erreur de connexion Stripe';
+      showToast(message, 'error');
       setIsStripeActionLoading(false);
     }
   };
 
-  const handleStripeDisconnect = async () => {
+  const handleStripeDashboard = async () => {
     setIsStripeActionLoading(true);
     try {
-      await reservation.disconnectStripe();
-      showToast('Compte Stripe déconnecté', 'success');
+      const { url } = await reservation.getStripeDashboardLink();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        await Linking.openURL(url);
+      }
     } catch (error: any) {
-      showToast(error?.response?.data?.error || 'Erreur lors de la déconnexion', 'error');
+      const apiError = error?.response?.data?.error;
+      const message = typeof apiError === 'string' ? apiError : apiError?.message || 'Impossible d\'ouvrir le tableau de bord Stripe';
+      showToast(message, 'error');
     } finally {
       setIsStripeActionLoading(false);
     }
@@ -212,71 +224,97 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
     );
   }
 
+  const slug = reservation.profile?.slug;
+  const bookingUrl = slug ? `${process.env.EXPO_PUBLIC_RESERVATION_API_URL}/book/${slug}` : null;
+
+  const handleCopyBookingUrl = async () => {
+    if (!bookingUrl) return;
+    try {
+      await Clipboard.setStringAsync(bookingUrl);
+      showToast('Lien copié', 'success');
+    } catch {
+      showToast('Impossible de copier le lien', 'error');
+    }
+  };
+
+  const handleOpenBookingUrl = async () => {
+    if (!bookingUrl) return;
+    try {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.open(bookingUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        await Linking.openURL(bookingUrl);
+      }
+    } catch {
+      showToast('Impossible d\'ouvrir le lien', 'error');
+    }
+  };
+
   const stripe = reservation.stripeStatus;
-  const isStripeConnected = stripe?.connected ?? false;
-  const isStripeProfileIncomplete = isStripeConnected && (!stripe?.chargesEnabled || !stripe?.payoutsEnabled);
-  const isStripeFullyConnected = isStripeConnected && !!stripe?.chargesEnabled && !!stripe?.payoutsEnabled;
+  const isNotConnected = !stripe?.connected;
+  const isOnboarding = !!stripe?.connected && !stripe?.onboardingComplete;
+  const isFullyConnected = !!stripe?.connected && !!stripe?.onboardingComplete;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pageTitle}>Paramètres de réservation</Text>
-          <Text style={styles.pageSubtitle}>Configurez le comportement de votre système de réservation</Text>
+    <View style={styles.tabContent}>
+      <View style={styles.tabHeader}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.tabTitle}>Paramètres</Text>
+          <Text style={styles.tabSubtitle}>Configurez le comportement de votre système de réservation</Text>
         </View>
         {hasChanges && (
           <Pressable
-            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+            style={[styles.createButton, { backgroundColor: '#2A2E33' }, isSaving && styles.createButtonDisabled]}
             onPress={handleSave}
             disabled={isSaving}
           >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? 'Sauvegarde...' : 'Sauvegarder'}
+            <Text style={styles.createButtonText}>
+              {isSaving ? 'Sauvegarde...' : 'Enregistrer'}
             </Text>
           </Pressable>
         )}
       </View>
 
-      {/* Row 1: Etablissement + Contraintes */}
-      <View style={[styles.row, isCompact && styles.rowCompact]}>
-        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIconWrap}>
-              <Store size={18} color="#3B82F6" />
-            </View>
-            <View>
-              <View style={tooltipStyles.titleRow}>
-                <Text style={styles.sectionTitle}>Établissement</Text>
-                <SettingsTooltip tooltipKey="etablissement" visible={visibleTooltip} onToggle={setVisibleTooltip} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Établissement + Contraintes (côte-à-côte sur écran large) */}
+        <View style={isWide ? styles.cardsRow : undefined}>
+          {/* Établissement */}
+          <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <Store size={24} color="#3B82F6" strokeWidth={2} />
               </View>
-              <Text style={styles.sectionSubtitle}>Informations visibles par vos clients</Text>
+              <View style={styles.viewCardContent}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.viewCardTitle}>Établissement</Text>
+                  <SettingsTooltip tooltipKey="etablissement" visible={visibleTooltip} onToggle={setVisibleTooltip} />
+                </View>
+                <Text style={styles.viewCardDescription}>Informations visibles par vos clients</Text>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.fieldGroup}>
-            <View style={styles.inlineRow}>
-              <View style={styles.inlineFieldHalf}>
+            <View style={styles.viewModeSection}>
+              <View style={[styles.inlineRow, isNarrow && styles.inlineRowStacked]}>
                 <LabeledInput
                   label="Nom de l'établissement"
                   value={form.businessName}
                   onChange={(v) => updateField('businessName', v)}
-                  placeholder="Nom affiché sur la page de réservation"
+                  placeholder="Nom affiché sur la page"
                 />
-              </View>
-              <View style={styles.inlineFieldHalf}>
                 <LabeledInput
                   label="Email de contact"
                   value={form.email}
                   onChange={(v) => updateField('email', v)}
-                  placeholder="Email affiché sur la page"
+                  placeholder="Email affiché"
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
               </View>
-            </View>
-            <View style={styles.inlineRow}>
-              <View style={styles.inlineFieldHalf}>
+              <View style={[styles.inlineRow, isNarrow && styles.inlineRowStacked]}>
                 <LabeledInput
                   label="Téléphone"
                   value={form.phone}
@@ -284,8 +322,6 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
                   placeholder="N° de téléphone"
                   keyboardType="phone-pad"
                 />
-              </View>
-              <View style={styles.inlineFieldHalf}>
                 <LabeledInput
                   label="Adresse"
                   value={form.address}
@@ -293,215 +329,202 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
                   placeholder="Adresse"
                 />
               </View>
+
+              {bookingUrl && (
+                <View>
+                  <Text style={styles.fieldLabel}>Lien de votre page de réservation</Text>
+                  <View style={styles.bookingUrlRow}>
+                    <Text style={styles.bookingUrlText} numberOfLines={1} selectable>
+                      {bookingUrl}
+                    </Text>
+                    <Pressable
+                      style={styles.bookingUrlIconBtn}
+                      onPress={handleCopyBookingUrl}
+                      accessibilityLabel="Copier le lien"
+                    >
+                      <Copy size={16} color="#475569" />
+                    </Pressable>
+                    <Pressable
+                      style={styles.bookingUrlIconBtn}
+                      onPress={handleOpenBookingUrl}
+                      accessibilityLabel="Ouvrir le lien"
+                    >
+                      <ExternalLink size={16} color="#475569" />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.helpText}>
+                    Partagez ce lien avec vos clients pour qu'ils réservent en ligne.
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
-        </View>
 
-        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIconWrap}>
-              <Settings size={18} color="#64748B" />
-            </View>
-            <View>
-              <View style={tooltipStyles.titleRow}>
-                <Text style={styles.sectionTitle}>Contraintes de réservation</Text>
-                <SettingsTooltip tooltipKey="contraintes" visible={visibleTooltip} onToggle={setVisibleTooltip} />
+          {/* Contraintes */}
+          <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(100, 116, 139, 0.1)' }]}>
+                <Settings size={24} color="#64748B" strokeWidth={2} />
               </View>
-              <Text style={styles.sectionSubtitle}>Limites et délais pour les réservations</Text>
-            </View>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <View style={styles.constraintsGrid}>
-              <View style={styles.constraintItem}>
-                <Text style={styles.constraintLabel}>Délai minimum</Text>
-                <View style={styles.constraintInputRow}>
-                  <TextInput
-                    style={styles.constraintInput}
-                    value={form.minNoticeHours}
-                    onChangeText={(v) => updateField('minNoticeHours', v)}
-                    keyboardType="number-pad"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <Text style={styles.constraintUnit}>heures</Text>
+              <View style={styles.viewCardContent}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.viewCardTitle}>Contraintes de réservation</Text>
+                  <SettingsTooltip tooltipKey="contraintes" visible={visibleTooltip} onToggle={setVisibleTooltip} />
                 </View>
-              </View>
-
-              <View style={styles.constraintItem}>
-                <Text style={styles.constraintLabel}>Réservation max à l'avance</Text>
-                <View style={styles.constraintInputRow}>
-                  <TextInput
-                    style={styles.constraintInput}
-                    value={form.maxAdvanceDays}
-                    onChangeText={(v) => updateField('maxAdvanceDays', v)}
-                    keyboardType="number-pad"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <Text style={styles.constraintUnit}>jours</Text>
-                </View>
-              </View>
-
-              <View style={styles.constraintItem}>
-                <Text style={styles.constraintLabel}>Taille min du groupe</Text>
-                <View style={styles.constraintInputRow}>
-                  <TextInput
-                    style={styles.constraintInput}
-                    value={form.minPartySize}
-                    onChangeText={(v) => updateField('minPartySize', v)}
-                    keyboardType="number-pad"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <Text style={styles.constraintUnit}>pers.</Text>
-                </View>
-              </View>
-
-              <View style={styles.constraintItem}>
-                <Text style={styles.constraintLabel}>Taille max du groupe</Text>
-                <View style={styles.constraintInputRow}>
-                  <TextInput
-                    style={styles.constraintInput}
-                    value={form.maxPartySize}
-                    onChangeText={(v) => updateField('maxPartySize', v)}
-                    keyboardType="number-pad"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <Text style={styles.constraintUnit}>pers.</Text>
-                </View>
+                <Text style={styles.viewCardDescription}>Limites et délais pour les réservations</Text>
               </View>
             </View>
 
-            <View style={styles.inlineRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.constraintLabel}>Délai d'annulation</Text>
-              </View>
-              <View style={styles.constraintInputRow}>
-                <TextInput
-                  style={styles.constraintInput}
-                  value={form.cancellationDeadlineHours}
-                  onChangeText={(v) => updateField('cancellationDeadlineHours', v)}
-                  keyboardType="number-pad"
-                  placeholderTextColor="#9CA3AF"
+            <View style={styles.viewModeSection}>
+              <View style={styles.constraintsGrid}>
+                <ConstraintItem
+                  label="Délai minimum"
+                  value={form.minNoticeHours}
+                  onChange={(v) => updateField('minNoticeHours', v)}
+                  unit="heures"
+                  isNarrow={isNarrow}
                 />
-                <Text style={styles.constraintUnit}>h avant</Text>
+                <ConstraintItem
+                  label="Réservation max à l'avance"
+                  value={form.maxAdvanceDays}
+                  onChange={(v) => updateField('maxAdvanceDays', v)}
+                  unit="jours"
+                  isNarrow={isNarrow}
+                />
+                <ConstraintItem
+                  label="Taille min du groupe"
+                  value={form.minPartySize}
+                  onChange={(v) => updateField('minPartySize', v)}
+                  unit="pers."
+                  isNarrow={isNarrow}
+                />
+                <ConstraintItem
+                  label="Taille max du groupe"
+                  value={form.maxPartySize}
+                  onChange={(v) => updateField('maxPartySize', v)}
+                  unit="pers."
+                  isNarrow={isNarrow}
+                />
+                <ConstraintItem
+                  label="Délai d'annulation"
+                  value={form.cancellationDeadlineHours}
+                  onChange={(v) => updateField('cancellationDeadlineHours', v)}
+                  unit="h avant"
+                  isNarrow={isNarrow}
+                />
               </View>
             </View>
           </View>
         </View>
-      </View>
 
-      {/* Row 2: Notifications + Email */}
-      <View style={[styles.row, isCompact && styles.rowCompact]}>
-        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIconWrap}>
-              <Bell size={18} color="#F59E0B" />
-            </View>
-            <View>
-              <View style={tooltipStyles.titleRow}>
-                <Text style={styles.sectionTitle}>Notifications & Rappels</Text>
-                <SettingsTooltip tooltipKey="notifications" visible={visibleTooltip} onToggle={setVisibleTooltip} />
+        {/* Notifications + Emails (côte-à-côte sur écran large) */}
+        <View style={isWide ? styles.cardsRow : undefined}>
+          {/* Notifications & Rappels */}
+          <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                <Bell size={24} color="#F59E0B" strokeWidth={2} />
               </View>
-              <Text style={styles.sectionSubtitle}>Gérez vos alertes et rappels clients</Text>
-            </View>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.groupLabel}>Notifications restaurateur</Text>
-            <SettingSwitch
-              label="Nouvelle réservation"
-              description="Recevoir un email à chaque nouvelle réservation"
-              value={form.notifyProfessionalOnNewReservation}
-              onChange={(v) => updateField('notifyProfessionalOnNewReservation', v)}
-            />
-            <SettingSwitch
-              label="Annulation"
-              description="Recevoir un email quand un client annule"
-              value={form.notifyProfessionalOnCancellation}
-              onChange={(v) => updateField('notifyProfessionalOnCancellation', v)}
-            />
-
-            <View style={styles.divider} />
-
-            <Text style={styles.groupLabel}>Rappels clients</Text>
-            <SettingSwitch
-              label="Rappels par email"
-              description="Envoyer un email de rappel avant la réservation"
-              value={form.reminderEnabled}
-              onChange={(v) => updateField('reminderEnabled', v)}
-            />
-
-            {form.reminderEnabled && (
-              <View style={styles.inlineRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.constraintLabel}>Envoyer le rappel</Text>
+              <View style={styles.viewCardContent}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.viewCardTitle}>Notifications & Rappels</Text>
+                  <SettingsTooltip tooltipKey="notifications" visible={visibleTooltip} onToggle={setVisibleTooltip} />
                 </View>
-                <View style={styles.constraintInputRow}>
-                  <TextInput
-                    style={styles.constraintInput}
+                <Text style={styles.viewCardDescription}>Gérez vos alertes et rappels clients</Text>
+              </View>
+            </View>
+
+            <View style={styles.viewModeSection}>
+              <Text style={styles.groupLabel}>Notifications restaurateur</Text>
+              <SettingSwitch
+                label="Nouvelle réservation"
+                description="Recevoir un email à chaque nouvelle réservation"
+                value={form.notifyProfessionalOnNewReservation}
+                onChange={(v) => updateField('notifyProfessionalOnNewReservation', v)}
+              />
+              <SettingSwitch
+                label="Annulation"
+                description="Recevoir un email quand un client annule"
+                value={form.notifyProfessionalOnCancellation}
+                onChange={(v) => updateField('notifyProfessionalOnCancellation', v)}
+              />
+
+              <View style={styles.divider} />
+
+              <Text style={styles.groupLabel}>Rappels clients</Text>
+              <SettingSwitch
+                label="Rappels par email"
+                description="Envoyer un email de rappel avant la réservation"
+                value={form.reminderEnabled}
+                onChange={(v) => updateField('reminderEnabled', v)}
+              />
+
+              {form.reminderEnabled && (
+                <View style={styles.constraintsGrid}>
+                  <ConstraintItem
+                    label="Envoyer le rappel"
                     value={form.reminderHoursBefore}
-                    onChangeText={(v) => updateField('reminderHoursBefore', v)}
-                    keyboardType="number-pad"
-                    placeholderTextColor="#9CA3AF"
+                    onChange={(v) => updateField('reminderHoursBefore', v)}
+                    unit="h avant"
+                    isNarrow={isNarrow}
                   />
-                  <Text style={styles.constraintUnit}>h avant</Text>
                 </View>
+              )}
+            </View>
+          </View>
+
+          {/* Emails */}
+          <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
+                <Mail size={24} color="#A855F7" strokeWidth={2} />
               </View>
-            )}
+              <View style={styles.viewCardContent}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.viewCardTitle}>Personnalisation des emails</Text>
+                  <SettingsTooltip tooltipKey="emails" visible={visibleTooltip} onToggle={setVisibleTooltip} />
+                </View>
+                <Text style={styles.viewCardDescription}>Message ajouté dans les emails clients</Text>
+              </View>
+            </View>
+
+            <View style={styles.viewModeSection}>
+              <Text style={styles.helpText}>
+                Ce message sera inclus dans tous les emails envoyés aux clients (confirmation, rappel, annulation).
+              </Text>
+              <TextInput
+                style={styles.textAreaInput}
+                value={form.customEmailMessage}
+                onChangeText={(v) => updateField('customEmailMessage', v.slice(0, 2000))}
+                placeholder="Ex : Merci d'avoir réservé chez nous ! N'hésitez pas à nous contacter pour toute demande spéciale."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={6}
+                maxLength={2000}
+              />
+              <Text style={styles.charCount}>{form.customEmailMessage.length} / 2000</Text>
+            </View>
           </View>
         </View>
 
-        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIconWrap}>
-              <Mail size={18} color="#A855F7" />
+        {/* Stripe + Garantie no-show (côte-à-côte sur écran large) */}
+        <View style={isWide ? styles.cardsRow : undefined}>
+        {/* Stripe */}
+        <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
+          <View style={styles.viewCardHeader}>
+            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+              <Link2 size={24} color="#6366F1" strokeWidth={2} />
             </View>
-            <View>
-              <View style={tooltipStyles.titleRow}>
-                <Text style={styles.sectionTitle}>Personnalisation des emails</Text>
-                <SettingsTooltip tooltipKey="emails" visible={visibleTooltip} onToggle={setVisibleTooltip} />
-              </View>
-              <Text style={styles.sectionSubtitle}>Message ajouté dans les emails clients</Text>
-            </View>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldHint}>
-              Ce message sera inclus dans tous les emails envoyés aux clients (confirmation, rappel, annulation).
-            </Text>
-            <TextInput
-              style={styles.textAreaInput}
-              value={form.customEmailMessage}
-              onChangeText={(v) => updateField('customEmailMessage', v.slice(0, 2000))}
-              placeholder="Ex : Merci d'avoir réservé chez nous ! N'hésitez pas à nous contacter pour toute demande spéciale."
-              placeholderTextColor="#9CA3AF"
-              multiline
-              numberOfLines={6}
-              maxLength={2000}
-            />
-            <Text style={styles.charCount}>{form.customEmailMessage.length} / 2000</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Row 3: Stripe Connect + Garantie no-show */}
-      <View style={[styles.row, isCompact && styles.rowCompact]}>
-
-        {/* Compte Stripe */}
-        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: '#F0F0FF' }]}>
-              <Link2 size={18} color="#6366F1" />
-            </View>
-            <View>
-              <View style={tooltipStyles.titleRow}>
-                <Text style={styles.sectionTitle}>Compte Stripe</Text>
+            <View style={styles.viewCardContent}>
+              <View style={styles.titleRow}>
+                <Text style={styles.viewCardTitle}>Compte Stripe</Text>
                 <SettingsTooltip tooltipKey="stripe" visible={visibleTooltip} onToggle={setVisibleTooltip} />
               </View>
-              <Text style={styles.sectionSubtitle}>Encaissez les frais no-show via Stripe</Text>
+              <Text style={styles.viewCardDescription}>Encaissez les frais no-show via Stripe</Text>
             </View>
           </View>
 
-          <View style={styles.fieldGroup}>
+          <View style={styles.viewModeSection}>
             {isStripeActionLoading ? (
               <ActivityIndicator size="small" color="#6366F1" style={{ alignSelf: 'flex-start' }} />
             ) : (
@@ -509,46 +532,54 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
                 <View style={styles.stripeStatusRow}>
                   <View style={[
                     styles.stripeStatusBadge,
-                    isStripeFullyConnected && { backgroundColor: '#F0FDF4' },
-                    isStripeProfileIncomplete && { backgroundColor: '#FFFBEB' },
-                    !isStripeConnected && { backgroundColor: '#F1F5F9' },
+                    isFullyConnected && { backgroundColor: '#F0FDF4' },
+                    isOnboarding && { backgroundColor: '#FFFBEB' },
+                    isNotConnected && { backgroundColor: '#F1F5F9' },
                   ]}>
                     <View style={[
                       styles.stripeStatusDot,
-                      isStripeFullyConnected && { backgroundColor: '#10B981' },
-                      isStripeProfileIncomplete && { backgroundColor: '#F59E0B' },
-                      !isStripeConnected && { backgroundColor: '#94A3B8' },
+                      isFullyConnected && { backgroundColor: '#10B981' },
+                      isOnboarding && { backgroundColor: '#F59E0B' },
+                      isNotConnected && { backgroundColor: '#94A3B8' },
                     ]} />
                     <Text style={[
                       styles.stripeStatusText,
-                      isStripeFullyConnected && { color: '#10B981' },
-                      isStripeProfileIncomplete && { color: '#D97706' },
-                      !isStripeConnected && { color: '#64748B' },
+                      isFullyConnected && { color: '#10B981' },
+                      isOnboarding && { color: '#D97706' },
+                      isNotConnected && { color: '#64748B' },
                     ]}>
-                      {isStripeFullyConnected ? 'Connecté' : isStripeProfileIncomplete ? 'Profil incomplet' : 'Non connecté'}
+                      {isFullyConnected ? 'Connecté' : isOnboarding ? 'Onboarding en cours' : 'Non connecté'}
                     </Text>
                   </View>
                 </View>
 
-                {isStripeConnected && stripe?.accountId && (
+                {isFullyConnected && stripe?.accountId && (
                   <Text style={styles.stripeAccountId}>ID : {stripe.accountId}</Text>
                 )}
 
-                {isStripeFullyConnected && (
-                  <Pressable style={styles.stripeDisconnectButton} onPress={handleStripeDisconnect}>
-                    <Text style={styles.stripeDisconnectText}>Déconnecter</Text>
+                {isOnboarding && stripe?.requirementsDue && stripe.requirementsDue.length > 0 && (
+                  <View style={styles.stripeWarning}>
+                    <Text style={styles.stripeWarningText}>
+                      Stripe attend encore : {formatRequirements(stripe.requirementsDue)}
+                    </Text>
+                  </View>
+                )}
+
+                {isFullyConnected && (
+                  <Pressable style={styles.stripeConnectButton} onPress={handleStripeDashboard}>
+                    <Text style={styles.stripeConnectText}>Accéder à mon tableau de bord Stripe</Text>
                   </Pressable>
                 )}
 
-                {isStripeProfileIncomplete && (
+                {isOnboarding && (
                   <Pressable style={styles.stripeConnectButton} onPress={handleStripeConnect}>
                     <Text style={styles.stripeConnectText}>Compléter mon profil Stripe</Text>
                   </Pressable>
                 )}
 
-                {!isStripeConnected && (
+                {isNotConnected && (
                   <Pressable style={styles.stripeConnectButton} onPress={handleStripeConnect}>
-                    <Text style={styles.stripeConnectText}>Relier mon compte Stripe</Text>
+                    <Text style={styles.stripeConnectText}>Créer mon compte Stripe</Text>
                   </Pressable>
                 )}
               </>
@@ -557,72 +588,109 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
         </View>
 
         {/* Garantie no-show */}
-        <View style={[styles.section, !isCompact && styles.sectionHalf]}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: '#FFF7ED' }]}>
-              <Shield size={18} color="#F97316" />
+        <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
+          <View style={styles.viewCardHeader}>
+            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
+              <Shield size={24} color="#F97316" strokeWidth={2} />
             </View>
-            <View>
-              <View style={tooltipStyles.titleRow}>
-                <Text style={styles.sectionTitle}>Garantie no-show</Text>
+            <View style={styles.viewCardContent}>
+              <View style={styles.titleRow}>
+                <Text style={styles.viewCardTitle}>Garantie no-show</Text>
                 <SettingsTooltip tooltipKey="noshow" visible={visibleTooltip} onToggle={setVisibleTooltip} />
               </View>
-              <Text style={styles.sectionSubtitle}>Protégez-vous contre les absences</Text>
+              <Text style={styles.viewCardDescription}>Protégez-vous contre les absences</Text>
             </View>
+            <Switch
+              value={form.requireCardGuarantee}
+              onValueChange={(v) => updateField('requireCardGuarantee', v)}
+              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+              thumbColor={form.requireCardGuarantee ? '#FFFFFF' : '#F3F4F6'}
+            />
           </View>
 
-          <View style={styles.fieldGroup}>
-            <SettingSwitch
-              label="Empreinte CB requise"
-              description="Demander une carte bancaire pour confirmer la réservation"
-              value={form.requireCardGuarantee}
-              onChange={(v) => updateField('requireCardGuarantee', v)}
-            />
+          {form.requireCardGuarantee && (
+            <View style={styles.viewModeSection}>
+              <Text style={styles.helpText}>
+                Demander une carte bancaire pour confirmer la réservation. En cas de no-show, vous pourrez débiter le montant configuré.
+              </Text>
 
-            {form.requireCardGuarantee && !isStripeConnected && (
-              <View style={styles.stripeWarning}>
-                <Text style={styles.stripeWarningText}>
-                  Reliez d'abord votre compte Stripe pour activer cette fonctionnalité.
-                </Text>
-              </View>
-            )}
+              {!isFullyConnected && (
+                <View style={styles.stripeWarning}>
+                  <Text style={styles.stripeWarningText}>
+                    Reliez d'abord votre compte Stripe pour activer cette fonctionnalité.
+                  </Text>
+                </View>
+              )}
 
-            {form.requireCardGuarantee && (
-              <>
-                <View style={styles.divider} />
-                <View style={styles.inlineRow}>
-                  <View style={styles.inlineFieldHalf}>
-                    <Text style={styles.fieldLabel}>Montant en cas de no-show</Text>
-                    <View style={styles.amountInputRow}>
-                      <TextInput
-                        style={[styles.textInput, { flex: 1 }]}
-                        value={form.noShowFeeAmountEur}
-                        onChangeText={(v) => updateField('noShowFeeAmountEur', v.replace(',', '.'))}
-                        placeholder="00.00"
-                        placeholderTextColor="#9CA3AF"
-                        keyboardType="decimal-pad"
-                      />
-                      <Text style={styles.constraintUnit}>€</Text>
-                    </View>
-                  </View>
-                  <View style={styles.inlineFieldHalf}>
-                    <Text style={styles.fieldLabel}>Devise</Text>
-                    <StyledSelect
-                      value={form.noShowFeeCurrency}
-                      onChange={(v) => updateField('noShowFeeCurrency', v)}
-                      options={[{ label: 'EUR — Euro', value: 'eur' }]}
-                      disabled
+              <View style={[styles.inlineRow, isNarrow && styles.inlineRowStacked]}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.fieldLabel}>Montant en cas de no-show</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={form.noShowFeeAmountEur}
+                      onChangeText={(v) => updateField('noShowFeeAmountEur', v.replace(',', '.'))}
+                      placeholder="00.00"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="decimal-pad"
                     />
+                    <Text style={styles.inputSuffix}>€</Text>
                   </View>
                 </View>
-              </>
-            )}
-          </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.fieldLabel}>Devise</Text>
+                  <StyledSelect
+                    value={form.noShowFeeCurrency}
+                    onChange={(v) => updateField('noShowFeeCurrency', v)}
+                    options={[{ label: 'EUR — Euro', value: 'eur' }]}
+                    disabled
+                  />
+                </View>
+              </View>
+            </View>
+          )}
         </View>
-      </View>
-
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
+}
+
+// === Helpers ===
+
+// Map des clés Stripe `requirements.currently_due` vers des libellés FR lisibles.
+// Stripe renvoie des chemins comme `individual.verification.document`, `external_account`,
+// `business_profile.url`, etc. Liste des clés standard : https://stripe.com/docs/connect/required-verification-information
+const REQUIREMENT_LABELS: Record<string, string> = {
+  'external_account': 'compte bancaire',
+  'business_profile.url': 'site web ou page Instagram',
+  'business_profile.mcc': 'type d\'activité',
+  'business_profile.product_description': 'description de l\'activité',
+  'individual.verification.document': 'pièce d\'identité',
+  'individual.verification.additional_document': 'justificatif complémentaire',
+  'individual.first_name': 'prénom',
+  'individual.last_name': 'nom',
+  'individual.dob.day': 'date de naissance',
+  'individual.dob.month': 'date de naissance',
+  'individual.dob.year': 'date de naissance',
+  'individual.address.line1': 'adresse',
+  'individual.address.city': 'ville',
+  'individual.address.postal_code': 'code postal',
+  'individual.email': 'email',
+  'individual.phone': 'numéro de téléphone',
+  'individual.id_number': 'numéro d\'identification',
+  'tos_acceptance.date': 'acceptation des CGU',
+  'tos_acceptance.ip': 'acceptation des CGU',
+  'company.tax_id': 'numéro SIRET',
+  'company.name': 'raison sociale',
+  'company.address.line1': 'adresse de la société',
+  'company.verification.document': 'justificatif de la société',
+};
+
+function formatRequirements(keys: string[]): string {
+  const labels = keys.map((k) => REQUIREMENT_LABELS[k] ?? k.replace(/_/g, ' '));
+  const unique = Array.from(new Set(labels));
+  return unique.join(', ');
 }
 
 // === Sub-components ===
@@ -634,8 +702,8 @@ function StyledSelect({ value, onChange, options, disabled }: { value: string; o
     if (disabled) {
       const label = options.find(o => o.value === value)?.label ?? value;
       return (
-        <View style={{ height: 38, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#F8FAFC', paddingHorizontal: 10, justifyContent: 'center' }}>
-          <Text style={{ fontSize: 13, color: '#64748B' }}>{label}</Text>
+        <View style={{ height: 42, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#F8FAFC', paddingHorizontal: 12, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 14, color: '#64748B' }}>{label}</Text>
         </View>
       );
     }
@@ -644,19 +712,19 @@ function StyledSelect({ value, onChange, options, disabled }: { value: string; o
         <select
           value={value}
           onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
-          style={{ height: 38, width: '100%', paddingLeft: 10, paddingRight: 32, fontSize: 13, color: '#1E293B', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, outline: 'none', appearance: 'none', cursor: 'pointer' } as any}
+          style={{ height: 42, width: '100%', paddingLeft: 12, paddingRight: 32, fontSize: 14, color: '#1E293B', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, outline: 'none', appearance: 'none', cursor: 'pointer' } as any}
         >
           {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' } as any}>
+        <View style={{ position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' } as any}>
           <ChevronDown size={14} color="#64748B" />
         </View>
       </View>
     );
   }
   return (
-    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#F8FAFC', overflow: 'hidden' }}>
-      <Picker selectedValue={value} onValueChange={onChange} enabled={!disabled} style={{ height: 40 }}>
+    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#FFFFFF', overflow: 'hidden' }}>
+      <Picker selectedValue={value} onValueChange={onChange} enabled={!disabled} style={{ height: 42 }}>
         {options.map(o => <Picker.Item key={o.value} label={o.label} value={o.value} />)}
       </Picker>
     </View>
@@ -675,7 +743,7 @@ function LabeledInput({ label, value, onChange, placeholder, keyboardType, autoC
     <View style={styles.labeledInputContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
-        style={styles.textInput}
+        style={styles.textInputBlock}
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
@@ -683,6 +751,30 @@ function LabeledInput({ label, value, onChange, placeholder, keyboardType, autoC
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
       />
+    </View>
+  );
+}
+
+function ConstraintItem({ label, value, onChange, unit, isNarrow }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  unit: string;
+  isNarrow?: boolean;
+}) {
+  return (
+    <View style={[styles.constraintItem, isNarrow && styles.constraintItemFull]}>
+      <Text style={styles.constraintLabel} numberOfLines={2}>{label}</Text>
+      <View style={styles.constraintInputRow}>
+        <TextInput
+          style={styles.constraintInput}
+          value={value}
+          onChangeText={onChange}
+          keyboardType="number-pad"
+          placeholderTextColor="#9CA3AF"
+        />
+        <Text style={styles.constraintUnit}>{unit}</Text>
+      </View>
     </View>
   );
 }
@@ -702,113 +794,140 @@ function SettingSwitch({ label, description, value, onChange }: {
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
-        thumbColor={value ? '#10B981' : '#9CA3AF'}
+        trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+        thumbColor={value ? '#FFFFFF' : '#F3F4F6'}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  contentContainer: { paddingBottom: 40 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
 
-  // Header
-  headerRow: {
+  // ── Page wrapper (iso notifications.tsx) ──────────────────────────────
+  tabContent: {
+    flex: 1,
+    padding: 24,
+  },
+  tabHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 24,
+    gap: 16,
   },
-  pageTitle: { fontSize: 22, fontWeight: '700', color: '#1E293B', marginBottom: 4 },
-  pageSubtitle: { fontSize: 14, color: '#64748B' },
-  saveButton: {
-    backgroundColor: '#2A2E33',
-    borderRadius: 10,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  tabTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
   },
-  saveButtonDisabled: { opacity: 0.7 },
-  saveButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-
-  // Layout
-  row: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 20,
-    zIndex: 10,
+  tabSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
   },
-  section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    ...(Platform.OS === 'web' && {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 6,
-      overflow: 'visible',
-    }),
-  },
-  rowCompact: {
-    flexDirection: 'column',
-  },
-  sectionHalf: {
-    flex: 1,
-  },
-
-  // Section header
-  sectionHeader: {
+  createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-    zIndex: 10,
-  },
-  sectionIconWrap: {
-    width: 34,
-    height: 34,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    gap: 8,
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  createButtonDisabled: {
+    opacity: 0.5,
+  },
+  createButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingBottom: 24,
+    gap: 16,
+  },
+
+  // ── Grid wrapper (cards côte-à-côte) ──────────────────────────────────
+  cardsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 16,
+  },
+  cardsRowItem: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  // ── viewCard (iso) ────────────────────────────────────────────────────
+  viewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  viewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  viewIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
+  viewCardContent: {
+    flex: 1,
+    minWidth: 0,
   },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 1,
+  viewCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  viewCardDescription: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    position: 'relative',
+    zIndex: 9999,
   },
 
-  // Field groups
-  fieldGroup: {
-    gap: 12,
+  // ── Body section under header ─────────────────────────────────────────
+  viewModeSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    gap: 16,
+  },
+
+  // ── Help text / labels ────────────────────────────────────────────────
+  helpText: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
   },
   groupLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#475569',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   divider: {
     height: 1,
     backgroundColor: '#F1F5F9',
-    marginVertical: 8,
-  },
-
-  // Labeled input
-  labeledInputContainer: {
-    gap: 6,
   },
   fieldLabel: {
     fontSize: 13,
@@ -816,8 +935,26 @@ const styles = StyleSheet.create({
     color: '#475569',
     marginBottom: 6,
   },
-  textInput: {
-    backgroundColor: '#F8FAFC',
+
+  // ── Inline row ────────────────────────────────────────────────────────
+  inlineRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  inlineRowStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+
+  // ── Labeled input ─────────────────────────────────────────────────────
+  labeledInputContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  textInputBlock: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 8,
@@ -826,28 +963,82 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1E293B',
   },
-  inlineRow: {
+
+  // ── Booking URL row ───────────────────────────────────────────────────
+  bookingUrlRow: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
   },
-  inlineFieldHalf: {
+  bookingUrlText: {
     flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    color: '#1E293B',
+    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
+  },
+  bookingUrlIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
   },
 
-  // Constraints grid (2x2)
+  // ── Amount input wrapper ──────────────────────────────────────────────
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+    padding: 0,
+  },
+  inputSuffix: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+
+  // ── Constraints grid (cards) ──────────────────────────────────────────
   constraintsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
   constraintItem: {
-    width: '47%',
+    flexBasis: '47%',
+    flexGrow: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
     padding: 14,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+    minWidth: 180,
+  },
+  constraintItemFull: {
+    flexBasis: '100%',
+    minWidth: 0,
   },
   constraintLabel: {
     fontSize: 12,
@@ -858,7 +1049,7 @@ const styles = StyleSheet.create({
   constraintInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   constraintInput: {
     backgroundColor: '#FFFFFF',
@@ -877,23 +1068,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
     fontWeight: '500',
+    flex: 1,
   },
 
-  // Switch
+  // ── Switch ────────────────────────────────────────────────────────────
   switchField: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    gap: 12,
+    paddingVertical: 4,
   },
-  switchInfo: { flex: 1, marginRight: 16 },
+  switchInfo: { flex: 1, minWidth: 0 },
   switchLabel: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 2 },
   switchDescription: { fontSize: 12, color: '#94A3B8' },
 
-  // Text area
-  fieldHint: { fontSize: 12, color: '#94A3B8', lineHeight: 18 },
+  // ── Textarea ──────────────────────────────────────────────────────────
   textAreaInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 10,
@@ -904,9 +1096,9 @@ const styles = StyleSheet.create({
     minHeight: 130,
     textAlignVertical: 'top',
   },
-  charCount: { fontSize: 11, color: '#94A3B8', textAlign: 'right', marginTop: 4 },
+  charCount: { fontSize: 11, color: '#94A3B8', textAlign: 'right' },
 
-  // Stripe Connect
+  // ── Stripe ────────────────────────────────────────────────────────────
   stripeStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -972,28 +1164,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#D97706',
   },
-
-  // No-show fee
-  amountInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  pickerContainer: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 40,
-    ...(Platform.OS === 'web' && {
-      paddingHorizontal: 8,
-      fontSize: 13,
-      borderWidth: 0,
-    }),
-  },
 });
 
 // === Tooltip ===
@@ -1026,13 +1196,6 @@ function SettingsTooltip({ tooltipKey, visible, onToggle }: { tooltipKey: string
 }
 
 const tooltipStyles = StyleSheet.create({
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    position: 'relative',
-    zIndex: 9999,
-  },
   overlay: {
     position: 'fixed' as any,
     top: 0,
