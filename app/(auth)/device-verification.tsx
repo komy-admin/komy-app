@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Text as RNText,
   Pressable,
 } from 'react-native';
+import { Lock } from 'lucide-react-native';
 import { AuthBackground } from '~/components/auth/AuthBackground';
 import { PinInput } from '~/components/ui';
 import { useSelector } from 'react-redux';
@@ -15,7 +16,7 @@ import { authApiService } from '~/api/auth.api';
 import { useRouter } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
-import { extractApiError } from '~/lib/apiErrorHandler';
+import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
 import { SessionExpiredError } from '~/api/base.api';
 
 export default function DeviceVerificationScreen() {
@@ -24,6 +25,11 @@ export default function DeviceVerificationScreen() {
   const [error, setError] = useState(false);
   const [emailCooldown, setEmailCooldown] = useState(0);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [isPermanentlyLocked, setIsPermanentlyLocked] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
 
   const router = useRouter();
   const { showToast } = useToast();
@@ -48,6 +54,35 @@ export default function DeviceVerificationScreen() {
     }
   }, [loginToken]);
 
+  // Cleanup countdown interval
+  useEffect(() => {
+    return () => {
+      if (countdownInterval.current) clearInterval(countdownInterval.current);
+    };
+  }, []);
+
+  const startCountdown = (seconds: number) => {
+    if (countdownInterval.current) clearInterval(countdownInterval.current);
+    let remaining = seconds;
+    setCountdown(remaining);
+    countdownInterval.current = setInterval(() => {
+      remaining -= 1;
+      setCountdown(remaining);
+      if (remaining <= 0) {
+        if (countdownInterval.current) clearInterval(countdownInterval.current);
+        setIsLocked(false);
+        setAttemptsRemaining(null);
+        showToast('Vous pouvez maintenant réessayer', 'info');
+      }
+    }, 1000) as unknown as NodeJS.Timeout;
+  };
+
+  const formatCountdown = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Email cooldown timer
   useEffect(() => {
     if (emailCooldown <= 0) return;
@@ -62,9 +97,9 @@ export default function DeviceVerificationScreen() {
     }
   }, [activeMethod]);
 
-  // Reset error when user types
+  // Reset error only when code is fully re-entered
   useEffect(() => {
-    if (error && code.length > 0 && code.length < 6) {
+    if (error && code.length === 6) {
       setError(false);
     }
   }, [code]);
@@ -81,12 +116,12 @@ export default function DeviceVerificationScreen() {
 
       const info = extractApiError(err);
       if (info.status === 401) {
-        showToast('Session expirée. Veuillez vous reconnecter.', 'error');
+        showApiError(err, showToast, 'Session expirée');
         store.dispatch(sessionActions.clearLogin2FAState());
         router.replace('/login');
         return;
       }
-      showToast(info.message || 'Erreur lors de l\'envoi du code', 'error');
+      showApiError(err, showToast, 'Erreur lors de l\'envoi du code');
     } finally {
       setIsSendingEmail(false);
     }
@@ -102,6 +137,11 @@ export default function DeviceVerificationScreen() {
       hasVerified.current = true;
       const response = await sessionService.verifyLogin2FA(codeValue, activeMethod);
 
+      // skipPinRequired users are fully authenticated after 2FA
+      if (response.skipPin) {
+        return; // AppInitializer handles navigation
+      }
+
       if (response.requirePin || response.requirePinSetup) {
         router.replace('/pin-verification');
         return;
@@ -112,17 +152,40 @@ export default function DeviceVerificationScreen() {
       if (err instanceof SessionExpiredError) return;
 
       const info = extractApiError(err);
-      if (info.status === 401) {
-        showToast('Session expirée. Veuillez vous reconnecter.', 'error');
+
+      if (info.status === 401 && info.code !== 'INVALID_2FA_CODE') {
+        showApiError(err, showToast, 'Session expirée');
         store.dispatch(sessionActions.clearLogin2FAState());
         router.replace('/login');
         return;
       }
+
       hasVerified.current = false;
-      setError(true);
       setCode('');
       setIsLoading(false);
-      showToast(info.message || 'Code invalide', 'error');
+
+      if (info.code === 'RATE_LIMIT_2FA_PERMANENT') {
+        setIsPermanentlyLocked(true);
+        setIsLocked(true);
+        setAttemptsRemaining(0);
+      } else if (info.code === 'RATE_LIMIT_2FA') {
+        setIsLocked(true);
+        setAttemptsRemaining(0);
+        if (info.details?.remainingSeconds) {
+          startCountdown(info.details.remainingSeconds);
+        }
+      } else {
+        setError(true);
+        if (info.details?.attemptsRemaining !== undefined) {
+          setAttemptsRemaining(info.details.attemptsRemaining);
+        }
+        if (info.details?.remainingSeconds) {
+          setIsLocked(true);
+          setAttemptsRemaining(0);
+          startCountdown(info.details.remainingSeconds);
+        }
+      }
+      showApiError(err, showToast, 'Code invalide');
     }
   }, [isLoading, loginToken, activeMethod]);
 
@@ -137,83 +200,123 @@ export default function DeviceVerificationScreen() {
 
       <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered>
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <RNText style={styles.title}>Nouvel appareil détecté</RNText>
-              <RNText style={styles.subtitle}>
-                {activeMethod === 'totp'
-                  ? 'Entrez le code à 6 chiffres depuis l\'application d\'authentification de l\'administrateur.'
-                  : 'Demandez le code à 6 chiffres envoyé par email à l\'administrateur.'}
-              </RNText>
-            </View>
-
-            {/* Method selector */}
-            {hasBoth && (
-              <View style={styles.switchContainer}>
-                <Pressable
-                  style={[styles.switchOption, activeMethod === 'totp' && styles.switchOptionActive]}
-                  onPress={() => { setActiveMethod('totp'); setCode(''); setError(false); }}
-                >
-                  <RNText style={[styles.switchName, activeMethod === 'totp' && styles.switchNameActive]}>Application</RNText>
-                  <RNText style={[styles.switchSub, activeMethod === 'totp' && styles.switchSubActive]}>Authenticator</RNText>
-                </Pressable>
-                <Pressable
-                  style={[styles.switchOption, activeMethod === 'email' && styles.switchOptionActive]}
-                  onPress={() => { setActiveMethod('email'); setCode(''); setError(false); }}
-                >
-                  <RNText style={[styles.switchName, activeMethod === 'email' && styles.switchNameActive]}>Email</RNText>
-                  <RNText style={[styles.switchSub, activeMethod === 'email' && styles.switchSubActive]}>Code par email</RNText>
-                </Pressable>
-              </View>
-            )}
-
-            {/* Send email button */}
-            {activeMethod === 'email' && (
-              <Pressable
-                style={[styles.sendEmailButton, (emailCooldown > 0 || isSendingEmail) && styles.buttonDisabled]}
-                onPress={handleSendEmailCode}
-                disabled={emailCooldown > 0 || isSendingEmail}
-              >
-                <RNText style={styles.sendEmailButtonText}>
-                  {isSendingEmail ? 'Envoi...' : emailCooldown > 0 ? `Renvoyer (${emailCooldown}s)` : 'Envoyer le code'}
+            {isLocked ? (
+              <View style={styles.lockedContainer}>
+                <RNText style={[styles.title, { color: '#EF4444' }]}>
+                  {isPermanentlyLocked
+                    ? 'Vérification bloquée'
+                    : '2FA temporairement verrouillé'}
                 </RNText>
-              </Pressable>
-            )}
 
-            {/* PIN Input */}
-            <View style={styles.pinContainer}>
-              <PinInput
-                length={6}
-                value={code}
-                onChange={setCode}
-                onComplete={handleVerify}
-                secure={false}
-                autoFocus
-                error={error}
-                variant="light"
-                cellWidth={48}
-                cellHeight={56}
-              />
-            </View>
+                <View style={styles.lockedIconCircle}>
+                  <Lock size={32} color="#EF4444" strokeWidth={2} />
+                </View>
 
-            {/* Error message */}
-            {error && (
-              <View style={styles.errorContainer}>
-                <RNText style={styles.errorText}>Code invalide. Veuillez réessayer.</RNText>
+                {isPermanentlyLocked ? (
+                  <RNText style={styles.lockedHint}>
+                    Trop de tentatives incorrectes.{'\n'}
+                    Contactez votre administrateur pour débloquer.
+                  </RNText>
+                ) : (
+                  <>
+                    <RNText style={styles.lockedCountdown}>
+                      Réessayez dans : {formatCountdown(countdown)}
+                    </RNText>
+                    <RNText style={styles.lockedHint}>
+                      Trop de tentatives incorrectes.{'\n'}
+                      Le délai augmente après chaque série d'échecs.
+                    </RNText>
+                  </>
+                )}
               </View>
+            ) : (
+              <>
+                <View style={styles.headerContainer}>
+                  <RNText style={styles.title}>Nouvel appareil détecté</RNText>
+                  <RNText style={styles.subtitle}>
+                    {activeMethod === 'totp'
+                      ? 'Entrez le code à 6 chiffres depuis l\'application d\'authentification de l\'administrateur.'
+                      : 'Demandez le code à 6 chiffres envoyé par email à l\'administrateur.'}
+                  </RNText>
+                </View>
+
+                {/* Method selector */}
+                {hasBoth && (
+                  <View style={styles.switchContainer}>
+                    <Pressable
+                      style={[styles.switchOption, activeMethod === 'totp' && styles.switchOptionActive]}
+                      onPress={() => { setActiveMethod('totp'); setCode(''); setError(false); }}
+                    >
+                      <RNText style={[styles.switchName, activeMethod === 'totp' && styles.switchNameActive]}>Application</RNText>
+                      <RNText style={[styles.switchSub, activeMethod === 'totp' && styles.switchSubActive]}>Authenticator</RNText>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.switchOption, activeMethod === 'email' && styles.switchOptionActive]}
+                      onPress={() => { setActiveMethod('email'); setCode(''); setError(false); }}
+                    >
+                      <RNText style={[styles.switchName, activeMethod === 'email' && styles.switchNameActive]}>Email</RNText>
+                      <RNText style={[styles.switchSub, activeMethod === 'email' && styles.switchSubActive]}>Code par email</RNText>
+                    </Pressable>
+                  </View>
+                )}
+
+                {/* Send email button */}
+                {activeMethod === 'email' && (
+                  <Pressable
+                    style={[styles.sendEmailButton, (emailCooldown > 0 || isSendingEmail) && styles.buttonDisabled]}
+                    onPress={handleSendEmailCode}
+                    disabled={emailCooldown > 0 || isSendingEmail}
+                  >
+                    <RNText style={styles.sendEmailButtonText}>
+                      {isSendingEmail ? 'Envoi...' : emailCooldown > 0 ? `Renvoyer (${emailCooldown}s)` : 'Envoyer le code'}
+                    </RNText>
+                  </Pressable>
+                )}
+
+                {/* PIN Input */}
+                <View style={styles.pinContainer}>
+                  <PinInput
+                    length={6}
+                    value={code}
+                    onChange={setCode}
+                    onComplete={handleVerify}
+                    secure={false}
+                    autoFocus
+                    error={error}
+                    variant="light"
+                    cellWidth={48}
+                    cellHeight={56}
+                  />
+                </View>
+
+                {error && (
+                  <RNText style={styles.errorText}>
+                    Code invalide
+                    {attemptsRemaining !== null && attemptsRemaining >= 0 && (
+                      <>
+                        {' — '}
+                        <RNText style={styles.errorTextBold}>
+                          {attemptsRemaining} essai{attemptsRemaining > 1 ? 's' : ''} restant{attemptsRemaining > 1 ? 's' : ''}
+                        </RNText>
+                      </>
+                    )}
+                  </RNText>
+                )}
+
+                {/* Verify button */}
+                <Pressable
+                  style={[styles.primaryButton, (code.length !== 6 || isLoading) && styles.primaryButtonDisabled]}
+                  onPress={() => handleVerify(code)}
+                  disabled={code.length !== 6 || isLoading}
+                >
+                  <RNText style={styles.primaryButtonText}>
+                    {isLoading ? 'Vérification...' : 'Confirmer'}
+                  </RNText>
+                </Pressable>
+              </>
             )}
 
-            {/* Verify button */}
-            <Pressable
-              style={[styles.primaryButton, (code.length !== 6 || isLoading) && styles.primaryButtonDisabled]}
-              onPress={() => handleVerify(code)}
-              disabled={code.length !== 6 || isLoading}
-            >
-              <RNText style={styles.primaryButtonText}>
-                {isLoading ? 'Vérification...' : 'Confirmer'}
-              </RNText>
-            </Pressable>
-
-            {/* Cancel button */}
+            {/* Cancel button — always visible */}
             <Pressable
               style={[styles.cancelButton, isLoading && styles.buttonDisabled]}
               onPress={handleCancel}
@@ -315,18 +418,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     width: '100%',
   },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
-    width: '100%',
-  },
   errorText: {
     color: '#EF4444',
     fontSize: 14,
+    fontWeight: '400',
     textAlign: 'center',
+    marginBottom: 12,
+    width: '100%',
+  },
+  errorTextBold: {
+    fontWeight: '700',
   },
   primaryButton: {
     width: '100%',
@@ -346,6 +447,32 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  lockedContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 32,
+  },
+  lockedIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockedCountdown: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  lockedHint: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
   },
   cancelButton: {
     width: '100%',

@@ -61,7 +61,8 @@ export abstract class BaseApiService<T> {
 
         const PIN_ENDPOINTS = [
           '/auth/verify-pin',
-          '/auth/set-pin'
+          '/auth/set-pin',
+          '/auth/verify-qr-token'
         ];
 
         // Helper to extract path from config.url

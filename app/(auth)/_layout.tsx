@@ -55,6 +55,13 @@ export default function AuthLayout() {
             title: 'Reset PIN',
           }}
         />
+        <Stack.Screen
+          name="standby"
+          options={{
+            title: 'Standby',
+            animation: 'fade',
+          }}
+        />
       </Stack>
   );
 }

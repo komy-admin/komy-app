@@ -49,8 +49,9 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const { progress, progressPercentage, initializeApp } = useAppInit();
 
-  const onPinRoute = segments.join('/') === '(auth)/pin-verification';
-  const shouldShowLoader = isFullyAuthenticated && (!appInitialized || isAppInitializing || onPinRoute);
+  const currentRoute = segments.join('/');
+  const onLockRoute = currentRoute === '(auth)/pin-verification' || currentRoute === '(auth)/standby';
+  const shouldShowLoader = isFullyAuthenticated && (!appInitialized || isAppInitializing || onLockRoute);
 
   // Retarder la disparition de l'overlay pour laisser la nouvelle route se peindre
   const [showLoader, setShowLoader] = useState(false);
@@ -103,12 +104,12 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
   // Redirection après initialisation complète
   useEffect(() => {
     if (isFullyAuthenticated && appInitialized && !isAppInitializing && user?.profil) {
-      if (onPinRoute) {
+      if (onLockRoute) {
         const homeRoute = getHomeRoute(user.profil);
         router.replace(homeRoute as any);
       }
     }
-  }, [isFullyAuthenticated, appInitialized, isAppInitializing, user?.profil, onPinRoute, router]);
+  }, [isFullyAuthenticated, appInitialized, isAppInitializing, user?.profil, onLockRoute, router]);
 
   // Pas authentifié → passer directement au contenu (login/pin)
   if (!isFullyAuthenticated) {

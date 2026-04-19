@@ -93,6 +93,29 @@ class SessionService {
 
     store.dispatch(sessionActions.clearLogin2FAState());
 
+    // skipPinRequired users get full auth immediately after 2FA
+    if (response.skipPin && response.sessionToken && response.authToken) {
+      await storageService.setItem('authToken', response.authToken);
+      await storageService.setItem('sessionToken', response.sessionToken);
+
+      store.dispatch(sessionActions.setAuthToken({
+        authToken: response.authToken,
+        requirePin: false
+      }));
+
+      store.dispatch(sessionActions.setSessionToken({
+        sessionToken: response.sessionToken,
+        expiresIn: response.expiresIn ?? 0,
+        user: response.user ?? {}
+      }));
+
+      if (response.user) {
+        store.dispatch(sessionActions.updateUser(response.user));
+      }
+
+      return response;
+    }
+
     if (response.authToken) {
       await storageService.setItem('authToken', response.authToken);
 
@@ -120,6 +143,15 @@ class SessionService {
   async qrLogin(qrToken: string): Promise<QRLoginResponse> {
     const response = await authApiService.qrLogin(qrToken);
 
+    // 2FA required for this device
+    if (response.requiresTwoFactor && response.loginToken) {
+      store.dispatch(sessionActions.setLogin2FARequired({
+        loginToken: response.loginToken,
+        methods: response.twoFactorMethods || { totp: false, email: false },
+      }));
+      return response;
+    }
+
     if (response.authToken) {
       await storageService.setItem('authToken', response.authToken);
 
@@ -135,7 +167,7 @@ class SessionService {
         store.dispatch(sessionActions.setSessionToken({
           sessionToken: response.sessionToken,
           expiresIn: response.expiresIn ?? 0,
-          user: response.user
+          user: response.user ?? {}
         }));
 
         if (response.user) {
@@ -314,13 +346,14 @@ class SessionService {
     try {
       const state = store.getState();
       const user = state.session.user;
+      const authToken = state.session.authToken;
 
       // Only check for quick-created users (with skipPinRequired flag)
-      if (!user || !user.skipPinRequired) {
+      if (!user || !user.skipPinRequired || !authToken) {
         return true; // Regular users don't need QR token check
       }
 
-      const result = await authApiService.verifyQrToken();
+      const result = await authApiService.verifyQrToken(authToken);
 
       if (!result.valid) {
         // Token was revoked - logout user
@@ -331,6 +364,49 @@ class SessionService {
       return true;
     } catch (error) {
       return true; // Don't logout on network errors
+    }
+  }
+
+  /**
+   * Clear session for standby mode (skipPinRequired users)
+   * Same as clearSession but without requiring PIN on unlock
+   */
+  clearSessionStandby(): void {
+    store.dispatch(sessionActions.expireSessionStandby());
+  }
+
+  /**
+   * Unlock from standby mode
+   * Verifies QR token + gets fresh sessionToken for skipPinRequired users
+   */
+  async unlockStandby(): Promise<boolean> {
+    const state = store.getState();
+    const authToken = state.session.authToken;
+
+    if (!authToken) return false;
+
+    try {
+      const result = await authApiService.unlockStandby(authToken);
+
+      if (!result.valid || !result.sessionToken) {
+        await this.logout();
+        return false;
+      }
+
+      store.dispatch(sessionActions.setSessionToken({
+        sessionToken: result.sessionToken,
+        expiresIn: result.expiresIn ?? 0,
+        user: result.user ?? {}
+      }));
+
+      if (result.user) {
+        store.dispatch(sessionActions.updateUser(result.user));
+      }
+
+      return true;
+    } catch {
+      await this.logout();
+      return false;
     }
   }
 }

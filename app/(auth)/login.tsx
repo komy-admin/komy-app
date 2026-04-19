@@ -75,11 +75,16 @@ export default function LoginScreen() {
     try {
       const response = await sessionService.qrLogin(data);
 
+      if (response.requiresTwoFactor) {
+        router.replace('/device-verification');
+        return;
+      }
+
       if (response.skipPin) {
         return;
       }
 
-      router.push('/pin-verification');
+      router.replace('/pin-verification');
     } catch (error) {
       showToast('Erreur lors de la connexion QR', 'error');
     }

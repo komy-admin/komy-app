@@ -72,9 +72,14 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
 
   const handleLock = useCallback(() => {
     setShowProfileMenu(false);
-    sessionService.clearSession();
-    router.replace('/pin-verification' as Href);
-  }, [router]);
+    if (user?.skipPinRequired) {
+      sessionService.clearSessionStandby();
+      router.replace('/standby' as Href);
+    } else {
+      sessionService.clearSession();
+      router.replace('/pin-verification' as Href);
+    }
+  }, [router, user?.skipPinRequired]);
 
   const handleLogout = useCallback(async () => {
     try {

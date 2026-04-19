@@ -35,6 +35,11 @@ export interface LoginResponse {
   requiresTwoFactor?: boolean;
   twoFactorMethods?: { totp: boolean; email: boolean };
   loginToken?: string;  // Short-lived token for 2FA verification
+  // skipPinRequired users after 2FA get full auth
+  skipPin?: boolean;
+  sessionToken?: string;
+  expiresIn?: number;
+  user?: User;
 }
 
 export interface PinVerificationResponse {

@@ -26,16 +26,33 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
-  async verifyQrToken(): Promise<{ valid: boolean; user?: User; error?: string }> {
+  async verifyQrToken(authToken: string): Promise<{ valid: boolean; user?: User; error?: string }> {
     try {
       const { data } = await this.axiosInstance.get<{ user: User }>(
-        `${this.endpoint}/verify-qr-token`
+        `${this.endpoint}/verify-qr-token`,
+        { headers: { Authorization: `Bearer ${authToken}` } }
       );
       return { valid: true, user: data.user };
     } catch (err) {
       const info = extractApiError(err);
       if (info.status === 401) {
         return { valid: false, error: info.message || 'Token révoqué' };
+      }
+      throw err;
+    }
+  }
+
+  async unlockStandby(authToken: string): Promise<{ valid: boolean; sessionToken?: string; expiresIn?: number; user?: any }> {
+    try {
+      const { data } = await this.axiosInstance.get(
+        `${this.endpoint}/verify-qr-token`,
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+      return { valid: true, sessionToken: data.sessionToken, expiresIn: data.expiresIn, user: data.user };
+    } catch (err) {
+      const info = extractApiError(err);
+      if (info.status === 401) {
+        return { valid: false };
       }
       throw err;
     }

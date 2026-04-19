@@ -21,11 +21,11 @@ export interface QRLoginResponse {
   requirePinSetup?: boolean;        // True if user needs to create PIN for first time
   requirePinVerification?: boolean;  // True if user needs to verify existing PIN
   skipPin?: boolean;                 // True if quick created user (no PIN needed)
-  authToken: string;                 // JWT 1 year for PIN verification only
+  authToken?: string;                // JWT 1 year for PIN verification only (absent if requiresTwoFactor)
   sessionToken?: string;             // JWT session token if skipPin is true
   expiresIn?: number;                // Token expiry in seconds
   message: string;
-  user: {
+  user?: {                           // Absent if requiresTwoFactor
     id: string;
     firstName: string;
     lastName: string;
@@ -33,6 +33,10 @@ export interface QRLoginResponse {
     profil: UserProfile;
     accountId: string;
   };
+  // 2FA fields (when new device detected)
+  requiresTwoFactor?: boolean;
+  twoFactorMethods?: { totp: boolean; email: boolean };
+  loginToken?: string;
 }
 
 // Legacy - can be removed after migration

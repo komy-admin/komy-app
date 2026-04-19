@@ -17,7 +17,7 @@ import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
-import { extractApiError } from '~/lib/apiErrorHandler';
+import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
 import { SessionExpiredError } from '~/api/base.api';
 
 export default function PinVerificationScreen() {
@@ -120,28 +120,22 @@ export default function PinVerificationScreen() {
 
       const info = extractApiError(err);
 
-      if (info.silent) {
-        // noop — safety net
-      } else if (info.code === 'PIN_PERMANENTLY_LOCKED') {
+      if (info.code === 'PIN_PERMANENTLY_LOCKED') {
         setIsPermanentlyLocked(true);
         setIsLocked(true);
         setAttemptsRemaining(0);
-        showToast('PIN verrouillé. Réinitialisez votre PIN par email.', 'error');
       } else if (info.code === 'PIN_LOCKED' || info.code === 'ACCOUNT_LOCKED' || info.code === 'TOO_MANY_ATTEMPTS') {
         setIsLocked(true);
         setAttemptsRemaining(0);
         if (info.details?.remainingSeconds) {
           startCountdown(info.details.remainingSeconds);
         }
-        showToast(info.message || 'Compte verrouillé', 'error');
       } else if (info.code === 'INVALID_PIN') {
         if (info.details?.attemptsRemaining !== undefined) {
           setAttemptsRemaining(info.details.attemptsRemaining);
         }
-        showToast(info.message || 'Code PIN incorrect', 'error');
-      } else {
-        showToast(info.message || 'Une erreur est survenue', 'error');
       }
+      showApiError(err, showToast, 'Code PIN incorrect');
     } finally {
       setIsLoading(false);
     }

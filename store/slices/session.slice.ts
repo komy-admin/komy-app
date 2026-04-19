@@ -215,6 +215,20 @@ const sessionSlice = createSlice({
       state.progressPercentage = 0;
     },
 
+    // Standby lock for skipPinRequired users — no PIN needed on unlock
+    expireSessionStandby: (state) => {
+      state.sessionToken = null;
+      state.sessionExpiresAt = null;
+      state.isAuthenticated = false;
+      state.isPinVerified = false;
+      state.requiresPin = false;
+      state.isInAppLock = true;
+      state.appInitialized = false;
+      state.isAppInitializing = false;
+      state.initializationProgress = {};
+      state.progressPercentage = 0;
+    },
+
     // Called when app starts with stored authToken
     setStoredAuthToken: (state, action: PayloadAction<{
       authToken: string;

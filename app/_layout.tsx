@@ -115,13 +115,26 @@ function AuthenticationGate() {
     };
   }, [router]);
 
-  // Verify QR token status when app resumes (for quick-created users)
+  // Auto-lock on app resume — WebSocket events are lost in background, force re-init
+  const wasInBackgroundRef = React.useRef(false);
+
   React.useEffect(() => {
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      // Only check when app becomes active
-      if (nextAppState === 'active' && isAuthenticated && userProfile?.skipPinRequired) {
-        // Only check for quick-created users (those with skipPinRequired)
-        await sessionService.verifyQrTokenStatus();
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'background') {
+        wasInBackgroundRef.current = true;
+        return;
+      }
+
+      if (nextAppState === 'active' && isAuthenticated && wasInBackgroundRef.current) {
+        wasInBackgroundRef.current = false;
+        // Force lock/standby to trigger full data re-init on unlock
+        if (userProfile?.skipPinRequired) {
+          sessionService.clearSessionStandby();
+          router.replace('/standby');
+        } else {
+          sessionService.clearSession();
+          router.replace('/pin-verification');
+        }
       }
     };
 
@@ -130,7 +143,7 @@ function AuthenticationGate() {
     return () => {
       subscription.remove();
     };
-  }, [isAuthenticated, userProfile]);
+  }, [isAuthenticated, userProfile, router]);
 
   React.useEffect(() => {
     if (!isInitialized || isLoading) {
@@ -165,6 +178,19 @@ function AuthenticationGate() {
       return;
     }
 
+    // Standby screen: authToken required, no sessionToken needed
+    if (fullPath === '/(auth)/standby') {
+      if (!authToken) {
+        router.replace(LOGIN_ROUTE);
+        return;
+      }
+      // If not fully authenticated, stay on standby (waiting for unlock)
+      if (!sessionToken || !isAuthenticated) {
+        return;
+      }
+      // Fully authenticated → fall through to redirect to home
+    }
+
     // If no authToken at all, redirect to login
     if (!authToken) {
       if (fullPath === LOGIN_ROUTE || fullPath === '/(auth)/login') {
@@ -174,9 +200,17 @@ function AuthenticationGate() {
       return;
     }
 
-    // Check if PIN verification is required
+    // Check if PIN verification or standby is required
     // User has authToken but no sessionToken
     if (authToken && !sessionToken && !isAuthenticated) {
+      // skipPinRequired users go to standby, others to PIN
+      if (userProfile?.skipPinRequired) {
+        if (fullPath !== '/(auth)/standby') {
+          router.replace('/standby');
+          return;
+        }
+        return;
+      }
       if (fullPath !== '/(auth)/pin-verification') {
         router.replace('/pin-verification');
         return;
@@ -186,9 +220,8 @@ function AuthenticationGate() {
 
     // If we have both tokens and user is authenticated
     if (sessionToken && userProfile && userProfile.profil && isAuthenticated) {
-      // Ne pas rediriger depuis PIN verification - laisser AppInitializer gérer
-      // Seulement rediriger depuis login
-      if (isLoginRoute(fullPath)) {
+      // Rediriger depuis login ou standby (après unlock) vers home
+      if (isLoginRoute(fullPath) || fullPath === '/(auth)/standby') {
         const homeRoute = getHomeRouteForRole(userProfile.profil);
         if (!homeRoute) {
           console.error(
