@@ -11,6 +11,7 @@ import type {
   ReservationSchedule,
   CreateManualReservationDto,
 } from '~/types/reservation.types';
+import { nowInTz, todayIsoInTz } from '~/lib/date.utils';
 
 const MONTHS = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -91,9 +92,12 @@ function generateTimeSlotsForService(
   date: string,
 ): string[] {
   if (!date || !service) return [];
-  const d = new Date(date + 'T00:00:00');
-  const jsDay = d.getDay();
-  const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+  // La chaîne "YYYY-MM-DD" est déjà sans ambiguïté de timezone pour le calcul du jour
+  // de semaine : on force une heure neutre pour ne pas dépendre du runtime JS.
+  const [y, m, d] = date.split('-').map(Number);
+  // Zeller-like : calcul indépendant du fuseau via Date UTC.
+  const dayOfWeekRaw = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const dayOfWeek = dayOfWeekRaw === 0 ? 7 : dayOfWeekRaw;
 
   const serviceSchedules = schedules.filter(
     (s) => s.serviceId === service.id && s.dayOfWeek === dayOfWeek,
@@ -121,6 +125,7 @@ function generateTimeSlotsForService(
 export interface ReservationFormPanelProps {
   services: ReservationService[];
   schedules: ReservationSchedule[];
+  timezone?: string;
   onSubmit: (data: CreateManualReservationDto) => Promise<unknown>;
   onCancel: () => void;
 }
@@ -128,12 +133,17 @@ export interface ReservationFormPanelProps {
 export const ReservationFormPanel: React.FC<ReservationFormPanelProps> = ({
   services,
   schedules,
+  timezone,
   onSubmit,
   onCancel,
 }) => {
   const { showToast } = useToast();
   const formErrors = useFormErrors();
-  const today = new Date().toISOString().split('T')[0];
+  // "Aujourd'hui" dans la timezone du pro (fallback Europe/Paris) — évite que le
+  // device d'un employé en déplacement affiche la veille.
+  const tz = timezone || 'Europe/Paris';
+  const today = todayIsoInTz(tz);
+  const _nowTz = nowInTz(tz);
 
   const [serviceId, setServiceId] = useState('');
   const [date, setDate] = useState(today);
@@ -147,8 +157,8 @@ export const ReservationFormPanel: React.FC<ReservationFormPanelProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const [showCalendar, setShowCalendar] = useState(false);
-  const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
-  const [calYear, setCalYear] = useState(() => new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(() => _nowTz.month - 1);
+  const [calYear, setCalYear] = useState(() => _nowTz.year);
 
   const [capacityError, setCapacityError] = useState<{
     currentCovers: number;
@@ -195,15 +205,21 @@ export const ReservationFormPanel: React.FC<ReservationFormPanelProps> = ({
   };
 
   const openCalendar = () => {
-    const d = new Date(date + 'T00:00:00');
-    setCalMonth(d.getMonth());
-    setCalYear(d.getFullYear());
+    const [y, m] = date.split('-').map(Number);
+    setCalMonth(m - 1);
+    setCalYear(y);
     setShowCalendar(true);
   };
 
   const formatDateLabel = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    const d = new Date(`${dateStr}T12:00:00`);
+    return d.toLocaleDateString('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: tz,
+    });
   };
 
   const validate = (): boolean => {

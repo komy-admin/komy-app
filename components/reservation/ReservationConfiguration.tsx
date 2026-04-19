@@ -17,6 +17,7 @@ import type {
   CreateReservationScheduleDto,
   CreateReservationOverrideDto,
 } from '~/types/reservation.types';
+import { nowInTz, todayIsoInTz } from '~/lib/date.utils';
 
 const DAYS = [
   { value: 1, short: 'Lun', label: 'Lundi' },
@@ -35,9 +36,11 @@ const MONTHS = [
 
 interface ReservationConfigurationProps {
   reservation: {
+    profile: { timezone: string } | null;
     services: ReservationService[];
     schedules: ReservationSchedule[];
     overrides: ReservationOverride[];
+    loadProfile: () => Promise<unknown>;
     loadServices: () => Promise<ReservationService[]>;
     loadSchedules: () => Promise<ReservationSchedule[]>;
     loadOverrides: (month?: number, year?: number) => Promise<ReservationOverride[]>;
@@ -77,6 +80,7 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
 
   useEffect(() => {
     Promise.all([
+      reservation.loadProfile().catch(() => null),
       reservation.loadServices(),
       reservation.loadSchedules(),
       reservation.loadOverrides(overrideMonth, overrideYear),
@@ -209,6 +213,7 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
           <OverrideFormPanel
             services={reservation.services}
             existingOverrides={reservation.overrides}
+            timezone={reservation.profile?.timezone}
             onSave={handleSaveOverride}
             onCancel={handleClosePanel}
             initialDate={initialOverrideDate}
@@ -299,6 +304,7 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
                   overrides={reservation.overrides}
                   getServiceName={getServiceName}
                   formatFullDate={formatFullDate}
+                  timezone={reservation.profile?.timezone}
                   onAddForDate={(d) => openOverridePanel(d)}
                   onDeleteOverride={(o) => setOverrideToDelete(o)}
                 />
@@ -511,20 +517,21 @@ interface OverridesCalendarProps {
   overrides: ReservationOverride[];
   getServiceName: (id: string | null | undefined) => string;
   formatFullDate: (dateStr: string) => string;
+  timezone?: string;
   onAddForDate: (date: string) => void;
   onDeleteOverride: (o: ReservationOverride) => void;
 }
 
-function OverridesCalendar({ overrides, getServiceName, formatFullDate, onAddForDate, onDeleteOverride }: OverridesCalendarProps) {
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth());
-  const [year, setYear] = useState(now.getFullYear());
+function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone, onAddForDate, onDeleteOverride }: OverridesCalendarProps) {
+  // "Aujourd'hui" et mois initial dans la TZ du pro — évite qu'un employé à l'étranger
+  // voie un calendrier désaligné d'un jour ou d'un mois.
+  const tz = timezone || 'Europe/Paris';
+  const nowTz = nowInTz(tz);
+  const [month, setMonth] = useState(nowTz.month - 1);
+  const [year, setYear] = useState(nowTz.year);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }, []);
+  const todayStr = useMemo(() => todayIsoInTz(tz), [tz]);
 
   const overridesByDate = useMemo(() => {
     const map: Record<string, ReservationOverride[]> = {};
