@@ -18,6 +18,18 @@ class SessionService {
   }
 
   /**
+   * Persist user profile for session restore on app restart.
+   * Called whenever we receive user data from the backend.
+   */
+  private async persistUserProfile(user: any): Promise<void> {
+    try {
+      await storageService.setItem('userProfile', JSON.stringify(user));
+    } catch {
+      // Non-critical — worst case user goes to PIN instead of standby on restart
+    }
+  }
+
+  /**
    * Initialize session on app start
    * Checks for stored authToken
    */
@@ -30,11 +42,20 @@ class SessionService {
         return { requireLogin: true, requirePin: false };
       }
 
-      // We have authToken, set it in Redux
-      store.dispatch(sessionActions.setStoredAuthToken({ authToken }));
+      // Restore persisted user profile (needed for skipPinRequired routing)
+      let user: any = null;
+      try {
+        const userJson = await storageService.getItem('userProfile');
+        if (userJson) user = JSON.parse(userJson);
+      } catch {
+        // Ignore parse errors
+      }
 
-      // User needs to enter PIN to get sessionToken
-      return { requireLogin: false, requirePin: true };
+      // We have authToken, set it in Redux (with user if available)
+      store.dispatch(sessionActions.setStoredAuthToken({ authToken, user }));
+
+      // User needs to enter PIN (or standby for skipPinRequired)
+      return { requireLogin: false, requirePin: !user?.skipPinRequired };
     } catch (error) {
       return { requireLogin: true, requirePin: false };
     }
@@ -111,6 +132,7 @@ class SessionService {
 
       if (response.user) {
         store.dispatch(sessionActions.updateUser(response.user));
+        await this.persistUserProfile(response.user);
       }
 
       return response;
@@ -172,6 +194,7 @@ class SessionService {
 
         if (response.user) {
           store.dispatch(sessionActions.updateUser(response.user));
+          await this.persistUserProfile(response.user);
         }
 
         return response;
@@ -192,6 +215,7 @@ class SessionService {
 
       if (response.user) {
         store.dispatch(sessionActions.updateUser(response.user));
+        await this.persistUserProfile(response.user);
       }
     }
 
@@ -218,6 +242,10 @@ class SessionService {
         expiresIn: response.expiresIn,
         user: response.user
       }));
+
+      if (response.user) {
+        await this.persistUserProfile(response.user);
+      }
     }
 
     return response;
@@ -242,6 +270,10 @@ class SessionService {
         expiresIn: response.expiresIn,
         user: response.user
       }));
+
+      if (response.user) {
+        await this.persistUserProfile(response.user);
+      }
     }
 
     return response;
@@ -322,14 +354,18 @@ class SessionService {
    * Full logout - clear everything
    */
   async logout(): Promise<void> {
-    const { sessionToken } = store.getState().session;
+    const { sessionToken, authToken } = store.getState().session;
 
     await storageService.removeItem('authToken');
     await storageService.removeItem('sessionToken');
+    await storageService.removeItem('userProfile');
 
-    if (sessionToken) {
+    // Always try API logout to delete TrustedDevice.
+    // Use sessionToken if available, otherwise fallback to authToken (standby case).
+    const token = sessionToken || authToken;
+    if (token) {
       try {
-        await authApiService.logout();
+        await authApiService.logout(sessionToken ? undefined : authToken ?? undefined);
       } catch {
         // Proceed with local cleanup even if API call fails
       }
@@ -401,6 +437,7 @@ class SessionService {
 
       if (result.user) {
         store.dispatch(sessionActions.updateUser(result.user));
+        await this.persistUserProfile(result.user);
       }
 
       return true;

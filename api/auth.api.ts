@@ -224,8 +224,12 @@ export class AuthApiService extends BaseApiService<AuthResponse> {
     return data;
   }
 
-  async logout(): Promise<void> {
-    await this.axiosInstance.post(`${this.endpoint}/logout`);
+  async logout(authToken?: string): Promise<void> {
+    const headers: Record<string, string> = {};
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`;
+    }
+    await this.axiosInstance.post(`${this.endpoint}/logout`, null, { headers });
   }
 
 }

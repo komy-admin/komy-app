@@ -8,7 +8,6 @@ import { RootState } from '~/store';
 import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
 import { useToast } from '~/components/ToastProvider';
-import { Lock } from 'lucide-react-native';
 
 const BREAKPOINT = 768;
 
@@ -62,19 +61,11 @@ export default function StandbyScreen() {
             resizeMode="contain"
           />
           <View style={styles.card}>
-            <RNText style={styles.title}>Application verrouillée</RNText>
-            <RNText style={styles.subtitle}>Déverrouillez pour reprendre votre session</RNText>
-
-            <View style={styles.userRow}>
-              <View style={styles.avatarCircle}>
-                <Lock size={14} color="#2A2E33" strokeWidth={2} />
-              </View>
-              <View style={styles.userInfo}>
-                <RNText style={styles.userName}>{displayName}</RNText>
-                {displayRole ? (
-                  <RNText style={styles.userRole}>{displayRole}</RNText>
-                ) : null}
-              </View>
+            <View style={styles.statusBox}>
+              <RNText style={styles.statusBoxTitle}>SESSION VERROUILLÉE</RNText>
+              {displayRole ? (
+                <RNText style={styles.userRole}>{displayRole}</RNText>
+              ) : null}
             </View>
 
             <Pressable
@@ -136,31 +127,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...shadows.bottom,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#2A2E33',
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: '#6B7280',
-    marginBottom: 24,
-  },
-  userRow: {
+  statusBox: {
     width: '100%',
-    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-    marginBottom: 16,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 16,
+    marginBottom: 20,
+  },
+  statusBoxTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2A2E33',
+    letterSpacing: 1,
+  },
+  userRole: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   unlockButton: {
     width: '100%',
@@ -171,32 +161,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unlockButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  avatarCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2A2E33',
-  },
-  userRole: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
-    textTransform: 'capitalize',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -232,5 +201,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#2A2E33',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

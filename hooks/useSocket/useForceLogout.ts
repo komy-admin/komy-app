@@ -7,6 +7,7 @@ import { useSocket } from './index';
 import { globalToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
 import { getDeviceId } from '~/lib/deviceId';
+import { markSessionClearing } from '~/api/base.api';
 
 /**
  * Hook pour gérer la déconnexion forcée en temps réel
@@ -46,16 +47,22 @@ export const useForceLogout = () => {
 
         hasTriggered.current = true;
 
+        // Suppress any in-flight 401 toasts from the interceptor
+        markSessionClearing();
+
         // Haptic feedback pour alerter l'utilisateur
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
         // Déconnecter immédiatement
         dispatch(logout());
 
-        // Message explicatif
-        const message = revokedDeviceId
-          ? 'Cet appareil a été déconnecté depuis votre profil.'
-          : 'Vous avez été déconnecté car votre compte est maintenant utilisé sur un autre appareil.';
+        // Message explicatif selon le type de déconnexion
+        const qrRevoked = event.data?.qrRevoked === true;
+        const message = qrRevoked
+          ? 'Votre accès a été révoqué par un administrateur.'
+          : revokedDeviceId
+            ? 'Cet appareil a été déconnecté depuis votre profil.'
+            : 'Vous avez été déconnecté car votre compte est maintenant utilisé sur un autre appareil.';
 
         // Afficher le toast après la déconnexion
         setTimeout(() => {

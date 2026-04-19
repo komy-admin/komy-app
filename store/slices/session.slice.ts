@@ -232,9 +232,15 @@ const sessionSlice = createSlice({
     // Called when app starts with stored authToken
     setStoredAuthToken: (state, action: PayloadAction<{
       authToken: string;
+      user?: Partial<User> | null;
     }>) => {
       state.authToken = action.payload.authToken;
-      state.requiresPin = true;
+      if (action.payload.user) {
+        state.user = action.payload.user as User;
+        state.requiresPin = !action.payload.user.skipPinRequired;
+      } else {
+        state.requiresPin = true;
+      }
       state.isAuthenticated = false;
       state.isPinVerified = false;
       state.isLoggingIn = false;

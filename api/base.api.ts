@@ -18,6 +18,12 @@ export class SessionExpiredError extends Error {
 /** Flag anti-rebond : évite N dispatches si N requêtes parallèles reçoivent 401 */
 let isSessionClearing = false;
 
+/** Marquer la session comme en cours de nettoyage (utilisé par useForceLogout) */
+export function markSessionClearing() {
+  isSessionClearing = true;
+  setTimeout(() => { isSessionClearing = false; }, 2000);
+}
+
 const DEV_API_URL = Platform.select({
   android: `${process.env.EXPO_PUBLIC_API_URL}/api`,
   ios: `${process.env.EXPO_PUBLIC_API_URL}/api`,
@@ -153,6 +159,11 @@ export abstract class BaseApiService<T> {
               globalToast.show(errorMessage, 'warning');
               setTimeout(() => { isSessionClearing = false; }, 2000);
             }
+            return Promise.reject(new SessionExpiredError());
+          }
+
+          // Catch-all: any 401 while session is already being cleared → suppress silently
+          if (isSessionClearing) {
             return Promise.reject(new SessionExpiredError());
           }
         }

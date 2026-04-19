@@ -5,7 +5,6 @@ import {
   Text as RNText,
   Pressable,
 } from 'react-native';
-import { Lock } from 'lucide-react-native';
 import { AuthBackground } from '~/components/auth/AuthBackground';
 import { PinInput } from '~/components/ui';
 import { useSelector } from 'react-redux';
@@ -203,28 +202,22 @@ export default function DeviceVerificationScreen() {
           <View style={styles.contentContainer}>
             {isLocked ? (
               <View style={styles.lockedContainer}>
-                <RNText style={[styles.title, { color: '#EF4444' }]}>
-                  {isPermanentlyLocked
-                    ? 'Vérification bloquée'
-                    : '2FA temporairement verrouillé'}
-                </RNText>
-
-                <View style={styles.lockedIconCircle}>
-                  <Lock size={32} color="#EF4444" strokeWidth={2} />
-                </View>
-
                 {isPermanentlyLocked ? (
-                  <RNText style={styles.lockedHint}>
-                    Trop de tentatives incorrectes.{'\n'}
-                    Contactez votre administrateur pour débloquer.
-                  </RNText>
-                ) : (
                   <>
-                    <RNText style={styles.lockedCountdown}>
-                      Réessayez dans : {formatCountdown(countdown)}
-                    </RNText>
+                    <RNText style={styles.lockedTitle}>Vérification bloquée</RNText>
                     <RNText style={styles.lockedHint}>
                       Trop de tentatives incorrectes.{'\n'}
+                      Contactez votre administrateur.
+                    </RNText>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.countdownBox}>
+                      <RNText style={styles.countdownBoxTitle}>2FA TEMPORAIREMENT VERROUILLÉ</RNText>
+                      <RNText style={styles.countdownLabel}>RÉESSAYEZ DANS</RNText>
+                      <RNText style={styles.lockedCountdown}>{formatCountdown(countdown)}</RNText>
+                    </View>
+                    <RNText style={styles.lockedHint}>
                       Le délai augmente après chaque série d'échecs.
                     </RNText>
                   </>
@@ -447,29 +440,53 @@ const styles = StyleSheet.create({
   },
   lockedContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 32,
+    width: '100%',
+    gap: 20,
+    marginBottom: 12,
   },
-  lockedIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#FEF2F2',
+  lockedTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#2A2E33',
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  countdownBox: {
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 4,
+  },
+  countdownBoxTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2A2E33',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  countdownLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    letterSpacing: 0.5,
   },
   lockedCountdown: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#EF4444',
-  },
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#DC2626',
+    fontVariant: ['tabular-nums'],
+  } as any,
   lockedHint: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 280,
+    lineHeight: 19,
+    maxWidth: 260,
   },
   cancelButton: {
     width: '100%',
