@@ -9,6 +9,7 @@ export interface ToastData {
   message: string;
   type: ToastType;
   duration: number;
+  count: number;
 }
 
 const DEFAULT_DURATIONS: Record<ToastType, number> = {
@@ -40,16 +41,21 @@ interface ToastItemProps {
 function ToastItem({ toast, onRemove }: ToastItemProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 250, useNativeDriver: true }),
     ]).start();
-
-    const timer = setTimeout(() => hide(), toast.duration);
-    return () => clearTimeout(timer);
   }, []);
+
+  // Reset timer on count change (dedup refresh)
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => hide(), toast.duration) as unknown as NodeJS.Timeout;
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [toast.count]);
 
   const hide = () => {
     Animated.parallel([
@@ -73,7 +79,12 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       ]}
     >
       <Icon size={18} color="#FFFFFF" />
-      <Text style={styles.message}>{toast.message}</Text>
+      <Text style={styles.message}>
+        {toast.count > 1 && (
+          <Text style={styles.count}>{toast.count}x </Text>
+        )}
+        {toast.message}
+      </Text>
       <Pressable onPress={hide} hitSlop={8}>
         <X size={16} color="rgba(255,255,255,0.7)" />
       </Pressable>
@@ -106,22 +117,23 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 20,
     zIndex: 99999,
-    elevation: 99999,
   },
   container: {
-    minWidth: 220,
-    maxWidth: 420,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    maxWidth: 480,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
   message: {
-    flex: 1,
+    flexShrink: 1,
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  count: {
+    fontWeight: '700',
   },
 });

@@ -25,8 +25,18 @@ function createToastStore() {
     },
     getSnapshot: () => toasts,
     add: (message: string, type: ToastType, duration: number) => {
+      // Dedup: if same message + type already visible, increment count & refresh
+      const existing = toasts.find((t) => t.message === message && t.type === type);
+      if (existing) {
+        toasts = toasts.map((t) =>
+          t.id === existing.id ? { ...t, count: t.count + 1, duration } : t
+        );
+        notify();
+        return;
+      }
+
       const id = ++idCounter;
-      toasts = [...toasts.slice(-(MAX_TOASTS - 1)), { id, message, type, duration }];
+      toasts = [...toasts.slice(-(MAX_TOASTS - 1)), { id, message, type, duration, count: 1 }];
       notify();
     },
     remove: (id: number) => {

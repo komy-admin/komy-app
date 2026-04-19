@@ -1,18 +1,14 @@
 import { Slot } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { Topbar } from '~/components/TopBar';
-import { ToastProvider } from '~/components/ToastProvider';
-
 export default function CookLayout() {
   return (
-    <ToastProvider>
-      <View style={styles.container}>
-        <Topbar enableConfigClick={false} />
-        <View style={styles.content}>
-          <Slot />
-        </View>
+    <View style={styles.container}>
+      <Topbar enableConfigClick={false} />
+      <View style={styles.content}>
+        <Slot />
       </View>
-    </ToastProvider>
+    </View>
   );
 }
 
