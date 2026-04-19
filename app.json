@@ -5,11 +5,11 @@
     "version": "1.0.0",
     "newArchEnabled": true,
     "orientation": "default",
-    "icon": "./assets/images/logo_komy_png/Logo_Komy_noirSF.webp",
+    "icon": "./assets/images/logo_komy_png/Logo_Komy_noirSF.png",
     "scheme": "komy",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/logo_komy_png/Logo_Komy_noirSF.webp",
+      "image": "./assets/images/logo_komy_png/Logo_Komy_noirSF.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -22,7 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo_komy_png/Logo_Komy_noirSF.webp",
+        "foregroundImage": "./assets/images/logo_komy_png/Logo_Komy_noirSF.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.forkit",
@@ -31,7 +31,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/logo_komy_png/Logo_Komy_noirSF.webp"
+      "favicon": "./assets/images/logo_komy_png/Logo_Komy_noirSF.png"
     },
     "plugins": [
       "expo-router",
