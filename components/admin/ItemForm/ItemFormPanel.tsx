@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Keyboard, Platform, ScrollView } from 'react-native';
-import { X, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Pressable, Keyboard, Platform } from 'react-native';
+import { X, ArrowLeft } from 'lucide-react-native';
 import { Item } from '~/types/item.types';
 import { ItemType } from '~/types/item-type.types';
 import { Tag } from '~/types/tag.types';
@@ -61,11 +61,6 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
   const [isSelectingColor, setIsSelectingColor] = useState(false);
   const { showToast } = useToast();
   const formErrors = useFormErrors();
-
-  // ItemType horizontal scroll
-  const itemTypeScrollRef = useRef<ScrollView>(null);
-  const [itemTypeScrollX, setItemTypeScrollX] = useState(0);
-  const [itemTypeScrollMax, setItemTypeScrollMax] = useState(0);
 
   const handleColorSelect = useCallback((selectedColor: string) => {
     setColor(selectedColor);
@@ -222,47 +217,16 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
           {/* Catégorie */}
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Catégorie</Text>
-            <View style={[styles.itemTypeScrollContainer, formErrors.hasError('itemTypeId') && styles.scrollContainerError]}>
-              {Platform.OS === 'web' && (
-                <Pressable
-                  style={styles.scrollArrow}
-                  onPress={() => itemTypeScrollRef.current?.scrollTo({ x: Math.max(0, itemTypeScrollX - 200), animated: true })}
-                >
-                  <ChevronLeft size={18} color={itemTypeScrollX > 0 ? '#374151' : '#D1D5DB'} strokeWidth={2} />
-                </Pressable>
-              )}
-              <ScrollView
-                ref={itemTypeScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.itemTypeScrollContent}
-                onScroll={(e) => {
-                  setItemTypeScrollX(e.nativeEvent.contentOffset.x);
-                  setItemTypeScrollMax(
-                    e.nativeEvent.contentSize.width - e.nativeEvent.layoutMeasurement.width
-                  );
-                }}
-                scrollEventThrottle={16}
-                style={styles.itemTypeScroll}
-              >
-                {itemTypes.map((type) => (
-                  <SelectButton
-                    key={type.id}
-                    label={type.name}
-                    isActive={itemTypeId === type.id}
-                    onPress={() => handleCategorySelect(type.id)}
-                    variant="sub"
-                  />
-                ))}
-              </ScrollView>
-              {Platform.OS === 'web' && (
-                <Pressable
-                  style={styles.scrollArrow}
-                  onPress={() => itemTypeScrollRef.current?.scrollTo({ x: Math.min(itemTypeScrollMax, itemTypeScrollX + 200), animated: true })}
-                >
-                  <ChevronRight size={18} color={itemTypeScrollX < itemTypeScrollMax - 1 ? '#374151' : '#D1D5DB'} strokeWidth={2} />
-                </Pressable>
-              )}
+            <View style={[styles.itemTypeWrap, formErrors.hasError('itemTypeId') && styles.scrollContainerError]}>
+              {itemTypes.map((type) => (
+                <SelectButton
+                  key={type.id}
+                  label={type.name}
+                  isActive={itemTypeId === type.id}
+                  onPress={() => handleCategorySelect(type.id)}
+                  variant="sub"
+                />
+              ))}
             </View>
             <FormFieldError message={formErrors.getError('itemTypeId')} />
           </View>
@@ -471,32 +435,10 @@ const styles = StyleSheet.create({
     borderColor: '#EF4444',
     backgroundColor: '#FEF2F2',
   },
-  itemTypeScrollContainer: {
+  itemTypeWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  itemTypeScroll: {
-    flex: 1,
-  },
-  itemTypeScrollContent: {
+    flexWrap: 'wrap',
     gap: 8,
-    paddingVertical: 2,
-    paddingHorizontal: 2,
-  },
-  scrollArrow: {
-    width: 32,
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    } as any),
   },
   scrollContainerError: {
     borderWidth: 1,

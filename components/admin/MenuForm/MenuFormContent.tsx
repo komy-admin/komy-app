@@ -4,7 +4,7 @@ import {
   Keyboard, Platform, ScrollView, Animated,
 } from 'react-native';
 import {
-  X, ArrowLeftToLine, Plus, Trash2, Package, Eye, EyeOff, Lock, ChevronLeft, ChevronRight,
+  X, ArrowLeftToLine, Plus, Trash2, Package, Eye, EyeOff, Lock,
 } from 'lucide-react-native';
 import { Menu, MenuCategoryItem } from '~/types/menu.types';
 import { Item } from '~/types/item.types';
@@ -118,11 +118,6 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
 
   // Description height
   const [descriptionHeight, setDescriptionHeight] = useState(44);
-
-  // ItemType horizontal scroll
-  const itemTypeScrollRef = useRef<ScrollView>(null);
-  const [itemTypeScrollX, setItemTypeScrollX] = useState(0);
-  const [itemTypeScrollMax, setItemTypeScrollMax] = useState(0);
 
   // Business logic hook
   const editor = useMenuEditor({
@@ -372,47 +367,16 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
             {/* Type d'article */}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Type d'article</Text>
-              <View style={styles.itemTypeScrollContainer}>
-                {Platform.OS === 'web' && (
-                  <Pressable
-                    style={styles.scrollArrow}
-                    onPress={() => itemTypeScrollRef.current?.scrollTo({ x: Math.max(0, itemTypeScrollX - 200), animated: true })}
-                  >
-                    <ChevronLeft size={18} color={itemTypeScrollX > 0 ? '#374151' : '#D1D5DB'} strokeWidth={2} />
-                  </Pressable>
-                )}
-                <ScrollView
-                  ref={itemTypeScrollRef}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.itemTypeScrollContent}
-                  onScroll={(e) => {
-                    setItemTypeScrollX(e.nativeEvent.contentOffset.x);
-                    setItemTypeScrollMax(
-                      e.nativeEvent.contentSize.width - e.nativeEvent.layoutMeasurement.width
-                    );
-                  }}
-                  scrollEventThrottle={16}
-                  style={styles.itemTypeScroll}
-                >
-                  {itemTypes.map((type) => (
-                    <SelectButton
-                      key={type.id}
-                      label={type.name}
-                      isActive={category.itemTypeId === type.id}
-                      onPress={() => editor.updateCategory(activeCategoryIndex, 'itemTypeId', type.id)}
-                      variant="sub"
-                    />
-                  ))}
-                </ScrollView>
-                {Platform.OS === 'web' && (
-                  <Pressable
-                    style={styles.scrollArrow}
-                    onPress={() => itemTypeScrollRef.current?.scrollTo({ x: Math.min(itemTypeScrollMax, itemTypeScrollX + 200), animated: true })}
-                  >
-                    <ChevronRight size={18} color={itemTypeScrollX < itemTypeScrollMax - 1 ? '#374151' : '#D1D5DB'} strokeWidth={2} />
-                  </Pressable>
-                )}
+              <View style={styles.itemTypeWrap}>
+                {itemTypes.map((type) => (
+                  <SelectButton
+                    key={type.id}
+                    label={type.name}
+                    isActive={category.itemTypeId === type.id}
+                    onPress={() => editor.updateCategory(activeCategoryIndex, 'itemTypeId', type.id)}
+                    variant="sub"
+                  />
+                ))}
               </View>
             </View>
 
@@ -941,32 +905,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 16,
   },
-  itemTypeScrollContainer: {
+  itemTypeWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  itemTypeScroll: {
-    flex: 1,
-  },
-  itemTypeScrollContent: {
+    flexWrap: 'wrap',
     gap: 8,
-    paddingVertical: 2,
-    paddingHorizontal: 2,
-  },
-  scrollArrow: {
-    width: 32,
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web' && {
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    } as any),
   },
   divider: {
     height: 1,
