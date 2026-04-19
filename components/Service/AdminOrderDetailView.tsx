@@ -13,6 +13,7 @@ import { useOrderLines } from '~/hooks/useOrderLines';
 import { useOrders } from '~/hooks/useOrders';
 import { useMenus } from '~/hooks/useMenus';
 import { usePayments } from '~/hooks/usePayments';
+import { colors } from '~/theme';
 import { entitiesActions } from '~/store';
 import { useDispatch } from 'react-redux';
 import { useToast } from '~/components/ToastProvider';
@@ -43,15 +44,15 @@ interface AdminOrderLinesGroupProps {
 const getItemTypeIcon = (itemTypeName: string) => {
   switch (itemTypeName) {
     case 'Boissons':
-      return <Wine size={24} color="#1A1A1A" strokeWidth={1.5} />;
+      return <Wine size={24} color={colors.brand.dark} strokeWidth={1.5} />;
     case 'Entrées':
-      return <UtensilsCrossed size={24} color="#1A1A1A" strokeWidth={1.5} />;
+      return <UtensilsCrossed size={24} color={colors.brand.dark} strokeWidth={1.5} />;
     case 'Plats':
-      return <Soup size={24} color="#1A1A1A" strokeWidth={1.5} />;
+      return <Soup size={24} color={colors.brand.dark} strokeWidth={1.5} />;
     case 'Desserts':
-      return <Dessert size={24} color="#1A1A1A" strokeWidth={1.5} />;
+      return <Dessert size={24} color={colors.brand.dark} strokeWidth={1.5} />;
     default:
-      return <UtensilsCrossed size={24} color="#1A1A1A" strokeWidth={1.5} />;
+      return <UtensilsCrossed size={24} color={colors.brand.dark} strokeWidth={1.5} />;
   }
 };
 
@@ -133,7 +134,7 @@ const AdminOrderLineItem = ({
       flexDirection: 'row',
       backgroundColor: isMenuItem ? `${getStatusColor(itemStatus)}60` : 'white',
       borderTopWidth: isFirstInCategory ? 0 : 1,
-      borderTopColor: '#E5E7EB',
+      borderTopColor: colors.gray[200],
       minHeight: itemHeight,
     }}>
       {/* Contenu principal de l'item */}
@@ -152,7 +153,7 @@ const AdminOrderLineItem = ({
               {/* Badge "PAYÉ" si l'item est entièrement payé (100%) */}
               {paymentStatus.isFullyPaid && (
                 <View style={{
-                  backgroundColor: '#10B981',
+                  backgroundColor: colors.success.base,
                   paddingHorizontal: 6,
                   paddingVertical: 2,
                   borderRadius: 8,
@@ -183,19 +184,19 @@ const AdminOrderLineItem = ({
               <Text style={{
                 fontSize: 11,
                 fontWeight: '600',
-                color: '#1A1A1A'
+                color: colors.brand.dark
               }}>
                 {getStatusText(itemStatus)}
               </Text>
             </View>
             {/* Heure */}
-            <Text style={{ fontSize: 12, color: '#666666' }}>
+            <Text style={{ fontSize: 12, color: colors.gray[500] }}>
               {formatDate(updatedAt, DateFormat.TIME)}
             </Text>
           </View>
           {/* Commentaire sur une ligne séparée si présent */}
           {itemNote && (
-            <Text style={{ fontSize: 14, color: '#666666', fontStyle: 'italic' }}>
+            <Text style={{ fontSize: 14, color: colors.gray[500], fontStyle: 'italic' }}>
               Commentaire : {itemNote}
             </Text>
           )}
@@ -207,7 +208,7 @@ const AdminOrderLineItem = ({
         {paymentFraction > 0 ? (
           /* Si partiellement ou totalement payé, afficher un cadenas */
           <View style={{
-            backgroundColor: '#9CA3AF',
+            backgroundColor: colors.gray[400],
             width: 60,
             alignItems: 'center',
             justifyContent: 'center',
@@ -221,7 +222,7 @@ const AdminOrderLineItem = ({
               <Pressable
                 onPress={handleStatusClick}
                 style={{
-                  backgroundColor: '#3B82F6',
+                  backgroundColor: colors.info.base,
                   width: 60,
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -236,7 +237,7 @@ const AdminOrderLineItem = ({
               <Pressable
                 onPress={handleDeleteClick}
                 style={{
-                  backgroundColor: '#EF4444',
+                  backgroundColor: colors.error.base,
                   width: 60,
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -365,7 +366,7 @@ const AdminMenuOrderGroup = ({
                   height: 48,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  shadowColor: '#000',
+                  shadowColor: colors.black,
                   shadowOffset: {
                     width: 0,
                     height: 2,
@@ -374,13 +375,13 @@ const AdminMenuOrderGroup = ({
                   shadowRadius: 4,
                   elevation: 4,
                 }}>
-                  <Menu size={24} color="#1A1A1A" strokeWidth={1.5} />
+                  <Menu size={24} color={colors.brand.dark} strokeWidth={1.5} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{
                     fontSize: 18,
                     fontWeight: '700',
-                    color: '#1A1A1A',
+                    color: colors.brand.dark,
                     marginBottom: 2
                   }}>
                     Menu : {menuInfo?.name || 'Menu'}
@@ -394,7 +395,7 @@ const AdminMenuOrderGroup = ({
                         paddingHorizontal: 8,
                         paddingVertical: 4,
                       }}>
-                        <Text style={{ fontSize: 10, color: '#1A1A1A', fontWeight: '600' }}>
+                        <Text style={{ fontSize: 10, color: colors.brand.dark, fontWeight: '600' }}>
                           STATUTS MIXTES
                         </Text>
                       </View>
@@ -410,7 +411,7 @@ const AdminMenuOrderGroup = ({
                         <Text style={{
                           fontSize: 12,
                           fontWeight: '600',
-                          color: '#1A1A1A'
+                          color: colors.brand.dark
                         }}>
                           {itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}
                         </Text>
@@ -418,7 +419,7 @@ const AdminMenuOrderGroup = ({
                     )}
                     <Text style={{
                       fontSize: 13,
-                      color: '#666666',
+                      color: colors.gray[500],
                       fontWeight: '500'
                     }}>
                       {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
@@ -429,9 +430,9 @@ const AdminMenuOrderGroup = ({
 
               {/* Chevron */}
               {isExpanded ? (
-                <ChevronUp size={20} color="#1A1A1A" strokeWidth={2.5} />
+                <ChevronUp size={20} color={colors.brand.dark} strokeWidth={2.5} />
               ) : (
-                <ChevronDown size={20} color="#1A1A1A" strokeWidth={2.5} />
+                <ChevronDown size={20} color={colors.brand.dark} strokeWidth={2.5} />
               )}
             </View>
           </Pressable>
@@ -444,7 +445,7 @@ const AdminMenuOrderGroup = ({
                 <Pressable
                   onPress={handleGroupStatusClick}
                   style={{
-                    backgroundColor: '#3B82F6',
+                    backgroundColor: colors.info.base,
                     width: 60,
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -459,7 +460,7 @@ const AdminMenuOrderGroup = ({
               <Pressable
                 onPress={handleGroupDeleteClick}
                 style={{
-                  backgroundColor: '#EF4444',
+                  backgroundColor: colors.error.base,
                   width: 60,
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -474,7 +475,7 @@ const AdminMenuOrderGroup = ({
 
         {isExpanded && (
           <View style={{
-            backgroundColor: '#FAFBFC',
+            backgroundColor: colors.gray[50],
           }}>
             {/* Grouper les items par type d'item */}
             {(() => {
@@ -493,14 +494,14 @@ const AdminMenuOrderGroup = ({
                 <View key={categoryName}>
                   {/* Header de catégorie */}
                   <View style={{
-                    backgroundColor: '#E5E7EB',
+                    backgroundColor: colors.gray[200],
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                   }}>
                     <Text style={{
                       fontSize: 14,
                       fontWeight: '700',
-                      color: '#1F2937',
+                      color: colors.gray[800],
                     }}>
                       {categoryName}
                     </Text>
@@ -641,7 +642,7 @@ const AdminOrderItemsGroup = ({
                   height: 48,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  shadowColor: '#000',
+                  shadowColor: colors.black,
                   shadowOffset: {
                     width: 0,
                     height: 2,
@@ -656,7 +657,7 @@ const AdminOrderItemsGroup = ({
                   <Text style={{
                     fontSize: 18,
                     fontWeight: '700',
-                    color: '#1A1A1A',
+                    color: colors.brand.dark,
                     marginBottom: 2
                   }}>
                     {itemType.name}
@@ -671,14 +672,14 @@ const AdminOrderItemsGroup = ({
                       <Text style={{
                         fontSize: 12,
                         fontWeight: '600',
-                        color: '#1A1A1A'
+                        color: colors.brand.dark
                       }}>
                         {itemStatus ? getStatusText(itemStatus) : 'Aucun statut'}
                       </Text>
                     </View>
                     <Text style={{
                       fontSize: 13,
-                      color: '#666666',
+                      color: colors.gray[500],
                       fontWeight: '500'
                     }}>
                       {orderItems.length} article{orderItems.length > 1 ? 's' : ''}
@@ -689,9 +690,9 @@ const AdminOrderItemsGroup = ({
 
               {/* Chevron */}
               {isExpanded ? (
-                <ChevronUp size={20} color="#1A1A1A" strokeWidth={2.5} />
+                <ChevronUp size={20} color={colors.brand.dark} strokeWidth={2.5} />
               ) : (
-                <ChevronDown size={20} color="#1A1A1A" strokeWidth={2.5} />
+                <ChevronDown size={20} color={colors.brand.dark} strokeWidth={2.5} />
               )}
             </View>
           </Pressable>
@@ -704,7 +705,7 @@ const AdminOrderItemsGroup = ({
                 <Pressable
                   onPress={handleGroupStatusClick}
                   style={{
-                    backgroundColor: '#3B82F6',
+                    backgroundColor: colors.info.base,
                     width: 60,
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -720,7 +721,7 @@ const AdminOrderItemsGroup = ({
                 <Pressable
                   onPress={handleGroupDeleteClick}
                   style={{
-                    backgroundColor: '#EF4444',
+                    backgroundColor: colors.error.base,
                     width: 60,
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -736,14 +737,14 @@ const AdminOrderItemsGroup = ({
 
         {isExpanded && (
           <View style={{
-            backgroundColor: '#FAFBFC',
+            backgroundColor: colors.gray[50],
           }}>
             {orderItems.map((orderLine: any, index: number) => {
               const fraction = orderLine.paidFraction ?? 0;
 
               return (
                 <View key={orderLine.id} style={{
-                  backgroundColor: index % 2 === 0 ? 'white' : '#F8F9FA'
+                  backgroundColor: index % 2 === 0 ? 'white' : colors.gray[50]
                 }}>
                   <AdminOrderLineItem
                     orderLine={orderLine}
@@ -934,7 +935,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                     <Text style={{
                       fontSize: 20,
                       fontWeight: '700',
-                      color: '#1A1A1A',
+                      color: colors.brand.dark,
                       marginBottom: 12
                     }}>
                       🍽️ Menus
@@ -992,7 +993,7 @@ export default function AdminOrderDetailView({ order, itemTypes, onDeleteOrderLi
                     <Text style={{
                       fontSize: 20,
                       fontWeight: '700',
-                      color: '#1A1A1A',
+                      color: colors.brand.dark,
                       marginBottom: 12
                     }}>
                       📋 Articles individuels

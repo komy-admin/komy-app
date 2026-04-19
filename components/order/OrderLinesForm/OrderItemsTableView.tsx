@@ -9,8 +9,9 @@ import { ItemsByTypeGroup } from '~/hooks/order/useOrderLinesForm';
 import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/order/useScrollSync';
 import { formatPrice, getContrastColor } from '~/lib/utils';
 import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
-const MENU_COLOR = '#10B981';
+const MENU_COLOR = colors.success.base;
 const ITEM_HEIGHT = 58;
 
 interface TableSection {
@@ -51,7 +52,7 @@ const OrderItemRow = memo<OrderItemRowProps>(({
     onOpenCustomization(item);
   }, [item, onOpenCustomization]);
 
-  const itemColor = item.color || '#6B7280';
+  const itemColor = item.color || colors.gray[500];
   const buttonBgColor = itemColor;
   const buttonIconColor = getContrastColor(itemColor);
 
@@ -87,7 +88,7 @@ const OrderItemRow = memo<OrderItemRowProps>(({
         {item.tags && item.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {item.tags.slice(0, 2).map((tag) => {
-              const tagColor = (typeof tag === 'object' && 'color' in tag && typeof tag.color === 'string' ? tag.color : null) || '#6B7280';
+              const tagColor = (typeof tag === 'object' && 'color' in tag && typeof tag.color === 'string' ? tag.color : null) || colors.gray[500];
               return (
                 <View
                   key={tag.id}
@@ -119,7 +120,7 @@ const OrderItemRow = memo<OrderItemRowProps>(({
             { backgroundColor: '#2A2E33' }
           ]}
         >
-          <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
+          <Plus size={20} color={colors.white} strokeWidth={2.5} />
         </View>
       </View>
     </Pressable>
@@ -191,7 +192,7 @@ const MenuRow = memo<MenuRowProps>(({
 
       <View style={styles.actionCell}>
         <View style={[styles.addButton, { backgroundColor: '#2A2E33' }]}>
-          <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
+          <Plus size={20} color={colors.white} strokeWidth={2.5} />
         </View>
       </View>
     </Pressable>
@@ -358,7 +359,7 @@ export const OrderItemsTableView = memo<OrderItemsTableViewProps>(({
 OrderItemsTableView.displayName = 'OrderItemsTableView';
 
 const COLORS = {
-  textSecondary: '#6B7280',
+  textSecondary: colors.gray[500],
 };
 
 const styles = StyleSheet.create({
@@ -367,15 +368,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 0,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#F4F5F5',
+    borderBottomColor: colors.gray[100],
     alignItems: 'center',
     height: 58,
   },
   evenRow: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   oddRow: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.gray[50],
   },
 
   // Cells
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontStyle: 'italic',
     lineHeight: 16,
     marginTop: 2,
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
   },
   menuPriceLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     lineHeight: 14,
   },
   priceText: {
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
   },
   categoriesText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '600',
   },
   actionCell: {

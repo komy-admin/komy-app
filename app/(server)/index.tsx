@@ -14,6 +14,7 @@ import { getStatusColor, getStatusText, getMostImportantStatus, getOrderGlobalSt
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from '@react-navigation/native';
+import { colors } from '~/theme';
 
 export default function ServerHomePage() {
   const snapPoints = useMemo(() => ['15%', '35%', '60%'], []);
@@ -91,7 +92,7 @@ export default function ServerHomePage() {
       case Status.SERVED:
         return <CheckCircle2 {...iconProps} color={getStatusColor(status)} />;
       case Status.ERROR:
-        return <AlertCircle {...iconProps} color="#EF4444" />;
+        return <AlertCircle {...iconProps} color={colors.error.base} />;
       default:
         return <Clock {...iconProps} color={getStatusColor(status)} />;
     }
@@ -179,7 +180,7 @@ export default function ServerHomePage() {
                 {getStatusIcon(orderStatus)}
                 <View
                   style={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: colors.white,
                     paddingHorizontal: 8,
                     paddingVertical: 4,
                     borderRadius: 6
@@ -270,13 +271,13 @@ export default function ServerHomePage() {
             position: 'absolute',
             bottom: 20,
             right: 20,
-            backgroundColor: '#2A2E33',
+            backgroundColor: colors.brand.dark,
             width: 56,
             height: 56,
             borderRadius: 28,
             justifyContent: 'center',
             alignItems: 'center',
-            shadowColor: '#000',
+            shadowColor: colors.black,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,
             shadowRadius: 6,
@@ -295,21 +296,21 @@ export default function ServerHomePage() {
         index={bottomSheetIndex}
         onChange={(index) => setBottomSheetIndex(index)}
         handleIndicatorStyle={{
-          backgroundColor: '#94A3B8',
+          backgroundColor: colors.neutral[400],
           width: 40,
           height: 4,
         }}
         handleStyle={{
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.white,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           paddingVertical: 8,
         }}
         backgroundStyle={{
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.white,
         }}
         style={{
-          shadowColor: "#000",
+          shadowColor: colors.black,
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.15,
           shadowRadius: 6,

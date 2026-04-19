@@ -9,6 +9,7 @@ import { ReservationSettingsPage } from '~/components/reservation/ReservationSet
 import { ReservationList } from '~/components/reservation/ReservationList';
 import { ReservationGuide } from '~/components/reservation/ReservationGuide';
 import { View as LoadingView, ActivityIndicator } from 'react-native';
+import { colors } from '~/theme';
 
 export type ReservationSection = 'reservations' | 'configuration' | 'settings' | 'guide';
 
@@ -23,7 +24,7 @@ export default function ReservationPage() {
   if (reservation.isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2A2E33" />
+        <ActivityIndicator size="large" color={colors.brand.dark} />
       </View>
     );
   }
@@ -66,13 +67,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   content: {
     flex: 1,

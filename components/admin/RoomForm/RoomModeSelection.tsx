@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable } from 'react-native';
 import { X, Plus, Trash2 } from 'lucide-react-native';
 import { Room } from '~/types/room.types';
+import { colors } from '~/theme';
 
 interface RoomModeSelectionProps {
   rooms: Room[];
@@ -23,7 +24,7 @@ export const RoomModeSelection: React.FC<RoomModeSelectionProps> = ({
       <View style={styles.header}>
         <Text style={styles.title}>Gestion des salles</Text>
         <TouchableOpacity onPress={onCancel}>
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -57,7 +58,7 @@ export const RoomModeSelection: React.FC<RoomModeSelectionProps> = ({
           {rooms.map((room) => (
             <View key={room.id} style={styles.roomItem}>
               <View style={styles.roomColorOuter}>
-                <View style={[styles.roomColorInner, { backgroundColor: room.isActive ? (room.color || '#6366F1') : '#D1D5DB' }]} />
+                <View style={[styles.roomColorInner, { backgroundColor: room.isActive ? (room.color || colors.brand.accent) : colors.gray[300] }]} />
               </View>
               <Text style={[styles.roomName, !room.isActive && styles.roomNameInactive]} numberOfLines={1}>
                 {room.name}
@@ -67,7 +68,7 @@ export const RoomModeSelection: React.FC<RoomModeSelectionProps> = ({
                   <Text style={styles.editButtonText}>Modifier</Text>
                 </Pressable>
                 <Pressable onPress={() => onDelete(room)} style={styles.deleteButton}>
-                  <Trash2 size={16} color="#EF4444" strokeWidth={2} />
+                  <Trash2 size={16} color={colors.error.base} strokeWidth={2} />
                 </Pressable>
               </View>
             </View>
@@ -81,7 +82,7 @@ export const RoomModeSelection: React.FC<RoomModeSelectionProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -89,12 +90,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   content: {
     flex: 1,
@@ -142,12 +143,12 @@ const styles = StyleSheet.create({
   separatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   separatorText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -160,9 +161,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: colors.neutral[100],
     gap: 12,
   },
   roomColorOuter: {
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#1E293B',
+    borderColor: colors.neutral[800],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -183,10 +184,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   roomNameInactive: {
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textDecorationLine: 'line-through',
   },
   roomActions: {
@@ -198,9 +199,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -208,13 +209,13 @@ const styles = StyleSheet.create({
     height: 38,
     paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     justifyContent: 'center',
     alignItems: 'center',
   },
   editButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

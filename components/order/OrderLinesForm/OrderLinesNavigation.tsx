@@ -5,10 +5,10 @@ import { LayoutGrid, List, Menu } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 const ACTIVE_COLOR = '#2A2E33';
-const INACTIVE_COLOR = '#9CA3AF';
+const INACTIVE_COLOR = colors.gray[400];
 
 /**
  * Props pour le composant OrderLinesNavigation
@@ -142,9 +142,9 @@ OrderLinesNavigation.displayName = 'OrderLinesNavigation';
 const styles = {
   sidebar: {
     width: 82,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderLeftWidth: 1,
-    borderLeftColor: '#E5E7EB',
+    borderLeftColor: colors.gray[200],
     paddingTop: 12,
     alignItems: 'center' as const,
     ...shadows.left,
@@ -154,7 +154,7 @@ const styles = {
   horizontalDivider: {
     width: 48,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     marginVertical: 10,
   },
 

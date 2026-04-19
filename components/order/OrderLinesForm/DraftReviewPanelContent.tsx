@@ -8,6 +8,7 @@ import { formatPrice, getStatusText } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
 import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
 import { SectionDivider } from '~/components/ui';
+import { colors } from '~/theme';
 
 // Fingerprint: identical item + tags + note + status + paymentFraction = same line
 const getLineFingerprint = (line: OrderLine): string => {
@@ -259,7 +260,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
       >
         {totalLines === 0 ? (
           <View style={styles.emptyState}>
-            <ShoppingBag size={64} color="#CBD5E1" strokeWidth={1.5} />
+            <ShoppingBag size={64} color={colors.neutral[300]} strokeWidth={1.5} />
             <RNText style={styles.emptyTitle}>Commande vide</RNText>
             <RNText style={styles.emptyText}>
               Ajoutez des articles pour commencer
@@ -380,7 +381,7 @@ const DeleteConfirmOverlay: React.FC<{
   return (
     <Animated.View style={[styles.deleteOverlay, { opacity }]}>
       <Pressable onPress={onConfirm} style={styles.deleteOverlayButton}>
-        <Trash2 size={16} color="#FFFFFF" strokeWidth={2} />
+        <Trash2 size={16} color={colors.white} strokeWidth={2} />
         <RNText style={styles.deleteOverlayText}>Confirmer la suppression</RNText>
       </Pressable>
     </Animated.View>
@@ -430,8 +431,8 @@ const StatusBadgeInline: React.FC<{
   const statusLabel = getStatusText(s);
 
   const hasPaidBadge = paymentStatus === 'paid' || paymentStatus === 'partial';
-  const paidBg = paymentStatus === 'paid' ? '#FEF2F2' : '#FFF7ED';
-  const paidColor = paymentStatus === 'paid' ? '#EF4444' : '#EA580C';
+  const paidBg = paymentStatus === 'paid' ? colors.error.bg : '#FFF7ED';
+  const paidColor = paymentStatus === 'paid' ? colors.error.base : '#EA580C';
   const paidLabel = paymentStatus === 'paid' ? 'Payé' : 'Partiel';
 
   return (
@@ -532,7 +533,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
                 style={styles.trashButton}
                 hitSlop={6}
               >
-                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                <Trash2 size={18} color={colors.error.base} strokeWidth={2} />
               </Pressable>
             )}
           </View>
@@ -644,7 +645,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
                 style={styles.trashButton}
                 hitSlop={6}
               >
-                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                <Trash2 size={18} color={colors.error.base} strokeWidth={2} />
               </Pressable>
             )}
           </View>
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   panelHeader: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     height: 53,
@@ -720,7 +721,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRightWidth: 1,
-    borderRightColor: '#F3F4F6',
+    borderRightColor: colors.gray[100],
     height: '100%',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
@@ -737,7 +738,7 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
   },
 
   // Empty State
@@ -751,12 +752,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 16,
   },
   emptyText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
   },
 
@@ -767,7 +768,7 @@ const styles = StyleSheet.create({
 
   // Section block (white)
   sectionBlock: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
 
   // Receipt row wrapper (for overlay positioning)
@@ -785,7 +786,7 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.gray[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   receiptMainLine: {
@@ -796,14 +797,14 @@ const styles = StyleSheet.create({
   receiptQty: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginRight: 6,
     flexShrink: 0,
   },
   receiptName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
     flexShrink: 1,
   },
   receiptDots: {
@@ -813,7 +814,7 @@ const styles = StyleSheet.create({
   receiptPrice: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
     flexShrink: 0,
   },
   trashButton: {
@@ -828,7 +829,7 @@ const styles = StyleSheet.create({
   },
   receiptTag: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.gray[500],
     paddingLeft: 4,
   },
   receiptNote: {
@@ -846,7 +847,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
     zIndex: 5,
   },
 
@@ -874,7 +875,7 @@ const styles = StyleSheet.create({
   deleteOverlayText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 
   // Locked state
@@ -919,7 +920,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   menuBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -927,7 +928,7 @@ const styles = StyleSheet.create({
   menuBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 0.5,
   },
   menuItemsList: {
@@ -936,16 +937,16 @@ const styles = StyleSheet.create({
   },
   menuSubItemText: {
     fontSize: 12,
-    color: '#4B5563',
+    color: colors.gray[600],
   },
   menuSubCategory: {
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontSize: 11,
   },
   menuSubItemDetail: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontStyle: 'italic',
   },
 
@@ -955,21 +956,21 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: colors.neutral[200],
+    backgroundColor: colors.white,
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -986,6 +987,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

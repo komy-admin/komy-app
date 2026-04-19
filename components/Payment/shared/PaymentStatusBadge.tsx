@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '~/theme';
 
 interface PaymentStatusBadgeProps {
   status:
@@ -18,11 +19,11 @@ const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
     case 'completed':
       return { label: 'COMPLÉTÉ', backgroundColor: '#D1FAE5', color: '#065F46' };
     case 'pending':
-      return { label: 'EN ATTENTE', backgroundColor: '#FEF3C7', color: '#92400E' };
+      return { label: 'EN ATTENTE', backgroundColor: colors.warning.border, color: colors.warning.text };
     case 'failed':
       return { label: 'ÉCHOUÉ', backgroundColor: '#FEE2E2', color: '#991B1B' };
     case 'refunded':
-      return { label: 'REMBOURSÉ', backgroundColor: '#F3F4F6', color: '#374151' };
+      return { label: 'REMBOURSÉ', backgroundColor: colors.gray[100], color: colors.gray[700] };
     case 'paid':
       return { label: 'ENTIÈREMENT PAYÉ', backgroundColor: '#D1FAE5', color: '#065F46' };
     case 'partial':
@@ -32,7 +33,7 @@ const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
     case 'overpaid':
       return { label: 'SURPAYÉ', backgroundColor: '#E9D5FF', color: '#6B21A8' };
     default:
-      return { label: 'INCONNU', backgroundColor: '#F3F4F6', color: '#374151' };
+      return { label: 'INCONNU', backgroundColor: colors.gray[100], color: colors.gray[700] };
   }
 };
 

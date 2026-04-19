@@ -3,6 +3,7 @@ import type { PaymentSummary as PaymentSummaryType } from '~/types/payment-histo
 import { PaymentStatusBadge } from '../shared/PaymentStatusBadge';
 import { formatPrice } from '~/lib/utils';
 import { CheckCircle } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 interface PaymentSummaryProps {
   summary: PaymentSummaryType;
@@ -26,7 +27,7 @@ export function PaymentSummary({ summary }: PaymentSummaryProps) {
               {formatPrice(summary.paidAmount)}
             </Text>
             {summary.status === 'paid' && (
-              <CheckCircle size={16} color="#10B981" strokeWidth={2} />
+              <CheckCircle size={16} color={colors.success.base} strokeWidth={2} />
             )}
           </View>
         </View>
@@ -53,16 +54,16 @@ export function PaymentSummary({ summary }: PaymentSummaryProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     padding: 16,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -76,13 +77,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 14,
-    color: '#4B5563',
+    color: colors.gray[600],
     fontWeight: '500',
   },
   statValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   paidAmountContainer: {
     flexDirection: 'row',
@@ -92,17 +93,17 @@ const styles = StyleSheet.create({
   paidAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#10B981',
+    color: colors.success.base,
   },
   remainingAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F59E0B',
+    color: colors.warning.base,
   },
   remainingAmountZero: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   badgeContainer: {
     marginTop: 12,

@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Printer, Mail, Euro, FileText } from 'lucide-react-native';
 import type { Payment } from '~/types/payment.types';
+import { colors } from '~/theme';
 
 interface PaymentActionsProps {
   payment: Payment;
@@ -27,18 +28,18 @@ export function PaymentActions({
         <Pressable
           style={styles.actionButton}
           onPress={onReprint}
-          android_ripple={{ color: '#E5E7EB' }}
+          android_ripple={{ color: colors.gray[200] }}
         >
-          <Printer size={20} color="#374151" strokeWidth={2} />
+          <Printer size={20} color={colors.gray[700]} strokeWidth={2} />
           <Text style={styles.buttonText}>Réimprimer</Text>
         </Pressable>
 
         <Pressable
           style={styles.actionButton}
           onPress={onSendEmail}
-          android_ripple={{ color: '#E5E7EB' }}
+          android_ripple={{ color: colors.gray[200] }}
         >
-          <Mail size={20} color="#374151" strokeWidth={2} />
+          <Mail size={20} color={colors.gray[700]} strokeWidth={2} />
           <Text style={styles.buttonText}>Email</Text>
         </Pressable>
 
@@ -46,9 +47,9 @@ export function PaymentActions({
           style={[styles.actionButton, isRefundDisabled && styles.disabledButton]}
           onPress={onRefund}
           disabled={isRefundDisabled}
-          android_ripple={{ color: isRefundDisabled ? 'transparent' : '#E5E7EB' }}
+          android_ripple={{ color: isRefundDisabled ? 'transparent' : colors.gray[200] }}
         >
-          <Euro size={20} color={isRefundDisabled ? '#9CA3AF' : '#374151'} strokeWidth={2} />
+          <Euro size={20} color={isRefundDisabled ? colors.gray[400] : colors.gray[700]} strokeWidth={2} />
           <Text style={[styles.buttonText, isRefundDisabled && styles.disabledText]}>
             Rembourser
           </Text>
@@ -57,9 +58,9 @@ export function PaymentActions({
         <Pressable
           style={styles.actionButton}
           onPress={onViewAudit}
-          android_ripple={{ color: '#E5E7EB' }}
+          android_ripple={{ color: colors.gray[200] }}
         >
-          <FileText size={20} color="#374151" strokeWidth={2} />
+          <FileText size={20} color={colors.gray[700]} strokeWidth={2} />
           <Text style={styles.buttonText}>Audit</Text>
         </Pressable>
       </View>
@@ -69,15 +70,15 @@ export function PaymentActions({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.gray[200],
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -94,18 +95,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.gray[200],
+    backgroundColor: colors.white,
   },
   buttonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: colors.gray[700],
   },
   disabledButton: {
     opacity: 0.5,
   },
   disabledText: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
 });

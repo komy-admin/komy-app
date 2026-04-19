@@ -9,6 +9,7 @@
 import React from "react";
 import Svg, { Line, Rect, G } from 'react-native-svg';
 import { EXTRA_LINES } from '~/hooks/room/constants';
+import { colors } from '~/theme';
 
 interface GridLinesInterface {
   width: number;
@@ -19,7 +20,7 @@ interface GridLinesInterface {
   borderColor?: string;
 }
 
-const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_COLS, GRID_ROWS, CELL_SIZE, borderColor = '#2A2E33' }) => {
+const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_COLS, GRID_ROWS, CELL_SIZE, borderColor = colors.brand.dark }) => {
   const extendedHeight = height + (EXTRA_LINES * 2 * CELL_SIZE);
   const extendedWidth = width + (EXTRA_LINES * 2 * CELL_SIZE);
 
@@ -42,7 +43,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={0}
             x2={(i + EXTRA_LINES) * CELL_SIZE}
             y2={extendedHeight}
-            stroke="#D1D5DB"
+            stroke={colors.gray[300]}
             strokeWidth={1}
             strokeDasharray="4,4"
           />
@@ -56,7 +57,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={(i + 1 + EXTRA_LINES) * CELL_SIZE}
             x2={extendedWidth}
             y2={(i + 1 + EXTRA_LINES) * CELL_SIZE}
-            stroke="#D1D5DB"
+            stroke={colors.gray[300]}
             strokeWidth={1}
             strokeDasharray="4,4"
           />
@@ -70,7 +71,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={0}
             x2={i * CELL_SIZE}
             y2={extendedHeight}
-            stroke="#D1D5DB"
+            stroke={colors.gray[300]}
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}
@@ -85,7 +86,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={0}
             x2={(GRID_COLS + EXTRA_LINES + i + 1) * CELL_SIZE}
             y2={extendedHeight}
-            stroke="#D1D5DB"
+            stroke={colors.gray[300]}
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}
@@ -100,7 +101,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={i * CELL_SIZE}
             x2={extendedWidth}
             y2={i * CELL_SIZE}
-            stroke="#D1D5DB"
+            stroke={colors.gray[300]}
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}
@@ -115,7 +116,7 @@ const RoomGridComponent: React.FC<GridLinesInterface> = ({ width, height, GRID_C
             y1={(GRID_ROWS + EXTRA_LINES + i) * CELL_SIZE}
             x2={extendedWidth}
             y2={(GRID_ROWS + EXTRA_LINES + i) * CELL_SIZE}
-            stroke="#D1D5DB"
+            stroke={colors.gray[300]}
             strokeWidth={1}
             strokeDasharray="4,4"
             opacity={0.5}

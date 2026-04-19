@@ -12,6 +12,7 @@ import { useToast } from '~/components/ToastProvider';
 import { showApiError } from '~/lib/apiErrorHandler';
 import { useOrders, useMenu, useOrderLines } from '~/hooks/useRestaurant';
 import * as Haptics from 'expo-haptics';
+import { colors } from '~/theme';
 
 export default function OrderDetailPage() {
   const { id } = useLocalSearchParams();
@@ -202,7 +203,7 @@ export default function OrderDetailPage() {
             onPress={() => router.replace('/(server)')}
             className="flex-row items-center"
           >
-            <ArrowLeft size={20} color="#374151" />
+            <ArrowLeft size={20} color={colors.gray[700]} />
             <Text className="ml-2 text-gray-700">Retour</Text>
           </Pressable>
 
@@ -214,7 +215,7 @@ export default function OrderDetailPage() {
             onPress={() => setShowDeleteModal(true)}
             className="p-2"
           >
-            <Trash2 size={20} color="#EF4444" />
+            <Trash2 size={20} color={colors.error.base} />
           </Pressable>
         </View>
 
@@ -263,7 +264,7 @@ export default function OrderDetailPage() {
             onPress={() => setShowTerminateModal(true)}
           >
             <View className="flex-row items-center justify-center">
-              <CheckCircle size={18} color="#374151" />
+              <CheckCircle size={18} color={colors.gray[700]} />
               <Text className="text-gray-900 font-medium ml-1">Terminer</Text>
             </View>
           </Button>

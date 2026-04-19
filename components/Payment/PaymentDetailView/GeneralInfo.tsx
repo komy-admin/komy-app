@@ -4,6 +4,7 @@ import { InfoRow } from '../shared/InfoRow';
 import { PaymentMethodIcon } from '../shared/PaymentMethodIcon';
 import { PaymentStatusBadge } from '../shared/PaymentStatusBadge';
 import { formatPrice } from '~/lib/utils';
+import { colors } from '~/theme';
 
 interface GeneralInfoProps {
   payment: Payment;
@@ -81,15 +82,15 @@ export function GeneralInfo({ payment }: GeneralInfoProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.gray[200],
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -103,17 +104,17 @@ const styles = StyleSheet.create({
   },
   paymentMethodText: {
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.gray[800],
     fontWeight: '500',
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     marginVertical: 8,
   },
   thickDivider: {
     height: 1,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.gray[300],
     marginVertical: 4,
   },
   amountValue: {
@@ -122,6 +123,6 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
 });

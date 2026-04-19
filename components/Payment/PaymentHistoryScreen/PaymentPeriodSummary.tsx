@@ -2,6 +2,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import type { PeriodSummary, PaymentHistoryFilters } from '~/types/payment-history.types';
 import { formatPrice } from '~/lib/utils';
 import { SelectButton } from '~/components/ui/select-button';
+import { colors } from '~/theme';
 
 interface PaymentPeriodSummaryProps {
   summary: PeriodSummary;
@@ -66,7 +67,7 @@ export function PaymentPeriodSummary({
                   })
                 }
                 variant="pill"
-                activeColor="#6366F1"
+                activeColor={colors.brand.accent}
                 activeBgColor="#EEF2FF"
               />
             ))}
@@ -91,7 +92,7 @@ export function PaymentPeriodSummary({
                   })
                 }
                 variant="pill"
-                activeColor="#6366F1"
+                activeColor={colors.brand.accent}
                 activeBgColor="#EEF2FF"
               />
             ))}
@@ -104,7 +105,7 @@ export function PaymentPeriodSummary({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     margin: 16,
     padding: 16,
     borderRadius: 10,
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -132,18 +133,18 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
   },
   statValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   totalAmount: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#10B981',
+    color: colors.success.base,
   },
   filterSection: {
     marginBottom: 12,
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: colors.gray[700],
     marginBottom: 8,
   },
   filterButtons: {

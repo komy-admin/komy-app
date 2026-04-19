@@ -1,5 +1,6 @@
 import React from 'react';
 import { CreditCard, Banknote, FileText, Ticket } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 interface PaymentMethodIconProps {
   method: 'card' | 'cash' | 'check' | 'ticket_resto';
@@ -11,14 +12,14 @@ export function PaymentMethodIcon({ method, size = 20 }: PaymentMethodIconProps)
 
   switch (method) {
     case 'card':
-      return <CreditCard {...iconProps} color="#6366F1" />;
+      return <CreditCard {...iconProps} color={colors.brand.accent} />;
     case 'cash':
-      return <Banknote {...iconProps} color="#10B981" />;
+      return <Banknote {...iconProps} color={colors.success.base} />;
     case 'check':
-      return <FileText {...iconProps} color="#F59E0B" />;
+      return <FileText {...iconProps} color={colors.warning.base} />;
     case 'ticket_resto':
-      return <Ticket {...iconProps} color="#EC4899" />;
+      return <Ticket {...iconProps} color={colors.pink} />;
     default:
-      return <CreditCard {...iconProps} color="#9CA3AF" />;
+      return <CreditCard {...iconProps} color={colors.gray[400]} />;
   }
 }

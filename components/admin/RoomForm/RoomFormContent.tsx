@@ -7,7 +7,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface RoomFormContentProps {
   room: Room | null;
@@ -74,10 +74,10 @@ const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }>
     const svgH = roomH * scale;
     const offsetX = (CONTAINER_SIZE - svgW) / 2;
     const offsetY = (CONTAINER_SIZE - svgH) / 2;
-    const roomBorder = selected ? '#2A2E33' : '#CBD5E1';
-    const roomBg = selected ? '#EEEDF5' : '#F9FAFB';
-    const tableFill = selected ? '#64748B' : '#B0B8C4';
-    const tableStroke = selected ? '#475569' : '#9CA3AF';
+    const roomBorder = selected ? colors.brand.dark : colors.neutral[300];
+    const roomBg = selected ? '#EEEDF5' : colors.gray[50];
+    const tableFill = selected ? colors.neutral[500] : '#B0B8C4';
+    const tableStroke = selected ? colors.neutral[600] : colors.gray[400];
 
     return (
       <Svg width={CONTAINER_SIZE} height={CONTAINER_SIZE}>
@@ -190,7 +190,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
         {onBack && (
           <>
             <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <ArrowLeft size={20} color="#1E293B" strokeWidth={2} />
+              <ArrowLeft size={20} color={colors.neutral[800]} strokeWidth={2} />
             </TouchableOpacity>
             <View style={styles.headerSeparator} />
           </>
@@ -199,7 +199,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
           {room ? room.name : 'Créer une nouvelle salle'}
         </Text>
         <TouchableOpacity onPress={onCancel}>
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -217,7 +217,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
               value={formData.name}
               onChangeText={(text) => { setFormData(prev => ({ ...prev, name: text })); formErrors.clearError('name'); }}
               placeholder="Entrez le nom de la salle"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
               style={[styles.formInput, formErrors.hasError('name') && styles.formInputError]}
               autoComplete="off"
             />
@@ -243,7 +243,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                       Platform.OS === 'web' && {
                         fontSize: 13,
                         fontWeight: formData.isActive ? '700' : '600',
-                        color: formData.isActive ? '#047857' : '#6B7280',
+                        color: formData.isActive ? colors.success.text : colors.gray[500],
                         lineHeight: 18,
                       } as TextStyle,
                     ]}
@@ -257,7 +257,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                       Platform.OS === 'web' && {
                         fontSize: 11,
                         fontWeight: '500',
-                        color: formData.isActive ? '#059669' : '#9CA3AF',
+                        color: formData.isActive ? colors.success.dark : colors.gray[400],
                         lineHeight: 14,
                       } as TextStyle,
                     ]}
@@ -330,7 +330,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                   onBlur={() => handleManualBlur('width')}
                   keyboardType="number-pad"
                   placeholder={String(MIN_ROOM_DIM)}
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.neutral[400]}
                   style={styles.dimensionInput}
                   selectTextOnFocus
                 />
@@ -344,7 +344,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                   onBlur={() => handleManualBlur('height')}
                   keyboardType="number-pad"
                   placeholder={String(MIN_ROOM_DIM)}
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.neutral[400]}
                   style={styles.dimensionInput}
                   selectTextOnFocus
                 />
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
   },
   backButton: {
     alignSelf: 'stretch',
@@ -423,14 +423,14 @@ const styles = StyleSheet.create({
     width: 1,
     alignSelf: 'stretch',
     marginVertical: -20,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   panelTitle: {
     flex: 1,
     paddingLeft: 8,
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formGroup: {
     marginBottom: 20,
@@ -438,22 +438,22 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
   },
   formInput: {
     height: 44,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    color: '#1E293B',
+    backgroundColor: colors.neutral[50],
+    color: colors.neutral[800],
     paddingHorizontal: 12,
     fontSize: 13,
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
 
   // Status toggle
@@ -463,9 +463,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.gray[50],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     height: 44,
     ...shadows.bottom,
     ...(Platform.OS === 'web' && {
@@ -473,8 +473,8 @@ const styles = StyleSheet.create({
     }),
   } as ViewStyle,
   statusToggleActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#34D399',
+    backgroundColor: colors.success.bg,
+    borderColor: colors.success.border,
   } as ViewStyle,
   statusIconContainer: {
     width: 12,
@@ -491,21 +491,21 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.gray[300],
   } as ViewStyle,
   statusPulseActive: {
-    borderColor: '#10B981',
+    borderColor: colors.success.base,
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
   } as ViewStyle,
   statusCore: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.gray[400],
     zIndex: 1,
   } as ViewStyle,
   statusCoreActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
   } as ViewStyle,
   statusTextContainer: {
     flex: 1,
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     letterSpacing: 0.2,
     lineHeight: 16,
     ...(Platform.OS === 'web' ? {
@@ -525,13 +525,13 @@ const styles = StyleSheet.create({
     } : {}),
   } as TextStyle,
   statusLabelActive: {
-    color: '#047857',
+    color: colors.success.text,
     fontWeight: '700',
   } as TextStyle,
   statusSubtext: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     letterSpacing: 0.1,
     marginTop: 1,
     lineHeight: 14,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     } : {}),
   } as TextStyle,
   statusSubtextActive: {
-    color: '#059669',
+    color: colors.success.dark,
   } as TextStyle,
 
   // Color picker
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   colorSwatchWrapperSelected: {
-    borderColor: '#2A2E33',
+    borderColor: colors.brand.dark,
   },
   colorSwatch: {
     height: 30,
@@ -576,15 +576,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
     padding: 8,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.gray[50],
     gap: 8,
     width: '48%',
   },
   sizeCardSelected: {
-    borderColor: '#2A2E33',
+    borderColor: colors.brand.dark,
     borderWidth: 2,
     backgroundColor: '#FAFAFE',
   },
@@ -594,19 +594,19 @@ const styles = StyleSheet.create({
   sizeDescription: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   sizeDescriptionSelected: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   sizeDimensions: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     fontWeight: '500',
     marginTop: 1,
   },
   sizeDimensionsSelected: {
-    color: '#64748B',
+    color: colors.neutral[500],
   },
 
   // Manual dimensions
@@ -621,16 +621,16 @@ const styles = StyleSheet.create({
   dimensionLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 6,
   },
   dimensionInput: {
     height: 44,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    color: '#1E293B',
+    backgroundColor: colors.neutral[50],
+    color: colors.neutral[800],
     paddingHorizontal: 12,
     fontSize: 13,
     textAlign: 'center',
@@ -638,12 +638,12 @@ const styles = StyleSheet.create({
   dimensionSeparator: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: colors.neutral[400],
     paddingBottom: 12,
   },
   dimensionHint: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     marginTop: 6,
   },
   customPreview: {
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 10,
     borderWidth: 1.5,
-    borderColor: '#6366F1',
+    borderColor: colors.brand.accent,
     borderRadius: 10,
     backgroundColor: '#FAFAFE',
     gap: 10,
@@ -663,12 +663,12 @@ const styles = StyleSheet.create({
   customPreviewLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6366F1',
+    color: colors.brand.accent,
   },
   customPreviewDim: {
     fontSize: 10,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 1,
   },
 
@@ -677,20 +677,20 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonSaving: {
     opacity: 0.5,
@@ -707,6 +707,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

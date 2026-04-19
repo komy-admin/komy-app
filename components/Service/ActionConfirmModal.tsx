@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-n
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import type { GroupedSection } from '~/hooks/order/useOrderStatusActions';
+import { colors } from '~/theme';
 
 interface ActionConfirmModalProps {
   isVisible: boolean;
@@ -30,7 +31,7 @@ const VARIANT_CONFIG = {
     title: 'Servir',
     subtitle: 'Confirmation de service',
     confirmText: 'Confirmer le service',
-    color: '#10B981',
+    color: colors.success.base,
   },
 } as const;
 
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bannerText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.5,
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   // Scroll
   scrollArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
   },
   // Section (like DraftReviewPanelContent)
   section: {
@@ -157,17 +158,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.gray[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sectionBlock: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   // Item row (receipt style)
   itemRow: {
@@ -177,19 +178,19 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.gray[200],
   },
   itemQty: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginRight: 6,
     flexShrink: 0,
   },
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
     flex: 1,
   },
   // Footer
@@ -198,14 +199,14 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: colors.neutral[200],
+    backgroundColor: colors.white,
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   confirmButton: {
     flex: 2,
@@ -226,6 +227,6 @@ const styles = StyleSheet.create({
   confirmText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

@@ -2,6 +2,7 @@ import { View, Text, Pressable, Modal, StyleSheet, Platform } from 'react-native
 import { Status } from '~/types/status.enum';
 import { getStatusColor, getStatusText } from '~/lib/utils';
 import { Check } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 interface StatusSelectorProps {
   visible: boolean;
@@ -47,7 +48,7 @@ export default function StatusSelector({
               {getStatusText(status)}
             </Text>
             {currentStatus === status && (
-              <Check size={20} color="#1A1A1A" />
+              <Check size={20} color={colors.brand.dark} />
             )}
           </View>
         </Pressable>
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     width: '100%',
     maxWidth: 400,
     borderRadius: 12,
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
     textAlign: 'center',
-    color: '#1A1A1A',
+    color: colors.brand.dark,
   },
   statusButtonWrapper: {
     marginBottom: 8,
@@ -121,6 +122,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1A1A1A',
+    color: colors.brand.dark,
   }
 });

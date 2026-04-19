@@ -1,6 +1,8 @@
 import { Slot } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { Topbar } from '~/components/TopBar';
+import { colors } from '~/theme';
+
 export default function CookLayout() {
   return (
     <View style={styles.container}>
@@ -15,7 +17,7 @@ export default function CookLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.gray[100],
   },
   content: {
     flex: 1,

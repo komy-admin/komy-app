@@ -12,7 +12,7 @@ import {
 } from '~/lib/status.utils';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { formatPrice } from '~/lib/utils';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 const STATUS_PRIORITY: Record<string, number> = {
   [Status.READY]: 0,
@@ -96,14 +96,14 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
     <View style={styles.flex1} onLayout={handleContainerLayout}>
       {activeOrders.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <ShoppingBag size={48} color="#CBD5E1" strokeWidth={1.5} />
+          <ShoppingBag size={48} color={colors.neutral[300]} strokeWidth={1.5} />
           <RNText style={styles.emptyTitle}>Aucune commande</RNText>
           <RNText style={styles.emptySubtitle}>
             {onCreateOrder ? 'Créez une nouvelle commande pour commencer' : 'Créez une commande depuis la vue salles'}
           </RNText>
           {onCreateOrder && (
             <Pressable onPress={onCreateOrder} style={styles.emptyBtn}>
-              <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <Plus size={18} color={colors.white} strokeWidth={2.5} />
               <RNText style={styles.emptyBtnText}>Nouvelle commande</RNText>
             </Pressable>
           )}
@@ -190,7 +190,7 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
 }
 
 const styles = StyleSheet.create({
-  flex1: { flex: 1, backgroundColor: '#FFFFFF' },
+  flex1: { flex: 1, backgroundColor: colors.white },
 
   emptyContainer: {
     flex: 1,
@@ -201,19 +201,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 8,
   } as any,
   emptySubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
   } as any,
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     }),
   } as any,
   emptyBtnText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   } as any,
@@ -265,18 +265,18 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     letterSpacing: 0.5,
   } as any,
   cardTime: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.gray[700],
   } as any,
   cardArticles: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.gray[700],
   } as any,
   cardFooter: {
     flexDirection: 'row',
@@ -286,12 +286,12 @@ const styles = StyleSheet.create({
   cardUpdatedAt: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
   } as any,
   cardPrice: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
   } as any,
   cardBadges: {
     flexDirection: 'row',
@@ -313,12 +313,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B98120',
   },
   paidBadgeText: {
-    color: '#059669',
+    color: colors.success.dark,
   },
   partialBadge: {
     backgroundColor: '#F59E0B20',
   },
   partialBadgeText: {
-    color: '#D97706',
+    color: colors.warning.dark,
   },
 });

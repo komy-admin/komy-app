@@ -17,6 +17,7 @@ import { X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash, ArrowLeftToLine 
 import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
+import { colors } from '~/theme';
 
 // Type pour les valeurs des tags (union de tous les types possibles)
 type TagValue = string | number | boolean | string[] | null | undefined;
@@ -82,17 +83,17 @@ const getFieldTypeLabel = (fieldType: string): string => {
 const getFieldTypeIconColor = (fieldType: string): string => {
   switch (fieldType) {
     case 'select':
-      return '#3B82F6';
+      return colors.info.base;
     case 'multi-select':
-      return '#8B5CF6';
+      return colors.purple.alt;
     case 'toggle':
-      return '#10B981';
+      return colors.success.base;
     case 'number':
-      return '#F59E0B';
+      return colors.warning.base;
     case 'text':
-      return '#EC4899';
+      return colors.pink;
     default:
-      return '#64748B';
+      return colors.neutral[500];
   }
 };
 
@@ -138,7 +139,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
   const [tagValues, setTagValues] = useState<TagValuesRecord>({});
 
   // Couleurs de l'article
-  const itemColor = item.color || '#3B82F6';
+  const itemColor = item.color || colors.info.base;
   const itemBgColor = getColorWithOpacity(itemColor, 0.12);
 
   // Initialiser les valeurs des tags depuis initialData
@@ -262,7 +263,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
             </RNText>
           </View>
           <Pressable onPress={onCancel} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <X size={24} color="#64748B" strokeWidth={2} />
+            <X size={24} color={colors.neutral[500]} strokeWidth={2} />
           </Pressable>
         </View>
       )}
@@ -308,7 +309,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
                 value={note}
                 onChangeText={setNote}
                 placeholder="Ex: Sans oignons, bien cuit, sauce à part..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.neutral[400]}
                 style={styles.noteInput}
                 multiline
                 numberOfLines={3}
@@ -420,8 +421,8 @@ const TagCard: React.FC<{ tag: Tag; children: ReactNode; hasError?: boolean }> =
     <View style={[
       styles.tagCard,
       {
-        backgroundColor: hasError ? '#FEF2F2' : bgColor,
-        borderColor: hasError ? '#EF4444' : borderColor,
+        backgroundColor: hasError ? colors.error.bg : bgColor,
+        borderColor: hasError ? colors.error.base : borderColor,
       }
     ]}>
       <View style={styles.tagCardContent}>
@@ -538,7 +539,7 @@ const MultiSelectField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasEr
 
             >
               <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
+                {isSelected && <Check size={12} color={colors.white} strokeWidth={2.5} />}
               </View>
               <View style={styles.radioContent}>
                 <RNText style={[
@@ -581,7 +582,7 @@ const NumberField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }
         min={0}
         max={100}
         placeholder="0"
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={colors.neutral[400]}
         decimalPlaces={0}
         style={styles.numberInput}
       />
@@ -602,7 +603,7 @@ const TextField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }) 
         value={textValue}
         onChangeText={onChange}
         placeholder={`Entrez ${tag.label.toLowerCase()}`}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={colors.neutral[400]}
         style={styles.textInput}
       />
     </TagCard>
@@ -649,9 +650,9 @@ const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }
         <Switch
           value={boolValue}
           onValueChange={onChange}
-          trackColor={{ false: '#E2E8F0', true: '#BFDBFE' }}
-          thumbColor={boolValue ? '#3B82F6' : '#CBD5E1'}
-          ios_backgroundColor="#E2E8F0"
+          trackColor={{ false: colors.neutral[200], true: '#BFDBFE' }}
+          thumbColor={boolValue ? colors.info.base : colors.neutral[300]}
+          ios_backgroundColor={colors.neutral[200]}
         />
       </Pressable>
     </TagCard>
@@ -673,18 +674,18 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     marginBottom: 10,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     gap: 16,
   },
   // Header avec bouton retour (iso DraftReviewPanelContent)
   panelHeaderBack: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     height: 89,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     marginBottom: 10,
   },
   backButton: {
@@ -693,7 +694,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRightWidth: 1,
-    borderRightColor: '#F3F4F6',
+    borderRightColor: colors.gray[100],
     height: '100%',
   },
   backTitleContainer: {
@@ -709,23 +710,23 @@ const styles = StyleSheet.create({
   },
   backSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 1,
   },
   panelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   panelSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -751,16 +752,16 @@ const styles = StyleSheet.create({
   selectedItemName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 2,
   },
   selectedItemPrice: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     marginVertical: 12,
   },
   formGroup: {
@@ -768,24 +769,24 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   noteInput: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: '#1E293B',
-    backgroundColor: '#F8FAFC',
+    color: colors.neutral[800],
+    backgroundColor: colors.neutral[50],
     minHeight: 44,
     textAlignVertical: 'top',
   },
   formHint: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 8,
   },
   // ========================================
@@ -812,7 +813,7 @@ const styles = StyleSheet.create({
   tagCardTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     flex: 1,
   },
   tagHeaderBadges: {
@@ -842,7 +843,7 @@ const styles = StyleSheet.create({
   requiredBadgeText: {
     fontSize: 9,
     fontWeight: '600',
-    color: '#DC2626',
+    color: colors.error.text,
     letterSpacing: 0.2,
   },
   tagCardBody: {
@@ -851,7 +852,7 @@ const styles = StyleSheet.create({
   tagErrorText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#EF4444',
+    color: colors.error.base,
     marginTop: 8,
   },
   // Radio group - Plus compact
@@ -865,12 +866,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.neutral[50],
     gap: 10,
   },
   radioOptionActive: {
-    borderColor: '#3B82F6',
+    borderColor: colors.info.base,
     backgroundColor: '#EFF6FF',
   },
   radio: {
@@ -878,7 +879,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
+    borderColor: colors.neutral[300],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -886,7 +887,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.info.base,
   },
   radioContent: {
     flex: 1,
@@ -896,19 +897,19 @@ const styles = StyleSheet.create({
   },
   radioLabel: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     flex: 1,
   },
   radioLabelActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   radioPriceText: {
     fontSize: 11,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginLeft: 8,
   },
   radioPriceTextActive: {
-    color: '#3B82F6',
+    color: colors.info.base,
   },
   // Checkbox pour multi-select - Plus compact
   checkbox: {
@@ -916,32 +917,32 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
+    borderColor: colors.neutral[300],
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: colors.info.base,
+    borderColor: colors.info.base,
   },
   textInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   numberInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   // Toggle option - Iso avec les inputs
   toggleOption: {
@@ -951,12 +952,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.neutral[50],
     height: 44,
   },
   toggleOptionActive: {
-    borderColor: '#3B82F6',
+    borderColor: colors.info.base,
     backgroundColor: '#EFF6FF',
   },
   toggleContent: {
@@ -966,23 +967,23 @@ const styles = StyleSheet.create({
   },
   toggleStatusText: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   toggleStatusTextActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   togglePriceText: {
     fontSize: 11,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginLeft: 8,
   },
   togglePriceTextActive: {
-    color: '#3B82F6',
+    color: colors.info.base,
   },
   panelFooter: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
     gap: 12,
   },
   // Actions (boutons) dans le footer
@@ -994,14 +995,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -1015,6 +1016,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

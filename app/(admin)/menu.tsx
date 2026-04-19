@@ -13,6 +13,7 @@ import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal
 import { ItemFormPanel } from '@/components/admin/ItemForm/ItemFormPanel';
 import { MenuFormContent } from '@/components/admin/MenuForm/MenuFormContent';
 import { useMenuPage } from '~/hooks/useMenuPage';
+import { colors } from '~/theme';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -122,7 +123,7 @@ export default function MenuPage() {
 
       <View style={{ flex: 1 }}>
         <Tabs
-          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+          style={{ flex: 1, backgroundColor: colors.white }}
           value={activeTab}
           onValueChange={setActiveTab}
           className="w-full mx-auto flex-col"
@@ -239,7 +240,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
         <View style={styles.createPanelHeader}>
           <Text style={styles.createPanelTitle}>Ajouter</Text>
           <Pressable onPress={onClose}>
-            <X size={24} color="#64748B" strokeWidth={2} />
+            <X size={24} color={colors.neutral[500]} strokeWidth={2} />
           </Pressable>
         </View>
         <View style={styles.createPanelContent}>
@@ -251,8 +252,8 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
           >
             <View style={[styles.createPanelIconArticle, !hasItemTypes && styles.createPanelIconDisabled]}>
               {hasItemTypes
-                ? <PlusCircle size={22} color="#6366F1" strokeWidth={2.5} />
-                : <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+                ? <PlusCircle size={22} color={colors.brand.accent} strokeWidth={2.5} />
+                : <Lock size={18} color={colors.gray[400]} strokeWidth={2} />
               }
             </View>
             <View style={styles.createPanelCardContent}>
@@ -268,7 +269,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
             <View style={[styles.createPanelIconMenu, !hasItemTypes && styles.createPanelIconDisabled]}>
               {hasItemTypes
                 ? <Layers size={22} color="#16A34A" strokeWidth={2.5} />
-                : <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+                : <Lock size={18} color={colors.gray[400]} strokeWidth={2} />
               }
             </View>
             <View style={styles.createPanelCardContent}>
@@ -294,7 +295,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
 const styles = StyleSheet.create({
   createPanel: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   createPanelHeader: {
     flexDirection: 'row',
@@ -302,12 +303,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
   },
   createPanelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   createPanelContent: {
     flex: 1,
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
   createPanelSubtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 20,
   },
   createPanelCardArticle: {
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
   createPanelCardDescArticle: {
     fontSize: 12,
-    color: '#6366F1',
+    color: colors.brand.accent,
   },
   createPanelCardTitleMenu: {
     fontSize: 15,
@@ -381,22 +382,22 @@ const styles = StyleSheet.create({
     color: '#16A34A',
   },
   createPanelCardDisabled: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.neutral[50],
+    borderColor: colors.neutral[200],
     borderStyle: 'dashed' as const,
   },
   createPanelIconDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   createPanelCardTitleDisabled: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   createPanelCardDescDisabled: {
-    color: '#CBD5E1',
+    color: colors.neutral[300],
   },
   createPanelHint: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,

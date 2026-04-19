@@ -14,6 +14,7 @@ import { centsToEuros, eurosToCents, getContrastColor } from '~/lib/utils';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 
 interface ItemFormPanelProps {
   item: Item | null;
@@ -119,10 +120,10 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
       <View style={styles.panelContent}>
         <View style={styles.panelHeader}>
           <TouchableOpacity onPress={() => setIsSelectingColor(false)} style={styles.backButton}>
-            <ArrowLeft size={24} color="#64748B" strokeWidth={2} />
+            <ArrowLeft size={24} color={colors.neutral[500]} strokeWidth={2} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onCancel}>
-            <X size={24} color="#64748B" strokeWidth={2} />
+            <X size={24} color={colors.neutral[500]} strokeWidth={2} />
           </TouchableOpacity>
         </View>
 
@@ -162,7 +163,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
                         ]}
                         onPress={() => handleColorSelect('')}
                       >
-                        <X size={14} color="#94A3B8" strokeWidth={2} />
+                        <X size={14} color={colors.neutral[400]} strokeWidth={2} />
                       </Pressable>
                     );
                   }
@@ -203,7 +204,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
           onPress={onCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -240,7 +241,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
                 value={name}
                 onChangeText={(text) => { setName(text); formErrors.clearError('name'); }}
                 placeholder="Ex: Steak frites, Coca-Cola..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.neutral[400]}
               />
               <TouchableOpacity
                 style={[
@@ -365,7 +366,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     gap: 16,
   },
   headerTextContainer: {
@@ -396,12 +397,12 @@ const styles = StyleSheet.create({
   panelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   panelSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
   formGroup: {
@@ -418,22 +419,22 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 12,
   },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   itemTypeWrap: {
     flexDirection: 'row',
@@ -442,14 +443,14 @@ const styles = StyleSheet.create({
   },
   scrollContainerError: {
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
     borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     padding: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     marginTop: 4,
     marginBottom: 16,
   },
@@ -459,61 +460,61 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   toggleOptionActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#34D399',
+    backgroundColor: colors.success.bg,
+    borderColor: colors.success.border,
   },
   toggleOptionNote: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warning.bg,
     borderColor: '#FBBF24',
   },
   toggleIndicator: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.gray[400],
     marginRight: 12,
   },
   toggleIndicatorActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
   },
   toggleIndicatorNote: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.warning.base,
   },
   toggleText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   toggleTextActive: {
-    color: '#047857',
+    color: colors.success.text,
   },
   toggleTextNote: {
-    color: '#92400E',
+    color: colors.warning.text,
   },
   panelFooter: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -522,7 +523,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     gap: 8,
   },
   saveButtonDisabled: {
@@ -531,7 +532,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 
   // Name + Color row (like nameIconRow in ItemTypeFormPanel)
@@ -548,8 +549,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
   colorButtonPlaceholder: {
     fontSize: 20,
     fontWeight: '400',
-    color: '#94A3B8',
+    color: colors.neutral[400],
   },
 
   // Color selection view
@@ -582,12 +583,12 @@ const styles = StyleSheet.create({
   colorSelectionTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 8,
   },
   colorSelectionSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -596,7 +597,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -617,14 +618,14 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
   },
   colorGridButtonSelected: {
-    borderColor: '#1E293B',
+    borderColor: colors.neutral[800],
   },
   colorGridButtonNone: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',

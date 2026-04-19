@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '~/theme';
 
 interface ItemNameRowProps {
   itemName: string;
@@ -39,19 +40,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   containerEven: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
   },
   containerOdd: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   bullet: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
     marginRight: 8,
   },
   itemName: {
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.gray[800],
     flex: 1,
     fontWeight: '700',
   },

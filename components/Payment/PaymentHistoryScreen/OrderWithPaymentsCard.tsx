@@ -4,6 +4,7 @@ import { ChevronRight, Clock, CreditCard, Users, CheckCircle, AlertCircle, XCirc
 import type { OrderWithPayments } from '~/types/payment-history.types';
 import { formatPrice, DateFormat, formatDate } from '~/lib/utils';
 import * as Haptics from 'expo-haptics';
+import { colors } from '~/theme';
 
 interface OrderWithPaymentsCardProps {
   order: OrderWithPayments;
@@ -16,7 +17,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
       case 'paid':
         return {
           icon: CheckCircle,
-          color: '#10B981',
+          color: colors.success.base,
           bgColor: '#10B98115',
           borderColor: '#10B98130',
           label: 'Payé',
@@ -24,7 +25,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
       case 'partial':
         return {
           icon: AlertCircle,
-          color: '#F59E0B',
+          color: colors.warning.base,
           bgColor: '#F59E0B15',
           borderColor: '#F59E0B30',
           label: 'Partiel',
@@ -32,7 +33,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
       case 'unpaid':
         return {
           icon: XCircle,
-          color: '#EF4444',
+          color: colors.error.base,
           bgColor: '#EF444415',
           borderColor: '#EF444430',
           label: 'Impayé',
@@ -40,7 +41,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
       case 'overpaid':
         return {
           icon: AlertCircle,
-          color: '#8B5CF6',
+          color: colors.purple.alt,
           bgColor: '#8B5CF615',
           borderColor: '#8B5CF630',
           label: 'Surpayé',
@@ -48,7 +49,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
       default:
         return {
           icon: Clock,
-          color: '#6B7280',
+          color: colors.gray[500],
           bgColor: '#6B728015',
           borderColor: '#6B728030',
           label: 'En cours',
@@ -80,7 +81,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
         {/* Header avec statut et table */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={[styles.tableTag, { backgroundColor: '#6366F1' }]}>
+            <View style={[styles.tableTag, { backgroundColor: colors.brand.accent }]}>
               <Text style={styles.tableTagText}>{order.table?.name || 'Sans table'}</Text>
             </View>
             <Text style={styles.orderNumber}>#{order.id.substring(0, 8).toUpperCase()}</Text>
@@ -97,7 +98,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
         {/* Info section */}
         <View style={styles.infoRow}>
           <View style={styles.dateTimeContainer}>
-            <Clock size={14} color="#9CA3AF" strokeWidth={2} />
+            <Clock size={14} color={colors.gray[400]} strokeWidth={2} />
             <Text style={styles.dateTimeText}>
               {formatDate(order.createdAt, DateFormat.SHORT_DATE)} à {formatDate(order.createdAt, DateFormat.TIME)}
             </Text>
@@ -105,7 +106,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
 
           {order.user && (
             <View style={styles.userContainer}>
-              <Users size={14} color="#9CA3AF" strokeWidth={2} />
+              <Users size={14} color={colors.gray[400]} strokeWidth={2} />
               <Text style={styles.userText} numberOfLines={1}>
                 {order.user.firstName} {order.user.lastName}
               </Text>
@@ -122,7 +123,7 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
 
           <View style={styles.amountDetails}>
             <View style={styles.amountItem}>
-              <View style={[styles.amountIndicator, { backgroundColor: '#10B981' }]} />
+              <View style={[styles.amountIndicator, { backgroundColor: colors.success.base }]} />
               <View>
                 <Text style={styles.amountItemValue}>{formatPrice(order.paidAmount)}</Text>
                 <Text style={styles.amountItemLabel}>Payé</Text>
@@ -131,9 +132,9 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
 
             {order.remainingAmount > 0 && (
               <View style={styles.amountItem}>
-                <View style={[styles.amountIndicator, { backgroundColor: '#F59E0B' }]} />
+                <View style={[styles.amountIndicator, { backgroundColor: colors.warning.base }]} />
                 <View>
-                  <Text style={[styles.amountItemValue, { color: '#F59E0B' }]}>
+                  <Text style={[styles.amountItemValue, { color: colors.warning.base }]}>
                     {formatPrice(order.remainingAmount)}
                   </Text>
                   <Text style={styles.amountItemLabel}>Reste</Text>
@@ -146,12 +147,12 @@ export const OrderWithPaymentsCard = memo<OrderWithPaymentsCardProps>(({ order, 
         {/* Footer avec infos paiements */}
         <View style={styles.footer}>
           <View style={styles.paymentInfo}>
-            <CreditCard size={14} color="#9CA3AF" strokeWidth={2} />
+            <CreditCard size={14} color={colors.gray[400]} strokeWidth={2} />
             <Text style={styles.paymentText}>
               {order.paymentsCount} transaction{order.paymentsCount > 1 ? 's' : ''}
             </Text>
           </View>
-          <ChevronRight size={18} color="#D1D5DB" strokeWidth={2} />
+          <ChevronRight size={18} color={colors.gray[300]} strokeWidth={2} />
         </View>
       </View>
     </Pressable>
@@ -162,7 +163,7 @@ OrderWithPaymentsCard.displayName = 'OrderWithPaymentsCard';
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     marginBottom: 12,
     overflow: 'hidden',
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   tableTagText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   statusBadge: {
     flexDirection: 'row',
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
   },
   dateTimeText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
   },
   userContainer: {
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   },
   userText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
     flex: 1,
   },
@@ -272,9 +273,9 @@ const styles = StyleSheet.create({
     gap: 24,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.gray[100],
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   mainAmountContainer: {
     minWidth: 100,
@@ -282,12 +283,12 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
     letterSpacing: -0.5,
   },
   amountLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontWeight: '500',
     marginTop: 2,
   },
@@ -308,11 +309,11 @@ const styles = StyleSheet.create({
   amountItemValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   amountItemLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontWeight: '500',
   },
   footer: {
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
   },
   paymentText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
   },
 });

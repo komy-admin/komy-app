@@ -13,6 +13,7 @@ import { getUserProfileText } from "~/lib/utils";
 import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { QuickFormContent } from "~/components/admin/TeamForm";
 import { UserQrModal } from "~/components/admin/UserQrModal";
+import { colors } from '~/theme';
 import { useToast } from '~/components/ToastProvider';
 import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
@@ -36,13 +37,13 @@ const TEAM_TABLE_COLUMNS = [
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: getColorWithOpacity('#2A2E33', 0.12),
+        backgroundColor: getColorWithOpacity(colors.brand.dark, 0.12),
         borderWidth: 1.5,
-        borderColor: '#2A2E33',
+        borderColor: colors.brand.dark,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '600' }}>
+        <Text style={{ color: colors.brand.dark, fontSize: 14, fontWeight: '600' }}>
           {user.firstName?.charAt(0)?.toUpperCase() || '?'}
         </Text>
       </View>
@@ -53,7 +54,7 @@ const TEAM_TABLE_COLUMNS = [
     key: 'name',
     width: '60%',
     render: (user: User) => (
-      <Text style={{ fontSize: 15, color: '#2A2E33' }}>
+      <Text style={{ fontSize: 15, color: colors.brand.dark }}>
         {[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}
       </Text>
     ),
@@ -63,7 +64,7 @@ const TEAM_TABLE_COLUMNS = [
     key: 'createdAt',
     width: '33%',
     render: (user: any) => (
-      <Text style={{ fontSize: 15, color: '#2A2E33' }}>
+      <Text style={{ fontSize: 15, color: colors.brand.dark }}>
         {user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR') : '—'}
       </Text>
     ),
@@ -244,7 +245,7 @@ export default function TeamPage() {
     if (canModifyUsers) {
       actions.push({
         label: 'Modifier',
-        icon: <Edit2 size={16} color="#4F46E5" />,
+        icon: <Edit2 size={16} color={colors.brand.accentDark} />,
         onPress: () => handleEditUser(user.id)
       });
     }
@@ -252,7 +253,7 @@ export default function TeamPage() {
     // QR Code accessible à tous (admin, superadmin, manager)
     actions.push({
       label: 'QR Code',
-      icon: <QrCode size={16} color="#4F46E5" />,
+      icon: <QrCode size={16} color={colors.brand.accentDark} />,
       onPress: () => handleShowQrCode(user)
     });
 
@@ -260,7 +261,7 @@ export default function TeamPage() {
     if (canModifyUsers) {
       actions.push({
         label: 'Supprimer',
-        icon: <Trash size={16} color="#ef4444" />,
+        icon: <Trash size={16} color={colors.error.base} />,
         type: 'destructive',
         onPress: () => handleDeleteUser(user.id)
       });
@@ -289,7 +290,7 @@ export default function TeamPage() {
 
         <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Tabs
-          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+          style={{ flex: 1, backgroundColor: colors.white }}
           value={activeTab}
           onValueChange={(newValue: string) => {
             const newTab = newValue as UserProfile | 'all';
@@ -328,14 +329,14 @@ export default function TeamPage() {
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             {!canManageUsers ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                <Text style={{ color: '#ef4444', fontSize: 16, textAlign: 'center' }}>
+                <Text style={{ color: colors.error.base, fontSize: 16, textAlign: 'center' }}>
                   Accès non autorisé{'\n'}
                   Vous n'avez pas les droits nécessaires pour gérer les utilisateurs.
                 </Text>
               </View>
             ) : loading || error ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
+                <Text style={{ color: error ? colors.error.base : colors.gray[500], fontSize: 16 }}>
                   {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
                 </Text>
               </View>

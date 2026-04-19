@@ -16,6 +16,7 @@ import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { MenuCategoryItem, MenuItemWithCustomization } from '~/types/menu-configuration.types';
 import { MenuItemSelection } from '~/components/order/OrderLinesForm/MenuConfiguration';
+import { colors } from '~/theme';
 
 /**
  * OrderLinesForm - Version refactorisée (composant présentationnel)
@@ -532,7 +533,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   mainContentRow: {
     flex: 1,
@@ -540,11 +541,11 @@ const styles = StyleSheet.create({
   },
   sidePanelContent: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
   mainContent: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   contentWithNav: {
     flex: 1,

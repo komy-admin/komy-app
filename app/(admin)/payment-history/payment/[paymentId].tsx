@@ -12,6 +12,7 @@ import { usePayments } from '~/hooks/usePayments'
 import type { Payment } from '~/types/payment.types'
 import { extractApiError, showApiError } from '~/lib/apiErrorHandler'
 import { useToast } from '~/components/ToastProvider'
+import { colors } from '~/theme'
 export default function PaymentDetailScreen() {
   const { paymentId } = useLocalSearchParams<{ paymentId: string }>()
   const router = useRouter()
@@ -100,7 +101,7 @@ export default function PaymentDetailScreen() {
   if (!payment) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={colors.info.base} />
         <Text className="mt-4 text-gray-600">Chargement...</Text>
       </View>
     )
@@ -111,11 +112,11 @@ export default function PaymentDetailScreen() {
       {/* Header */}
       <View className="flex-row justify-between items-center p-4 border-b border-gray-200">
         <Button variant="ghost" onPress={handleBack}>
-          <ArrowLeft size={24} color="#374151" />
+          <ArrowLeft size={24} color={colors.gray[700]} />
         </Button>
         <Text className="text-lg font-bold">Détail Paiement</Text>
         <Button variant="ghost" onPress={handleClose}>
-          <X size={24} color="#374151" />
+          <X size={24} color={colors.gray[700]} />
         </Button>
       </View>
 
@@ -123,11 +124,11 @@ export default function PaymentDetailScreen() {
       <View className="px-4 py-2 bg-gray-50 border-b border-gray-200">
         <View className="flex-row items-center gap-1 flex-wrap">
           <Text className="text-sm text-gray-600">Historique</Text>
-          <ChevronRight size={12} color="#9CA3AF" />
+          <ChevronRight size={12} color={colors.gray[400]} />
           <Text className="text-sm text-gray-600">Commandes</Text>
-          <ChevronRight size={12} color="#9CA3AF" />
+          <ChevronRight size={12} color={colors.gray[400]} />
           <Text className="text-sm text-gray-600">Paiements</Text>
-          <ChevronRight size={12} color="#9CA3AF" />
+          <ChevronRight size={12} color={colors.gray[400]} />
           <Text className="text-sm text-gray-900 font-medium">
             #PMT-{payment.id.substring(0, 8)}
           </Text>

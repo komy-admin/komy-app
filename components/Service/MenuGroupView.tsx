@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { OrderLine, OrderLineType, OrderLineItem } from '~/types/order-line.types';
 import { Status } from '~/types/status.enum';
 import { DateFormat, formatDate, getMostImportantStatus, getStatusColor, getStatusText } from '~/lib/utils';
+import { colors } from '~/theme';
 
 interface MenuGroupViewProps {
   orderLine: OrderLine; // OrderLine de type MENU
@@ -50,7 +51,7 @@ export default function MenuGroupView({
           borderRadius: 12,
           padding: 16,
           borderWidth: 1,
-          borderColor: '#E5E5E5',
+          borderColor: colors.gray[200],
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -64,21 +65,21 @@ export default function MenuGroupView({
               justifyContent: 'center',
               alignItems: 'center'
             }}>
-              <UtensilsCrossed size={24} color="#1A1A1A" strokeWidth={1.5} />
+              <UtensilsCrossed size={24} color={colors.brand.dark} strokeWidth={1.5} />
             </View>
             
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#1A1A1A' }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.brand.dark }}>
                 {orderLine.menu.name} (x{orderLine.quantity})
               </Text>
-              <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>
+              <Text style={{ fontSize: 14, color: colors.gray[500], marginTop: 2 }}>
                 {statusText} • {orderLine.totalPrice}€
               </Text>
-              <Text style={{ fontSize: 12, color: '#666666', marginTop: 2 }}>
+              <Text style={{ fontSize: 12, color: colors.gray[500], marginTop: 2 }}>
                 {orderLine.items.length} item{orderLine.items.length > 1 ? 's' : ''}
               </Text>
               {orderLine.note && (
-                <Text style={{ fontSize: 12, color: '#666666', fontStyle: 'italic', marginTop: 2 }}>
+                <Text style={{ fontSize: 12, color: colors.gray[500], fontStyle: 'italic', marginTop: 2 }}>
                   Note: {orderLine.note}
                 </Text>
               )}
@@ -87,9 +88,9 @@ export default function MenuGroupView({
           
           <View style={{ alignItems: 'center' }}>
             {displayExpanded ? (
-              <ChevronUp size={24} color="#1A1A1A" />
+              <ChevronUp size={24} color={colors.brand.dark} />
             ) : (
-              <ChevronDown size={24} color="#1A1A1A" />
+              <ChevronDown size={24} color={colors.brand.dark} />
             )}
           </View>
         </View>
@@ -100,7 +101,7 @@ export default function MenuGroupView({
             {orderLine.menu.description && (
               <Text style={{ 
                 fontSize: 14, 
-                color: '#666666', 
+                color: colors.gray[500], 
                 fontStyle: 'italic',
                 marginBottom: 12,
                 paddingLeft: 52 // Aligné avec le contenu principal
@@ -121,19 +122,19 @@ export default function MenuGroupView({
                   paddingHorizontal: 16,
                   marginLeft: 36, // Indenté par rapport à l'icône
                   borderTopWidth: index === 0 ? 1 : 0,
-                  borderTopColor: '#E5E7EB',
+                  borderTopColor: colors.gray[200],
                   backgroundColor: 'rgba(255, 255, 255, 0.5)',
                   borderRadius: 8,
                   marginBottom: 4,
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '500', color: '#1A1A1A' }}>
+                  <Text style={{ fontSize: 15, fontWeight: '500', color: colors.brand.dark }}>
                     {orderLineItem.item.name}
                   </Text>
                   <Text style={{ 
                     fontSize: 13, 
-                    color: '#666666',
+                    color: colors.gray[500],
                     marginTop: 2 
                   }}>
                     Catégorie: {orderLineItem.categoryName}
@@ -141,7 +142,7 @@ export default function MenuGroupView({
                   {orderLineItem.item.description && (
                     <Text style={{ 
                       fontSize: 13, 
-                      color: '#888888',
+                      color: colors.gray[400],
                       marginTop: 2 
                     }}>
                       {orderLineItem.item.description}
@@ -158,7 +159,7 @@ export default function MenuGroupView({
                   }}>
                     <Text style={{
                       fontSize: 11,
-                      color: '#1A1A1A',
+                      color: colors.brand.dark,
                       fontWeight: '600',
                       textTransform: 'uppercase'
                     }}>
@@ -175,10 +176,10 @@ export default function MenuGroupView({
               paddingLeft: 52,
               paddingTop: 12,
               borderTopWidth: 1,
-              borderTopColor: '#E5E7EB',
+              borderTopColor: colors.gray[200],
             }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 14, color: '#666666' }}>
+                <Text style={{ fontSize: 14, color: colors.gray[500] }}>
                   Prix de base du menu:
                 </Text>
                 <Text style={{ fontSize: 14, fontWeight: '500' }}>
@@ -186,10 +187,10 @@ export default function MenuGroupView({
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#1A1A1A' }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.brand.dark }}>
                   Total ligne (x{orderLine.quantity}):
                 </Text>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#1A1A1A' }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.brand.dark }}>
                   {orderLine.totalPrice}€
                 </Text>
               </View>
@@ -200,7 +201,7 @@ export default function MenuGroupView({
               <Pressable
                 onPress={() => onStatusUpdate(orderLine.items!, globalStatus)}
                 style={{
-                  backgroundColor: '#2A2E33',
+                  backgroundColor: colors.brand.dark,
                   borderRadius: 8,
                   paddingVertical: 12,
                   paddingHorizontal: 16,
@@ -210,7 +211,7 @@ export default function MenuGroupView({
               >
                 <Text style={{
                   fontSize: 14,
-                  color: '#FBFBFB',
+                  color: colors.gray[50],
                   fontWeight: '500',
                   textAlign: 'center',
                   textTransform: 'uppercase',

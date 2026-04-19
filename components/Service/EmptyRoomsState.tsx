@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { LayoutDashboard } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 interface EmptyRoomsStateProps {
   onCreateFirstRoom: () => void;
@@ -19,7 +20,7 @@ export const EmptyRoomsState = memo<EmptyRoomsStateProps>(({
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <LayoutDashboard size={48} color="#D1D5DB" />
+        <LayoutDashboard size={48} color={colors.gray[300]} />
       </View>
       <Text style={styles.title}>
         Aucune salle configurée
@@ -43,7 +44,7 @@ EmptyRoomsState.displayName = 'EmptyRoomsState';
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F4F5F7',
+    backgroundColor: colors.gray[100],
     padding: 48,
     alignItems: 'center',
     flex: 1,
@@ -55,21 +56,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
   description: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
     maxWidth: 320,
   },
   button: {
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 12,
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
     })
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.4,

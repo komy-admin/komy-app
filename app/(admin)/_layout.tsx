@@ -6,7 +6,7 @@ import { Monitor, Smartphone } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { logout } from '~/store';
 import { useAppDispatch } from '~/store/hooks';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 
 // Composant pour la vérification de l'écran admin
@@ -57,7 +57,7 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
         <View style={styles.blockedContent}>
           {/* Icône principale */}
           <View style={styles.blockedIconContainer}>
-            <Monitor size={64} color="#6366F1" strokeWidth={1.5} />
+            <Monitor size={64} color={colors.brand.accent} strokeWidth={1.5} />
           </View>
 
           {/* Titre */}
@@ -83,13 +83,13 @@ function AdminScreenSizeGate({ children }: { children: React.ReactNode }) {
           {/* Suggestions */}
           <View style={styles.suggestionsContainer}>
             <View style={styles.suggestionItem}>
-              <Monitor size={20} color="#10B981" />
+              <Monitor size={20} color={colors.success.base} />
               <Text style={styles.suggestionText}>
                 Utilisez un écran plus large ou un ordinateur
               </Text>
             </View>
             <View style={styles.suggestionItem}>
-              <Smartphone size={20} color="#F59E0B" />
+              <Smartphone size={20} color={colors.warning.base} />
               <Text style={styles.suggestionText}>
                 Interface mobile en développement
               </Text>
@@ -132,13 +132,13 @@ const styles = StyleSheet.create({
   // Styles pour l'écran de blocage admin
   blockedContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   blockedContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 20,
     padding: 40,
     alignItems: 'center',
@@ -160,21 +160,21 @@ const styles = StyleSheet.create({
   blockedTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 36,
   },
   blockedMessage: {
     fontSize: 16,
-    color: '#64748B',
+    color: colors.neutral[500],
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
     maxWidth: 400,
   },
   dimensionsInfo: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     borderRadius: 12,
     padding: 16,
     marginBottom: 32,
@@ -183,12 +183,12 @@ const styles = StyleSheet.create({
   },
   dimensionsText: {
     fontSize: 14,
-    color: '#475569',
+    color: colors.neutral[600],
     fontWeight: '500',
     marginBottom: 4,
   },
   dimensionsTextError: {
-    color: '#DC2626',
+    color: colors.error.text,
     fontWeight: '700',
   },
   suggestionsContainer: {
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 14,
-    color: '#475569',
+    color: colors.neutral[600],
     fontWeight: '500',
     flex: 1,
   },
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     width: '100%',
     height: 56,
-    backgroundColor: '#000000',
+    backgroundColor: colors.black,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 24,

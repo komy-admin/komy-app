@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
+import { colors } from '~/theme';
 
 interface InfoRowProps {
   label: string;
@@ -29,13 +30,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
     flex: 1,
   },
   value: {
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.gray[800],
     fontWeight: '500',
     textAlign: 'right',
     flex: 1,

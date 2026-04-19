@@ -8,6 +8,7 @@ import { SelectedTag } from '~/types/order-line.types';
 import { formatPrice } from '~/lib/utils';
 import { useToast } from '~/components/ToastProvider';
 import { ItemCustomizationPanelContent } from '~/components/order/OrderLinesForm/ItemCustomizationPanelContent';
+import { colors } from '~/theme';
 
 /**
  * Type pour une catégorie de menu
@@ -387,7 +388,7 @@ export const MenuConfiguration: React.FC<MenuConfigurationProps> = ({
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={styles.closeButton}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -448,15 +449,15 @@ export const MenuConfiguration: React.FC<MenuConfigurationProps> = ({
 
 const COLORS = {
   primary: '#2A2E33',
-  success: '#059669',
-  warning: '#F59E0B',
+  success: colors.success.dark,
+  warning: colors.warning.base,
   text: '#2A2E33',
-  textSecondary: '#6B7280',
-  background: '#FFFFFF',
-  border: '#E2E8F0',
-  backgroundGray: '#F3F4F6',
+  textSecondary: colors.gray[500],
+  background: colors.white,
+  border: colors.neutral[200],
+  backgroundGray: colors.gray[100],
   selectedBackground: '#ECFDF5',
-  selectedBorder: '#059669'
+  selectedBorder: colors.success.dark
 };
 
 const styles = StyleSheet.create({
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.gray[50],
   },
   headerText: {
     flex: 1,
@@ -487,11 +488,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   subtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 2,
   },
   closeButton: {
@@ -514,8 +515,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   categoryCardError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
 
   categoryHeader: {
@@ -527,7 +528,7 @@ const styles = StyleSheet.create({
   },
   categoryHeaderError: {
     backgroundColor: '#FEE2E2',
-    borderBottomColor: '#FECACA',
+    borderBottomColor: colors.error.border,
   },
 
   categoryHeaderContent: {
@@ -545,7 +546,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   categoryNumberBadgeError: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error.base,
   },
 
   categoryNumberText: {
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   categoryHeaderSubtitleError: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontWeight: '600',
   },
 
@@ -630,7 +631,7 @@ const styles = StyleSheet.create({
   menuItemName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     letterSpacing: 0.2,
     flex: 1,
   },
@@ -706,14 +707,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   confirmButton: {
     flex: 1,
@@ -726,6 +727,6 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

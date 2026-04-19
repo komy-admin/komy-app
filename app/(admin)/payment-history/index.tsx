@@ -9,6 +9,7 @@ import { usePayments } from '~/hooks/usePayments';
 import { showApiError } from '~/lib/apiErrorHandler';
 import { useToast } from '~/components/ToastProvider';
 import * as Haptics from 'expo-haptics';
+import { colors } from '~/theme';
 
 export default function PaymentHistoryScreen() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function PaymentHistoryScreen() {
           minimumFractionDigits: 2,
         }).format(summary.totalAmount / 100),
         trend: trendRevenue,
-        color: '#10B981',
+        color: colors.success.base,
       },
       {
         id: 'transactions',
@@ -85,7 +86,7 @@ export default function PaymentHistoryScreen() {
         label: 'Transactions',
         value: summary.paymentsCount.toString(),
         trend: trendTransactions,
-        color: '#6366F1',
+        color: colors.brand.accent,
       },
       {
         id: 'average',
@@ -97,7 +98,7 @@ export default function PaymentHistoryScreen() {
           minimumFractionDigits: 2,
         }).format(avgBasket / 100),
         trend: trendAvg,
-        color: '#F59E0B',
+        color: colors.warning.base,
       },
     ];
   }, [summary]);
@@ -117,7 +118,7 @@ export default function PaymentHistoryScreen() {
               pressed && styles.buttonPressed
             ]}
           >
-            <ArrowLeft size={22} color="#1F2937" strokeWidth={2.5} />
+            <ArrowLeft size={22} color={colors.gray[800]} strokeWidth={2.5} />
           </Pressable>
 
           <Text style={styles.headerTitle}>Historique des Paiements</Text>
@@ -133,7 +134,7 @@ export default function PaymentHistoryScreen() {
           >
             <RefreshCw
               size={20}
-              color={isRefreshing ? '#9CA3AF' : '#1F2937'}
+              color={isRefreshing ? colors.gray[400] : colors.gray[800]}
               strokeWidth={2.5}
             />
           </Pressable>
@@ -166,7 +167,7 @@ export default function PaymentHistoryScreen() {
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color={colors.brand.accent} />
           <Text style={styles.loadingText}>Chargement des paiements...</Text>
         </View>
       ) : (
@@ -200,7 +201,7 @@ export default function PaymentHistoryScreen() {
             ) : (
               <View style={styles.emptyState}>
                 <View style={styles.emptyIconContainer}>
-                  <CreditCard size={48} color="#D1D5DB" strokeWidth={1.5} />
+                  <CreditCard size={48} color={colors.gray[300]} strokeWidth={1.5} />
                 </View>
                 <Text style={styles.emptyTitle}>Aucun paiement</Text>
                 <Text style={styles.emptyText}>
@@ -218,10 +219,10 @@ export default function PaymentHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.gray[50],
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -255,12 +256,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonPressed: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     transform: [{ scale: 0.95 }],
   },
   buttonDisabled: {
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
     letterSpacing: -0.5,
     marginHorizontal: 12,
   },
@@ -282,11 +283,11 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.gray[100],
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -324,13 +325,13 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
     marginBottom: 2,
     letterSpacing: -0.3,
   },
   statLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
   },
   loadingContainer: {
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
   },
   scrollView: {
@@ -357,24 +358,24 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
   },
   emptyState: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 48,
     alignItems: 'center',
     marginTop: 40,
     borderWidth: 2,
-    borderColor: '#F3F4F6',
+    borderColor: colors.gray[100],
     borderStyle: 'dashed',
   },
   emptyIconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -382,12 +383,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,

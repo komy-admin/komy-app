@@ -13,6 +13,7 @@ import { ActionItem } from '~/components/ActionMenu';
 import { formatPrice, sortActiveFirst } from '~/lib/utils';
 import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
 import { showApiError } from '~/lib/apiErrorHandler';
+import { colors } from '~/theme';
 
 // ============================================================
 // Types
@@ -288,15 +289,15 @@ export function useMenuPage() {
   // ============================================================
 
   const getItemActions = useCallback((item: Item): ActionItem[] => [
-    { label: 'Modifier', icon: <Edit2 size={16} color="#4F46E5" />, onPress: () => handleEditItem(item.id ?? '') },
-    { label: item.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={item.isActive ? '#EF4444' : '#10B981'} />, onPress: () => handleToggleItemStatus(item.id ?? '') },
-    { label: 'Supprimer', icon: <Trash size={16} color="#ef4444" />, type: 'destructive', onPress: () => handleDeleteItem(item.id ?? '') },
+    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accentDark} />, onPress: () => handleEditItem(item.id ?? '') },
+    { label: item.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={item.isActive ? colors.error.base : colors.success.base} />, onPress: () => handleToggleItemStatus(item.id ?? '') },
+    { label: 'Supprimer', icon: <Trash size={16} color={colors.error.base} />, type: 'destructive', onPress: () => handleDeleteItem(item.id ?? '') },
   ], [handleEditItem, handleToggleItemStatus, handleDeleteItem]);
 
   const getMenuActions = useCallback((menu: Menu): ActionItem[] => [
-    { label: 'Modifier', icon: <Edit2 size={16} color="#4F46E5" />, onPress: () => handleEditMenu(menu.id) },
-    { label: menu.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={menu.isActive ? '#EF4444' : '#10B981'} />, onPress: () => handleToggleMenuStatus(menu.id) },
-    { label: 'Supprimer', icon: <Trash size={16} color="#ef4444" />, type: 'destructive', onPress: () => handleDeleteMenu(menu.id) },
+    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accentDark} />, onPress: () => handleEditMenu(menu.id) },
+    { label: menu.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={menu.isActive ? colors.error.base : colors.success.base} />, onPress: () => handleToggleMenuStatus(menu.id) },
+    { label: 'Supprimer', icon: <Trash size={16} color={colors.error.base} />, type: 'destructive', onPress: () => handleDeleteMenu(menu.id) },
   ], [handleEditMenu, handleToggleMenuStatus, handleDeleteMenu]);
 
   const getTousActions = useCallback((entry: any): ActionItem[] => {
@@ -326,24 +327,24 @@ export function useMenuPage() {
   ), []);
 
   const renderStatus = useCallback((isActive: boolean) => (
-    <Text style={{ color: isActive ? '#10B981' : '#EF4444', fontWeight: '500' }}>
+    <Text style={{ color: isActive ? colors.success.base : colors.error.base, fontWeight: '500' }}>
       {isActive ? 'Actif' : 'Inactif'}
     </Text>
   ), []);
 
   const itemTableColumns = useMemo(() => [
-    { label: '', key: 'color', width: 64, render: (item: Item) => renderColorCircle(item.color || '#6B7280', item.name) },
+    { label: '', key: 'color', width: 64, render: (item: Item) => renderColorCircle(item.color || colors.gray[500], item.name) },
     { label: 'Nom', key: 'name', width: '46%' },
     { label: 'Prix', key: 'price', width: '23%', render: (item: Item) => <Text>{formatPrice(item.price)}</Text> },
     { label: 'Statut', key: 'statut', width: '24%', render: (item: Item) => renderStatus(item.isActive) },
   ], [renderColorCircle, renderStatus]);
 
   const menuTableColumns = useMemo(() => [
-    { label: '', key: 'color', width: 64, render: (menu: Menu) => renderColorCircle('#10B981', menu.name) },
+    { label: '', key: 'color', width: 64, render: (menu: Menu) => renderColorCircle(colors.success.base, menu.name) },
     { label: 'Nom', key: 'name', width: '34%' },
     { label: 'Prix', key: 'basePrice', width: '17%', render: (menu: Menu) => <Text>{formatPrice(getMenuPrice(menu))}</Text> },
     { label: 'Catégories', key: 'categories', width: '28%', render: (menu: Menu) => (
-      <Text style={{ fontSize: 12, color: '#666666' }}>
+      <Text style={{ fontSize: 12, color: colors.gray[500] }}>
         {menu.categories?.length || 0} catégorie{(menu.categories?.length || 0) > 1 ? 's' : ''}
       </Text>
     ) },
@@ -353,7 +354,7 @@ export function useMenuPage() {
   const tousColumns = useMemo(() => [
     { label: '', key: 'color', width: 64, render: (entry: any) => {
       const isMenu = entry._type === 'menu';
-      return renderColorCircle(isMenu ? '#10B981' : (entry.color || '#6B7280'), entry.name);
+      return renderColorCircle(isMenu ? colors.success.base : (entry.color || colors.gray[500]), entry.name);
     } },
     { label: 'Nom', key: 'name', width: '46%' },
     { label: 'Prix', key: 'price', width: '23%', render: (entry: any) => (

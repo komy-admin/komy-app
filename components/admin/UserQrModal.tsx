@@ -27,6 +27,7 @@ import { QRCode } from '~/components/ui/QRCode';
 import { Share2, Copy } from 'lucide-react-native';
 import { useUserQrCode } from '~/hooks/useUserQrCode';
 import { User } from '~/types/user.types';
+import { colors } from '~/theme';
 
 export interface UserQrModalProps {
   /** User to generate QR code for */
@@ -99,7 +100,7 @@ export const UserQrModal: React.FC<UserQrModalProps> = ({ user, visible, onClose
               variant="outline"
               disabled={!qr.token || qr.loading}
             >
-              <Share2 size={16} color="#2A2E33" />
+              <Share2 size={16} color={colors.brand.dark} />
               <Text style={styles.shareButtonText}>Partager</Text>
             </Button>
 
@@ -110,7 +111,7 @@ export const UserQrModal: React.FC<UserQrModalProps> = ({ user, visible, onClose
               variant="outline"
               disabled={!qr.token || qr.loading}
             >
-              <Copy size={16} color={qr.copied ? '#10B981' : '#2A2E33'} />
+              <Copy size={16} color={qr.copied ? colors.success.base : colors.brand.dark} />
               <Text style={[styles.shareButtonText, qr.copied && styles.copiedButtonText]}>
                 {qr.copied ? 'Copié !' : 'Copier lien'}
               </Text>
@@ -148,13 +149,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.gray[500],
     marginVertical: 40,
   },
   userNameText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textAlign: 'center',
     marginBottom: 30,
   },
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
   shareButton: {
     flex: 1,
     paddingVertical: 12,
-    borderColor: '#2A2E33',
+    borderColor: colors.brand.dark,
     borderWidth: 1,
     borderRadius: 6,
     flexDirection: 'row',
@@ -176,25 +177,25 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   shareButtonText: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontSize: 13,
     fontWeight: '500',
   },
   copiedButton: {
-    borderColor: '#10B981',
+    borderColor: colors.success.base,
   },
   copiedButtonText: {
-    color: '#10B981',
+    color: colors.success.base,
   },
   revokeButton: {
     flex: 1,
     paddingVertical: 12,
-    borderColor: '#FF4444',
+    borderColor: colors.error.base,
     borderWidth: 1,
     borderRadius: 6,
   },
   revokeButtonText: {
-    color: '#FF4444',
+    color: colors.error.base,
     fontSize: 13,
     fontWeight: '500',
   },

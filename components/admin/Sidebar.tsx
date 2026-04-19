@@ -8,6 +8,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useMemo, useCallback } from 'react';
 import { navigationEvents } from '~/lib/navigation-events';
+import { colors } from '~/theme';
 
 const ServiceIcon = ({ size, color, style }: { size: number; color: string; style?: any }) => (
   <MaterialCommunityIcons name="room-service-outline" size={size} color={color} style={style} />
@@ -91,7 +92,7 @@ export function AdminSidebar() {
 const styles = StyleSheet.create({
   container: {
     width: 100,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     paddingTop: 8,
     zIndex: 100,
   },
