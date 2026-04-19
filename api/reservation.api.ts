@@ -327,8 +327,11 @@ class ReservationApiService {
     return response.data.data;
   }
 
-  async disconnectStripe(): Promise<void> {
-    await this.axiosInstance.delete('/professionals/me/stripe/connect');
+  async getStripeDashboardLink(): Promise<{ url: string }> {
+    const response = await this.axiosInstance.post<ReservationApiResponse<{ url: string }>>(
+      '/professionals/me/stripe/connect/dashboard'
+    );
+    return response.data.data;
   }
 }
 

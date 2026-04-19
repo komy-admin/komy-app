@@ -6,12 +6,13 @@ import NotificationsPage from '~/components/config/notifications';
 import DashboardPage from '~/components/config/dashboard';
 import ConfigurationRestoPage from '@/components/config/configuration';
 import SecurityPage from '~/components/config/security';
+import ReservationConfigPage from '~/components/config/reservation';
 import { PinConfirmationModal } from '~/components/ui/PinConfirmationModal';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
 
-type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
+type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security' | 'reservation';
 
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
@@ -55,6 +56,8 @@ export default function ConfigPage() {
         return <SecurityPage isCompactSidebar={isCompactSidebar}/>;
       case 'configuration':
         return <ConfigurationRestoPage isCompactSidebar={isCompactSidebar}/>;
+      case 'reservation':
+        return <ReservationConfigPage isCompactSidebar={isCompactSidebar}/>;
       default:
         return <DashboardPage/>;
     }

@@ -13,13 +13,22 @@ export interface CardImprint {
   cardBrand?: string | null;
   authorizedAt?: string | null;
   capturedAt?: string | null;
+  failedAt?: string | null;
+  failureReason?: string | null;
+  disputedAt?: string | null;
+  disputeReason?: string | null;
+  stripeDisputeId?: string | null;
 }
 
 export interface StripeConnectStatus {
   connected: boolean;
+  onboardingComplete: boolean;
   accountId: string | null;
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
+  detailsSubmitted?: boolean;
+  requirementsDue?: string[];
+  disabledReason?: string | null;
 }
 
 export interface ReservationService {
@@ -227,7 +236,8 @@ export type ReservationEventType =
   | 'reservation.cancelled'
   | 'reservation.no_show'
   | 'reservation.completed'
-  | 'reservation.updated';
+  | 'reservation.updated'
+  | 'reservation.dispute_opened';
 
 export interface ReservationWebSocketEvent {
   event: ReservationEventType;

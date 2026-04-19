@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo, memo } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform, Dimensions, ImageSourcePropType } from 'react-native';
-import { User, Bell, LogOut, PenTool, Database, Settings, ShieldCheck } from 'lucide-react-native';
+import { User, Bell, LogOut, PenTool, Database, Settings, ShieldCheck, CalendarCheck } from 'lucide-react-native';
 import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
 
-type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
+type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security' | 'reservation';
 
 // Composant Avatar mémorisé pour éviter les reloads d'image sur resize
 const ProfileAvatar = memo(({
@@ -38,6 +38,7 @@ const CONFIG_ITEMS = [
   { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
   { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: '#475569' },
   { id: 'configuration', Icon: Settings, label: 'Configuration', color: '#A855F7' },
+  { id: 'reservation', Icon: CalendarCheck, label: 'Réservation', color: '#F59E0B' },
 ];
 
 // Configuration des breakpoints de hauteur - Extraite pour performance
