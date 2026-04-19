@@ -11,6 +11,7 @@ import type {
   ReservationOverride,
   CreateReservationOverrideDto,
 } from '~/types/reservation.types';
+import { nowInTz } from '~/lib/date.utils';
 
 const MONTHS = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -84,6 +85,7 @@ const selectStyles = StyleSheet.create<any>({
 export interface OverrideFormPanelProps {
   services: ReservationService[];
   existingOverrides: ReservationOverride[];
+  timezone?: string;
   onSave: (data: CreateReservationOverrideDto) => Promise<void>;
   onCancel: () => void;
   initialDate?: string;
@@ -92,14 +94,17 @@ export interface OverrideFormPanelProps {
 export const OverrideFormPanel: React.FC<OverrideFormPanelProps> = ({
   services,
   existingOverrides,
+  timezone,
   onSave,
   onCancel,
   initialDate,
 }) => {
   const { showToast } = useToast();
   const formErrors = useFormErrors();
-  const now = new Date();
-  const initial = initialDate ? new Date(`${initialDate}T00:00:00`) : null;
+  // "Aujourd'hui" dans la TZ du pro pour que le calendrier s'ouvre sur le bon mois
+  const tz = timezone || 'Europe/Paris';
+  const nowTz = nowInTz(tz);
+  const initialParts = initialDate ? initialDate.split('-').map(Number) : null;
 
   const [date, setDate] = useState(initialDate || '');
   const [isClosed, setIsClosed] = useState(true);
@@ -109,8 +114,8 @@ export const OverrideFormPanel: React.FC<OverrideFormPanelProps> = ({
   const [endMin, setEndMin] = useState('00');
   const [serviceId, setServiceId] = useState('');
   const [reason, setReason] = useState('');
-  const [calMonth, setCalMonth] = useState(initial ? initial.getMonth() : now.getMonth());
-  const [calYear, setCalYear] = useState(initial ? initial.getFullYear() : now.getFullYear());
+  const [calMonth, setCalMonth] = useState(initialParts ? initialParts[1] - 1 : nowTz.month - 1);
+  const [calYear, setCalYear] = useState(initialParts ? initialParts[0] : nowTz.year);
   const [isSaving, setIsSaving] = useState(false);
 
   const navigateCalendar = (direction: number) => {

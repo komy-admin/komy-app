@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Modal, TextInput, useWindowDimensions } from 'react-native';
 import { ChevronLeft, ChevronRight, X as XIcon, AlertTriangle, CheckCircle, CreditCard, RefreshCw } from 'lucide-react-native';
 import { ForkTable, Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui';
-import { TabsHeader } from '~/components/ui/TabsHeader';
+import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { SlidePanel } from '~/components/ui/SlidePanel';
@@ -17,8 +17,10 @@ import type {
   ReservationService,
   ReservationSchedule,
   ReservationStatus,
+  ReservationProfessionalProfile,
   CreateManualReservationDto,
 } from '~/types/reservation.types';
+import { nowInTz, todayIsoInTz } from '~/lib/date.utils';
 
 const IMPRINT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Empreinte en attente', color: '#F59E0B', bg: '#FFFBEB' },
@@ -45,10 +47,12 @@ const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 interface ReservationListProps {
   reservation: {
+    profile: ReservationProfessionalProfile | null;
     services: ReservationService[];
     schedules: ReservationSchedule[];
     reservations: Reservation[];
     reservationsMeta: any;
+    loadProfile: () => Promise<ReservationProfessionalProfile>;
     loadServices: () => Promise<ReservationService[]>;
     loadSchedules: () => Promise<ReservationSchedule[]>;
     loadReservations: (params?: any) => Promise<any>;
@@ -69,14 +73,17 @@ export function ReservationList({ reservation }: ReservationListProps) {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
 
-  const today = new Date().toISOString().split('T')[0];
+  // Timezone du professionnel (fallback Europe/Paris avant le chargement du profil)
+  const timezone = reservation.profile?.timezone || 'Europe/Paris';
+  const today = todayIsoInTz(timezone);
   const [filterDate, setFilterDate] = useState(today);
   const [activeServiceTab, setActiveServiceTab] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
 
   const [showCalendar, setShowCalendar] = useState(false);
-  const [calMonth, setCalMonth] = useState(() => new Date(today).getMonth());
-  const [calYear, setCalYear] = useState(() => new Date(today).getFullYear());
+  const _nowTz = nowInTz(timezone);
+  const [calMonth, setCalMonth] = useState(() => _nowTz.month - 1);
+  const [calYear, setCalYear] = useState(() => _nowTz.year);
 
   const [cancelModalId, setCancelModalId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -86,7 +93,13 @@ export function ReservationList({ reservation }: ReservationListProps) {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      await Promise.all([reservation.loadServices(), reservation.loadSchedules()]);
+      // Charge le profil (timezone) en parallèle — nécessaire pour afficher dates/heures
+      // dans le fuseau du pro et non celui du device.
+      await Promise.all([
+        reservation.loadProfile().catch(() => null),
+        reservation.loadServices(),
+        reservation.loadSchedules(),
+      ]);
       await reservation.loadReservations({
         date: filterDate || undefined,
         page: currentPage,
@@ -154,9 +167,10 @@ export function ReservationList({ reservation }: ReservationListProps) {
   };
 
   const openCalendar = () => {
-    const d = new Date(filterDate + 'T00:00:00');
-    setCalMonth(d.getMonth());
-    setCalYear(d.getFullYear());
+    // filterDate est "YYYY-MM-DD" — on parse à la main pour éviter tout décalage timezone.
+    const [y, m] = filterDate.split('-').map(Number);
+    setCalMonth(m - 1);
+    setCalYear(y);
     setShowCalendar(true);
   };
 
@@ -217,8 +231,16 @@ export function ReservationList({ reservation }: ReservationListProps) {
   }, [reservation.services]);
 
   const formatDateLabel = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    // "YYYY-MM-DD" → ancre à midi pour éviter tout décalage quand l'appareil est dans
+    // une timezone à l'ouest d'UTC (sinon toLocaleDateString peut afficher la veille).
+    const date = new Date(`${dateStr}T12:00:00`);
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: timezone,
+    };
     return date.toLocaleDateString('fr-FR', options);
   };
 
@@ -243,6 +265,7 @@ export function ReservationList({ reservation }: ReservationListProps) {
           <ReservationFormPanel
             services={reservation.services}
             schedules={reservation.schedules}
+            timezone={timezone}
             onSubmit={handleCreateReservation}
             onCancel={handleClosePanel}
           />
@@ -451,7 +474,7 @@ export function ReservationList({ reservation }: ReservationListProps) {
           value={activeServiceTab}
           onValueChange={(v: string) => setActiveServiceTab(v)}
         >
-          <TabsHeader
+          <AppHeader
             rightSlot={
               <View style={styles.headerRightSlot}>
                 <View style={styles.dateNav}>
@@ -478,26 +501,27 @@ export function ReservationList({ reservation }: ReservationListProps) {
                 <HeaderActionButton label="AJOUTER" onPress={() => setShowCreatePanel(true)} />
               </View>
             }
-          >
-            <TabsList className="flex-row justify-start h-full" style={{ height: 60 }}>
-              <TabsTrigger value="all" className="">
-                <TabBadgeItem
-                  name="Tous"
-                  stats={formatStats(reservationsCountByService['all'] || 0)}
-                  isActive={activeServiceTab === 'all'}
-                />
-              </TabsTrigger>
-              {reservation.services.map(service => (
-                <TabsTrigger key={service.id} value={service.id} className="">
+            tabs={
+              <TabsList className="flex-row justify-start h-full" style={{ height: 60 }}>
+                <TabsTrigger value="all" className="">
                   <TabBadgeItem
-                    name={service.name}
-                    stats={formatStats(reservationsCountByService[service.id] || 0)}
-                    isActive={activeServiceTab === service.id}
+                    name="Tous"
+                    stats={formatStats(reservationsCountByService['all'] || 0)}
+                    isActive={activeServiceTab === 'all'}
                   />
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </TabsHeader>
+                {reservation.services.map(service => (
+                  <TabsTrigger key={service.id} value={service.id} className="">
+                    <TabBadgeItem
+                      name={service.name}
+                      stats={formatStats(reservationsCountByService[service.id] || 0)}
+                      isActive={activeServiceTab === service.id}
+                    />
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            }
+          />
 
           {showCalendar && (
             <View style={styles.calendarDropdownWrapper}>
