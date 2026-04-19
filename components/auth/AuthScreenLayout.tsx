@@ -13,7 +13,7 @@
 import React from 'react';
 import { StyleSheet, ViewStyle, View, useWindowDimensions } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface AuthScreenLayoutProps {
   children: React.ReactNode;
@@ -55,7 +55,7 @@ export const AuthScreenLayout: React.FC<AuthScreenLayoutProps> = ({ children, st
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     paddingHorizontal: 32,
     paddingVertical: 36,

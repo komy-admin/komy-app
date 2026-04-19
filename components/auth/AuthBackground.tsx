@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Polygon, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { colors } from '~/theme';
 
 /**
  * AuthBackground - Diagonal split background for auth screens.
@@ -25,11 +26,11 @@ export const AuthBackground: React.FC = () => {
       <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#2A2E33" />
-            <Stop offset="1" stopColor="#E2E8F0" />
+            <Stop offset="0" stopColor={colors.brand.dark} />
+            <Stop offset="1" stopColor={colors.neutral[200]} />
           </LinearGradient>
         </Defs>
-        <Polygon points={darkPoints} fill="#2A2E33" />
+        <Polygon points={darkPoints} fill={colors.brand.dark} />
         <Polygon points={redPoints} fill={`url(#${gradId})`} />
       </Svg>
     </View>

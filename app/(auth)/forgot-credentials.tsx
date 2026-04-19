@@ -14,6 +14,7 @@ import { useToast } from '~/components/ToastProvider';
 import { ChevronLeft } from 'lucide-react-native';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { extractApiError } from '~/lib/apiErrorHandler';
+import { colors } from '~/theme';
 
 type CredentialType = 'pin' | 'password';
 
@@ -93,7 +94,7 @@ export default function ForgotCredentialsScreen() {
               onPress={handleBack}
               style={styles.backButton}
             >
-              <ChevronLeft size={24} color="#6B7280" />
+              <ChevronLeft size={24} color={colors.gray[500]} />
               <RNText style={styles.backButtonText}>Retour</RNText>
             </Pressable>
 
@@ -118,7 +119,7 @@ export default function ForgotCredentialsScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   style={styles.input}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.gray[400]}
                   editable={!isLoading}
                   autoFocus
                 />
@@ -179,7 +180,7 @@ export default function ForgotCredentialsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   contentContainer: {
     alignItems: 'center',
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     marginLeft: 4,
   },
   headerContainer: {
@@ -210,14 +211,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -225,13 +226,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
     paddingHorizontal: 16,
     fontSize: 15,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surface.muted,
     marginBottom: 24,
-    color: '#2A2E33',
+    color: colors.brand.dark,
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -249,11 +250,12 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    color: colors.white,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   primaryButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.gray[300],
   },
   successContainer: {
     width: '100%',
@@ -261,18 +263,18 @@ const styles = StyleSheet.create({
   },
   successText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 8,
   },
   emailHighlight: {
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   successHint: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 20,
@@ -285,19 +287,21 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surface.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   infoText: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,

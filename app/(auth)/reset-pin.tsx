@@ -18,6 +18,7 @@ import { sessionActions } from '~/store';
 import { storageService } from '~/lib/storageService';
 import * as Haptics from 'expo-haptics';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { colors } from '~/theme';
 
 export default function ResetPinScreen() {
   const [pin, setPin] = useState('');
@@ -196,7 +197,7 @@ export default function ResetPinScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   contentContainer: {
     alignItems: 'center',
@@ -209,14 +210,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -245,21 +246,21 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.surface.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   infoContainer: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoText: {
-    color: '#6B7280',
+    color: colors.gray[500],
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,

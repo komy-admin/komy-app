@@ -38,7 +38,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera."
+          "cameraPermission": "Komy a besoin d'accéder à la caméra pour scanner les QR codes."
         }
       ],
       "expo-secure-store"

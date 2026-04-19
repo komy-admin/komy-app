@@ -15,6 +15,7 @@ import { extractApiError } from '~/lib/apiErrorHandler';
 import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { colors } from '~/theme';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -121,7 +122,7 @@ export default function ResetPasswordScreen() {
         <AuthBackground />
         <View style={styles.successOverlay}>
           <View style={styles.successIconCircle}>
-            <Check size={40} color="#22C55E" strokeWidth={2.5} />
+            <Check size={40} color={colors.success.base} strokeWidth={2.5} />
           </View>
           <RNText style={styles.successTitle}>Mot de passe réinitialisé!</RNText>
           <RNText style={styles.successText}>
@@ -142,7 +143,7 @@ export default function ResetPasswordScreen() {
               onPress={handleBack}
               style={styles.backButton}
             >
-              <ChevronLeft size={24} color="#6B7280" />
+              <ChevronLeft size={24} color={colors.gray[500]} />
               <RNText style={styles.backButtonText}>Retour</RNText>
             </Pressable>
 
@@ -165,7 +166,7 @@ export default function ResetPasswordScreen() {
                   placeholder="Entrez votre nouveau mot de passe"
                   secureTextEntry={!showPassword}
                   style={[styles.input, passwordTouched && !isPasswordValid && password.length > 0 ? styles.inputError : null]}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.gray[400]}
                   editable={!isLoading}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -175,9 +176,9 @@ export default function ResetPasswordScreen() {
                   style={styles.eyeButton}
                 >
                   {showPassword ? (
-                    <EyeOff size={20} color="#9CA3AF" />
+                    <EyeOff size={20} color={colors.gray[400]} />
                   ) : (
-                    <Eye size={20} color="#9CA3AF" />
+                    <Eye size={20} color={colors.gray[400]} />
                   )}
                 </Pressable>
               </View>
@@ -192,7 +193,7 @@ export default function ResetPasswordScreen() {
                   placeholder="Confirmez votre nouveau mot de passe"
                   secureTextEntry={!showConfirmPassword}
                   style={[styles.input, confirmPassword.length > 0 && password !== confirmPassword ? styles.inputError : null]}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.gray[400]}
                   editable={!isLoading}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -202,9 +203,9 @@ export default function ResetPasswordScreen() {
                   style={styles.eyeButton}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff size={20} color="#9CA3AF" />
+                    <EyeOff size={20} color={colors.gray[400]} />
                   ) : (
-                    <Eye size={20} color="#9CA3AF" />
+                    <Eye size={20} color={colors.gray[400]} />
                   )}
                 </Pressable>
               </View>
@@ -246,7 +247,7 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   contentContainer: {
     alignItems: 'center',
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     marginLeft: 4,
   },
   headerContainer: {
@@ -277,14 +278,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.gray[600],
     marginBottom: 8,
   },
   inputWrapper: {
@@ -305,13 +306,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingRight: 48,
     fontSize: 15,
-    backgroundColor: '#F9FAFB',
-    color: '#2A2E33',
+    backgroundColor: colors.surface.muted,
+    color: colors.brand.dark,
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
     }),
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
   },
   eyeButton: {
     position: 'absolute',
@@ -339,24 +340,24 @@ const styles = StyleSheet.create({
   },
   passwordRule: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   passwordRuleValid: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontWeight: '600',
   },
   passwordRuleError: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontWeight: '500',
   },
   passwordRuleSep: {
     fontSize: 12,
-    color: '#D1D5DB',
+    color: colors.gray[300],
   },
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -364,16 +365,17 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    color: colors.white,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   primaryButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.gray[300],
   },
   infoContainer: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -381,7 +383,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoText: {
-    color: '#6B7280',
+    color: colors.gray[500],
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -405,13 +407,13 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
   },
   successText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
   },
 });
