@@ -183,7 +183,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
             onPress={() => setActiveTab('item-types')}
             activeOpacity={1}
           >
-            <Utensils size={20} color={activeTab === 'item-types' ? '#6366F1' : '#64748B'} strokeWidth={2} />
+            <Utensils size={20} color={activeTab === 'item-types' ? colors.brand.accent : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'item-types' && styles.sidebarTabTextActive]}>
                 Types d'articles
@@ -200,7 +200,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
             onPress={() => setActiveTab('tags')}
             activeOpacity={1}
           >
-            <TagsIcon size={20} color={activeTab === 'tags' ? '#A855F7' : '#64748B'} strokeWidth={2} />
+            <TagsIcon size={20} color={activeTab === 'tags' ? colors.purple.base : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'tags' && styles.sidebarTabTextActive]}>
                 Tags personnalisés
@@ -217,7 +217,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
             onPress={() => setActiveTab('views')}
             activeOpacity={1}
           >
-            <Eye size={20} color={activeTab === 'views' ? '#3B82F6' : '#64748B'} strokeWidth={2} />
+            <Eye size={20} color={activeTab === 'views' ? colors.info.base : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
                 Gestion Module
@@ -302,7 +302,7 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
           <Text style={styles.tabTitle}>Types d'articles</Text>
           <Text style={styles.tabSubtitle}>Gérer les catégories de votre menu</Text>
         </View>
-        <TouchableOpacity style={[styles.createButton, { backgroundColor: '#6366F1' }]} onPress={onCreateItemType}>
+        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.brand.accent }]} onPress={onCreateItemType}>
           <Text style={styles.createButtonText}>Nouveau type</Text>
         </TouchableOpacity>
       </View>
@@ -313,12 +313,12 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
       >
         {itemTypes.length === 0 ? (
           <View style={styles.emptyState}>
-            <Utensils size={48} color="#CBD5E1" strokeWidth={1.5} />
+            <Utensils size={48} color={colors.neutral[300]} strokeWidth={1.5} />
             <Text style={styles.emptyStateTitle}>Aucun type d'article configuré</Text>
             <Text style={styles.emptyStateText}>Créez votre premier type pour commencer</Text>
-            <TouchableOpacity style={[styles.emptyStateButton, { borderColor: '#6366F1' }]} onPress={onCreateItemType}>
-              <Plus size={20} color="#6366F1" strokeWidth={2} />
-              <Text style={[styles.emptyStateButtonText, { color: '#6366F1' }]}>Créer un type</Text>
+            <TouchableOpacity style={[styles.emptyStateButton, { borderColor: colors.brand.accent }]} onPress={onCreateItemType}>
+              <Plus size={20} color={colors.brand.accent} strokeWidth={2} />
+              <Text style={[styles.emptyStateButtonText, { color: colors.brand.accent }]}>Créer un type</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -363,11 +363,11 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
       >
         {tags.length === 0 ? (
           <View style={styles.emptyState}>
-            <TagsIcon size={48} color="#CBD5E1" strokeWidth={1.5} />
+            <TagsIcon size={48} color={colors.neutral[300]} strokeWidth={1.5} />
             <Text style={styles.emptyStateTitle}>Aucun tag configuré</Text>
             <Text style={styles.emptyStateText}>Créez votre premier tag pour commencer</Text>
             <TouchableOpacity style={styles.emptyStateButton} onPress={onCreateTag}>
-              <Plus size={20} color="#A855F7" strokeWidth={2} />
+              <Plus size={20} color={colors.purple.base} strokeWidth={2} />
               <Text style={styles.emptyStateButtonText}>Créer un tag</Text>
             </TouchableOpacity>
           </View>
@@ -466,11 +466,11 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         </View>
         {hasChanges && (
           <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: '#10B981' }]}
+            style={[styles.createButton, { backgroundColor: colors.success.base }]}
             onPress={handleSaveChanges}
             disabled={configLoading}
           >
-            <Check size={20} color="#FFFFFF" strokeWidth={2} />
+            <Check size={20} color={colors.white} strokeWidth={2} />
             <Text style={styles.createButtonText}>Enregistrer</Text>
           </TouchableOpacity>
         )}
@@ -486,7 +486,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.warning.base, 0.1) }]}>
-                <LayoutDashboard size={24} color="#F59E0B" strokeWidth={2} />
+                <LayoutDashboard size={24} color={colors.warning.base} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Salles</Text>
@@ -495,8 +495,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
               <Switch
                 value={localRoomEnabled}
                 onValueChange={setLocalRoomEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                thumbColor={localRoomEnabled ? '#FFFFFF' : '#F3F4F6'}
+                trackColor={{ false: colors.gray[300], true: colors.success.base }}
+                thumbColor={localRoomEnabled ? colors.white : colors.gray[100]}
                 disabled={configLoading}
               />
             </View>
@@ -506,7 +506,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.info.base, 0.1) }]}>
-                <Users size={24} color="#3B82F6" strokeWidth={2} />
+                <Users size={24} color={colors.info.base} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Équipe</Text>
@@ -515,8 +515,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
               <Switch
                 value={localTeamEnabled}
                 onValueChange={setLocalTeamEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                thumbColor={localTeamEnabled ? '#FFFFFF' : '#F3F4F6'}
+                trackColor={{ false: colors.gray[300], true: colors.success.base }}
+                thumbColor={localTeamEnabled ? colors.white : colors.gray[100]}
                 disabled={configLoading}
               />
             </View>
@@ -526,7 +526,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.success.base, 0.1) }]}>
-                <ChefHat size={24} color="#10B981" strokeWidth={2} />
+                <ChefHat size={24} color={colors.success.base} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Cuisine</Text>
@@ -535,8 +535,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
               <Switch
                 value={localKitchenEnabled}
                 onValueChange={setLocalKitchenEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                thumbColor={localKitchenEnabled ? '#FFFFFF' : '#F3F4F6'}
+                trackColor={{ false: colors.gray[300], true: colors.success.base }}
+                thumbColor={localKitchenEnabled ? colors.white : colors.gray[100]}
                 disabled={configLoading}
               />
             </View>
@@ -547,7 +547,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.purple.base, 0.1) }]}>
-                <Wine size={24} color="#A855F7" strokeWidth={2} />
+                <Wine size={24} color={colors.purple.base} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Bar</Text>
@@ -556,8 +556,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
               <Switch
                 value={localBarEnabled}
                 onValueChange={setLocalBarEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                thumbColor={localBarEnabled ? '#FFFFFF' : '#F3F4F6'}
+                trackColor={{ false: colors.gray[300], true: colors.success.base }}
+                thumbColor={localBarEnabled ? colors.white : colors.gray[100]}
                 disabled={configLoading}
               />
             </View>
@@ -578,8 +578,8 @@ interface ItemTypeListItemProps {
 
 const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType, onEdit, onDelete }) => {
   const isBar = itemType.type === 'bar';
-  const iconColor = isBar ? '#A855F7' : '#10B981';
-  const backgroundColor = isBar ? '#FAF5FF' : '#F0FDF4';
+  const iconColor = isBar ? colors.purple.base : colors.success.base;
+  const backgroundColor = isBar ? colors.neutral[50] : colors.success.bg;
 
   // Récupérer l'icône enregistrée
   const iconData = AVAILABLE_ICONS.find(i => i.name === itemType.icon);
@@ -600,8 +600,8 @@ const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType
                   {isBar ? 'Bar' : 'Cuisine'}
                 </Text>
               </View>
-              <View style={[styles.tagBadge, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}>
-                <Text style={[styles.tagBadgeText, { color: '#64748B' }]}>
+              <View style={[styles.tagBadge, { backgroundColor: colors.neutral[100], borderColor: colors.neutral[300] }]}>
+                <Text style={[styles.tagBadgeText, { color: colors.neutral[500] }]}>
                   Niveau {itemType.priorityOrder}
                 </Text>
               </View>
@@ -612,7 +612,7 @@ const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType
               <Text style={styles.tagActionButtonText}>Modifier</Text>
             </Pressable>
             <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
-              <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
+              <Trash2 size={16} color={colors.error.base} strokeWidth={1.5} />
             </Pressable>
           </View>
         </View>
@@ -640,7 +640,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, onEdit, onDel
       <View style={styles.tagItem}>
         <View style={styles.tagItemHeader}>
           <View style={styles.tagItemIcon}>
-            <TagsIcon size={20} color="#A855F7" strokeWidth={2} />
+            <TagsIcon size={20} color={colors.purple.base} strokeWidth={2} />
           </View>
           <View style={styles.tagItemContent}>
             <Text style={styles.tagItemTitle}>{tag.label}</Text>
@@ -670,7 +670,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, onEdit, onDel
               <Text style={styles.tagActionButtonText}>Modifier</Text>
             </Pressable>
             <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
-              <Trash2 size={16} color="#EF4444" strokeWidth={1.5} />
+              <Trash2 size={16} color={colors.error.base} strokeWidth={1.5} />
             </Pressable>
           </View>
         </View>
@@ -684,7 +684,7 @@ TagListItem.displayName = 'TagListItem';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
   content: {
     flex: 1,
@@ -692,11 +692,11 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 240,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
+    borderLeftColor: colors.neutral[200],
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: colors.neutral[200],
     padding: 16,
     gap: 8,
   },
@@ -717,15 +717,15 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   sidebarTabActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   sidebarTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   sidebarTabTextActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '600',
   },
   mainContent: {
@@ -744,17 +744,17 @@ const styles = StyleSheet.create({
   tabTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   tabSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#A855F7',
+    backgroundColor: colors.purple.base,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   tagsList: {
     flex: 1,
@@ -777,38 +777,38 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 16,
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     marginBottom: 8,
   },
   emptyStateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F4FF',
+    backgroundColor: colors.neutral[50],
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#A855F7',
+    borderColor: colors.purple.base,
     gap: 8,
     marginTop: 8,
   },
   emptyStateButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#A855F7',
+    color: colors.purple.base,
   },
   tagItem: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
   },
   tagItemHeader: {
     flexDirection: 'row',
@@ -819,7 +819,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8F4FF',
+    backgroundColor: colors.neutral[50],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -830,7 +830,7 @@ const styles = StyleSheet.create({
   tagItemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   tagItemMeta: {
     flexDirection: 'row',
@@ -838,28 +838,28 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   tagBadge: {
-    backgroundColor: '#A855F7',
+    backgroundColor: colors.purple.base,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   tagBadgeRequired: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.warning.base,
   },
   tagBadgeSuccess: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
   },
   tagBadgeWarning: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error.base,
   },
   tagBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   tagItemOptions: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 2,
   },
   tagItemActions: {
@@ -870,15 +870,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   tagActionButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   tagActionButtonDanger: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
   },
   // Views Tab specific styles
   viewsScrollContainer: {
@@ -891,11 +891,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   viewCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
   },
   viewCardHeader: {
     flexDirection: 'row',
@@ -915,11 +915,11 @@ const styles = StyleSheet.create({
   viewCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   viewCardDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
 });

@@ -10,6 +10,7 @@ import { IconSelector, AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 import { VatRateSelector } from '~/components/ui/vat-rate-selector';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 
 // Filtres de catégories pré-calculés (constants - pas besoin de recalculer à chaque render)
 const DRINKS_ICONS = AVAILABLE_ICONS.filter(i => i.category === 'drinks');
@@ -120,10 +121,10 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
       <View style={styles.panelContent}>
         <View style={styles.panelHeader}>
           <TouchableOpacity onPress={() => setIsSelectingIcon(false)} style={styles.backButton}>
-            <ArrowLeft size={24} color="#64748B" strokeWidth={2} />
+            <ArrowLeft size={24} color={colors.neutral[500]} strokeWidth={2} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onCancel}>
-            <X size={24} color="#64748B" strokeWidth={2} />
+            <X size={24} color={colors.neutral[500]} strokeWidth={2} />
           </TouchableOpacity>
         </View>
 
@@ -148,7 +149,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
             <IconSelector
               selectedIcon={icon}
               onSelectIcon={handleIconSelect}
-              color="#A855F7"
+              color={colors.purple.base}
               disabledIcons={usedIcons}
               iconsToShow={DRINKS_ICONS}
             />
@@ -157,7 +158,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           {/* Catégorie Repas/Plats */}
           <View style={styles.categorySection}>
             <View style={styles.categoryHeader}>
-              <View style={[styles.categoryBadge, { backgroundColor: '#10B981' }]}>
+              <View style={[styles.categoryBadge, { backgroundColor: colors.success.base }]}>
                 <Text style={styles.categoryBadgeText}>Repas / Plats</Text>
               </View>
             </View>
@@ -165,7 +166,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
             <IconSelector
               selectedIcon={icon}
               onSelectIcon={handleIconSelect}
-              color="#A855F7"
+              color={colors.purple.base}
               disabledIcons={usedIcons}
               iconsToShow={FOOD_ICONS}
             />
@@ -174,7 +175,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
           {/* Catégorie Desserts */}
           <View style={styles.categorySection}>
             <View style={styles.categoryHeader}>
-              <View style={[styles.categoryBadge, { backgroundColor: '#F59E0B' }]}>
+              <View style={[styles.categoryBadge, { backgroundColor: colors.warning.base }]}>
                 <Text style={styles.categoryBadgeText}>Desserts</Text>
               </View>
             </View>
@@ -182,7 +183,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
             <IconSelector
               selectedIcon={icon}
               onSelectIcon={handleIconSelect}
-              color="#A855F7"
+              color={colors.purple.base}
               disabledIcons={usedIcons}
               iconsToShow={DESSERTS_ICONS}
             />
@@ -198,7 +199,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
       <View style={styles.panelHeader}>
         <Text style={styles.panelTitle}>{itemType ? 'Modifier le type' : 'Nouveau type'}</Text>
         <TouchableOpacity onPress={onCancel}>
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -223,7 +224,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               value={name}
               onChangeText={handleNameChange}
               placeholder="Ex: Entrée, Plat, Boisson..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
             />
 
             {/* Bouton sélection icône */}
@@ -237,9 +238,9 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               onPress={() => setIsSelectingIcon(true)}
             >
               {icon ? (
-                <MaterialCommunityIcons name={icon as any} size={24} color="#A855F7" />
+                <MaterialCommunityIcons name={icon as any} size={24} color={colors.purple.base} />
               ) : (
-                <Plus size={20} color="#94A3B8" strokeWidth={2} />
+                <Plus size={20} color={colors.neutral[400]} strokeWidth={2} />
               )}
             </TouchableOpacity>
           </View>
@@ -254,15 +255,15 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               style={[
                 styles.radioOption,
                 type === 'kitchen' && styles.radioOptionActive,
-                type === 'kitchen' && { borderColor: '#10B981', backgroundColor: '#F0FDF4' }
+                type === 'kitchen' && { borderColor: colors.success.base, backgroundColor: colors.success.bg }
               ]}
               onPress={() => { setType('kitchen'); formErrors.clearError('type'); }}
               activeOpacity={1}
             >
               <View style={styles.radio}>
-                {type === 'kitchen' && <View style={[styles.radioInner, { backgroundColor: '#10B981' }]} />}
+                {type === 'kitchen' && <View style={[styles.radioInner, { backgroundColor: colors.success.base }]} />}
               </View>
-              <ChefHat size={18} color={type === 'kitchen' ? '#10B981' : '#64748B'} strokeWidth={2} />
+              <ChefHat size={18} color={type === 'kitchen' ? colors.success.base : colors.neutral[500]} strokeWidth={2} />
               <Text style={[styles.radioLabel, type === 'kitchen' && styles.radioLabelActive]}>
                 Cuisine
               </Text>
@@ -272,15 +273,15 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               style={[
                 styles.radioOption,
                 type === 'bar' && styles.radioOptionActive,
-                type === 'bar' && { borderColor: '#A855F7', backgroundColor: '#FAF5FF' }
+                type === 'bar' && { borderColor: colors.purple.base, backgroundColor: colors.neutral[50] }
               ]}
               onPress={() => { setType('bar'); formErrors.clearError('type'); }}
               activeOpacity={1}
             >
               <View style={styles.radio}>
-                {type === 'bar' && <View style={[styles.radioInner, { backgroundColor: '#A855F7' }]} />}
+                {type === 'bar' && <View style={[styles.radioInner, { backgroundColor: colors.purple.base }]} />}
               </View>
-              <Wine size={18} color={type === 'bar' ? '#A855F7' : '#64748B'} strokeWidth={2} />
+              <Wine size={18} color={type === 'bar' ? colors.purple.base : colors.neutral[500]} strokeWidth={2} />
               <Text style={[styles.radioLabel, type === 'bar' && styles.radioLabelActive]}>
                 Bar
               </Text>
@@ -336,7 +337,7 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
                     ))}
                   </Text>
                   {isSelected && (
-                    <Check size={14} color="#A855F7" strokeWidth={3} />
+                    <Check size={14} color={colors.purple.base} strokeWidth={3} />
                   )}
                 </TouchableOpacity>
               );
@@ -352,12 +353,12 @@ export const ItemTypeFormPanel: React.FC<ItemTypeFormPanelProps> = ({ itemType, 
               onPress={() => setPriorityOrder(nextNewLevel)}
               activeOpacity={0.7}
             >
-              <Plus size={16} color={priorityOrder === nextNewLevel ? '#A855F7' : '#94A3B8'} strokeWidth={2} />
+              <Plus size={16} color={priorityOrder === nextNewLevel ? colors.purple.base : colors.neutral[400]} strokeWidth={2} />
               <Text style={[styles.levelNewText, priorityOrder === nextNewLevel && styles.levelNamesActive]}>
                 Nouveau niveau
               </Text>
               {priorityOrder === nextNewLevel && (
-                <Check size={14} color="#A855F7" strokeWidth={3} />
+                <Check size={14} color={colors.purple.base} strokeWidth={3} />
               )}
             </TouchableOpacity>
           </View>
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -422,12 +423,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
   },
   panelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   backButton: {
     flexDirection: 'row',
@@ -444,12 +445,12 @@ const styles = StyleSheet.create({
   iconSelectionTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 8,
   },
   iconSelectionSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   categoryBadge: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.info.base,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -469,7 +470,7 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -489,8 +490,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -498,47 +499,47 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   iconButtonSelected: {
-    borderColor: '#A855F7',
-    backgroundColor: '#F8F4FF',
+    borderColor: colors.purple.base,
+    backgroundColor: colors.neutral[50],
   },
   iconButtonError: {
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
     borderStyle: 'solid',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
   },
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 8,
   },
   formHelpText: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 8,
   },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 14,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   radioGroup: {
     gap: 8,
   },
   selectorError: {
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
     borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     padding: 4,
   },
   radioOption: {
@@ -547,20 +548,20 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.white,
     gap: 12,
   },
   radioOptionActive: {
-    borderColor: '#A855F7',
-    backgroundColor: '#F8F4FF',
+    borderColor: colors.purple.base,
+    backgroundColor: colors.neutral[50],
   },
   radio: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
+    borderColor: colors.neutral[300],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -568,15 +569,15 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#A855F7',
+    backgroundColor: colors.purple.base,
   },
   radioLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
     flex: 1,
   },
   radioLabelActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '500',
   },
   levelList: {
@@ -584,7 +585,7 @@ const styles = StyleSheet.create({
   },
   radioSubLabel: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     marginTop: 2,
   },
   priorityGrid: {
@@ -597,15 +598,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.white,
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 10,
   },
   levelRowActive: {
-    borderColor: '#A855F7',
-    backgroundColor: '#FAF5FF',
+    borderColor: colors.purple.base,
+    backgroundColor: colors.neutral[50],
   },
   levelRowNew: {
     borderStyle: 'dashed',
@@ -614,46 +615,46 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     justifyContent: 'center',
     alignItems: 'center',
   },
   levelBadgeActive: {
-    backgroundColor: '#A855F7',
+    backgroundColor: colors.purple.base,
   },
   levelBadgeText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   levelBadgeTextActive: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   levelNames: {
     flex: 1,
     fontSize: 14,
-    color: '#374151',
+    color: colors.gray[700],
   },
   levelNamesActive: {
-    color: '#6B21A8',
+    color: colors.purple.alt,
     fontWeight: '500',
   },
   levelNameCurrent: {
     fontWeight: '700',
-    color: '#A855F7',
+    color: colors.purple.base,
   },
   levelNewText: {
     flex: 1,
     fontSize: 13,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     fontWeight: '500',
   },
   priorityFeedbackCard: {
     marginTop: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     overflow: 'hidden',
   },
   priorityFeedbackContent: {
@@ -661,31 +662,31 @@ const styles = StyleSheet.create({
   },
   priorityFeedbackUsage: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
   priorityFeedbackUsageBold: {
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   panelFooter: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -694,7 +695,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -702,6 +703,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

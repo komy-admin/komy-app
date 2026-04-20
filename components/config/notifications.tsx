@@ -34,7 +34,7 @@ export default function NotificationsPage({ isCompactSidebar }: { isCompactSideb
             onPress={() => setActiveTab('alerts')}
             activeOpacity={1}
           >
-            <Bell size={20} color={activeTab === 'alerts' ? '#6366F1' : '#64748B'} strokeWidth={2} />
+            <Bell size={20} color={activeTab === 'alerts' ? colors.brand.accent : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'alerts' && styles.sidebarTabTextActive]}>
                 Alerte visuelle
@@ -129,7 +129,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: '#6366F1' },
+            { backgroundColor: colors.brand.accent },
             (!hasChanges || (localEnabled && !isValidTime)) && styles.createButtonDisabled
           ]}
           onPress={handleSaveChanges}
@@ -151,7 +151,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
               <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1) }]}>
-                <Clock size={24} color="#6366F1" strokeWidth={2} />
+                <Clock size={24} color={colors.brand.accent} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Alerte Cuisine/Bar</Text>
@@ -160,8 +160,8 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
               <Switch
                 value={localEnabled}
                 onValueChange={handleToggleEnabled}
-                trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-                thumbColor={localEnabled ? '#FFFFFF' : '#F3F4F6'}
+                trackColor={{ false: colors.gray[300], true: colors.success.base }}
+                thumbColor={localEnabled ? colors.white : colors.gray[100]}
               />
             </View>
 
@@ -214,7 +214,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
   content: {
     flex: 1,
@@ -224,11 +224,11 @@ const styles = StyleSheet.create({
   // Sidebar
   sidebar: {
     width: 240,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
+    borderLeftColor: colors.neutral[200],
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: colors.neutral[200],
     padding: 16,
     gap: 8,
   },
@@ -249,15 +249,15 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   sidebarTabActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   sidebarTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   sidebarTabTextActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '600',
   },
 
@@ -278,12 +278,12 @@ const styles = StyleSheet.create({
   tabTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   tabSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   createButton: {
     flexDirection: 'row',
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 
   // ScrollView
@@ -315,11 +315,11 @@ const styles = StyleSheet.create({
 
   // Cards - même style que viewCard dans configuration.tsx
   viewCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
   },
   viewCardHeader: {
     flexDirection: 'row',
@@ -339,12 +339,12 @@ const styles = StyleSheet.create({
   viewCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   viewCardDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
 
   // Submenu section (quand activé) - même pattern que viewModeSection
@@ -352,19 +352,19 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
     gap: 16,
   },
   viewModeTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
 
   // Help text
   helpText: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
 
@@ -376,40 +376,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   textInput: {
     flex: 1,
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.gray[800],
     padding: 0,
   },
   inputSuffix: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     fontWeight: '500',
     marginLeft: 8,
   },
   previewText: {
     fontSize: 12,
-    color: '#6366F1',
+    color: colors.brand.accent,
     fontWeight: '500',
   },
   errorText: {
     fontSize: 12,
-    color: '#DC2626',
+    color: colors.error.text,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     padding: 12,
     borderRadius: 8,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error.border,
   },
 });

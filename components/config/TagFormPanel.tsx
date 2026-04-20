@@ -7,6 +7,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 
 interface TagFormPanelProps {
   tag: Tag | null;
@@ -148,7 +149,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
           onPress={onCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -170,8 +171,8 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                   style={[
                     styles.radioOption,
                     fieldType === type.value && {
-                      borderColor: '#A855F7',
-                      backgroundColor: '#F8F4FF',
+                      borderColor: colors.purple.base,
+                      backgroundColor: colors.neutral[50],
                     }
                   ]}
                   onPress={() => handleFieldTypeSelect(type.value)}
@@ -218,7 +219,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                 value={label}
                 onChangeText={(text) => { setLabel(text); formErrors.clearError('label'); }}
                 placeholder="Ex: Cuisson, Garnitures..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.neutral[400]}
               />
               <FormFieldError message={formErrors.getError('label')} />
             </View>
@@ -256,7 +257,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                           value={option.label}
                           onChangeText={(text) => { handleUpdateOptionLabel(index, text); formErrors.clearError(`options.${index}`); }}
                           placeholder="Nom de l'option"
-                          placeholderTextColor="#94A3B8"
+                          placeholderTextColor={colors.neutral[400]}
                         />
                         <TextInput
                           style={[styles.formInput, styles.optionPriceInput]}
@@ -264,14 +265,14 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                           onChangeText={(text) => handleUpdateOptionPrice(index, text)}
                           placeholder="0 €"
                           keyboardType="decimal-pad"
-                          placeholderTextColor="#94A3B8"
+                          placeholderTextColor={colors.neutral[400]}
                         />
                       </View>
                       <TouchableOpacity
                         style={styles.deleteOptionButton}
                         onPress={() => handleDeleteOption(index)}
                       >
-                        <Trash2 size={20} color="#EF4444" strokeWidth={1.5} />
+                        <Trash2 size={20} color={colors.error.base} strokeWidth={1.5} />
                       </TouchableOpacity>
                     </View>
                     <FormFieldError message={formErrors.getError(`options.${index}`)} />
@@ -285,7 +286,7 @@ export const TagFormPanel: React.FC<TagFormPanelProps> = ({ tag, onSave, onCance
                   ]}
                   onPress={handleAddOption}
                 >
-                  <Plus size={18} color={formErrors.errors['options'] ? '#EF4444' : '#64748B'} strokeWidth={2} />
+                  <Plus size={18} color={formErrors.errors['options'] ? colors.error.base : colors.neutral[500]} strokeWidth={2} />
                   <Text style={[
                     styles.addOptionButtonText,
                     formErrors.errors['options'] && styles.addOptionButtonTextError,
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     gap: 16,
   },
   headerTextContainer: {
@@ -349,12 +350,12 @@ const styles = StyleSheet.create({
   panelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   panelSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
   formGroup: {
@@ -363,36 +364,36 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 12,
   },
   formHelpText: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 8,
   },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 14,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   radioGroup: {
     gap: 8,
   },
   selectorError: {
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
     borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     padding: 4,
   },
   radioOption: {
@@ -401,8 +402,8 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.white,
     gap: 12,
   },
   radio: {
@@ -410,7 +411,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
+    borderColor: colors.neutral[300],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -418,22 +419,22 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#A855F7',
+    backgroundColor: colors.purple.base,
   },
   radioTextContainer: {
     flex: 1,
   },
   radioLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   radioLabelActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '500',
   },
   radioDescription: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     marginTop: 2,
     lineHeight: 16,
   },
@@ -443,36 +444,36 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   toggleOptionActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#34D399',
+    backgroundColor: colors.success.bg,
+    borderColor: colors.success.border,
   },
   toggleIndicator: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.gray[400],
     marginRight: 12,
   },
   toggleIndicatorActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
   },
   toggleText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   toggleTextActive: {
-    color: '#047857',
+    color: colors.success.text,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     marginTop: 20,
     marginBottom: 16,
   },
@@ -500,52 +501,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
   },
   addOptionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderRadius: 10,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderStyle: 'dashed' as any,
     gap: 8,
     marginTop: 4,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   addOptionButtonError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   addOptionButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   addOptionButtonTextError: {
-    color: '#EF4444',
+    color: colors.error.base,
   },
   panelFooter: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -554,7 +555,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -562,14 +563,14 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   selectedItemBanner: {
-    backgroundColor: '#FAF5FF',
+    backgroundColor: colors.neutral[50],
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E9D5FF',
+    borderColor: colors.neutral[200],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -580,7 +581,7 @@ const styles = StyleSheet.create({
   selectedItemLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#A855F7',
+    color: colors.purple.base,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -588,16 +589,16 @@ const styles = StyleSheet.create({
   selectedItemName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   changeItemButton: {
-    backgroundColor: '#A855F7',
+    backgroundColor: colors.purple.base,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   changeItemButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
