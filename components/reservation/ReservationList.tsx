@@ -12,6 +12,7 @@ import type {
 } from '~/types/reservation.types';
 import { CreateReservationModal } from './CreateReservationModal';
 import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface FilterOption { label: string; value: string; }
 
@@ -1069,7 +1070,7 @@ const styles = StyleSheet.create({
   // Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay.modal,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
   },

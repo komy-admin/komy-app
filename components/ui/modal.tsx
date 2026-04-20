@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { X } from 'lucide-react-native';
 import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface ForkModalProps {
   visible: boolean;
@@ -54,7 +55,7 @@ export const ForkModal = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: colors.overlay.modalStrong,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16

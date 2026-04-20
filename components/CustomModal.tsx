@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    backgroundColor: colors.overlay.modalDarkSlate,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
   },
   overlayTouchable: {
     position: 'absolute',

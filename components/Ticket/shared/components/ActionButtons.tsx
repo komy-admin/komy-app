@@ -4,6 +4,7 @@ import { Bell, X } from 'lucide-react-native';
 import { Status } from '~/types/status.enum';
 import { ItemGroup } from '~/types/kitchen.types';
 import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface ActionButtonsProps {
   mode: 'single' | 'dual' | 'none';
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay.modalStrong,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,

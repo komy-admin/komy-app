@@ -3,6 +3,7 @@ import { Status } from '~/types/status.enum';
 import { getStatusColor, getStatusText } from '~/lib/utils';
 import { Check } from 'lucide-react-native';
 import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface StatusSelectorProps {
   visible: boolean;
@@ -37,7 +38,7 @@ export default function StatusSelector({
             onStatusSelect(status);
             onClose();
           }}
-          android_ripple={{ color: colors.overlay.rippleDark }}
+          android_ripple={{ color: getColorWithOpacity(colors.black, 0.1) }}
           style={({ pressed }) => [
             styles.statusButton,
             { opacity: pressed ? 0.7 : 1 }
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: colors.overlay.modalStrong,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,

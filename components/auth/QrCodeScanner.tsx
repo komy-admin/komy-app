@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, AppState } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface QrCodeScannerProps {
   onScan: (data: string) => void;
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
     textAlign: 'center',
-    backgroundColor: colors.overlay.modalStrong,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     padding: 8,
     borderRadius: 8,
   },

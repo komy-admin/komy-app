@@ -6,7 +6,7 @@ import { ItemType } from '~/types/item-type.types';
 import { Tag } from '~/types/tag.types';
 import { NumberInput } from '~/components/ui/number-input';
 import { VatRateSelector } from '~/components/ui/vat-rate-selector';
-import { COLOR_COLUMNS } from '~/components/ui/color-picker';
+import { COLOR_COLUMNS } from '~/components/ui/color-palette';
 import { TagSelector } from '~/components/ui';
 import { SelectButton } from '~/components/ui/select-button';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';

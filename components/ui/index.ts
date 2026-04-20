@@ -12,7 +12,7 @@ export * from './table';
 export * from './loader';
 export * from './dialog';
 export * from './modal';
-export * from './color-picker';
+export * from './color-palette';
 export * from './select-button';
 export * from './TagSelector';
 export { default as PinInput } from './pin-input';

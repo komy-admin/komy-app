@@ -21,23 +21,15 @@ export const colors = colorsTokens as {
     accent: string;
     accentDark: string;
   };
-  neutral: Record<50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900, string>;
+  neutral: Record<50 | 100 | 200 | 300 | 400 | 500 | 600 | 800, string>;
   gray: Record<50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900, string>;
   success: { base: string; bg: string; border: string; text: string; dark: string };
   error: { base: string; bg: string; border: string; text: string; dark: string };
   warning: { base: string; bg: string; border: string; text: string; dark: string };
-  info: { base: string; bg: string; border: string; text: string };
+  info: { base: string; bg: string; text: string };
   purple: { base: string; alt: string };
   pink: string;
-  surface: { white: string; screen: string; card: string; muted: string };
-  overlay: {
-    modalSoft: string;
-    modal: string;
-    modalStrong: string;
-    modalHeavy: string;
-    modalDarkSlate: string;
-    rippleDark: string;
-  };
+  surface: { muted: string };
   glass: {
     light: string;
     medium: string;

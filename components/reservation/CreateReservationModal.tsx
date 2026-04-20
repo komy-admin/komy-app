@@ -5,6 +5,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useToast } from '~/components/ToastProvider';
 import type { ReservationService, ReservationSchedule, CreateManualReservationDto } from '~/types/reservation.types';
 import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface FilterOption { label: string; value: string; }
 
@@ -475,7 +476,7 @@ export function CreateReservationModal({ visible, onClose, services, schedules, 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: colors.overlay.modal,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
   },
