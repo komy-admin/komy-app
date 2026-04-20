@@ -34,7 +34,7 @@ export default function NotificationsPage({ isCompactSidebar }: { isCompactSideb
             onPress={() => setActiveTab('alerts')}
             activeOpacity={1}
           >
-            <Bell size={20} color={activeTab === 'alerts' ? colors.brand.accent : colors.neutral[500]} strokeWidth={2} />
+            <Bell size={20} color={activeTab === 'alerts' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'alerts' && styles.sidebarTabTextActive]}>
                 Alerte visuelle
@@ -129,7 +129,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: colors.brand.accent },
+            { backgroundColor: colors.brand.dark },
             (!hasChanges || (localEnabled && !isValidTime)) && styles.createButtonDisabled
           ]}
           onPress={handleSaveChanges}
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: '#949799',
   },
   createButtonText: {
     fontSize: 14,

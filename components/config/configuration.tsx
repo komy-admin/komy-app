@@ -183,7 +183,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
             onPress={() => setActiveTab('item-types')}
             activeOpacity={1}
           >
-            <Utensils size={20} color={activeTab === 'item-types' ? colors.brand.accent : colors.neutral[500]} strokeWidth={2} />
+            <Utensils size={20} color={activeTab === 'item-types' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'item-types' && styles.sidebarTabTextActive]}>
                 Types d'articles
@@ -200,7 +200,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
             onPress={() => setActiveTab('tags')}
             activeOpacity={1}
           >
-            <TagsIcon size={20} color={activeTab === 'tags' ? colors.purple.base : colors.neutral[500]} strokeWidth={2} />
+            <TagsIcon size={20} color={activeTab === 'tags' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'tags' && styles.sidebarTabTextActive]}>
                 Tags personnalisés
@@ -217,7 +217,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
             onPress={() => setActiveTab('views')}
             activeOpacity={1}
           >
-            <Eye size={20} color={activeTab === 'views' ? colors.info.base : colors.neutral[500]} strokeWidth={2} />
+            <Eye size={20} color={activeTab === 'views' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'views' && styles.sidebarTabTextActive]}>
                 Gestion Module
@@ -302,7 +302,7 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
           <Text style={styles.tabTitle}>Types d'articles</Text>
           <Text style={styles.tabSubtitle}>Gérer les catégories de votre menu</Text>
         </View>
-        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.brand.accent }]} onPress={onCreateItemType}>
+        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.brand.dark }]} onPress={onCreateItemType}>
           <Text style={styles.createButtonText}>Nouveau type</Text>
         </TouchableOpacity>
       </View>
@@ -466,7 +466,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         </View>
         {hasChanges && (
           <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.success.base }]}
+            style={[styles.createButton, { backgroundColor: colors.brand.dark }]}
             onPress={handleSaveChanges}
             disabled={configLoading}
           >
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.purple.base,
+    backgroundColor: colors.brand.dark,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,

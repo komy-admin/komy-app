@@ -35,7 +35,7 @@ export default function SecurityPage({ isCompactSidebar }: { isCompactSidebar?: 
             onPress={() => setActiveTab('2fa-account')}
             activeOpacity={1}
           >
-            <ShieldCheck size={20} color={activeTab === '2fa-account' ? colors.neutral[600] : colors.neutral[500]} strokeWidth={2} />
+            <ShieldCheck size={20} color={activeTab === '2fa-account' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === '2fa-account' && styles.sidebarTabTextActive]}>
                 2FA
@@ -52,7 +52,7 @@ export default function SecurityPage({ isCompactSidebar }: { isCompactSidebar?: 
             onPress={() => setActiveTab('devices')}
             activeOpacity={1}
           >
-            <Monitor size={20} color={activeTab === 'devices' ? colors.neutral[600] : colors.neutral[500]} strokeWidth={2} />
+            <Monitor size={20} color={activeTab === 'devices' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'devices' && styles.sidebarTabTextActive]}>
                 Appareils

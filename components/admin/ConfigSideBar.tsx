@@ -34,11 +34,11 @@ const ProfileAvatar = memo(({
 ));
 
 const CONFIG_ITEMS = [
-  { id: 'dashboard', Icon: Database, label: 'Dashboard', color: colors.info.base },
-  { id: 'profile', Icon: User, label: 'Mon compte', color: colors.success.base },
-  { id: 'notifications', Icon: Bell, label: 'Notifications', color: colors.error.base },
-  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: colors.neutral[600] },
-  { id: 'configuration', Icon: Settings, label: 'Configuration', color: colors.purple.base },
+  { id: 'dashboard', Icon: Database, label: 'Dashboard', color: colors.brand.dark },
+  { id: 'profile', Icon: User, label: 'Mon compte', color: colors.brand.dark },
+  { id: 'notifications', Icon: Bell, label: 'Notifications', color: colors.brand.dark },
+  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: colors.brand.dark },
+  { id: 'configuration', Icon: Settings, label: 'Configuration', color: colors.brand.dark },
 ];
 
 // Configuration des breakpoints de hauteur - Extraite pour performance
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   },
   userRole: {
     fontSize: 14,
-    color: '#64666A',
+    color: colors.gray[500],
     fontWeight: '400',
     textAlign: 'center',
   },

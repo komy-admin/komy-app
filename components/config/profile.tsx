@@ -39,7 +39,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('restaurant')}
             activeOpacity={1}
           >
-            <Landmark size={20} color={activeTab === 'restaurant' ? colors.brand.accent : colors.neutral[500]} strokeWidth={2} />
+            <Landmark size={20} color={activeTab === 'restaurant' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'restaurant' && styles.sidebarTabTextActive]}>
                 Restaurant
@@ -56,7 +56,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('password')}
             activeOpacity={1}
           >
-            <Lock size={20} color={activeTab === 'password' ? colors.warning.base : colors.neutral[500]} strokeWidth={2} />
+            <Lock size={20} color={activeTab === 'password' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'password' && styles.sidebarTabTextActive]}>
                 Mot de passe
@@ -73,7 +73,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('pin')}
             activeOpacity={1}
           >
-            <KeyRound size={20} color={activeTab === 'pin' ? colors.purple.alt : colors.neutral[500]} strokeWidth={2} />
+            <KeyRound size={20} color={activeTab === 'pin' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'pin' && styles.sidebarTabTextActive]}>
                 Code PIN
@@ -90,7 +90,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('info')}
             activeOpacity={1}
           >
-            <User size={20} color={activeTab === 'info' ? colors.success.base : colors.neutral[500]} strokeWidth={2} />
+            <User size={20} color={activeTab === 'info' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'info' && styles.sidebarTabTextActive]}>
                 Informations
@@ -172,7 +172,7 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: colors.brand.accent },
+            { backgroundColor: colors.brand.dark },
             !canSave && styles.createButtonDisabled
           ]}
           onPress={handleSave}
@@ -331,7 +331,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: colors.success.base },
+            { backgroundColor: colors.brand.dark },
             (!hasChanges || isSaving || hasValidationErrors()) && styles.createButtonDisabled
           ]}
           onPress={handleSave}
@@ -503,7 +503,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: colors.warning.base },
+            { backgroundColor: colors.brand.dark },
             (!isPasswordFormValid || isSavingPassword) && styles.createButtonDisabled
           ]}
           onPress={handleSavePassword}
@@ -686,7 +686,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: colors.purple.alt },
+            { backgroundColor: colors.brand.dark },
             (!isPinFormValid || isSaving) && styles.createButtonDisabled
           ]}
           onPress={handleSavePin}
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createButtonDisabled: {
-    opacity: 0.4,
+    backgroundColor: '#949799',
   },
   createButtonText: {
     fontSize: 14,
