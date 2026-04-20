@@ -38,7 +38,6 @@ export default function StatusSelector({
             onStatusSelect(status);
             onClose();
           }}
-          android_ripple={{ color: getColorWithOpacity(colors.black, 0.1) }}
           style={({ pressed }) => [
             styles.statusButton,
             { opacity: pressed ? 0.7 : 1 }

@@ -473,7 +473,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <Pressable onPress={onBack} className="mr-3">
-              <ChevronLeft size={24} color={colors.black} />
+              <ChevronLeft size={24} color={colors.brand.dark} />
             </Pressable>
             <Text className="text-lg font-semibold">Paiement - {tableName}</Text>
           </View>

@@ -277,7 +277,7 @@ export default function ServerHomePage() {
             borderRadius: 28,
             justifyContent: 'center',
             alignItems: 'center',
-            shadowColor: colors.black,
+            shadowColor: colors.brand.dark,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,
             shadowRadius: 6,
@@ -310,7 +310,7 @@ export default function ServerHomePage() {
           backgroundColor: colors.white,
         }}
         style={{
-          shadowColor: colors.black,
+          shadowColor: colors.brand.dark,
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.15,
           shadowRadius: 6,

@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    color: getColorWithOpacity(colors.black, 0.01),
+    color: getColorWithOpacity(colors.brand.dark, 0.01),
     backgroundColor: 'transparent',
     fontSize: 1,
     textAlign: 'center',

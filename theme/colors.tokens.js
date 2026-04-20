@@ -91,7 +91,6 @@ const colors = {
   },
 
   // === Absolutes ===
-  black: '#000000',        // 9×
   white: '#FFFFFF',        // 166×
 };
 

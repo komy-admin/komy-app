@@ -366,7 +366,7 @@ const AdminMenuOrderGroup = ({
                   height: 48,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  shadowColor: colors.black,
+                  shadowColor: colors.brand.dark,
                   shadowOffset: {
                     width: 0,
                     height: 2,
@@ -642,7 +642,7 @@ const AdminOrderItemsGroup = ({
                   height: 48,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  shadowColor: colors.black,
+                  shadowColor: colors.brand.dark,
                   shadowOffset: {
                     width: 0,
                     height: 2,

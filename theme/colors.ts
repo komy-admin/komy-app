@@ -30,6 +30,5 @@ export const colors = colorsTokens as {
   purple: { base: string; alt: string };
   pink: string;
   surface: { muted: string };
-  black: string;
   white: string;
 };
