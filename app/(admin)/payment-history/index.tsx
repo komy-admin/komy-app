@@ -13,10 +13,11 @@ import { colors } from '~/theme';
 
 export default function PaymentHistoryScreen() {
   const router = useRouter();
-  const { getOrdersWithPayments, loading } = usePayments();
+  const { getOrdersWithPayments } = usePayments();
   const { showToast } = useToast();
   const [ordersWithPayments, setOrdersWithPayments] = useState<OrderWithPayments[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [filters, setFilters] = useState<PaymentHistoryFilters>({
     period: 'today',
@@ -33,6 +34,8 @@ export default function PaymentHistoryScreen() {
       setOrdersWithPayments(data);
     } catch (error) {
       showApiError(error, showToast, 'Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
     }
   };
 
