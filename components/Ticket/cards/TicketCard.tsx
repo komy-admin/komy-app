@@ -10,6 +10,7 @@ import { ItemRow } from '../shared/components/ItemRow';
 import { ActionButtons } from '../shared/components/ActionButtons';
 import { SectionDivider } from '~/components/ui';
 import { Status } from '~/types/status.enum';
+import { colors } from '~/theme';
 
 /**
  * Composant unique pour les cartes cuisine/bar (mode ticket)
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 18,
     right: -38,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.info.base,
     paddingVertical: 6,
     paddingHorizontal: 45,
     transform: [{ rotate: '45deg' }],
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
   notifiedBannerText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     textAlign: 'center',

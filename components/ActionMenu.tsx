@@ -94,7 +94,7 @@ export function ActionMenu({ actions, width = 180, withSeparator = false, fullWi
     <View style={styles.container}>
       <Pressable onPress={handlePress} style={styles.button}>
         <View style={styles.buttonInner}>
-          <MenuIcon size={18} color="#2A2E33" strokeWidth={2.5} />
+          <MenuIcon size={18} color={colors.brand.dark} strokeWidth={2.5} />
         </View>
       </Pressable>
 
@@ -127,7 +127,7 @@ export function ActionMenu({ actions, width = 180, withSeparator = false, fullWi
                     {action.icon && (
                       <View style={styles.icon}>
                         {typeof action.icon === 'function' ? (
-                          <action.icon size={20} color="#2A2E33" strokeWidth={1.5} />
+                          <action.icon size={20} color={colors.brand.dark} strokeWidth={1.5} />
                         ) : (
                           action.icon
                         )}
@@ -165,11 +165,11 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { cursor: 'pointer' } }),
   },
   buttonInner: {
-    borderColor: '#D7D7D7',
+    borderColor: colors.gray[300],
     borderWidth: 1,
     borderRadius: 20,
     padding: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     minWidth: 36,
     minHeight: 36,
     justifyContent: 'center',
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   menu: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: getColorWithOpacity(colors.neutral[200], 0.6),
@@ -219,16 +219,16 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     flex: 1,
     letterSpacing: -0.1,
   },
   destructiveText: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontWeight: '600',
   },
   separator: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
   },
 });

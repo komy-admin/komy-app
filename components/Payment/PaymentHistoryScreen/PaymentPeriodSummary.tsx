@@ -68,7 +68,7 @@ export function PaymentPeriodSummary({
                 }
                 variant="pill"
                 activeColor={colors.brand.accent}
-                activeBgColor="#EEF2FF"
+                activeBgColor={colors.neutral[50]}
               />
             ))}
           </View>
@@ -93,7 +93,7 @@ export function PaymentPeriodSummary({
                 }
                 variant="pill"
                 activeColor={colors.brand.accent}
-                activeBgColor="#EEF2FF"
+                activeBgColor={colors.neutral[50]}
               />
             ))}
           </View>
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 16,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: colors.brand.dark,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,

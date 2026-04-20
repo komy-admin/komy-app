@@ -160,7 +160,7 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
 const styles = StyleSheet.create({
   loaderOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
@@ -194,14 +194,14 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 3,
     minWidth: 6,
   },
   progressText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     letterSpacing: 0.3,
     ...(Platform.OS === 'web' && {

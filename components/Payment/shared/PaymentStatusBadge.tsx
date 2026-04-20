@@ -17,21 +17,21 @@ interface PaymentStatusBadgeProps {
 const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
   switch (status) {
     case 'completed':
-      return { label: 'COMPLÉTÉ', backgroundColor: '#D1FAE5', color: '#065F46' };
+      return { label: 'COMPLÉTÉ', backgroundColor: colors.success.bg, color: colors.success.dark };
     case 'pending':
       return { label: 'EN ATTENTE', backgroundColor: colors.warning.border, color: colors.warning.text };
     case 'failed':
-      return { label: 'ÉCHOUÉ', backgroundColor: '#FEE2E2', color: '#991B1B' };
+      return { label: 'ÉCHOUÉ', backgroundColor: colors.error.bg, color: colors.error.dark };
     case 'refunded':
       return { label: 'REMBOURSÉ', backgroundColor: colors.gray[100], color: colors.gray[700] };
     case 'paid':
-      return { label: 'ENTIÈREMENT PAYÉ', backgroundColor: '#D1FAE5', color: '#065F46' };
+      return { label: 'ENTIÈREMENT PAYÉ', backgroundColor: colors.success.bg, color: colors.success.dark };
     case 'partial':
-      return { label: 'PARTIELLEMENT PAYÉ', backgroundColor: '#FED7AA', color: '#9A3412' };
+      return { label: 'PARTIELLEMENT PAYÉ', backgroundColor: colors.warning.border, color: colors.warning.text };
     case 'unpaid':
-      return { label: 'NON PAYÉ', backgroundColor: '#FEE2E2', color: '#991B1B' };
+      return { label: 'NON PAYÉ', backgroundColor: colors.error.bg, color: colors.error.dark };
     case 'overpaid':
-      return { label: 'SURPAYÉ', backgroundColor: '#E9D5FF', color: '#6B21A8' };
+      return { label: 'SURPAYÉ', backgroundColor: colors.neutral[200], color: colors.purple.alt };
     default:
       return { label: 'INCONNU', backgroundColor: colors.gray[100], color: colors.gray[700] };
   }

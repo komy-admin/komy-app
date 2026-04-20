@@ -19,7 +19,7 @@ export default function PaymentsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2563EB', // Bleu primaire
+        tabBarActiveTintColor: colors.info.base, // Bleu primaire
         tabBarInactiveTintColor: colors.gray[500], // Gris
         tabBarStyle: {
           backgroundColor: 'white',

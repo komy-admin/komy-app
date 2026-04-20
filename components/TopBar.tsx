@@ -5,6 +5,7 @@ import { Href, useRouter, usePathname } from 'expo-router'
 import { useAppSelector } from '~/store/hooks';
 import { sessionService } from '~/services/SessionService';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { colors } from '~/theme';
 
 const capitalize = (str: string) =>
   str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -108,7 +109,7 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
         </View>
         {accountName ? (
           <View style={styles.badge}>
-            <Landmark size={24} color="#2A2E33" strokeWidth={1} />
+            <Landmark size={24} color={colors.brand.dark} strokeWidth={1} />
             <Text style={styles.badgeText}>{accountName}</Text>
           </View>
         ) : null}
@@ -117,11 +118,11 @@ export function Topbar({ enableConfigClick = true }: TopBarProps) {
       <View style={styles.rightSection}>
         <View style={styles.badgesRow}>
           <Pressable onPress={handleLock} style={styles.badge}>
-            <Lock size={24} color="#2A2E33" strokeWidth={1} />
+            <Lock size={24} color={colors.brand.dark} strokeWidth={1} />
             <Text style={styles.badgeText}>Verrouiller</Text>
           </Pressable>
           <View style={styles.badge}>
-            <Calendar size={24} color="#2A2E33" strokeWidth={1} />
+            <Calendar size={24} color={colors.brand.dark} strokeWidth={1} />
             <Text style={styles.badgeText}>{currentDate}</Text>
           </View>
         </View>
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: 90,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -192,11 +193,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderColor: '#F3F3F3',
+    borderColor: colors.gray[100],
     borderWidth: 1,
   },
   badgeText: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontSize: 14,
     fontWeight: '300',
   },
@@ -214,15 +215,15 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 30,
-    borderColor: '#54575B',
+    borderColor: colors.neutral[600],
   },
   userName: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontSize: 15,
     fontWeight: '300',
   },
   userProfil: {
-    color: '#64666A',
+    color: colors.gray[500],
     fontSize: 14,
     fontWeight: '200',
   },

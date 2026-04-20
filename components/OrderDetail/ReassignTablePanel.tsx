@@ -238,6 +238,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   emptyText: {
-    color: '#999',
+    color: colors.gray[400],
   },
 });

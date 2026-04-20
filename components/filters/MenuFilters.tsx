@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Text, TextInput, Pressable, Keyboard, Platform } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { NumberInput } from '~/components/ui/number-input';
+import { colors } from '~/theme';
 
 export interface MenuFilterState {
   name: string;
@@ -50,7 +51,7 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
           value={filters.name}
           onChangeText={(text) => updateFilter('name', text)}
           placeholder="Rechercher..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.gray[400]}
         />
       </View>
 
@@ -98,7 +99,7 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
               value={filters.minPrice}
               onChangeText={(value) => updateFilter('minPrice', value)}
               placeholder="Min"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.gray[400]}
               decimalPlaces={2}
               min={0}
               currency="€"
@@ -111,7 +112,7 @@ export const MenuFilters: React.FC<MenuFiltersProps> = ({
               value={filters.maxPrice}
               onChangeText={(value) => updateFilter('maxPrice', value)}
               placeholder="Max"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.gray[400]}
               decimalPlaces={2}
               min={0}
               currency="€"
@@ -158,20 +159,20 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 2,
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 15,
     minHeight: 40,
     fontSize: 14,
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   rangeInputs: {
     flexDirection: 'row',
@@ -183,29 +184,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   numberInputStyle: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minHeight: 40,
     fontSize: 14,
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textAlign: 'center',
     flex: 1,
     width: '100%',
   },
   rangeSeparator: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
     paddingHorizontal: 4,
   },
   filterActions: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.gray[200],
   },
   clearButton: {
     paddingVertical: 10,
@@ -216,21 +217,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   clearButtonActive: {
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderWidth: 1,
-    borderColor: '#2A2E33',
+    borderColor: colors.brand.dark,
   },
   clearButtonInactive: {
     ...Platform.select({
       web: {
-        backgroundColor: '#F3F4F6', // Gris clair sur web pour éviter le noir avec opacity
+        backgroundColor: colors.gray[100], // Gris clair sur web pour éviter le noir avec opacity
       },
       default: {
         backgroundColor: 'transparent',
       }
     }),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
   },
   clearButtonText: {
     fontSize: 14,
@@ -238,10 +239,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   clearButtonTextActive: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   clearButtonTextInactive: {
-    color: '#A0A0A0',
+    color: colors.gray[400],
   },
   statusButtons: {
     flexDirection: 'row',
@@ -254,22 +255,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.gray[200],
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 40,
   },
   statusButtonActive: {
-    backgroundColor: '#2A2E33',
-    borderColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
+    borderColor: colors.brand.dark,
   },
   statusButtonText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   statusButtonTextActive: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

@@ -3,6 +3,7 @@ import { View, Text as RNText, StyleSheet } from 'react-native';
 import { Status } from '~/types/status.enum';
 import { TicketItem } from '../types/ticket.types';
 import { ItemCustomization } from './ItemCustomization';
+import { colors } from '~/theme';
 
 interface ItemRowProps {
   item: TicketItem;
@@ -70,14 +71,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: colors.gray[100],
+    backgroundColor: colors.white,
   },
   containerLast: {
     borderBottomWidth: 0,
   },
   containerOverdue: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error.bg,
   },
   containerDraft: {
     opacity: 0.3, // Items DRAFT grisés (pas encore demandés)
@@ -85,14 +86,14 @@ const styles = StyleSheet.create({
   statusBarPending: {
     width: 3,
     alignSelf: 'stretch',
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.warning.base,
     borderRadius: 2,
     marginRight: 10,
   },
   statusBarReady: {
     width: 3,
     alignSelf: 'stretch',
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.info.base,
     borderRadius: 2,
     marginRight: 10,
   },
@@ -115,21 +116,21 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   statusBadgePending: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warning.border,
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: colors.warning.base,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     flexShrink: 0,
   },
   statusBadgeReady: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: colors.info.bg,
     borderWidth: 1,
-    borderColor: '#3B82F6',  // Bleu - cohérent avec utils.ts READY
+    borderColor: colors.info.base,  // Bleu - cohérent avec utils.ts READY
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 0.5,
   },
 });

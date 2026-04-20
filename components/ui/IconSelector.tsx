@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconButtonSelected: {
-    backgroundColor: '#F8F4FF',
+    backgroundColor: colors.neutral[50],
   },
   iconButtonDisabled: {
     opacity: 0.3,

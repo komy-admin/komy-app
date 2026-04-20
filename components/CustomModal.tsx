@@ -93,7 +93,7 @@ export function CustomModal({
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
-              <View style={[styles.titleIndicator, { backgroundColor: titleColor || '#6366F1' }]} />
+              <View style={[styles.titleIndicator, { backgroundColor: titleColor || colors.brand.accent }]} />
               <Text style={styles.title}>{title}</Text>
             </View>
             
@@ -103,7 +103,7 @@ export function CustomModal({
                   styles.closeButton,
                   Platform.OS === 'web' && { cursor: 'pointer' }
                 ]}>
-                  <X size={18} color="#64748B" strokeWidth={2.5} />
+                  <X size={18} color={colors.neutral[500]} strokeWidth={2.5} />
                 </View>
               </View>
             </TouchableWithoutFeedback>
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 24,
     position: 'relative',
     zIndex: 1001,
@@ -178,13 +178,13 @@ const styles = StyleSheet.create({
   titleIndicator: {
     width: 4,
     height: 24,
-    backgroundColor: '#6366F1',
+    backgroundColor: colors.brand.accent,
     borderRadius: 2,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     letterSpacing: -0.5,
   },
   closeButton: {

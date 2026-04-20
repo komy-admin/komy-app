@@ -17,15 +17,15 @@ interface RoomFormContentProps {
   onBack?: () => void;
 }
 
-const DEFAULT_ROOM_COLOR = '#6366F1';
+const DEFAULT_ROOM_COLOR = colors.brand.accent;
 
 const ROOM_COLORS = [
-  { label: 'Indigo', hex: '#6366F1' },
-  { label: 'Violet', hex: '#8B5CF6' },
-  { label: 'Vert', hex: '#10B981' },
-  { label: 'Orange', hex: '#F59E0B' },
-  { label: 'Rose', hex: '#EC4899' },
-  { label: 'Rouge', hex: '#EF4444' },
+  { label: 'Indigo', hex: colors.brand.accent },
+  { label: 'Violet', hex: colors.purple.alt },
+  { label: 'Vert', hex: colors.success.base },
+  { label: 'Orange', hex: colors.warning.base },
+  { label: 'Rose', hex: colors.pink },
+  { label: 'Rouge', hex: colors.error.base },
 ] as const;
 
 const ROOM_SIZES = [
@@ -76,8 +76,8 @@ const RoomPreview: React.FC<{ roomW: number; roomH: number; selected: boolean }>
     const offsetX = (CONTAINER_SIZE - svgW) / 2;
     const offsetY = (CONTAINER_SIZE - svgH) / 2;
     const roomBorder = selected ? colors.brand.dark : colors.neutral[300];
-    const roomBg = selected ? '#EEEDF5' : colors.gray[50];
-    const tableFill = selected ? colors.neutral[500] : '#B0B8C4';
+    const roomBg = selected ? colors.neutral[100] : colors.gray[50];
+    const tableFill = selected ? colors.neutral[500] : colors.neutral[400];
     const tableStroke = selected ? colors.neutral[600] : colors.gray[400];
 
     return (
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   sizeCardSelected: {
     borderColor: colors.brand.dark,
     borderWidth: 2,
-    backgroundColor: '#FAFAFE',
+    backgroundColor: colors.gray[50],
   },
   sizeInfo: {
     justifyContent: 'center',
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.brand.accent,
     borderRadius: 10,
-    backgroundColor: '#FAFAFE',
+    backgroundColor: colors.gray[50],
     gap: 10,
   },
   customPreviewInfo: {

@@ -243,7 +243,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
       {/* Header */}
       <View style={styles.panelHeader}>
         <Pressable onPress={onCancel} style={styles.backButton}>
-          <ArrowLeftToLine size={20} color="#2A2E33" />
+          <ArrowLeftToLine size={20} color={colors.brand.dark} />
         </Pressable>
         <View style={styles.titleContainer}>
           <RNText style={styles.titleText} numberOfLines={1}>
@@ -432,8 +432,8 @@ const StatusBadgeInline: React.FC<{
   const statusLabel = getStatusText(s);
 
   const hasPaidBadge = paymentStatus === 'paid' || paymentStatus === 'partial';
-  const paidBg = paymentStatus === 'paid' ? colors.error.bg : '#FFF7ED';
-  const paidColor = paymentStatus === 'paid' ? colors.error.base : '#EA580C';
+  const paidBg = paymentStatus === 'paid' ? colors.error.bg : colors.warning.bg;
+  const paidColor = paymentStatus === 'paid' ? colors.error.base : colors.warning.dark;
   const paidLabel = paymentStatus === 'paid' ? 'Payé' : 'Partiel';
 
   return (
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 0.5,
   },
   scrollArea: {
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   receiptNote: {
     fontSize: 11,
     fontStyle: 'italic',
-    color: '#92400E',
+    color: colors.warning.text,
     marginTop: 3,
     paddingLeft: 4,
   },
@@ -980,7 +980,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonDisabled: {
     opacity: 0.5,

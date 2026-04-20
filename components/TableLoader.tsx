@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LoadingSpinner } from './LoadingSpinner';
+import { colors } from '~/theme';
 
 interface TableLoaderProps {
   message?: string;
@@ -14,7 +15,7 @@ export const TableLoader: React.FC<TableLoaderProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <LoadingSpinner size={40} color="#6366F1" />
+        <LoadingSpinner size={40} color={colors.brand.accent} />
         {showMessage && (
           <Text style={styles.message}>{message}</Text>
         )}
@@ -28,7 +29,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.gray[50],
     minHeight: 200,
   },
   content: {
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
   message: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666666',
+    color: colors.gray[500],
     fontWeight: '400',
     textAlign: 'center',
   },

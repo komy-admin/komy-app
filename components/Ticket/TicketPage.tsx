@@ -11,7 +11,7 @@ import { RootState } from '~/store';
 import { showApiError } from '~/lib/apiErrorHandler';
 import { useItemGrouping } from '~/hooks/useItemGrouping';
 import { filterItemsByArea } from '~/lib/itemFilters';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface TicketPageProps {
   area: 'kitchen' | 'bar';
@@ -87,10 +87,10 @@ export default function TicketPage({ area }: TicketPageProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FBFBFB',
+    backgroundColor: colors.white,
   },
   banner: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     ...shadows.bottom,
   },
   bannerText: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.5,

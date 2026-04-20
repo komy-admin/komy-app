@@ -21,9 +21,9 @@ const DEFAULT_DURATIONS: Record<ToastType, number> = {
 };
 
 const TOAST_COLORS: Record<ToastType, string> = {
-  success: '#2D6A4F',
-  error: '#D8315B',
-  warning: '#FFAA00',
+  success: colors.success.text,
+  error: colors.error.base,
+  warning: colors.warning.base,
   info: colors.info.base,
 };
 

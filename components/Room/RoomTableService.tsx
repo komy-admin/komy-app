@@ -45,7 +45,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   editionMode,
   outOfBounds = false,
   roomColor,
-  tableBg = '#F5F4FA',
+  tableBg = colors.neutral[50],
   onPress,
   onLongPress,
   selectedIcon = 'play',
@@ -108,7 +108,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   const tableStyle = useMemo(() => {
     if (outOfBounds) {
       return {
-        backgroundColor: '#FEE2E2',
+        backgroundColor: colors.error.bg,
         borderWidth: 2,
         borderColor: colors.error.base,
         borderStyle: 'dashed' as const,

@@ -152,7 +152,7 @@ export const ItemFormPanel: React.FC<ItemFormPanelProps> = ({
               <View key={rowIndex} style={styles.colorGridRow}>
                 {COLOR_COLUMNS.map((column, colIndex) => {
                   const c = column[rowIndex];
-                  if (c === '#FFFFFF') {
+                  if (c === colors.white) {
                     return (
                       <Pressable
                         key={`${rowIndex}-${colIndex}`}
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   },
   toggleOptionNote: {
     backgroundColor: colors.warning.bg,
-    borderColor: '#FBBF24',
+    borderColor: colors.warning.base,
   },
   toggleIndicator: {
     width: 10,

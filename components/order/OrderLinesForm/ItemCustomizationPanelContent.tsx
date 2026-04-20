@@ -102,17 +102,17 @@ const getFieldTypeIconColor = (fieldType: string): string => {
 const getFieldTypeLightBgColor = (fieldType: string): string => {
   switch (fieldType) {
     case 'select':
-      return '#EFF6FF';
+      return colors.info.bg;
     case 'multi-select':
-      return '#F5F3FF';
+      return getColorWithOpacity(colors.purple.alt, 0.1);
     case 'toggle':
-      return '#ECFDF5';
+      return colors.success.bg;
     case 'number':
-      return '#FEF3C7';
+      return colors.warning.border;
     case 'text':
-      return '#FCE7F3';
+      return colors.pink;
     default:
-      return '#F1F5F9';
+      return colors.neutral[100];
   }
 };
 
@@ -233,7 +233,7 @@ export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelConte
       {onBack ? (
         <View style={styles.panelHeaderBack}>
           <Pressable onPress={onBack} style={styles.backButton}>
-            <ArrowLeftToLine size={20} color="#2A2E33" />
+            <ArrowLeftToLine size={20} color={colors.brand.dark} />
           </Pressable>
           <View style={styles.backTitleContainer}>
             <RNText style={styles.backTitle} numberOfLines={1}>
@@ -642,7 +642,7 @@ const ToggleField: React.FC<TagFieldProps> = ({ tag, value, onChange, hasError }
         <Switch
           value={boolValue}
           onValueChange={onChange}
-          trackColor={{ false: colors.neutral[200], true: '#BFDBFE' }}
+          trackColor={{ false: colors.neutral[200], true: colors.info.bg }}
           thumbColor={boolValue ? colors.info.base : colors.neutral[300]}
           ios_backgroundColor={colors.neutral[200]}
         />
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
   backTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 0.3,
   },
   backSubtitle: {
@@ -827,7 +827,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   requiredBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error.bg,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
   },
   radioOptionActive: {
     borderColor: colors.info.base,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.info.bg,
   },
   radio: {
     width: 18,
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
   },
   toggleOptionActive: {
     borderColor: colors.info.base,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.info.bg,
   },
   toggleContent: {
     flex: 1,
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonText: {
     fontSize: 13,

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View, Text, Pressable, Platform } from 'react-n
 import { TicketCard } from './cards/TicketCard';
 import { ItemGroup } from '~/types/kitchen.types';
 import { Status } from '~/types/status.enum';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface TicketViewProps {
   itemGroups: ItemGroup[];
@@ -109,7 +109,7 @@ export function TicketView({ itemGroups, onStatusChange }: TicketViewProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
   },
   contentContainer: {
     paddingVertical: 16,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
   },
 });

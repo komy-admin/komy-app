@@ -448,15 +448,15 @@ export const MenuConfiguration: React.FC<MenuConfigurationProps> = ({
 };
 
 const COLORS = {
-  primary: '#2A2E33',
+  primary: colors.brand.dark,
   success: colors.success.dark,
   warning: colors.warning.base,
-  text: '#2A2E33',
+  text: colors.brand.dark,
   textSecondary: colors.gray[500],
   background: colors.white,
   border: colors.neutral[200],
   backgroundGray: colors.gray[100],
-  selectedBackground: '#ECFDF5',
+  selectedBackground: colors.success.bg,
   selectedBorder: colors.success.dark
 };
 
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   categoryHeaderError: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error.bg,
     borderBottomColor: colors.error.border,
   },
 
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
   },
 
   categorySupplementTag: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.neutral[50],
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   categorySupplementTagText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#4338CA',
+    color: colors.brand.accent,
   },
 
   categoryItemsList: {
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   },
 
   menuItemSupplement: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warning.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
   menuItemSupplementText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#92400E',
+    color: colors.warning.text,
   },
 
   menuItemActions: {
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -252,7 +252,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
           >
             <View style={[styles.createPanelIconArticle, !hasItemTypes && styles.createPanelIconDisabled]}>
               {hasItemTypes
-                ? <PlusCircle size={22} color={colors.brand.accent} strokeWidth={2.5} />
+                ? <PlusCircle size={22} color={colors.brand.dark} strokeWidth={2.5} />
                 : <Lock size={18} color={colors.gray[400]} strokeWidth={2} />
               }
             </View>
@@ -261,6 +261,11 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
               <Text style={[styles.createPanelCardDescArticle, !hasItemTypes && styles.createPanelCardDescDisabled]}>Ajouter un nouvel article au catalogue</Text>
             </View>
           </TouchableOpacity>
+          <View style={styles.createPanelDividerRow}>
+            <View style={styles.createPanelDividerLine} />
+            <Text style={styles.createPanelDividerText}>ou</Text>
+            <View style={styles.createPanelDividerLine} />
+          </View>
           <TouchableOpacity
             style={[styles.createPanelCardMenu, !hasItemTypes && styles.createPanelCardDisabled]}
             onPress={hasItemTypes ? onCreateMenu : undefined}
@@ -268,7 +273,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
           >
             <View style={[styles.createPanelIconMenu, !hasItemTypes && styles.createPanelIconDisabled]}>
               {hasItemTypes
-                ? <Layers size={22} color="#16A34A" strokeWidth={2.5} />
+                ? <Layers size={22} color={colors.brand.dark} strokeWidth={2.5} />
                 : <Lock size={18} color={colors.gray[400]} strokeWidth={2} />
               }
             </View>
@@ -323,30 +328,30 @@ const styles = StyleSheet.create({
   createPanelCardArticle: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.gray[100],
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#C7D2FE',
+    borderColor: colors.brand.dark,
     gap: 14,
   },
   createPanelCardMenu: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: colors.gray[100],
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#BBF7D0',
+    borderColor: colors.brand.dark,
     gap: 14,
   },
   createPanelIconArticle: {
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#E0E7FF',
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -354,7 +359,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -364,26 +369,26 @@ const styles = StyleSheet.create({
   createPanelCardTitleArticle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#4338CA',
+    color: colors.brand.dark,
     marginBottom: 2,
   },
   createPanelCardDescArticle: {
     fontSize: 12,
-    color: colors.brand.accent,
+    color: colors.neutral[500],
   },
   createPanelCardTitleMenu: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#15803D',
+    color: colors.brand.dark,
     marginBottom: 2,
   },
   createPanelCardDescMenu: {
     fontSize: 12,
-    color: '#16A34A',
+    color: colors.neutral[500],
   },
   createPanelCardDisabled: {
     backgroundColor: colors.neutral[50],
-    borderColor: colors.neutral[200],
+    borderColor: colors.neutral[300],
     borderStyle: 'dashed' as const,
   },
   createPanelIconDisabled: {
@@ -393,7 +398,24 @@ const styles = StyleSheet.create({
     color: colors.gray[400],
   },
   createPanelCardDescDisabled: {
-    color: colors.neutral[300],
+    color: colors.neutral[400],
+  },
+  createPanelDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 12,
+  },
+  createPanelDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray[200],
+  },
+  createPanelDividerText: {
+    paddingHorizontal: 14,
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.gray[400],
   },
   createPanelHint: {
     fontSize: 12,

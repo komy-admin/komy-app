@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { X, SlidersHorizontal } from 'lucide-react-native';
 import { Text } from './ui';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface SidePanelProps {
   children: React.ReactNode;
@@ -56,7 +56,7 @@ export function SidePanel({
 
   const getHeaderStyle = () => {
     return {
-      backgroundColor: onBack ? '#FFFFFF' : '#F1F1F1',
+      backgroundColor: onBack ? colors.white : colors.gray[100],
     };
   };
 
@@ -94,7 +94,7 @@ export function SidePanel({
           <View style={styles.collapsedBarContent}>
             {/* Section icône */}
             <View style={styles.fullWidthIconSection}>
-              <SlidersHorizontal size={20} color="#FFFFFF" strokeWidth={2} />
+              <SlidersHorizontal size={20} color={colors.white} strokeWidth={2} />
             </View>
 
             {/* Texte vertical */}
@@ -115,7 +115,7 @@ export function SidePanel({
                     style={{
                       fontSize: 14,
                       fontWeight: '600',
-                      color: '#2A2E33',
+                      color: colors.brand.dark,
                       letterSpacing: 1.2,
                       textAlign: 'center',
                     }}
@@ -157,7 +157,7 @@ export function SidePanel({
               </Text>
               {shouldShowCloseButton() && (
                 <Pressable onPress={handleCloseAction} style={styles.backButton}>
-                  <X size={24} color="#2A2E33" />
+                  <X size={24} color={colors.brand.dark} />
                 </Pressable>
               )}
             </View>
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRightWidth: 0,
     ...shadows.right,
   },
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     maxWidth: 280,
     textAlign: 'left',
   },
@@ -223,9 +223,9 @@ const styles = StyleSheet.create({
   collapsedBar: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: colors.neutral[200],
     flexDirection: 'column',
     ...shadows.right,
   },
@@ -237,9 +237,9 @@ const styles = StyleSheet.create({
   fullWidthIconSection: {
     width: 60,
     height: 60,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderLeftWidth: 1,
-    borderLeftColor: '#FFFFFF',
+    borderLeftColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },

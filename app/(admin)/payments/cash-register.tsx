@@ -409,7 +409,7 @@ export default function CashRegisterScreen() {
             <View className="flex-row items-center justify-between">
               <View>
                 <View className="flex-row items-center gap-2 mb-1">
-                  <Banknote size={20} color="#2563EB" />
+                  <Banknote size={20} color={colors.info.base} />
                   <Text className="text-sm font-semibold text-blue-900">
                     Espèces en caisse
                   </Text>

@@ -288,18 +288,21 @@ const styles = StyleSheet.create({
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
+    minHeight: 44,
   },
   createButtonDisabled: {
-    backgroundColor: '#949799',
+    backgroundColor: colors.neutral[300],
   },
   createButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 
   // ScrollView

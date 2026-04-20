@@ -66,7 +66,7 @@ export function ActionButtons({
   return (
     <>
       <TouchableOpacity style={styles.readyButton} onPress={handleReady} activeOpacity={0.7}>
-        <Bell size={15} color="#FFFFFF" strokeWidth={2.5} />
+        <Bell size={15} color={colors.white} strokeWidth={2.5} />
         <RNText style={styles.readyButtonText}>Prêt à servir</RNText>
       </TouchableOpacity>
 
@@ -82,7 +82,7 @@ export function ActionButtons({
               <View style={styles.modalHeader}>
                 <RNText style={styles.modalTitle}>Notifier le Service</RNText>
                 <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalClose}>
-                  <X size={20} color="#6B7280" strokeWidth={2} />
+                  <X size={20} color={colors.gray[500]} strokeWidth={2} />
                 </TouchableOpacity>
               </View>
 
@@ -105,7 +105,7 @@ export function ActionButtons({
                   onPress={handleNotifyConfirm}
                   activeOpacity={0.7}
                 >
-                  <Bell size={16} color="#FFFFFF" strokeWidth={2} />
+                  <Bell size={16} color={colors.white} strokeWidth={2} />
                   <RNText style={styles.modalButtonConfirmText}>Notifier</RNText>
                 </TouchableOpacity>
               </View>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   readyButton: {
     flexDirection: 'row',
     gap: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     paddingVertical: 12,
     paddingHorizontal: 16,
     margin: 12,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   readyButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 0.5,
   },
   modalOverlay: {
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -159,20 +159,20 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   modalClose: {
     padding: 4,
   },
   modalText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.gray[500],
     lineHeight: 22,
     marginBottom: 24,
   },
   modalBold: {
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   modalActions: {
     flexDirection: 'row',
@@ -183,13 +183,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     alignItems: 'center',
   },
   modalButtonCancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   modalButtonConfirm: {
     flex: 1,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.info.base,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
@@ -205,6 +205,6 @@ const styles = StyleSheet.create({
   modalButtonConfirmText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

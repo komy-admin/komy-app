@@ -9,7 +9,7 @@ export const useItemTypes = () => {
   const dispatch = useDispatch();
   
   // Récupérer les données depuis le store
-  const itemTypes = useSelector(selectItemTypes);
+  const itemTypes: ItemType[] = useSelector(selectItemTypes);
   const loading = false; // Géré globalement maintenant
   const error = null; // Géré globalement maintenant
 

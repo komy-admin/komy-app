@@ -268,7 +268,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
             <View style={styles.itemsGrid}>
               {allTypeItems.map((item) => {
                 const isAssigned = assignedIds.includes(item.id);
-                const itemColor = item.color || '#6B7280';
+                const itemColor = item.color || colors.gray[500];
                 return (
                   <Pressable
                     key={item.id}
@@ -467,7 +467,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
                     {categoryItems.map((ci) => {
                       const item = items.find(i => i.id === ci.itemId);
                       if (!item) return null;
-                      const itemColor = item.color || '#6B7280';
+                      const itemColor = item.color || colors.gray[500];
                       return (
                         <View
                           key={ci.tempId}
@@ -1222,7 +1222,7 @@ const styles = StyleSheet.create({
   },
   assignedItemToggleActive: {
     backgroundColor: colors.success.bg,
-    borderColor: '#A7F3D0',
+    borderColor: colors.success.border,
   },
   assignedItemToggleInactive: {
     backgroundColor: colors.gray[100],

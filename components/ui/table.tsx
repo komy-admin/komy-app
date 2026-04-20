@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: '#ECEEF0',
+    backgroundColor: colors.gray[100],
     minHeight: 52,
     alignItems: 'center',
   },

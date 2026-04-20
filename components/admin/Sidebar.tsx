@@ -65,7 +65,8 @@ export function AdminSidebar() {
            className="py-0.5 items-center"
            onPress={() => handleNavPress(href, isActive)}
          >
-            <View className="flex items-center justify-center rounded-md w-[78px] h-[72px] overflow-hidden" style={isActive ? {backgroundColor: '#54575B', opacity: 1} : {}}>
+            <View className="flex items-center justify-center rounded-md w-[78px] h-[72px] overflow-hidden">
+              {isActive && <View style={styles.activeOverlay} />}
               <Icon
                 size={26}
                 color={isActive ? 'white' : 'gray'}
@@ -98,5 +99,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  activeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.gray[500],
+    opacity: 0.5,
   },
 });

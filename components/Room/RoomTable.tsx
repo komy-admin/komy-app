@@ -74,7 +74,7 @@ const RoomTable: React.FC<TableViewProps> = ({
   currentZoomScale,
   isSelected,
   roomColor,
-  tableBg = '#F5F4FA',
+  tableBg = colors.neutral[50],
   onPress,
   onLongPress,
   onUpdate,
@@ -539,7 +539,7 @@ const RoomTable: React.FC<TableViewProps> = ({
     borderRadius: tableBorderRadius,
     ...(isEditing
       ? { borderWidth: 3, borderColor: colors.brand.dark, borderStyle: 'solid' as const }
-      : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const }
+      : { borderWidth: 2, borderColor: colors.gray[400], borderStyle: 'solid' as const }
     ),
   }), [status, isEditing, tableBg, tableBorderRadius]);
 

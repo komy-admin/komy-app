@@ -8,7 +8,7 @@ import { Tag } from '~/types/tag.types';
 export const useTags = () => {
   const dispatch = useDispatch();
 
-  const tags = useSelector(selectTags);
+  const tags: Tag[] = useSelector(selectTags);
 
   const createTag = useCallback(async (data: Partial<Tag>): Promise<Tag> => {
     try {

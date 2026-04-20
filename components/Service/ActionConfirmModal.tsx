@@ -25,7 +25,7 @@ const VARIANT_CONFIG = {
     title: 'Réclamer',
     subtitle: 'Confirmation de réclamation',
     confirmText: 'Confirmer la réclamation',
-    color: '#FB923C',
+    color: colors.warning.base,
   },
   serve: {
     title: 'Servir',

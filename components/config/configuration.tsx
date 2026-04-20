@@ -303,7 +303,7 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
           <Text style={styles.tabSubtitle}>Gérer les catégories de votre menu</Text>
         </View>
         <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.brand.dark }]} onPress={onCreateItemType}>
-          <Text style={styles.createButtonText}>Nouveau type</Text>
+          <Text style={styles.createButtonText}>Ajouter</Text>
         </TouchableOpacity>
       </View>
 
@@ -316,9 +316,9 @@ const ItemTypesTab: React.FC<ItemTypesTabProps> = ({ itemTypes, onCreateItemType
             <Utensils size={48} color={colors.neutral[300]} strokeWidth={1.5} />
             <Text style={styles.emptyStateTitle}>Aucun type d'article configuré</Text>
             <Text style={styles.emptyStateText}>Créez votre premier type pour commencer</Text>
-            <TouchableOpacity style={[styles.emptyStateButton, { borderColor: colors.brand.accent }]} onPress={onCreateItemType}>
-              <Plus size={20} color={colors.brand.accent} strokeWidth={2} />
-              <Text style={[styles.emptyStateButtonText, { color: colors.brand.accent }]}>Créer un type</Text>
+            <TouchableOpacity style={[styles.emptyStateButton, { borderColor: colors.brand.dark }]} onPress={onCreateItemType}>
+              <Plus size={20} color={colors.brand.dark} strokeWidth={2} />
+              <Text style={[styles.emptyStateButtonText, { color: colors.brand.dark }]}>Créer un type</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -353,7 +353,7 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
           <Text style={styles.tabSubtitle}>Créer des modificateurs pour vos articles</Text>
         </View>
         <TouchableOpacity style={styles.createButton} onPress={onCreateTag}>
-          <Text style={styles.createButtonText}>Nouveau tag</Text>
+          <Text style={styles.createButtonText}>Ajouter</Text>
         </TouchableOpacity>
       </View>
 
@@ -366,9 +366,9 @@ const TagsTab: React.FC<TagsTabProps> = ({ tags, onCreateTag, onEditTag, onDelet
             <TagsIcon size={48} color={colors.neutral[300]} strokeWidth={1.5} />
             <Text style={styles.emptyStateTitle}>Aucun tag configuré</Text>
             <Text style={styles.emptyStateText}>Créez votre premier tag pour commencer</Text>
-            <TouchableOpacity style={styles.emptyStateButton} onPress={onCreateTag}>
-              <Plus size={20} color={colors.purple.base} strokeWidth={2} />
-              <Text style={styles.emptyStateButtonText}>Créer un tag</Text>
+            <TouchableOpacity style={[styles.emptyStateButton, { borderColor: colors.brand.dark }]} onPress={onCreateTag}>
+              <Plus size={20} color={colors.brand.dark} strokeWidth={2} />
+              <Text style={[styles.emptyStateButtonText, { color: colors.brand.dark }]}>Créer un tag</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -485,8 +485,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Salles */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.warning.base, 0.1) }]}>
-                <LayoutDashboard size={24} color={colors.warning.base} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <LayoutDashboard size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Salles</Text>
@@ -505,8 +505,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Équipe */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.info.base, 0.1) }]}>
-                <Users size={24} color={colors.info.base} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Users size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Équipe</Text>
@@ -525,8 +525,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Cuisine */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.success.base, 0.1) }]}>
-                <ChefHat size={24} color={colors.success.base} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <ChefHat size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Cuisine</Text>
@@ -546,8 +546,8 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Bar */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.purple.base, 0.1) }]}>
-                <Wine size={24} color={colors.purple.base} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Wine size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Bar</Text>
@@ -578,8 +578,6 @@ interface ItemTypeListItemProps {
 
 const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType, onEdit, onDelete }) => {
   const isBar = itemType.type === 'bar';
-  const iconColor = isBar ? colors.purple.base : colors.success.base;
-  const backgroundColor = isBar ? colors.neutral[50] : colors.success.bg;
 
   // Récupérer l'icône enregistrée
   const iconData = AVAILABLE_ICONS.find(i => i.name === itemType.icon);
@@ -589,14 +587,14 @@ const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType
     <Pressable>
       <View style={styles.tagItem}>
         <View style={styles.tagItemHeader}>
-          <View style={[styles.tagItemIcon, { backgroundColor }]}>
-            <MaterialCommunityIcons name={iconName as any} size={20} color={iconColor} />
+          <View style={styles.tagItemIcon}>
+            <MaterialCommunityIcons name={iconName as any} size={20} color={colors.brand.dark} />
           </View>
           <View style={styles.tagItemContent}>
             <Text style={styles.tagItemTitle}>{itemType.name}</Text>
             <View style={styles.tagItemMeta}>
-              <View style={[styles.tagBadge, { backgroundColor, borderColor: iconColor }]}>
-                <Text style={[styles.tagBadgeText, { color: iconColor }]}>
+              <View style={[styles.tagBadge, { backgroundColor: isBar ? colors.neutral[50] : colors.success.bg, borderColor: isBar ? colors.purple.base : colors.success.base }]}>
+                <Text style={[styles.tagBadgeText, { color: isBar ? colors.purple.base : colors.success.base }]}>
                   {isBar ? 'Bar' : 'Cuisine'}
                 </Text>
               </View>
@@ -640,7 +638,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, onEdit, onDel
       <View style={styles.tagItem}>
         <View style={styles.tagItemHeader}>
           <View style={styles.tagItemIcon}>
-            <TagsIcon size={20} color={colors.purple.base} strokeWidth={2} />
+            <TagsIcon size={20} color={colors.brand.dark} strokeWidth={2} />
           </View>
           <View style={styles.tagItemContent}>
             <Text style={styles.tagItemTitle}>{tag.label}</Text>
@@ -755,15 +753,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.brand.dark,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
+    minHeight: 44,
   },
   createButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   tagsList: {
     flex: 1,
@@ -793,14 +794,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.purple.base,
+    borderColor: colors.brand.dark,
     gap: 8,
     marginTop: 8,
   },
   emptyStateButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.purple.base,
+    color: colors.brand.dark,
   },
   tagItem: {
     backgroundColor: colors.white,
@@ -816,10 +817,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tagItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.neutral[50],
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },

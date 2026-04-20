@@ -36,7 +36,7 @@ export const RoomModeSelection: React.FC<RoomModeSelectionProps> = ({
           activeOpacity={0.7}
         >
           <View style={styles.createIconWrapper}>
-            <Plus size={24} color="#16A34A" strokeWidth={2.5} />
+            <Plus size={22} color={colors.brand.dark} strokeWidth={2.5} />
           </View>
           <View style={styles.createContent}>
             <Text style={styles.createTitle}>Créer une salle</Text>
@@ -106,18 +106,18 @@ const styles = StyleSheet.create({
   createCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: colors.gray[100],
     borderRadius: 12,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: '#BBF7D0',
+    borderColor: colors.brand.dark,
     gap: 14,
   },
   createIconWrapper: {
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -127,12 +127,12 @@ const styles = StyleSheet.create({
   createTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#15803D',
+    color: colors.brand.dark,
     marginBottom: 2,
   },
   createDescription: {
     fontSize: 12,
-    color: '#16A34A',
+    color: colors.neutral[500],
   },
   separator: {
     flexDirection: 'row',

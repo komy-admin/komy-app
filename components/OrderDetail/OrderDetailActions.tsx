@@ -179,7 +179,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             icon={Send}
             color={hasReadyItems ? colors.success.dark : colors.warning.dark}
             bg={hasReadyItems ? colors.success.bg : colors.warning.bg}
-            border={hasReadyItems ? '#6EE7B7' : '#FBBF24'}
+            border={hasReadyItems ? colors.success.border : colors.warning.base}
             label={hasReadyItems ? 'Servir' : 'Réclamer'}
             onPress={hasReadyItems ? onServe : onClaim}
             compact={compact}
@@ -188,8 +188,8 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         <ActionButton
           icon={Plus}
           color={colors.brand.accentDark}
-          bg="#EEF2FF"
-          border="#A5B4FC"
+          bg={getColorWithOpacity(colors.brand.accentDark, 0.1)}
+          border={colors.brand.accentDark}
           label="Ajouter"
           onPress={onAddItem}
           compact={compact}
@@ -199,9 +199,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         {onReassignTable && (
           <ActionButton
             icon={Repeat}
-            color="#2563EB"
+            color={colors.info.base}
             bg={colors.info.bg}
-            border="#93C5FD"
+            border={colors.info.base}
             label="Changer table"
             onPress={onReassignTable}
             compact={compact}
@@ -211,7 +211,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           icon={Wallet}
           color={colors.success.dark}
           bg={colors.success.bg}
-          border="#6EE7B7"
+          border={colors.success.border}
           label="Paiement"
           onPress={onPayment}
           disabled={order.paymentStatus === 'paid'}
@@ -228,7 +228,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             icon={CircleCheck}
             color={colors.warning.dark}
             bg={colors.warning.bg}
-            border="#FBBF24"
+            border={colors.warning.base}
             label="Terminer"
             onPress={onTerminate}
             disabled={order.paymentStatus !== 'paid'}
@@ -256,7 +256,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           <TextInput
             style={styles.noteInput}
             placeholder="Ajouter une note..."
-            placeholderTextColor="#C4C9D1"
+            placeholderTextColor={colors.neutral[300]}
             multiline
             textAlignVertical="top"
             value={noteText}
@@ -306,11 +306,11 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           compact && styles.infoTileCompact,
           summary.remaining > 0 && summary.paidAmount > 0 && {
             backgroundColor: colors.warning.bg,
-            borderColor: '#FBBF24',
+            borderColor: colors.warning.base,
           },
           summary.remaining === 0 && summary.paidAmount > 0 && {
             backgroundColor: colors.success.bg,
-            borderColor: '#6EE7B7',
+            borderColor: colors.success.border,
           },
         ]}>
           {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? colors.warning.dark : summary.remaining === 0 && summary.paidAmount > 0 ? colors.success.dark : colors.gray[400]} strokeWidth={1.8} />}

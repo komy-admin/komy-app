@@ -172,7 +172,7 @@ export default function ExportsScreen() {
                   : 'bg-white border-gray-300'
               }`}
             >
-              <FileText size={20} color={selectedFormat === 'csv' ? '#2563EB' : colors.gray[500]} />
+              <FileText size={20} color={selectedFormat === 'csv' ? colors.info.base : colors.gray[500]} />
               <Text
                 className={`text-sm font-medium mt-1 ${
                   selectedFormat === 'csv' ? 'text-blue-600' : 'text-gray-700'
@@ -190,7 +190,7 @@ export default function ExportsScreen() {
                   : 'bg-white border-gray-300'
               }`}
             >
-              <FileText size={20} color={selectedFormat === 'pdf' ? '#2563EB' : colors.gray[500]} />
+              <FileText size={20} color={selectedFormat === 'pdf' ? colors.info.base : colors.gray[500]} />
               <Text
                 className={`text-sm font-medium mt-1 ${
                   selectedFormat === 'pdf' ? 'text-blue-600' : 'text-gray-700'
@@ -210,7 +210,7 @@ export default function ExportsScreen() {
             >
               <FileSpreadsheet
                 size={20}
-                color={selectedFormat === 'xlsx' ? '#2563EB' : colors.gray[500]}
+                color={selectedFormat === 'xlsx' ? colors.info.base : colors.gray[500]}
               />
               <Text
                 className={`text-sm font-medium mt-1 ${
@@ -229,7 +229,7 @@ export default function ExportsScreen() {
         <Text className="text-lg font-semibold mb-3">Exports disponibles</Text>
 
         <ExportCard
-          icon={<ReceiptEuro size={20} color="#2563EB" />}
+          icon={<ReceiptEuro size={20} color={colors.info.base} />}
           title="Journal des encaissements"
           description="Liste chronologique de tous les paiements avec détails complets"
           type="journal"

@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: colors.brand.dark,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.04,
         shadowRadius: 8,

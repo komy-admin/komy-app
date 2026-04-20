@@ -8,7 +8,7 @@ import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { shadows, colors } from '~/theme';
 
-const ACTIVE_COLOR = '#2A2E33';
+const ACTIVE_COLOR = colors.brand.dark;
 const INACTIVE_COLOR = colors.gray[400];
 
 /**

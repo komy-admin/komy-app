@@ -1,10 +1,11 @@
 import React, { useMemo } from "react";
 import { View, ViewStyle } from "react-native";
 import { Table } from "~/types/table.types";
+import { colors } from '~/theme';
 
 // --- Constantes partagées ---
 
-const CHAIR_COLOR = '#D9D9D9';
+const CHAIR_COLOR = colors.gray[300];
 const GAP = 10;
 
 // --- RoomChairs : distribution linéaire (tables carrées) ---

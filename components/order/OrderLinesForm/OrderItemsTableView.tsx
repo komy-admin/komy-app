@@ -117,7 +117,7 @@ const OrderItemRow = memo<OrderItemRowProps>(({
         <View
           style={[
             styles.addButton,
-            { backgroundColor: '#2A2E33' }
+            { backgroundColor: colors.brand.dark }
           ]}
         >
           <Plus size={20} color={colors.white} strokeWidth={2.5} />
@@ -191,7 +191,7 @@ const MenuRow = memo<MenuRowProps>(({
       </View>
 
       <View style={styles.actionCell}>
-        <View style={[styles.addButton, { backgroundColor: '#2A2E33' }]}>
+        <View style={[styles.addButton, { backgroundColor: colors.brand.dark }]}>
           <Plus size={20} color={colors.white} strokeWidth={2.5} />
         </View>
       </View>
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   nameText: {
     fontSize: 15,
     fontWeight: '400',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   descriptionText: {
     fontSize: 12,
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   tagsCell: {
     flex: 2,
