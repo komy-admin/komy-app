@@ -36,7 +36,7 @@ const getLinePaymentStatus = (line: OrderLine): { isPaid: boolean; isPartiallyPa
 });
 
 export default function PaymentView({ order, tableName, onBack, onPaymentComplete, onTerminate }: PaymentViewProps) {
-  const { createPayment } = usePayments();
+  const { createPayment, printTicket } = usePayments();
   const { showToast } = useToast();
 
   // États principaux
@@ -45,6 +45,8 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCustomDialog, setShowCustomDialog] = useState<string | null>(null);
+  const [showPrintDialog, setShowPrintDialog] = useState<{ paymentId: string; amount: number } | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const orderTotals = useMemo(() => {
     return {
@@ -166,22 +168,23 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
 
     setIsProcessing(true);
     try {
-      await createPayment({
+      const payment = await createPayment({
         orderId: order.id,
         amount: selectedAmount,
         paymentMethod,
         allocations: buildAllocations()
       });
+      const paidAmount = selectedAmount;
       setSelectedItems(new Set());
       setItemFractions(new Map());
       setPaymentMethod(null);
-      onPaymentComplete();
       setIsProcessing(false);
+      setShowPrintDialog({ paymentId: payment.id, amount: paidAmount });
     } catch (error) {
       showApiError(error, showToast, 'Une erreur est survenue lors du paiement');
       setIsProcessing(false);
     }
-  }, [selectedAmount, paymentMethod, createPayment, order.id, buildAllocations, onPaymentComplete]);
+  }, [selectedAmount, paymentMethod, createPayment, order.id, buildAllocations]);
 
   // Render d'un item de la liste
   const renderOrderLine = useCallback((line: OrderLine) => {
@@ -463,9 +466,83 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
     );
   };
 
+  const handlePrintTicket = useCallback(async () => {
+    if (!showPrintDialog) return;
+    setIsPrinting(true);
+    try {
+      await printTicket(showPrintDialog.paymentId);
+      showToast('Ticket envoyé à l\'impression', 'success');
+    } catch {
+      showToast('Erreur lors de l\'impression du ticket', 'error');
+    } finally {
+      setIsPrinting(false);
+      setShowPrintDialog(null);
+      onPaymentComplete();
+    }
+  }, [showPrintDialog, printTicket, showToast, onPaymentComplete]);
+
+  const handleSkipPrint = useCallback(() => {
+    setShowPrintDialog(null);
+    onPaymentComplete();
+  }, [onPaymentComplete]);
+
+  const PrintTicketModal = () => {
+    if (!showPrintDialog) return null;
+
+    return (
+      <Modal
+        visible={true}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleSkipPrint}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center"
+          onPress={handleSkipPrint}
+        >
+          <Pressable
+            className="bg-white rounded-lg p-6 w-80"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="items-center mb-4">
+              <View className="w-12 h-12 rounded-full bg-green-100 items-center justify-center mb-3">
+                <Check size={24} color="#16A34A" />
+              </View>
+              <Text className="text-lg font-semibold text-center">Paiement enregistré</Text>
+              <Text className="text-sm text-gray-500 mt-1">{formatPrice(showPrintDialog.amount)}</Text>
+            </View>
+
+            <View className="gap-2">
+              <Button
+                className="w-full bg-blue-500 h-11"
+                onPress={handlePrintTicket}
+                disabled={isPrinting}
+              >
+                <View className="flex-row items-center justify-center gap-2">
+                  <Ticket size={18} color="white" />
+                  <Text className="text-white font-medium">
+                    {isPrinting ? 'Impression...' : 'Imprimer le ticket'}
+                  </Text>
+                </View>
+              </Button>
+              <Button
+                className="w-full bg-gray-100 h-11"
+                onPress={handleSkipPrint}
+                disabled={isPrinting}
+              >
+                <Text className="text-gray-700 font-medium">Fermer</Text>
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    );
+  };
+
   return (
     <View className="flex-1 bg-white">
       {CustomPercentageModal()}
+      {PrintTicketModal()}
 
       {/* HEADER */}
       <View className="bg-white border-b border-gray-200 pl-4">
