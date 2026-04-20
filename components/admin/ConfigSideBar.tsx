@@ -7,6 +7,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
 import { shadows, colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
 
@@ -290,7 +291,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
                 styles.menuItem,
                 dynamicStyles.menuItem,
                 {
-                  backgroundColor: isActive ? colors.neutral[100] : 'transparent',
+                  backgroundColor: isActive ? getColorWithOpacity(colors.brand.dark, 0.05) : 'transparent',
                 }
               ]}>
                 <View style={dynamicStyles.iconContainer}>
