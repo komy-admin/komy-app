@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { ItemTypes } from '~/types/item-type.enum';
 import { UserProfile } from '~/types/user.types';
 import { colors } from '~/theme';
 
@@ -33,16 +32,6 @@ export const sortActiveFirst = <T extends { isActive: boolean }>(a: T, b: T): nu
 // ========================================
 // Enum text helpers
 // ========================================
-
-export const getItemTypeText = (itemType: ItemTypes) => {
-  const texts = {
-    [ItemTypes.DRINK]: 'Boissons',
-    [ItemTypes.STARTER]: 'Entrées',
-    [ItemTypes.MAIN]: 'Plats',
-    [ItemTypes.DESSERT]: 'Desserts',
-  };
-  return texts[itemType] || 'Type inconnu';
-};
 
 export const getUserProfileText = (teamType: UserProfile) => {
   const texts = {
