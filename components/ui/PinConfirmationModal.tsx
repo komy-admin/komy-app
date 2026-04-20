@@ -251,15 +251,15 @@ const styles = StyleSheet.create({
     zIndex: 2000,
     ...Platform.select({
       web: {
-        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        backgroundColor: colors.glass.light,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
       },
       android: {
-        backgroundColor: 'rgba(255, 255, 255, 0.99)',
+        backgroundColor: colors.glass.solid,
       },
       default: {
-        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        backgroundColor: colors.glass.light,
       },
     }),
   } as any,

@@ -37,7 +37,7 @@ export default function StatusSelector({
             onStatusSelect(status);
             onClose();
           }}
-          android_ripple={{ color: 'rgba(0, 0, 0, 0.1)' }}
+          android_ripple={{ color: colors.overlay.rippleDark }}
           style={({ pressed }) => [
             styles.statusButton,
             { opacity: pressed ? 0.7 : 1 }
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay.modalStrong,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,

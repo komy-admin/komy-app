@@ -8,7 +8,8 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { LucideIcon, Menu as MenuIcon } from 'lucide-react-native';
-import { shadows } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { shadows, colors } from '~/theme';
 
 export type ActionItem = {
   label?: string;
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.6)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.6),
     overflow: 'hidden',
     ...shadows.bottom,
   },
@@ -194,12 +195,12 @@ const styles = StyleSheet.create({
       web: {
         cursor: 'pointer',
         transition: 'background-color 0.15s ease',
-        ':hover': { backgroundColor: 'rgba(248, 250, 252, 0.8)' },
+        ':hover': { backgroundColor: getColorWithOpacity(colors.neutral[50], 0.8) },
       },
     }),
   },
   itemPressed: {
-    backgroundColor: 'rgba(248, 250, 252, 0.8)',
+    backgroundColor: getColorWithOpacity(colors.neutral[50], 0.8),
   },
   itemContent: {
     flexDirection: 'row',

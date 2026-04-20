@@ -7,6 +7,8 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { X } from 'lucide-react-native';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get('window');
 
@@ -125,7 +127,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    backgroundColor: colors.overlay.modalDarkSlate,
   },
   overlayTouchable: {
     position: 'absolute',
@@ -142,15 +144,15 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.6)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.6),
     overflow: 'hidden',
   },
   header: {
-    backgroundColor: 'rgba(248, 250, 252, 0.8)',
+    backgroundColor: getColorWithOpacity(colors.neutral[50], 0.8),
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(226, 232, 240, 0.5)',
+    borderBottomColor: getColorWithOpacity(colors.neutral[200], 0.5),
     position: 'relative',
     zIndex: 10,
     ...Platform.select({
@@ -189,11 +191,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    backgroundColor: getColorWithOpacity(colors.neutral[400], 0.1),
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(203, 213, 225, 0.3)',
+    borderColor: getColorWithOpacity(colors.neutral[300], 0.3),
     ...Platform.select({
       web: {
         cursor: 'pointer',

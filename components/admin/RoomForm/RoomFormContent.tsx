@@ -7,6 +7,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { shadows, colors } from '~/theme';
 
 interface RoomFormContentProps {
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   statusPulseActive: {
     borderColor: colors.success.base,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: getColorWithOpacity(colors.success.base, 0.1),
   } as ViewStyle,
   statusCore: {
     width: 6,

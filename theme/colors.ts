@@ -30,6 +30,21 @@ export const colors = colorsTokens as {
   purple: { base: string; alt: string };
   pink: string;
   surface: { white: string; screen: string; card: string; muted: string };
+  overlay: {
+    modalSoft: string;
+    modal: string;
+    modalStrong: string;
+    modalHeavy: string;
+    modalDarkSlate: string;
+    rippleDark: string;
+  };
+  glass: {
+    light: string;
+    medium: string;
+    heavy: string;
+    opaque: string;
+    solid: string;
+  };
   black: string;
   white: string;
 };

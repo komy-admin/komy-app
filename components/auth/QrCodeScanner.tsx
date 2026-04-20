@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
     textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay.modalStrong,
     padding: 8,
     borderRadius: 8,
   },

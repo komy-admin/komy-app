@@ -5,6 +5,7 @@ import { LayoutGrid, List, Menu } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { shadows, colors } from '~/theme';
 
 const ACTIVE_COLOR = '#2A2E33';
@@ -171,7 +172,7 @@ const styles = {
     } as any),
   },
   navItemActive: {
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    backgroundColor: getColorWithOpacity(colors.info.base, 0.08),
   },
   navIconWrapper: {
     width: 32,

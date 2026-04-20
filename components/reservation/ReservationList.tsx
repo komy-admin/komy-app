@@ -11,6 +11,7 @@ import type {
   CreateManualReservationDto,
 } from '~/types/reservation.types';
 import { CreateReservationModal } from './CreateReservationModal';
+import { colors } from '~/theme';
 
 interface FilterOption { label: string; value: string; }
 
@@ -1068,7 +1069,7 @@ const styles = StyleSheet.create({
   // Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay.modal,
     justifyContent: 'center',
     alignItems: 'center',
   },

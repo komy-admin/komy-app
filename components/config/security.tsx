@@ -12,6 +12,8 @@ import PinInput from '~/components/ui/pin-input';
 import * as Clipboard from 'expo-clipboard';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { showApiError } from '~/lib/apiErrorHandler';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 type SecurityTab = '2fa-account' | 'devices';
 
@@ -358,7 +360,7 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* TOTP Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(71, 85, 105, 0.08)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.neutral[600], 0.08) }]}>
                 <Smartphone size={24} color="#475569" strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
@@ -406,7 +408,7 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* Email Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(71, 85, 105, 0.08)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.neutral[600], 0.08) }]}>
                 <Mail size={24} color="#475569" strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
@@ -845,7 +847,7 @@ const devicesStyles = StyleSheet.create({
     marginTop: 2,
   },
   currentTag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: getColorWithOpacity(colors.success.base, 0.12),
     paddingVertical: 8,
     borderRadius: 8,
     width: 100,

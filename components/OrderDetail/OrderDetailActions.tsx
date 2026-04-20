@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   // Glass overlay iso item cards
   glassOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    backgroundColor: colors.glass.medium,
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',

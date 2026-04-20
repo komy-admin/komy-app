@@ -23,6 +23,7 @@ import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { isTableInBounds } from "~/hooks/room/useRoomValidation";
 import { Status } from "~/types/status.enum";
+import { getColorWithOpacity } from "~/lib/color-utils";
 import { shadows, colors } from "~/theme";
 import { RoomChairs, RoomChairsRounded } from "./RoomChairs";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -510,7 +511,7 @@ const RoomTable: React.FC<TableViewProps> = ({
       borderColor: colors.brand.dark,
       borderStyle: 'dashed',
       borderRadius: 5,
-      backgroundColor: 'rgba(42, 46, 51, 0.1)',
+      backgroundColor: getColorWithOpacity(colors.brand.dark, 0.1),
     };
   });
 

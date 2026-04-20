@@ -8,6 +8,7 @@ import { formatPrice, getStatusText } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
 import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
 import { SectionDivider } from '~/components/ui';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
 
 // Fingerprint: identical item + tags + note + status + paymentFraction = same line
@@ -858,7 +859,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(239, 68, 68, 0.88)',
+    backgroundColor: getColorWithOpacity(colors.error.base, 0.88),
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 30,

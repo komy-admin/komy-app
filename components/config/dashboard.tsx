@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Database, TrendingUp, Users, Activity } from 'lucide-react-native';
-import { shadows } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { shadows, colors } from '~/theme';
 
 export default function DashboardPage() {
   return (
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(248, 250, 252, 0.9)',
+    backgroundColor: getColorWithOpacity(colors.neutral[50], 0.9),
     ...Platform.select({
       web: {
         backdropFilter: 'blur(8px)',
@@ -83,14 +84,14 @@ const styles = StyleSheet.create({
     height: 500,
     width: '60%',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.8),
     ...shadows.bottom,
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,

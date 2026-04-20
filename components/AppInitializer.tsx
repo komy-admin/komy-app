@@ -7,6 +7,8 @@ import { RootState } from '~/store';
 import { InitializationProgress, useAppInit } from '~/hooks/useAppInit';
 import { WebSocketListener } from './WebSocketListener';
 import { getHomeRoute } from '~/constants/routes';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 const INIT_STEPS = [
   { key: 'accountConfig', label: 'Configuration du compte...' },
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
   progressBar: {
     width: '100%',
     height: 6,
-    backgroundColor: 'rgba(42, 46, 51, 0.15)',
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.15),
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 16,

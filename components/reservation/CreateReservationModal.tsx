@@ -4,6 +4,7 @@ import { X as XIcon, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle } fro
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '~/components/ToastProvider';
 import type { ReservationService, ReservationSchedule, CreateManualReservationDto } from '~/types/reservation.types';
+import { colors } from '~/theme';
 
 interface FilterOption { label: string; value: string; }
 
@@ -474,7 +475,7 @@ export function CreateReservationModal({ visible, onClose, services, schedules, 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay.modal,
     justifyContent: 'center',
     alignItems: 'center',
   },

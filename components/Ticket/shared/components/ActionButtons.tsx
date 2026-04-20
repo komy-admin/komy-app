@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Text as RNText, StyleSheet, Modal, Pressable } 
 import { Bell, X } from 'lucide-react-native';
 import { Status } from '~/types/status.enum';
 import { ItemGroup } from '~/types/kitchen.types';
+import { colors } from '~/theme';
 
 interface ActionButtonsProps {
   mode: 'single' | 'dual' | 'none';
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay.modalStrong,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,

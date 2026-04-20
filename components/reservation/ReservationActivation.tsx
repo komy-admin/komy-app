@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { CalendarDays, CheckCircle, Zap } from 'lucide-react-native';
 import { useToast } from '~/components/ToastProvider';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 interface ReservationActivationProps {
   reservation: {
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
     shadowRadius: 25,
     elevation: 10,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.8),
     ...(Platform.OS === 'web' && {
       boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
     }),
@@ -103,7 +105,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: getColorWithOpacity(colors.info.base, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,

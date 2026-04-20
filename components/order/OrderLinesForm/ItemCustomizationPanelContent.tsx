@@ -15,6 +15,7 @@ import { Tag } from '~/types/tag.types';
 import { SelectedTag } from '~/types/order-line.types';
 import { X, Check, Circle, CheckSquare, ToggleLeft, Type, Hash, ArrowLeftToLine } from 'lucide-react-native';
 import { formatPrice, getTagFieldTypeConfig } from '~/lib/utils';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { colors } from '~/theme';
@@ -113,15 +114,6 @@ const getFieldTypeLightBgColor = (fieldType: string): string => {
     default:
       return '#F1F5F9';
   }
-};
-
-/** Convertir la couleur hex en rgba avec opacité */
-const getColorWithOpacity = (hexColor: string, opacity: number): string => {
-  const hex = hexColor.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
 
 export const ItemCustomizationPanelContent: React.FC<ItemCustomizationPanelContentProps> = ({

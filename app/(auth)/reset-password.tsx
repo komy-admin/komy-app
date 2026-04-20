@@ -15,6 +15,7 @@ import { extractApiError } from '~/lib/apiErrorHandler';
 import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
 
 export default function ResetPasswordScreen() {
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    backgroundColor: getColorWithOpacity(colors.success.border, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,

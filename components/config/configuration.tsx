@@ -15,6 +15,8 @@ import { TagFormPanel } from './TagFormPanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 type TabType = 'item-types' | 'tags' | 'views';
 
@@ -483,7 +485,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Salles */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.warning.base, 0.1) }]}>
                 <LayoutDashboard size={24} color="#F59E0B" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
@@ -503,7 +505,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Équipe */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.info.base, 0.1) }]}>
                 <Users size={24} color="#3B82F6" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
@@ -523,7 +525,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Cuisine */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.success.base, 0.1) }]}>
                 <ChefHat size={24} color="#10B981" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
@@ -544,7 +546,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         {/* Vue Bar */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.purple.base, 0.1) }]}>
                 <Wine size={24} color="#A855F7" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>

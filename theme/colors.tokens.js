@@ -93,6 +93,25 @@ const colors = {
     muted: '#F9FAFB',      // alias of gray.50
   },
 
+  // === Overlays (modal backdrops, ripples) ===
+  overlay: {
+    modalSoft: 'rgba(0, 0, 0, 0.2)',        // subtle (ActionMenu animation)
+    modal: 'rgba(0, 0, 0, 0.4)',            // standard backdrop (modals, side panels)
+    modalStrong: 'rgba(0, 0, 0, 0.5)',      // appuyé (dropdown, overlay critique)
+    modalHeavy: 'rgba(0, 0, 0, 0.7)',       // très opaque (color-picker)
+    modalDarkSlate: 'rgba(15, 23, 42, 0.4)',// variante slate-900
+    rippleDark: 'rgba(0, 0, 0, 0.1)',       // android ripple
+  },
+
+  // === Glass (semi-transparent whites) ===
+  glass: {
+    light: 'rgba(255, 255, 255, 0.5)',
+    medium: 'rgba(255, 255, 255, 0.65)',
+    heavy: 'rgba(255, 255, 255, 0.75)',
+    opaque: 'rgba(255, 255, 255, 0.88)',
+    solid: 'rgba(255, 255, 255, 0.99)',
+  },
+
   // === Absolutes ===
   black: '#000000',
   white: '#FFFFFF',

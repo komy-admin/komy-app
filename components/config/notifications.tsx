@@ -5,6 +5,8 @@ import { Clock, Bell } from 'lucide-react-native';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { useToast } from '~/components/ToastProvider';
 import { showApiError } from '~/lib/apiErrorHandler';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 type TabType = 'alerts';
 
@@ -148,7 +150,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
           {/* Alertes temporelles */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1) }]}>
                 <Clock size={24} color="#6366F1" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>

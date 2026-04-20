@@ -1072,7 +1072,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(239, 68, 68, 0.88)',
+    backgroundColor: getColorWithOpacity(colors.error.base, 0.88),
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 30,

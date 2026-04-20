@@ -9,6 +9,7 @@ import {
   Text,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
 
 interface PinInputProps {
@@ -212,16 +213,16 @@ const styles = StyleSheet.create({
   },
   // Dark variant
   boxDark: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: getColorWithOpacity(colors.white, 0.08),
+    borderColor: getColorWithOpacity(colors.white, 0.2),
   },
   boxActiveDark: {
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: getColorWithOpacity(colors.white, 0.6),
+    backgroundColor: getColorWithOpacity(colors.white, 0.12),
   },
   boxErrorDark: {
-    borderColor: '#FF6B6B',
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    borderColor: colors.error.base,
+    backgroundColor: getColorWithOpacity(colors.error.base, 0.15),
   },
   boxFilledDark: {
     borderColor: colors.white,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    color: 'rgba(0, 0, 0, 0.01)',
+    color: getColorWithOpacity(colors.black, 0.01),
     backgroundColor: 'transparent',
     fontSize: 1,
     textAlign: 'center',

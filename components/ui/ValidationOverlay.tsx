@@ -89,15 +89,15 @@ const styles = StyleSheet.create({
     zIndex: 200,
     ...Platform.select({
       web: {
-        backgroundColor: 'rgba(255, 255, 255, 0.75)',
+        backgroundColor: colors.glass.heavy,
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
       } as any,
       android: {
-        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+        backgroundColor: colors.glass.opaque,
       },
       default: {
-        backgroundColor: 'rgba(255, 255, 255, 0.75)',
+        backgroundColor: colors.glass.heavy,
       },
     }),
   },

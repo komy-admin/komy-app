@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   cardInner: {
     flex: 1,
     padding: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    backgroundColor: colors.glass.medium,
     borderRadius: 9,
     gap: 8,
   },

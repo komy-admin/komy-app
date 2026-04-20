@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { Text } from './text';
 import { Tag } from '~/types/tag.types';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
 
 interface TagSelectorProps {
@@ -35,7 +36,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           >
             <View style={styles.iconContainer}>
               <View style={[styles.pulse, {
-                backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                backgroundColor: isSelected ? getColorWithOpacity(colors.success.base, 0.1) : 'transparent',
                 borderColor: isSelected ? colors.success.base : colors.gray[300],
               }]} />
               <View style={[styles.core, {

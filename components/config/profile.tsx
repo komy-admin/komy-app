@@ -13,6 +13,8 @@ import { showApiError } from '~/lib/apiErrorHandler';
 import { accountConfigApiService } from '~/api/account-config.api';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 type TabType = 'restaurant' | 'info' | 'password' | 'pin';
 
@@ -192,7 +194,7 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1) }]}>
                 <Landmark size={24} color="#6366F1" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
@@ -351,7 +353,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.success.base, 0.1) }]}>
                 <User size={24} color="#11B981" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
@@ -524,7 +526,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
           {/* Mot de passe */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.warning.base, 0.1) }]}>
                 <Lock size={24} color="#F59E0B" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
@@ -706,7 +708,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.purple.alt, 0.1) }]}>
                 <KeyRound size={24} color="#8B5CF6" strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>

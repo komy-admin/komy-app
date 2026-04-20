@@ -6,6 +6,7 @@ import { Monitor, Smartphone } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { logout } from '~/store';
 import { useAppDispatch } from '~/store/hooks';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { shadows, colors } from '~/theme';
 
 
@@ -145,14 +146,14 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     width: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.8),
     ...shadows.bottom,
   },
   blockedIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 32,
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.8),
     ...shadows.bottom,
   },
   logoutButtonText: {
