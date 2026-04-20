@@ -360,8 +360,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* TOTP Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.neutral[600], 0.08) }]}>
-                <Smartphone size={24} color={colors.neutral[600]} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Smartphone size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -408,8 +408,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* Email Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.neutral[600], 0.08) }]}>
-                <Mail size={24} color={colors.neutral[600]} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Mail size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -506,9 +506,9 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
     switch (platform) {
       case 'ios':
       case 'android':
-        return <Smartphone size={20} color={colors.neutral[600]} strokeWidth={2} />;
+        return <Smartphone size={20} color={colors.brand.dark} strokeWidth={2} />;
       default:
-        return <Monitor size={20} color={colors.neutral[600]} strokeWidth={2} />;
+        return <Monitor size={20} color={colors.brand.dark} strokeWidth={2} />;
     }
   };
 
@@ -631,7 +631,7 @@ const twoFaStyles = StyleSheet.create({
   },
   secretText: {
     fontSize: 12,
-    color: colors.neutral[600],
+    color: colors.brand.dark,
     fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
     fontWeight: '600',
   },
@@ -639,7 +639,7 @@ const twoFaStyles = StyleSheet.create({
     fontSize: 11,
     color: colors.white,
     fontWeight: '600',
-    backgroundColor: colors.neutral[600],
+    backgroundColor: colors.brand.dark,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -714,7 +714,7 @@ const twoFaStyles = StyleSheet.create({
     fontWeight: '600',
   },
   enableButton: {
-    backgroundColor: colors.neutral[600],
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -727,7 +727,7 @@ const twoFaStyles = StyleSheet.create({
     fontWeight: '600',
   },
   verifyButton: {
-    backgroundColor: colors.neutral[600],
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -766,7 +766,7 @@ const twoFaStyles = StyleSheet.create({
   },
   sendEmailLinkText: {
     fontSize: 13,
-    color: colors.neutral[600],
+    color: colors.brand.dark,
     fontWeight: '500',
     textDecorationLine: 'underline',
   },
@@ -813,7 +813,7 @@ const devicesStyles = StyleSheet.create({
     borderColor: colors.neutral[200],
   },
   deviceCardCurrent: {
-    borderColor: colors.neutral[600],
+    borderColor: colors.brand.dark,
     backgroundColor: colors.gray[100],
   },
   deviceRow: {

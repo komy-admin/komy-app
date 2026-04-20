@@ -150,8 +150,8 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
           {/* Alertes temporelles */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1) }]}>
-                <Clock size={24} color={colors.brand.accent} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Clock size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Alerte Cuisine/Bar</Text>
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   },
   previewText: {
     fontSize: 12,
-    color: colors.brand.accent,
+    color: colors.brand.dark,
     fontWeight: '500',
   },
   errorText: {

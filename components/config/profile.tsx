@@ -194,8 +194,8 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1) }]}>
-                <Landmark size={24} color={colors.brand.accent} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Landmark size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Établissement</Text>
@@ -353,8 +353,8 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.success.base, 0.1) }]}>
-                <User size={24} color={colors.success.base} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <User size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Identité</Text>
@@ -526,8 +526,8 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
           {/* Mot de passe */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.warning.base, 0.1) }]}>
-                <Lock size={24} color={colors.warning.base} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Lock size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Mot de passe</Text>
@@ -708,8 +708,8 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.purple.alt, 0.1) }]}>
-                <KeyRound size={24} color={colors.purple.alt} strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <KeyRound size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Code PIN</Text>
