@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   // Glass overlay
   glassOverlay: {
     flex: 1,
-    backgroundColor: colors.glass.medium,
+    backgroundColor: getColorWithOpacity(colors.white, 0.65),
     borderRadius: 9,
   },
 

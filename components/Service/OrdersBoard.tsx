@@ -23,6 +23,10 @@ const STATUS_PRIORITY: Record<string, number> = {
   [Status.TERMINATED]: 5,
 };
 
+const GRID_PADDING = 16;
+const GRID_GAP = 12;
+const MIN_CARD_WIDTH = 220;
+
 function buildDailyOrderLabels(orders: Order[]): Map<string, string> {
   const labels = new Map<string, string>();
   const byDay = new Map<string, Order[]>();
@@ -74,10 +78,6 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
 
   const dailyLabels = useMemo(() => buildDailyOrderLabels(allOrders), [allOrders]);
 
-  const GRID_PADDING = 16;
-  const GRID_GAP = 12;
-  const MIN_CARD_WIDTH = 220;
-
   const numColumns = useMemo(() => {
     if (!containerWidth) return 2;
     const availableWidth = containerWidth - (GRID_PADDING * 2);
@@ -127,25 +127,22 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
               const borderColor = getColorWithOpacity(getStatusTextColor(globalStatus), 0.5);
 
               return (
-                <View
+                <Pressable
                   key={order.id}
-                  style={[
-                    styles.card,
-                    {
-                      width: cardWidth,
-                      borderColor: borderColor,
-                      backgroundColor: statusColor,
-                    },
-                  ]}
+                  onPress={() => onOrderPress(order)}
+                  style={({ pressed }) => pressed && styles.cardPressed}
                 >
-                  <Pressable
-                    onPress={() => onOrderPress(order)}
-                    style={({ pressed }) => [
-                      styles.cardPressable,
-                      pressed && styles.cardPressed,
+                  <View
+                    style={[
+                      styles.card,
+                      {
+                        width: cardWidth,
+                        borderColor: borderColor,
+                        backgroundColor: statusColor,
+                      },
                     ]}
                   >
-                    <View style={styles.cardInner}>
+                    <View style={styles.glassOverlay}>
                       <View style={styles.cardHeader}>
                         <RNText style={styles.cardLabel}>{label}</RNText>
                         <RNText style={styles.cardTime}>{time}</RNText>
@@ -154,7 +151,7 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
                         {lineCount} {lineCount > 1 ? 'articles' : 'article'}
                       </RNText>
                       <View style={styles.cardBadges}>
-                        <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                        <View style={[styles.statusBadge, { backgroundColor: getColorWithOpacity(getStatusTextColor(globalStatus), 0.15) }]}>
                           <RNText style={[styles.statusBadgeText, { color: getStatusTextColor(globalStatus) }]}>
                             {getStatusText(globalStatus)}
                           </RNText>
@@ -174,12 +171,12 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
                         )}
                       </View>
                       <View style={styles.cardFooter}>
-                        <RNText style={styles.cardUpdatedAt}>Dernière maj : {updatedAt}</RNText>
+                        <RNText style={styles.cardUpdatedAt}>Maj {updatedAt}</RNText>
                         <RNText style={styles.cardPrice}>{formatPrice(order.totalAmount)}</RNText>
                       </View>
                     </View>
-                  </Pressable>
-                </View>
+                  </View>
+                </Pressable>
               );
             })}
           </View>
@@ -237,19 +234,17 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
     borderWidth: 1.5,
-    ...shadows.bottom,
+    overflow: 'hidden',
+    ...shadows.all,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
-      transition: 'all 0.15s ease',
+      transition: 'opacity 0.15s ease, transform 0.15s ease',
     } as any : {}),
   },
-  cardPressable: {
-    flex: 1,
-  },
-  cardInner: {
+  glassOverlay: {
     flex: 1,
     padding: 14,
-    backgroundColor: colors.glass.medium,
+    backgroundColor: getColorWithOpacity(colors.white, 0.65),
     borderRadius: 9,
     gap: 8,
   },
@@ -263,40 +258,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardLabel: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: colors.neutral[800],
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   } as any,
   cardTime: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: colors.gray[700],
+    color: colors.gray[500],
+    letterSpacing: 0.3,
   } as any,
   cardArticles: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.gray[700],
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.gray[400],
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   } as any,
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'baseline',
   },
   cardUpdatedAt: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 9,
+    fontWeight: '600',
     color: colors.gray[400],
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   } as any,
   cardPrice: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: colors.neutral[800],
+    letterSpacing: 0.3,
   } as any,
   cardBadges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+    marginTop: 4,
   },
   statusBadge: {
     alignSelf: 'flex-start',
@@ -305,18 +308,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   } as any,
   paidBadge: {
-    backgroundColor: '#10B98120',
+    backgroundColor: getColorWithOpacity(colors.success.base, 0.125),
   },
   paidBadgeText: {
     color: colors.success.dark,
   },
   partialBadge: {
-    backgroundColor: '#F59E0B20',
+    backgroundColor: getColorWithOpacity(colors.warning.base, 0.125),
   },
   partialBadgeText: {
     color: colors.warning.dark,

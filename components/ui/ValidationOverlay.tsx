@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, Platform, Text as RNText } from 'react-native';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { shadows, colors } from '~/theme';
 
 export interface ValidationOverlayProps {
@@ -89,15 +90,15 @@ const styles = StyleSheet.create({
     zIndex: 200,
     ...Platform.select({
       web: {
-        backgroundColor: colors.glass.heavy,
+        backgroundColor: getColorWithOpacity(colors.white, 0.60),
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
       } as any,
       android: {
-        backgroundColor: colors.glass.opaque,
+        backgroundColor: getColorWithOpacity(colors.white, 0.88),
       },
       default: {
-        backgroundColor: colors.glass.heavy,
+        backgroundColor: getColorWithOpacity(colors.white, 0.65),
       },
     }),
   },

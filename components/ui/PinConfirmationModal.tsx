@@ -14,6 +14,7 @@ import type { PinInputRef } from '~/components/ui/pin-input';
 import { authApiService } from '~/api/auth.api';
 import * as Haptics from 'expo-haptics';
 import { extractApiError } from '~/lib/apiErrorHandler';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
 
 interface PinConfirmationModalProps {
@@ -251,15 +252,15 @@ const styles = StyleSheet.create({
     zIndex: 2000,
     ...Platform.select({
       web: {
-        backgroundColor: colors.glass.light,
+        backgroundColor: getColorWithOpacity(colors.white, 0.5),
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
       },
       android: {
-        backgroundColor: colors.glass.solid,
+        backgroundColor: getColorWithOpacity(colors.white, 0.99),
       },
       default: {
-        backgroundColor: colors.glass.light,
+        backgroundColor: getColorWithOpacity(colors.white, 0.5),
       },
     }),
   } as any,

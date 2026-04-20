@@ -24,6 +24,7 @@ import {
   getStatusTextColor,
   getOrderGlobalStatus,
 } from '~/lib/utils';
+import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
 
 export interface OrderDetailActionsProps {
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
   // Glass overlay iso item cards
   glassOverlay: {
     flex: 1,
-    backgroundColor: colors.glass.medium,
+    backgroundColor: getColorWithOpacity(colors.white, 0.65),
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',

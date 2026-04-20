@@ -90,15 +90,6 @@ const colors = {
     muted: '#F9FAFB',      // 12× — alias de gray.50
   },
 
-  // === Glass (semi-transparent whites) ===
-  glass: {
-    light: 'rgba(255, 255, 255, 0.5)',   // 3×
-    medium: 'rgba(255, 255, 255, 0.65)', // 3×
-    heavy: 'rgba(255, 255, 255, 0.75)',  // 3×
-    opaque: 'rgba(255, 255, 255, 0.88)', // 1×
-    solid: 'rgba(255, 255, 255, 0.99)',  // 1×
-  },
-
   // === Absolutes ===
   black: '#000000',        // 9×
   white: '#FFFFFF',        // 166×

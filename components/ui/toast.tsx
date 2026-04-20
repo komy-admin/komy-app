@@ -87,7 +87,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
         {toast.message}
       </Text>
       <Pressable onPress={hide} hitSlop={8}>
-        <X size={16} color={colors.glass.heavy} />
+        <X size={16} color={colors.white} />
       </Pressable>
     </Animated.View>
   );
