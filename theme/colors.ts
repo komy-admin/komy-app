@@ -27,6 +27,10 @@ export const colors = colorsTokens as {
   error: { base: string; bg: string; border: string; text: string; dark: string };
   warning: { base: string; bg: string; border: string; text: string; dark: string };
   info: { base: string; bg: string; text: string };
+  status: Record<
+    'ready' | 'pending' | 'served' | 'error' | 'terminated' | 'draft',
+    { badge: string; bg: string; text: string }
+  >;
   purple: { base: string; alt: string };
   pink: string;
   white: string;

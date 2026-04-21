@@ -78,6 +78,16 @@ const colors = {
     text: '#1D4ED8',       // 6×  — blue-700
   },
 
+  // === Status (order line state colors — pastel palette, distinct from semantic) ===
+  status: {
+    ready:      { badge: '#D7E3FC', bg: '#F5F8FE', text: '#1E3A5F' },
+    pending:    { badge: '#F9F1C8', bg: '#FEFAF1', text: '#92400E' },
+    served:     { badge: '#B7E1CC', bg: '#F0FAF5', text: '#065F46' },
+    error:      { badge: '#F7BFB5', bg: '#FEF5F4', text: '#991B1B' },
+    terminated: { badge: '#EBEBEB', bg: '#FAFAFA', text: '#374151' },
+    draft:      { badge: '#D1D5DB', bg: '#FAFAFA', text: '#374151' },
+  },
+
   // === Extra accents (low usage, kept for specific features) ===
   purple: {
     base: '#A855F7',       // 24×
