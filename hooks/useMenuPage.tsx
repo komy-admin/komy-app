@@ -279,13 +279,13 @@ export function useMenuPage() {
   // ============================================================
 
   const getItemActions = useCallback((item: Item): ActionItem[] => [
-    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accentDark} />, onPress: () => handleEditItem(item.id ?? '') },
+    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accent} />, onPress: () => handleEditItem(item.id ?? '') },
     { label: item.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={item.isActive ? colors.error.base : colors.success.base} />, onPress: () => handleToggleItemStatus(item.id ?? '') },
     { label: 'Supprimer', icon: <Trash size={16} color={colors.error.base} />, type: 'destructive', onPress: () => handleDeleteItem(item.id ?? '') },
   ], [handleEditItem, handleToggleItemStatus, handleDeleteItem]);
 
   const getMenuActions = useCallback((menu: Menu): ActionItem[] => [
-    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accentDark} />, onPress: () => handleEditMenu(menu.id) },
+    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accent} />, onPress: () => handleEditMenu(menu.id) },
     { label: menu.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={menu.isActive ? colors.error.base : colors.success.base} />, onPress: () => handleToggleMenuStatus(menu.id) },
     { label: 'Supprimer', icon: <Trash size={16} color={colors.error.base} />, type: 'destructive', onPress: () => handleDeleteMenu(menu.id) },
   ], [handleEditMenu, handleToggleMenuStatus, handleDeleteMenu]);

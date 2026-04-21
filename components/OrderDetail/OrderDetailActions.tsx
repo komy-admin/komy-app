@@ -187,9 +187,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         )}
         <ActionButton
           icon={Plus}
-          color={colors.brand.accentDark}
-          bg={getColorWithOpacity(colors.brand.accentDark, 0.1)}
-          border={colors.brand.accentDark}
+          color={colors.brand.accent}
+          bg={getColorWithOpacity(colors.brand.accent, 0.1)}
+          border={colors.brand.accent}
           label="Ajouter"
           onPress={onAddItem}
           compact={compact}
@@ -240,7 +240,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           icon={Trash2}
           color={colors.error.text}
           bg={colors.error.bg}
-          border={colors.error.border}
+          border={colors.error.base}
           label="Supprimer"
           onPress={onDelete}
           disabled={hasPayments}

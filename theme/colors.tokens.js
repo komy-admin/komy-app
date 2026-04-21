@@ -20,8 +20,7 @@ const colors = {
   // === Brand ===
   brand: {
     dark: '#2A2E33',       // 253× — signature black (primary buttons, titles)
-    accent: '#6366F1',     // 29×  — indigo (links, focus, active states)
-    accentDark: '#4F46E5', // 7×   — indigo-600 (candidat fusion avec accent)
+    accent: '#6366F1',     // 36×  — indigo (links, focus, active states)
   },
 
   // === Neutral (slate scale) ===
@@ -79,7 +78,7 @@ const colors = {
 
   // === Status (order line state colors — pastel palette, distinct from semantic) ===
   status: {
-    ready:      { badge: '#D7E3FC', bg: '#F5F8FE', text: '#1E3A5F' },
+    ready:      { badge: '#BFDBFE', bg: '#F5F8FE', text: '#1E3A5F' },
     pending:    { badge: '#F9F1C8', bg: '#FEFAF1', text: '#92400E' },
     served:     { badge: '#B7E1CC', bg: '#F0FAF5', text: '#065F46' },
     error:      { badge: '#F7BFB5', bg: '#FEF5F4', text: '#991B1B' },

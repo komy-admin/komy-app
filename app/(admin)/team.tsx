@@ -255,7 +255,7 @@ export default function TeamPage() {
     if (canModifyUsers) {
       actions.push({
         label: 'Modifier',
-        icon: <Edit2 size={16} color={colors.brand.accentDark} />,
+        icon: <Edit2 size={16} color={colors.brand.accent} />,
         onPress: () => handleEditUser(user.id)
       });
     }
@@ -263,7 +263,7 @@ export default function TeamPage() {
     // QR Code accessible à tous (admin, superadmin, manager)
     actions.push({
       label: 'QR Code',
-      icon: <QrCode size={16} color={colors.brand.accentDark} />,
+      icon: <QrCode size={16} color={colors.brand.accent} />,
       onPress: () => handleShowQrCode(user)
     });
 
