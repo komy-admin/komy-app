@@ -17,7 +17,7 @@ interface PaymentStatusBadgeProps {
 const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
   switch (status) {
     case 'completed':
-      return { label: 'COMPLÉTÉ', backgroundColor: colors.success.bg, color: colors.success.dark };
+      return { label: 'COMPLÉTÉ', backgroundColor: colors.success.bg, color: colors.success.base };
     case 'pending':
       return { label: 'EN ATTENTE', backgroundColor: colors.warning.border, color: colors.warning.text };
     case 'failed':
@@ -25,7 +25,7 @@ const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
     case 'refunded':
       return { label: 'REMBOURSÉ', backgroundColor: colors.gray[100], color: colors.gray[700] };
     case 'paid':
-      return { label: 'ENTIÈREMENT PAYÉ', backgroundColor: colors.success.bg, color: colors.success.dark };
+      return { label: 'ENTIÈREMENT PAYÉ', backgroundColor: colors.success.bg, color: colors.success.base };
     case 'partial':
       return { label: 'PARTIELLEMENT PAYÉ', backgroundColor: colors.warning.border, color: colors.warning.text };
     case 'unpaid':

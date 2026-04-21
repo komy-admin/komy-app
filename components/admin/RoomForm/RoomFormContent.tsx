@@ -258,7 +258,7 @@ export const RoomFormContent: React.FC<RoomFormContentProps> = ({
                       Platform.OS === 'web' && {
                         fontSize: 11,
                         fontWeight: '500',
-                        color: formData.isActive ? colors.success.dark : colors.gray[400],
+                        color: formData.isActive ? colors.success.base : colors.gray[400],
                         lineHeight: 14,
                       } as TextStyle,
                     ]}
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     } : {}),
   } as TextStyle,
   statusSubtextActive: {
-    color: colors.success.dark,
+    color: colors.success.base,
   } as TextStyle,
 
   // Color picker

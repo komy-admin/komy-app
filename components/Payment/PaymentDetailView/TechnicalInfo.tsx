@@ -40,7 +40,7 @@ export function TechnicalInfo({ payment, auditLogs }: TechnicalInfoProps) {
               label="Audit NF525:"
               value={
                 <View style={styles.auditContainer}>
-                  <CheckCircle size={16} color={colors.success.dark} />
+                  <CheckCircle size={16} color={colors.success.base} />
                   <Text style={styles.auditText}>Vérifié</Text>
                 </View>
               }
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   auditText: {
     fontSize: 14,
-    color: colors.success.dark,
+    color: colors.success.base,
     fontWeight: '500',
   },
 });

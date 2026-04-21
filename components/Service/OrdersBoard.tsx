@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: getColorWithOpacity(colors.success.base, 0.125),
   },
   paidBadgeText: {
-    color: colors.success.dark,
+    color: colors.success.base,
   },
   partialBadge: {
     backgroundColor: getColorWithOpacity(colors.warning.base, 0.125),

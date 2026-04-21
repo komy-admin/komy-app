@@ -177,7 +177,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         {(hasDraftItems || hasReadyItems) && (
           <ActionButton
             icon={Send}
-            color={hasReadyItems ? colors.success.dark : colors.warning.base}
+            color={hasReadyItems ? colors.success.base : colors.warning.base}
             bg={hasReadyItems ? colors.success.bg : colors.warning.bg}
             border={hasReadyItems ? colors.success.border : colors.warning.base}
             label={hasReadyItems ? 'Servir' : 'Réclamer'}
@@ -209,7 +209,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         )}
         <ActionButton
           icon={Wallet}
-          color={colors.success.dark}
+          color={colors.success.base}
           bg={colors.success.bg}
           border={colors.success.border}
           label="Paiement"
@@ -313,7 +313,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             borderColor: colors.success.border,
           },
         ]}>
-          {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? colors.warning.base : summary.remaining === 0 && summary.paidAmount > 0 ? colors.success.dark : colors.gray[400]} strokeWidth={1.8} />}
+          {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? colors.warning.base : summary.remaining === 0 && summary.paidAmount > 0 ? colors.success.base : colors.gray[400]} strokeWidth={1.8} />}
           {summary.paidAmount > 0 && summary.remaining > 0 ? (
             <>
               <View style={styles.remainingRow}>
@@ -327,14 +327,14 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
               <RNText style={[
                 styles.infoTileValue,
                 compact && styles.infoTileValueCompact,
-                summary.remaining === 0 && summary.paidAmount > 0 && { color: colors.success.dark },
+                summary.remaining === 0 && summary.paidAmount > 0 && { color: colors.success.base },
               ]}>
                 {formatPrice(summary.totalAmount)}
               </RNText>
               <RNText style={[
                 styles.infoTileLabel,
                 compact && styles.infoTileLabelCompact,
-                summary.remaining === 0 && summary.paidAmount > 0 && { color: colors.success.dark },
+                summary.remaining === 0 && summary.paidAmount > 0 && { color: colors.success.base },
               ]}>
                 {summary.remaining === 0 && summary.paidAmount > 0 ? 'Payé' : 'Total'}
               </RNText>

@@ -449,7 +449,7 @@ export const MenuConfiguration: React.FC<MenuConfigurationProps> = ({
 
 const COLORS = {
   primary: colors.brand.dark,
-  success: colors.success.dark,
+  success: colors.success.base,
   warning: colors.warning.base,
   text: colors.brand.dark,
   textSecondary: colors.gray[500],
@@ -457,7 +457,7 @@ const COLORS = {
   border: colors.neutral[200],
   backgroundGray: colors.gray[100],
   selectedBackground: colors.success.bg,
-  selectedBorder: colors.success.dark
+  selectedBorder: colors.success.base
 };
 
 const styles = StyleSheet.create({

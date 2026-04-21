@@ -51,11 +51,10 @@ const colors = {
 
   // === Semantic ===
   success: {
-    base: '#10B981',       // 67× — emerald-500
+    base: '#10B981',       // 81× — emerald-500
     bg: '#ECFDF5',         // 18× — emerald-50
     border: '#34D399',     // 12× — emerald-400
     text: '#047857',       // 11× — emerald-700
-    dark: '#059669',       // 15× — emerald-600
   },
   error: {
     base: '#EF4444',       // 84× — red-500

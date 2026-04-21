@@ -22,7 +22,6 @@ module.exports = {
           foreground: colors.success.text,
           bg: colors.success.bg,
           border: colors.success.border,
-          dark: colors.success.dark,
         },
         error: {
           DEFAULT: colors.error.base,
