@@ -11,7 +11,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
 import { QuickFormContent } from "~/components/admin/TeamForm";
-import { UserQrModal } from "~/components/admin/UserQrModal";
+import { UserQrPanelContent } from "~/components/admin/UserQrPanel";
 import { colors } from '~/theme';
 import { useToast } from '~/components/ToastProvider';
 import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
@@ -210,31 +210,43 @@ export default function TeamPage() {
   }, [pendingDeleteId, deleteUser, showToast]);
 
   const handleShowQrCode = useCallback((user: User) => {
+    setFormPanel(null);
+    setPendingDeleteId(null);
     setQrUser(user);
   }, []);
 
+  const handleCloseQrPanel = useCallback(() => {
+    setQrUser(null);
+    clearPanel();
+  }, [clearPanel]);
+
   // Synchroniser le panel avec le portal global
   useEffect(() => {
-    if (!formPanel) {
-      clearPanel();
+    if (qrUser) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseQrPanel} width={450}>
+          <UserQrPanelContent user={qrUser} onClose={handleCloseQrPanel} />
+        </SlidePanel>
+      );
       return;
     }
 
-    const panelContent = (
-      <QuickFormContent
-        user={formPanel.user}
-        onSave={handleQuickSave}
-        onCancel={handleCloseFormPanel}
-        activeTab={activeTab}
-      />
-    );
+    if (formPanel) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseFormPanel} width={430}>
+          <QuickFormContent
+            user={formPanel.user}
+            onSave={handleQuickSave}
+            onCancel={handleCloseFormPanel}
+            activeTab={activeTab}
+          />
+        </SlidePanel>
+      );
+      return;
+    }
 
-    renderPanel(
-      <SlidePanel visible={true} onClose={handleCloseFormPanel} width={430}>
-        {panelContent}
-      </SlidePanel>
-    );
-  }, [formPanel, activeTab, handleCloseFormPanel, handleQuickSave, renderPanel, clearPanel]);
+    clearPanel();
+  }, [qrUser, formPanel, activeTab, handleCloseFormPanel, handleCloseQrPanel, handleQuickSave, renderPanel, clearPanel]);
 
   const getUserActions = useCallback((user: User): ActionItem[] => {
     const actions: ActionItem[] = [];
@@ -356,13 +368,6 @@ export default function TeamPage() {
         </Tabs>
         </View>
       </View>
-
-      {/* QR Code Modal */}
-      <UserQrModal
-        user={qrUser}
-        visible={qrUser !== null}
-        onClose={() => setQrUser(null)}
-      />
 
       <DeleteConfirmPanel
         visible={!!pendingDeleteId}
