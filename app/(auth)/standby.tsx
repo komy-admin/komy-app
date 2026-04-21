@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   statusBox: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: colors.surface.muted,
+    backgroundColor: colors.gray[50],
     borderWidth: 1,
     borderColor: colors.gray[200],
     borderRadius: 12,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: colors.surface.muted,
+    backgroundColor: colors.gray[50],
     alignItems: 'center',
     justifyContent: 'center',
   },

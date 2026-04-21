@@ -39,7 +39,6 @@ module.exports = {
           dark: colors.warning.dark,
         },
         info: colors.info,
-        surface: colors.surface,
 
         // === Radix/shadcn HSL variables (kept for existing ui primitives) ===
         border: 'hsl(var(--border))',

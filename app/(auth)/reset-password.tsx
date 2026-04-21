@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingRight: 48,
     fontSize: 15,
-    backgroundColor: colors.surface.muted,
+    backgroundColor: colors.gray[50],
     color: colors.brand.dark,
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',

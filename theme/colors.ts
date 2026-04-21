@@ -29,6 +29,5 @@ export const colors = colorsTokens as {
   info: { base: string; bg: string; text: string };
   purple: { base: string; alt: string };
   pink: string;
-  surface: { muted: string };
   white: string;
 };

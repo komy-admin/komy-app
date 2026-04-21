@@ -19,79 +19,74 @@
 const colors = {
   // === Brand ===
   brand: {
-    dark: '#2A2E33',       // 154× — signature black (primary buttons, titles)
-    accent: '#6366F1',     // 25×  — indigo (links, focus, active states)
-    accentDark: '#4F46E5', // 5×
+    dark: '#2A2E33',       // 253× — signature black (primary buttons, titles)
+    accent: '#6366F1',     // 29×  — indigo (links, focus, active states)
+    accentDark: '#4F46E5', // 7×   — indigo-600 (candidat fusion avec accent)
   },
 
   // === Neutral (slate scale) ===
   neutral: {
-    50: '#F8FAFC',         // 35×
-    100: '#F1F5F9',        // 19×
-    200: '#E2E8F0',        // 75×
-    300: '#CBD5E1',        // 11×
-    400: '#94A3B8',        // 26×
-    500: '#64748B',        // 61×
-    600: '#475569',        // 11×
-    800: '#1E293B',        // 44×
+    50: '#F8FAFC',         // 58×
+    100: '#F1F5F9',        // 33×
+    200: '#E2E8F0',        // 116×
+    300: '#CBD5E1',        // 24×
+    400: '#94A3B8',        // 54×
+    500: '#64748B',        // 116×
+    600: '#475569',        // 12×
+    800: '#1E293B',        // 75×
   },
 
   // === Gray (pure scale) ===
   gray: {
-    50: '#F9FAFB',         // 49×
-    100: '#F3F4F6',        // 64×
-    200: '#E5E7EB',        // 99×
-    300: '#D1D5DB',        // 60×
-    400: '#9CA3AF',        // 115×
-    500: '#6B7280',        // 164×
-    600: '#4B5563',        // 38×
-    700: '#374151',        // 48×
-    800: '#1F2937',        // 34×
-    900: '#111827',        // 26×
+    50: '#F9FAFB',         // 46×
+    100: '#F3F4F6',        // 79×
+    200: '#E5E7EB',        // 98×
+    300: '#D1D5DB',        // 65×
+    400: '#9CA3AF',        // 135×
+    500: '#6B7280',        // 159×
+    600: '#4B5563',        // 34×
+    700: '#374151',        // 43×
+    800: '#1F2937',        // 32×
+    900: '#111827',        // 22×  (candidat fusion avec gray.800)
   },
 
   // === Semantic ===
   success: {
-    base: '#10B981',       // 52× — emerald-500
-    bg: '#ECFDF5',         // 9×  — emerald-50
-    border: '#34D399',     // 6×  — emerald-400
-    text: '#047857',       // 7×  — emerald-700
-    dark: '#059669',       // 14× — emerald-600
+    base: '#10B981',       // 67× — emerald-500
+    bg: '#ECFDF5',         // 18× — emerald-50
+    border: '#34D399',     // 12× — emerald-400
+    text: '#047857',       // 11× — emerald-700
+    dark: '#059669',       // 15× — emerald-600
   },
   error: {
-    base: '#EF4444',       // 70× — red-500
-    bg: '#FEF2F2',         // 25× — red-50
-    border: '#FECACA',     // 8×  — red-200
-    text: '#DC2626',       // 21× — red-600
-    dark: '#B91C1C',       // 1×  — red-700
+    base: '#EF4444',       // 84× — red-500
+    bg: '#FEF2F2',         // 43× — red-50
+    border: '#FECACA',     // 11× — red-200
+    text: '#DC2626',       // 22× — red-600
+    dark: '#B91C1C',       // 4×  — red-700 (candidat suppression)
   },
   warning: {
-    base: '#F59E0B',       // 23× — amber-500
-    bg: '#FFFBEB',         // 5×  — amber-50
-    border: '#FEF3C7',     // 6×  — amber-100
-    text: '#92400E',       // 5×  — amber-800
-    dark: '#D97706',       // 9×  — amber-600
+    base: '#F59E0B',       // 31× — amber-500
+    bg: '#FFFBEB',         // 7×  — amber-50
+    border: '#FEF3C7',     // 14× — amber-100
+    text: '#92400E',       // 10× — amber-800
+    dark: '#D97706',       // 11× — amber-600
   },
   info: {
-    base: '#3B82F6',       // 39× — blue-500
-    bg: '#EFF6FF',         // 3×  — blue-50
-    text: '#1D4ED8',       // 4×  — blue-700
+    base: '#3B82F6',       // 46× — blue-500
+    bg: '#EFF6FF',         // 10× — blue-50
+    text: '#1D4ED8',       // 6×  — blue-700
   },
 
   // === Extra accents (low usage, kept for specific features) ===
   purple: {
-    base: '#A855F7',       // 3×
-    alt: '#8B5CF6',        // 7×
+    base: '#A855F7',       // 24×
+    alt: '#8B5CF6',        // 12×
   },
-  pink: '#EC4899',         // 3×
-
-  // === Surfaces (named backgrounds) ===
-  surface: {
-    muted: '#F9FAFB',      // 12× — alias de gray.50
-  },
+  pink: '#EC4899',         // 10×
 
   // === Absolutes ===
-  white: '#FFFFFF',        // 166×
+  white: '#FFFFFF',        // 231×
 };
 
 module.exports = {

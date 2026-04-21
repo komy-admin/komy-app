@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     fontSize: 15,
-    backgroundColor: colors.surface.muted,
+    backgroundColor: colors.gray[50],
     marginBottom: 24,
     color: colors.brand.dark,
     ...(Platform.OS === 'web' ? {
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: colors.surface.muted,
+    backgroundColor: colors.gray[50],
     alignItems: 'center',
     justifyContent: 'center',
   },
