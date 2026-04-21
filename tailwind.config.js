@@ -35,7 +35,6 @@ module.exports = {
           foreground: colors.warning.text,
           bg: colors.warning.bg,
           border: colors.warning.border,
-          dark: colors.warning.dark,
         },
         info: colors.info,
 

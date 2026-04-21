@@ -323,6 +323,6 @@ const styles = StyleSheet.create({
     backgroundColor: getColorWithOpacity(colors.warning.base, 0.125),
   },
   partialBadgeText: {
-    color: colors.warning.dark,
+    color: colors.warning.base,
   },
 });

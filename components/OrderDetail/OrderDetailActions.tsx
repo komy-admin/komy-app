@@ -177,7 +177,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         {(hasDraftItems || hasReadyItems) && (
           <ActionButton
             icon={Send}
-            color={hasReadyItems ? colors.success.dark : colors.warning.dark}
+            color={hasReadyItems ? colors.success.dark : colors.warning.base}
             bg={hasReadyItems ? colors.success.bg : colors.warning.bg}
             border={hasReadyItems ? colors.success.border : colors.warning.base}
             label={hasReadyItems ? 'Servir' : 'Réclamer'}
@@ -226,7 +226,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         {order.status !== Status.TERMINATED && (
           <ActionButton
             icon={CircleCheck}
-            color={colors.warning.dark}
+            color={colors.warning.base}
             bg={colors.warning.bg}
             border={colors.warning.base}
             label="Terminer"
@@ -313,14 +313,14 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
             borderColor: colors.success.border,
           },
         ]}>
-          {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? colors.warning.dark : summary.remaining === 0 && summary.paidAmount > 0 ? colors.success.dark : colors.gray[400]} strokeWidth={1.8} />}
+          {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? colors.warning.base : summary.remaining === 0 && summary.paidAmount > 0 ? colors.success.dark : colors.gray[400]} strokeWidth={1.8} />}
           {summary.paidAmount > 0 && summary.remaining > 0 ? (
             <>
               <View style={styles.remainingRow}>
                 <RNText style={[styles.remainingValue, compact && { fontSize: 13 }]}>{formatPrice(summary.remaining)}</RNText>
                 <RNText style={styles.totalStrikethrough}>{formatPrice(summary.totalAmount)}</RNText>
               </View>
-              <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact, { color: colors.warning.dark }]}>À payer</RNText>
+              <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact, { color: colors.warning.base }]}>À payer</RNText>
             </>
           ) : (
             <>
@@ -549,6 +549,6 @@ const styles = StyleSheet.create({
   remainingValue: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.warning.dark,
+    color: colors.warning.base,
   },
 });

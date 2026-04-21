@@ -9,7 +9,7 @@ export const getTagFieldTypeConfig = (fieldType: string): { bgColor: string; tex
     case 'toggle':
       return { bgColor: colors.success.bg, textColor: colors.success.text };
     case 'number':
-      return { bgColor: colors.warning.border, textColor: colors.warning.dark };
+      return { bgColor: colors.warning.border, textColor: colors.warning.base };
     case 'text':
       return { bgColor: colors.pink, textColor: colors.pink };
     default:
@@ -26,7 +26,7 @@ export const getFieldTypeConfig = (fieldType: string) => {
     case 'toggle':
       return { bgColor: colors.success.bg, textColor: colors.success.text, priceBgColor: colors.success.border };
     case 'number':
-      return { bgColor: colors.warning.border, textColor: colors.warning.dark, priceBgColor: colors.warning.border };
+      return { bgColor: colors.warning.border, textColor: colors.warning.base, priceBgColor: colors.warning.border };
     case 'text':
       return { bgColor: colors.pink, textColor: colors.pink, priceBgColor: colors.pink };
     default:

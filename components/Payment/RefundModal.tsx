@@ -174,7 +174,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
               {/* Confirmation message */}
               {showConfirmation && (
                 <View style={styles.alertWarning}>
-                  <AlertCircle size={16} color={colors.warning.dark} />
+                  <AlertCircle size={16} color={colors.warning.base} />
                   <Text style={styles.alertWarningText}>
                     Confirmer le remboursement de {formatPrice(refundAmount)} ?
                     Cette action est irréversible.

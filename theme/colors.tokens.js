@@ -64,11 +64,10 @@ const colors = {
     text: '#DC2626',       // 25× — red-600
   },
   warning: {
-    base: '#F59E0B',       // 31× — amber-500
+    base: '#F59E0B',       // 41× — amber-500
     bg: '#FFFBEB',         // 7×  — amber-50
     border: '#FEF3C7',     // 14× — amber-100
     text: '#92400E',       // 10× — amber-800
-    dark: '#D97706',       // 11× — amber-600
   },
   info: {
     base: '#3B82F6',       // 46× — blue-500

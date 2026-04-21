@@ -370,7 +370,7 @@ const StatusBadgeInline: React.FC<{
 
   const hasPaidBadge = paymentStatus === 'paid' || paymentStatus === 'partial';
   const paidBg = paymentStatus === 'paid' ? colors.error.bg : colors.warning.bg;
-  const paidColor = paymentStatus === 'paid' ? colors.error.base : colors.warning.dark;
+  const paidColor = paymentStatus === 'paid' ? colors.error.base : colors.warning.base;
   const paidLabel = paymentStatus === 'paid' ? 'Payé' : 'Partiel';
 
   return (
