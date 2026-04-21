@@ -29,7 +29,6 @@ module.exports = {
           foreground: colors.error.text,
           bg: colors.error.bg,
           border: colors.error.border,
-          dark: colors.error.dark,
         },
         warning: {
           DEFAULT: colors.warning.base,

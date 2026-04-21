@@ -21,7 +21,7 @@ const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
     case 'pending':
       return { label: 'EN ATTENTE', backgroundColor: colors.warning.border, color: colors.warning.text };
     case 'failed':
-      return { label: 'ÉCHOUÉ', backgroundColor: colors.error.bg, color: colors.error.dark };
+      return { label: 'ÉCHOUÉ', backgroundColor: colors.error.bg, color: colors.error.text };
     case 'refunded':
       return { label: 'REMBOURSÉ', backgroundColor: colors.gray[100], color: colors.gray[700] };
     case 'paid':
@@ -29,7 +29,7 @@ const getStatusConfig = (status: PaymentStatusBadgeProps['status']) => {
     case 'partial':
       return { label: 'PARTIELLEMENT PAYÉ', backgroundColor: colors.warning.border, color: colors.warning.text };
     case 'unpaid':
-      return { label: 'NON PAYÉ', backgroundColor: colors.error.bg, color: colors.error.dark };
+      return { label: 'NON PAYÉ', backgroundColor: colors.error.bg, color: colors.error.text };
     case 'overpaid':
       return { label: 'SURPAYÉ', backgroundColor: colors.neutral[200], color: colors.purple.alt };
     default:

@@ -62,8 +62,7 @@ const colors = {
     base: '#EF4444',       // 84× — red-500
     bg: '#FEF2F2',         // 43× — red-50
     border: '#FECACA',     // 11× — red-200
-    text: '#DC2626',       // 22× — red-600
-    dark: '#B91C1C',       // 4×  — red-700 (candidat suppression)
+    text: '#DC2626',       // 25× — red-600
   },
   warning: {
     base: '#F59E0B',       // 31× — amber-500

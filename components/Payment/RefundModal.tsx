@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   alertErrorText: {
     flex: 1,
     fontSize: 14,
-    color: colors.error.dark,
+    color: colors.error.text,
     lineHeight: 20,
   },
   summary: {
