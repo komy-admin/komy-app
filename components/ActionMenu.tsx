@@ -4,12 +4,15 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  interpolate,
+  interpolateColor,
   runOnJS,
 } from 'react-native-reanimated';
 import { LucideIcon, Menu as MenuIcon } from 'lucide-react-native';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { shadows, colors } from '~/theme';
+
+const BACKDROP_TRANSPARENT = getColorWithOpacity(colors.brand.dark, 0);
+const BACKDROP_VISIBLE = getColorWithOpacity(colors.brand.dark, 0.2);
 
 export type ActionItem = {
   label?: string;
@@ -87,7 +90,11 @@ export function ActionMenu({ actions, width = 180, withSeparator = false, fullWi
   }));
 
   const backdropAnimatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0, 0, 0, ${interpolate(opacity.value, [0, 1], [0, 0.2])})`,
+    backgroundColor: interpolateColor(
+      opacity.value,
+      [0, 1],
+      [BACKDROP_TRANSPARENT, BACKDROP_VISIBLE]
+    ),
   }));
 
   return (
