@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text as RNText, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, interpolateColor } from 'react-native-reanimated';
 import { Status } from '~/types/status.enum';
 import { TicketItem } from '../types/ticket.types';
 import { ItemCustomization } from './ItemCustomization';
@@ -9,6 +10,7 @@ interface ItemRowProps {
   item: TicketItem;
   isLastItem: boolean;
   showStatusBadge?: boolean;
+  isFlashing?: boolean;
 }
 
 /**
@@ -17,17 +19,35 @@ interface ItemRowProps {
  * Affiche le nom, badge menu, badge statut, et personnalisations (notes + tags).
  * Items DRAFT grisés (opacity réduite).
  */
-export function ItemRow({ item, isLastItem, showStatusBadge = true }: ItemRowProps) {
+export function ItemRow({ item, isLastItem, showStatusBadge = true, isFlashing }: ItemRowProps) {
   const hasCustomization = (item.note && item.note.trim().length > 0) || (item.tags && item.tags.length > 0);
   const isDraft = item.status === Status.DRAFT;
 
+  const flashProgress = useSharedValue(0);
+
+  useEffect(() => {
+    if (isFlashing) {
+      flashProgress.value = 1;
+      flashProgress.value = withDelay(200, withTiming(0, { duration: 700 }));
+    }
+  }, [isFlashing]);
+
+  const flashStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      flashProgress.value,
+      [0, 1],
+      [colors.white, colors.success.bg],
+    ),
+  }));
+
   return (
-    <View
+    <Animated.View
       style={[
         styles.container,
         isLastItem && styles.containerLast,
         item.isOverdue && styles.containerOverdue,
         isDraft && styles.containerDraft,
+        flashStyle,
       ]}
     >
       {item.status === Status.PENDING && <View style={styles.statusBarPending} />}
@@ -60,7 +80,7 @@ export function ItemRow({ item, isLastItem, showStatusBadge = true }: ItemRowPro
           <ItemCustomization note={item.note} tags={item.tags} />
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

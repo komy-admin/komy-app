@@ -332,11 +332,14 @@ const FlashOverlay: React.FC = () => {
   const opacity = useRef(new Animated.Value(0.30)).current;
 
   useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 0,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   return (
