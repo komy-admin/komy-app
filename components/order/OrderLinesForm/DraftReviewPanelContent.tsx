@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Text as RNText, Platform, Animated } from 'react-native';
 import { Trash2, ShoppingBag, ArrowLeftToLine, Lock } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
@@ -53,7 +53,6 @@ interface DraftReviewPanelContentProps {
   onCancel?: () => void;
   hasChanges?: boolean;
   isProcessing?: boolean;
-  cancelDeleteRef?: React.RefObject<(() => void) | null>;
   hideFooter?: boolean;
   itemTypes?: ItemType[];
   allowEditAll?: boolean;
@@ -71,7 +70,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   onCancel,
   hasChanges = false,
   isProcessing = false,
-  cancelDeleteRef,
   hideFooter = false,
   itemTypes,
   allowEditAll = false,
@@ -80,36 +78,18 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
 }) => {
   const { isOrderLinePaid } = usePayments();
 
-  // Track which row is pending delete (by originalIndex + all group indices)
-  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
-  const [pendingDeleteIndices, setPendingDeleteIndices] = useState<number[]>([]);
-
   // Flash detection: track previous fingerprint quantities and menu IDs
   const prevFingerprintsRef = useRef<Map<string, number>>(new Map());
   const prevMenuIdsRef = useRef<Set<string>>(new Set());
   const isFirstRenderRef = useRef(true);
 
-  const handleDeleteRequest = useCallback((index: number, allIndices?: number[]) => {
-    setPendingDeleteIndex(index);
-    setPendingDeleteIndices(allIndices || [index]);
-  }, []);
-
-  const handleConfirmDelete = useCallback(() => {
-    if (pendingDeleteIndex !== null) {
-      if (onDeleteGroup && pendingDeleteIndices.length > 1) {
-        onDeleteGroup(pendingDeleteIndices);
-      } else {
-        onDelete(pendingDeleteIndex);
-      }
-      setPendingDeleteIndex(null);
-      setPendingDeleteIndices([]);
+  const handleDeleteDirect = useCallback((index: number, allIndices?: number[]) => {
+    if (onDeleteGroup && allIndices && allIndices.length > 1) {
+      onDeleteGroup(allIndices);
+    } else {
+      onDelete(index);
     }
-  }, [pendingDeleteIndex, pendingDeleteIndices, onDelete, onDeleteGroup]);
-
-  const handleCancelDelete = useCallback(() => {
-    setPendingDeleteIndex(null);
-    setPendingDeleteIndices([]);
-  }, []);
+  }, [onDelete, onDeleteGroup]);
 
 
   const isLineLocked = useCallback((line: OrderLine, hasAllocations: boolean): boolean => {
@@ -129,16 +109,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
     if (hasAllocations) return true;
     return false;
   }, []);
-
-  // Expose cancel to parent via ref
-  useEffect(() => {
-    if (cancelDeleteRef) {
-      cancelDeleteRef.current = handleCancelDelete;
-    }
-    return () => {
-      if (cancelDeleteRef) cancelDeleteRef.current = null;
-    };
-  }, [cancelDeleteRef, handleCancelDelete]);
 
   // Group ITEM lines by itemType, then merge identical lines
   const { itemSections, menuLines } = useMemo(() => {
@@ -239,7 +209,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   const totalLines = draftLines.length;
 
   return (
-    <Pressable style={styles.panelContent} onPress={pendingDeleteIndex !== null ? handleCancelDelete : undefined}>
+    <View style={styles.panelContent}>
       {/* Header */}
       <View style={styles.panelHeader}>
         <Pressable onPress={onCancel} style={styles.backButton}>
@@ -257,7 +227,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
         style={styles.scrollArea}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
-        onScrollBeginDrag={handleCancelDelete}
       >
         {totalLines === 0 ? (
           <View style={styles.emptyState}>
@@ -286,8 +255,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         totalPrice={group.totalPrice}
                         originalIndex={group.originalIndices[0]}
                         originalIndices={group.originalIndices}
-                        isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
-                        hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={isLineLocked(group.line, hasAllocations)}
                         isDeleteLocked={isLineDeleteLocked(group.line, hasAllocations)}
                         paymentStatus={paymentStatus}
@@ -295,9 +262,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         shouldFlash={flashFingerprints.has(getLineFingerprint(group.line))}
                         onEdit={onEdit}
                         onEditGroup={onEditGroup}
-                        onDeleteRequest={handleDeleteRequest}
-                        onConfirmDelete={handleConfirmDelete}
-                        onCancelDelete={handleCancelDelete}
+                        onDelete={handleDeleteDirect}
                       />
                     );
                   })}
@@ -319,17 +284,13 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         key={line.id || `temp-${originalIndex}`}
                         line={line}
                         originalIndex={originalIndex}
-                        isPendingDelete={pendingDeleteIndex === originalIndex}
-                        hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={isLineLocked(line, hasAllocations)}
                         isDeleteLocked={isLineDeleteLocked(line, hasAllocations)}
                         paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
                         shouldFlash={flashMenuIds.has(line.id)}
                         onEditMenu={onEditMenu}
-                        onDeleteRequest={handleDeleteRequest}
-                        onConfirmDelete={handleConfirmDelete}
-                        onCancelDelete={handleCancelDelete}
+                        onDelete={handleDeleteDirect}
                       />
                     );
                   })}
@@ -358,34 +319,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
         </View>
       )}
 
-    </Pressable>
-  );
-};
-
-// ========================================
-// INLINE DELETE CONFIRMATION OVERLAY
-// ========================================
-
-const DeleteConfirmOverlay: React.FC<{
-  onConfirm: () => void;
-}> = ({ onConfirm }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  return (
-    <Animated.View style={[styles.deleteOverlay, { opacity }]}>
-      <Pressable onPress={onConfirm} style={styles.deleteOverlayButton}>
-        <Trash2 size={16} color={colors.white} strokeWidth={2} />
-        <RNText style={styles.deleteOverlayText}>Confirmer la suppression</RNText>
-      </Pressable>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -461,8 +395,6 @@ interface ReceiptItemRowProps {
   totalPrice: number;
   originalIndex: number;
   originalIndices: number[];
-  isPendingDelete: boolean;
-  hasPendingDelete: boolean;
   isLocked: boolean;
   isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
@@ -470,9 +402,7 @@ interface ReceiptItemRowProps {
   shouldFlash?: boolean;
   onEdit: (index: number) => void;
   onEditGroup?: (indices: number[]) => void;
-  onDeleteRequest: (index: number, allIndices?: number[]) => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
+  onDelete: (index: number, allIndices?: number[]) => void;
 }
 
 const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
@@ -481,8 +411,6 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   totalPrice,
   originalIndex,
   originalIndices,
-  isPendingDelete,
-  hasPendingDelete,
   isLocked,
   isDeleteLocked,
   paymentStatus,
@@ -490,20 +418,16 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   shouldFlash,
   onEdit,
   onEditGroup,
-  onDeleteRequest,
-  onConfirmDelete,
-  onCancelDelete,
+  onDelete,
 }) => {
   const hasNote = !!line.note && line.note.trim().length > 0;
   const hasTags = !!(line.tags && line.tags.length > 0);
   const itemName = line.item?.name || 'Article';
-  const canDelete = !isLocked && !isDeleteLocked;
+  const canDelete = !isDeleteLocked;
 
   const handlePress = () => {
     if (isLocked) return;
-    if (hasPendingDelete) {
-      onCancelDelete();
-    } else if (onEditGroup && originalIndices.length > 1) {
+    if (onEditGroup && originalIndices.length > 1) {
       onEditGroup(originalIndices);
     } else {
       onEdit(originalIndex);
@@ -511,7 +435,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   };
 
   return (
-    <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
+    <View style={styles.receiptRowWrapper}>
       <Pressable onPress={handlePress} style={[styles.receiptRow, isLocked && styles.lockedRow]}>
         <View style={styles.receiptMainLine}>
           <RNText style={[styles.receiptQty, isLocked && styles.lockedText]}>{quantity}x</RNText>
@@ -530,7 +454,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
             )}
             {canDelete && (
               <Pressable
-                onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex, originalIndices); }}
+                onPress={(e) => { e.stopPropagation(); onDelete(originalIndex, originalIndices); }}
                 style={styles.trashButton}
                 hitSlop={6}
               >
@@ -561,9 +485,6 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
       </Pressable>
 
       {shouldFlash && <FlashOverlay />}
-      {isPendingDelete && (
-        <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
-      )}
     </View>
   );
 });
@@ -575,51 +496,39 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
 interface ReceiptMenuRowProps {
   line: OrderLine;
   originalIndex: number;
-  isPendingDelete: boolean;
-  hasPendingDelete: boolean;
   isLocked: boolean;
   isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
   shouldFlash?: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
-  onDeleteRequest: (index: number) => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
+  onDelete: (index: number) => void;
 }
 
 const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   line,
   originalIndex,
-  isPendingDelete,
-  hasPendingDelete,
   isLocked,
   isDeleteLocked,
   paymentStatus,
   showStatusBadge,
   shouldFlash,
   onEditMenu,
-  onDeleteRequest,
-  onConfirmDelete,
-  onCancelDelete,
+  onDelete,
 }) => {
   if (!line.menu || !line.items) return null;
 
   const hasNote = !!line.note && line.note.trim().length > 0;
   const menuName = line.menu.name || 'Menu';
-  const canDelete = !isLocked && !isDeleteLocked;
+  const canDelete = !isDeleteLocked;
 
   const handlePress = () => {
     if (isLocked) return;
-    if (hasPendingDelete) {
-      onCancelDelete();
-    } else {
-      onEditMenu?.(line);
-    }
+    onEditMenu?.(line);
   };
 
   return (
-    <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
+    <View style={styles.receiptRowWrapper}>
       <Pressable onPress={handlePress} style={[styles.receiptRow, isLocked && styles.lockedRow]}>
         <View style={styles.receiptMainLine}>
           <View style={styles.menuLabelWrap}>
@@ -642,7 +551,7 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
             )}
             {canDelete && (
               <Pressable
-                onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
+                onPress={(e) => { e.stopPropagation(); onDelete(originalIndex); }}
                 style={styles.trashButton}
                 hitSlop={6}
               >
@@ -694,9 +603,6 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
       </Pressable>
 
       {shouldFlash && <FlashOverlay />}
-      {isPendingDelete && (
-        <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
-      )}
     </View>
   );
 });
@@ -777,10 +683,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  receiptRowWrapperElevated: {
-    zIndex: 20,
-  },
-
   // Receipt row
   receiptRow: {
     paddingLeft: 20,
@@ -852,32 +754,6 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
 
-  // Inline delete confirmation overlay
-  deleteOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: getColorWithOpacity(colors.error.base, 0.88),
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 30,
-  },
-  deleteOverlayButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    flex: 1,
-    width: '100%',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
-  },
-  deleteOverlayText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.white,
-  },
 
   // Locked state
   lockedRow: {

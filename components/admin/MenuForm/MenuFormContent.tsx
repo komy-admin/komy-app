@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable,
   Keyboard, Platform, ScrollView, Animated,
@@ -43,31 +43,6 @@ interface MenuFormContentProps {
 
 const supplementContainerStyle = { minHeight: 32 };
 const flexStyle = { flex: 1 };
-
-// ============================================================
-// Inline delete overlay (second-click to confirm)
-// ============================================================
-
-const InlineDeleteOverlay: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  return (
-    <Animated.View style={[styles.inlineDeleteOverlay, { opacity }]}>
-      <Pressable onPress={onConfirm} style={styles.inlineDeleteOverlayButton}>
-        <Trash2 size={16} color={colors.white} strokeWidth={2} />
-        <Text style={styles.inlineDeleteOverlayText}>Supprimer</Text>
-      </Pressable>
-    </Animated.View>
-  );
-};
 
 // ============================================================
 // Component
@@ -532,10 +507,10 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
                             </Pressable>
                           </View>
                           {pendingDeleteItemTempId === ci.tempId && (
-                            <InlineDeleteOverlay onConfirm={() => {
+                            <DeleteConfirmOverlay onConfirm={() => {
                               editor.removeItemFromCategory(activeCategoryIndex, ci.tempId);
                               setPendingDeleteItemTempId(null);
-                            }} />
+                            }} label="Supprimer" />
                           )}
                         </View>
                       );
@@ -730,7 +705,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
                       </Pressable>
                     </View>
                     {pendingDeleteCategoryIndex === index && (
-                      <InlineDeleteOverlay onConfirm={() => handleConfirmDeleteCategory(index)} />
+                      <DeleteConfirmOverlay onConfirm={() => handleConfirmDeleteCategory(index)} label="Supprimer" />
                     )}
                   </View>
                   <FormFieldError message={hasError ? formErrors.getError(`categories.${index}`) : undefined} />
@@ -776,6 +751,63 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
     </View>
   );
 };
+
+// ============================================================
+// Inline Delete Overlay (local to MenuFormContent)
+// ============================================================
+
+const DeleteConfirmOverlay: React.FC<{ onConfirm: () => void; label?: string }> = ({
+  onConfirm,
+  label = 'Confirmer la suppression',
+}) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[overlayStyles.overlay, { opacity }]}>
+      <Pressable onPress={onConfirm} style={overlayStyles.button}>
+        <Trash2 size={16} color={colors.white} strokeWidth={2} />
+        <Text style={overlayStyles.text}>{label}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+};
+
+const overlayStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: getColorWithOpacity(colors.error.base, 0.88),
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+    borderRadius: 12,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    flex: 1,
+    width: '100%',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  text: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+  },
+});
 
 // ============================================================
 // Styles
@@ -1063,33 +1095,6 @@ const styles = StyleSheet.create({
   categoryCardError: {
     borderColor: colors.error.base,
     backgroundColor: colors.error.bg,
-  },
-
-  // Inline delete overlay
-  inlineDeleteOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: getColorWithOpacity(colors.error.base, 0.88),
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 30,
-  },
-  inlineDeleteOverlayButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    flex: 1,
-    width: '100%',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
-  },
-  inlineDeleteOverlayText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.white,
   },
 
   addCategoryButton: {

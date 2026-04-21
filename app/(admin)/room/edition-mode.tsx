@@ -2,7 +2,7 @@
  * Room Edition Mode - Édition des rooms et tables.
  *
  * Composants : RoomComponent (grille interactive), RoomFormContent (settings room),
- *              TableFormContent (édition table), DeleteConfirmationModal
+ *              TableFormContent (édition table), DeleteConfirmPanel
  * Hooks : useRooms, useTables, useTableEditor, usePanelPortal
  */
 
@@ -18,7 +18,7 @@ import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
 import { TableFormContent } from '~/components/admin/TableForm/TableFormContent';
 import { SlidePanel } from '~/components/ui/SlidePanel';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { DeleteConfirmPanel } from '~/components/ui/DeleteConfirmPanel';
 import { useToast } from '~/components/ToastProvider';
 import { useRooms, useTables } from '~/hooks/useRestaurant';
 import { useTableEditor } from '~/hooks/useTableEditor';
@@ -403,16 +403,16 @@ export default function RoomEditionMode() {
         </Text>
       </View>
 
-      <DeleteConfirmationModal
-        isVisible={isDeleteModalVisible}
+      <DeleteConfirmPanel
+        visible={isDeleteModalVisible}
         onClose={handleCloseModal}
         onConfirm={handleConfirmDelete}
         entityName={`"${selectedTable?.name}"`}
         entityType="la table"
       />
 
-      <DeleteConfirmationModal
-        isVisible={isRoomDeleteModalVisible}
+      <DeleteConfirmPanel
+        visible={isRoomDeleteModalVisible}
         onClose={handleCloseRoomDeleteModal}
         onConfirm={handleConfirmDeleteRoom}
         entityName={`"${roomToDelete?.name}"`}

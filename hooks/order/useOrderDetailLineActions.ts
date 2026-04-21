@@ -99,39 +99,22 @@ export function useOrderDetailLineActions({
     if (!selectedTableOrder) return;
     const line = selectedTableOrder.lines[index];
     if (!line) return;
-    // Brouillon → suppression directe, sinon confirmation via SlidePanel
-    if (line.status === Status.DRAFT) {
-      handleDeleteLine(line.id);
-    } else {
-      setDeleteGroupData({
-        indices: [index],
-        itemName: line.item?.name || 'Article',
-        status: line.status,
-      });
-    }
-  }, [selectedTableOrder, handleDeleteLine]);
+    setDeleteGroupData({
+      indices: [index],
+      itemName: line.item?.name || line.menu?.name || 'Article',
+      status: line.status,
+    });
+  }, [selectedTableOrder]);
 
   const handleDeleteGroupByIndices = useCallback((indices: number[]) => {
     if (!selectedTableOrder || indices.length === 0) return;
     const firstLine = selectedTableOrder.lines[indices[0]];
-    if (indices.length === 1) {
-      // Un seul item brouillon → suppression directe, sinon confirmation
-      if (firstLine?.status === Status.DRAFT) {
-        handleDeleteLine(firstLine.id);
-      } else {
-        setDeleteGroupData({
-          indices,
-          itemName: firstLine?.item?.name || 'Article',
-          status: firstLine?.status,
-        });
-      }
-      return;
-    }
     setDeleteGroupData({
       indices,
-      itemName: firstLine?.item?.name || 'Article',
+      itemName: firstLine?.item?.name || firstLine?.menu?.name || 'Article',
+      status: firstLine?.status,
     });
-  }, [selectedTableOrder, handleDeleteLine]);
+  }, [selectedTableOrder]);
 
   const handleConfirmDeleteGroup = useCallback(async (quantity: number, reason?: string, notes?: string) => {
     if (!deleteGroupData || !selectedTableOrder) return;

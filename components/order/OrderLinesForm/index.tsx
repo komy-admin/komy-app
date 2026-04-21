@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
@@ -58,9 +58,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
   // Panel Portal
   const { renderPanel, clearPanel } = usePanelPortal();
 
-  // Ref to cancel pending delete from outside the side panel
-  const cancelDeleteRef = useRef<(() => void) | null>(null);
-
   // Navigation
   const {
     activeMainTab,
@@ -117,9 +114,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    */
   const handleOpenCustomization = useCallback(
     (item: Item) => {
-      // Annuler toute suppression en cours
-      cancelDeleteRef.current?.();
-
       // Récupérer l'item complet depuis la liste
       const fullItem = items.find((i) => i.id === item.id) || item;
 
@@ -473,7 +467,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
               onCancel={handleBackPress}
               hasChanges={hasChanges}
               isProcessing={isProcessing}
-              cancelDeleteRef={cancelDeleteRef}
               itemTypes={itemTypes}
             />
           </View>

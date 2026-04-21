@@ -5,11 +5,11 @@ import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
+import { DeleteConfirmPanel } from "~/components/ui/DeleteConfirmPanel";
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { MenuFilters } from '~/components/filters/MenuFilters';
 import { X, PlusCircle, Layers, Lock } from 'lucide-react-native';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { ItemFormPanel } from '@/components/admin/ItemForm/ItemFormPanel';
 import { MenuFormContent } from '@/components/admin/MenuForm/MenuFormContent';
 import { useMenuPage } from '~/hooks/useMenuPage';
@@ -28,10 +28,9 @@ export default function MenuPage() {
     filteredItems, filteredMenus, tousSections,
     panelType, currentItem, currentMenu, closePanel,
     handleCreateItem, handleEditItem, handleSaveItem,
-    isDeleteItemModalVisible, itemToDelete, isDeleting, confirmDeleteItem, handleCloseDeleteItemModal,
     handleCreateMenu, handleEditMenu, handleBulkMenuSave,
-    isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
     createMenuCategoryItem, loadMenuCategoryItems,
+    pendingDeleteId, pendingDeleteType, pendingDeleteName, confirmDelete, clearPendingDelete,
     getItemActions, getMenuActions, getTousActions, handleTousRowPress,
     itemTableColumns, menuTableColumns, tousColumns,
   } = useMenuPage();
@@ -203,22 +202,12 @@ export default function MenuPage() {
         </Tabs>
       </View>
 
-      <DeleteConfirmationModal
-        isVisible={isDeleteItemModalVisible}
-        onClose={handleCloseDeleteItemModal}
-        onConfirm={confirmDeleteItem}
-        entityName={itemToDelete?.name || ''}
-        entityType="l'article"
-        isLoading={isDeleting}
-      />
-
-      <DeleteConfirmationModal
-        isVisible={isDeleteMenuModalVisible}
-        onClose={handleCloseDeleteMenuModal}
-        onConfirm={confirmDeleteMenu}
-        entityName={menuToDelete?.name || ''}
-        entityType="le menu"
-        isLoading={isDeletingMenu}
+      <DeleteConfirmPanel
+        visible={!!pendingDeleteId}
+        onClose={clearPendingDelete}
+        onConfirm={confirmDelete}
+        entityName={`"${pendingDeleteName}"`}
+        entityType={pendingDeleteType === 'menu' ? 'le menu' : "l'article"}
       />
     </View>
   );

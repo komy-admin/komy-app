@@ -14,6 +14,7 @@ interface PanelPortalContextType {
   renderPanel: (panel: ReactNode) => void;
   clearPanel: () => void;
   setTopBarHeight: (height: number) => void;
+  topOffset: number;
 }
 
 const PanelPortalContext = createContext<PanelPortalContextType | null>(null);
@@ -111,7 +112,7 @@ export function PanelPortalProvider({ children }: { children: ReactNode }) {
   }, [segments, clearPanel]);
 
   return (
-    <PanelPortalContext.Provider value={{ renderPanel, clearPanel, setTopBarHeight: handleSetTopBarHeight }}>
+    <PanelPortalContext.Provider value={{ renderPanel, clearPanel, setTopBarHeight: handleSetTopBarHeight, topOffset: totalTopOffset }}>
       {children}
 
       {/* Zone de rendu des panels - COMMENCE SOUS LA TOPBAR + SAFE AREA */}

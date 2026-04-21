@@ -245,26 +245,27 @@ function GroupDeletePickerContent({
           </View>
         )}
 
-        {/* Delete button */}
-        <View style={styles.deleteSection}>
-          <Pressable
-            onPress={onConfirm}
-            disabled={!canConfirm}
-            style={({ pressed }) => [
-              styles.deleteButton,
-              !canConfirm && styles.deleteButtonDisabled,
-              pressed && canConfirm && { opacity: 0.8, transform: [{ scale: 0.98 }] },
-            ]}
-          >
-            <Text style={styles.deleteButtonText}>Confirmer la suppression</Text>
-          </Pressable>
-        </View>
-
         {/* Spacer */}
         <View style={styles.spacer} />
 
         {/* Footer */}
         <View style={styles.footer}>
+          <Pressable
+            onPress={onConfirm}
+            disabled={!canConfirm}
+            style={[styles.confirmButton, !canConfirm && styles.confirmButtonDisabled]}
+          >
+            <Text style={styles.confirmButtonText}>
+              Confirmer la suppression
+            </Text>
+          </Pressable>
+
+          <View style={styles.separatorRow}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>ou</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
           <Pressable onPress={onClose} style={styles.cancelButton}>
             <Text style={styles.cancelText}>Annuler</Text>
           </Pressable>
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 18,
     paddingHorizontal: 20,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gray[50],
     borderBottomWidth: 1,
     borderBottomColor: colors.gray[100],
   },
@@ -362,8 +363,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[50],
   },
   reasonButtonSelected: {
-    backgroundColor: colors.error.text,
-    borderColor: colors.error.text,
+    backgroundColor: colors.brand.dark,
+    borderColor: colors.brand.dark,
   },
   reasonText: {
     fontSize: 14,
@@ -448,34 +449,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.gray[400],
   },
-  // Delete button
-  deleteSection: {
-    padding: 20,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: colors.error.text,
-    paddingVertical: 16,
-    borderRadius: 12,
-    ...(Platform.OS === 'web' ? {
-      cursor: 'pointer',
-      transition: 'all 0.12s ease',
-    } as any : {}),
-  },
-  deleteButtonDisabled: {
-    backgroundColor: colors.gray[300],
-    ...(Platform.OS === 'web' ? { cursor: 'default' as any } : {}),
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.white,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
   // Spacer
   spacer: {
     flex: 1,
@@ -487,10 +460,43 @@ const styles = StyleSheet.create({
     borderTopColor: colors.neutral[200],
     backgroundColor: colors.white,
   },
+  confirmButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.error.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  confirmButtonDisabled: {
+    backgroundColor: colors.gray[300],
+    ...(Platform.OS === 'web' ? { cursor: 'default' as any } : {}),
+  },
+  confirmButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  separatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 10,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.neutral[200],
+  },
+  separatorText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.gray[400],
+  },
   cancelButton: {
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.neutral[200],
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),

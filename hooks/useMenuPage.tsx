@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
@@ -40,18 +40,25 @@ export function useMenuPage() {
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
 
-  // Delete modals
-  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
-  const [isDeleteItemModalVisible, setIsDeleteItemModalVisible] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
-  const [isDeleteMenuModalVisible, setIsDeleteMenuModalVisible] = useState(false);
-  const [isDeletingMenu, setIsDeletingMenu] = useState(false);
+  // Delete confirmation panel
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteType, setPendingDeleteType] = useState<'item' | 'menu' | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
 
   // ============================================================
   // Panel handlers
   // ============================================================
+
+  const clearPendingDelete = useCallback(() => {
+    setPendingDeleteId(null);
+    setPendingDeleteType(null);
+    setPendingDeleteName('');
+  }, []);
+
+  // Clear pending delete when tab changes
+  useEffect(() => {
+    clearPendingDelete();
+  }, [activeTab]);
 
   const closePanel = useCallback(() => {
     setPanelType('none');
@@ -64,18 +71,20 @@ export function useMenuPage() {
   // ============================================================
 
   const handleCreateItem = useCallback(() => {
+    clearPendingDelete();
     setCurrentItem(null);
     setCurrentMenu(null);
     setPanelType('item');
-  }, []);
+  }, [clearPendingDelete]);
 
   const handleEditItem = useCallback((id: string) => {
+    clearPendingDelete();
     const item = items.find(i => i.id === id);
     if (!item) return;
     setCurrentItem(item);
     setCurrentMenu(null);
     setPanelType('item');
-  }, [items]);
+  }, [items, clearPendingDelete]);
 
   const handleSaveItem = useCallback(async (item: Item) => {
     const itemType = itemTypes.find(type => type.id === item.itemType?.id);
@@ -99,30 +108,10 @@ export function useMenuPage() {
 
   const handleDeleteItem = useCallback((id: string) => {
     const item = items.find(i => i.id === id);
-    if (!item) return;
-    setItemToDelete(item);
-    setIsDeleteItemModalVisible(true);
+    setPendingDeleteId(id);
+    setPendingDeleteType('item');
+    setPendingDeleteName(item?.name || '');
   }, [items]);
-
-  const confirmDeleteItem = useCallback(async () => {
-    if (!itemToDelete) return;
-    setIsDeleting(true);
-    try {
-      await deleteMenuItem(itemToDelete.id);
-      showToast('Article supprimé avec succès', 'success');
-    } catch (error) {
-      showApiError(error, showToast, "Erreur lors de la suppression de l'article");
-    } finally {
-      setIsDeleting(false);
-      setIsDeleteItemModalVisible(false);
-      setItemToDelete(null);
-    }
-  }, [itemToDelete, deleteMenuItem, showToast]);
-
-  const handleCloseDeleteItemModal = useCallback(() => {
-    setIsDeleteItemModalVisible(false);
-    setItemToDelete(null);
-  }, []);
 
   const handleToggleItemStatus = useCallback(async (id: string) => {
     try {
@@ -138,18 +127,20 @@ export function useMenuPage() {
   // ============================================================
 
   const handleCreateMenu = useCallback(() => {
+    clearPendingDelete();
     setCurrentMenu(null);
     setCurrentItem(null);
     setPanelType('menu');
-  }, []);
+  }, [clearPendingDelete]);
 
   const handleEditMenu = useCallback((id: string) => {
+    clearPendingDelete();
     const menu = allMenus.find(m => m.id === id);
     if (!menu) return;
     setCurrentMenu(menu);
     setCurrentItem(null);
     setPanelType('menu');
-  }, [allMenus]);
+  }, [allMenus, clearPendingDelete]);
 
   const handleToggleMenuStatus = useCallback(async (id: string) => {
     const menu = allMenus.find(m => m.id === id);
@@ -213,30 +204,29 @@ export function useMenuPage() {
 
   const handleDeleteMenu = useCallback((id: string) => {
     const menu = allMenus.find(m => m.id === id);
-    if (!menu) return;
-    setMenuToDelete(menu);
-    setIsDeleteMenuModalVisible(true);
+    setPendingDeleteId(id);
+    setPendingDeleteType('menu');
+    setPendingDeleteName(menu?.name || '');
   }, [allMenus]);
 
-  const confirmDeleteMenu = useCallback(async () => {
-    if (!menuToDelete) return;
-    setIsDeletingMenu(true);
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDeleteId || !pendingDeleteType) return;
     try {
-      await deleteMenu(menuToDelete.id);
-      showToast('Menu supprimé avec succès', 'success');
+      if (pendingDeleteType === 'item') {
+        await deleteMenuItem(pendingDeleteId);
+        showToast('Article supprimé avec succès', 'success');
+      } else {
+        await deleteMenu(pendingDeleteId);
+        showToast('Menu supprimé avec succès', 'success');
+      }
     } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la suppression du menu');
+      showApiError(error, showToast, pendingDeleteType === 'item'
+        ? "Erreur lors de la suppression de l'article"
+        : 'Erreur lors de la suppression du menu');
     } finally {
-      setIsDeletingMenu(false);
-      setIsDeleteMenuModalVisible(false);
-      setMenuToDelete(null);
+      clearPendingDelete();
     }
-  }, [menuToDelete, deleteMenu, showToast]);
-
-  const handleCloseDeleteMenuModal = useCallback(() => {
-    setIsDeleteMenuModalVisible(false);
-    setMenuToDelete(null);
-  }, []);
+  }, [pendingDeleteId, pendingDeleteType, deleteMenuItem, deleteMenu, showToast, clearPendingDelete]);
 
   // ============================================================
   // Filtres
@@ -382,12 +372,13 @@ export function useMenuPage() {
 
     // Items CRUD
     handleCreateItem, handleEditItem, handleSaveItem,
-    isDeleteItemModalVisible, itemToDelete, isDeleting, confirmDeleteItem, handleCloseDeleteItemModal,
 
     // Menus CRUD
     handleCreateMenu, handleEditMenu, handleBulkMenuSave,
-    isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
     createMenuCategoryItem, loadMenuCategoryItems,
+
+    // Delete confirmation panel
+    pendingDeleteId, pendingDeleteType, pendingDeleteName, confirmDelete, clearPendingDelete,
 
     // Actions & colonnes
     getItemActions, getMenuActions, getTousActions, handleTousRowPress,

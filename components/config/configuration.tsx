@@ -13,7 +13,7 @@ import { SlidePanel } from '~/components/ui/SlidePanel';
 import { ItemTypeFormPanel } from './ItemTypeFormPanel';
 import { TagFormPanel } from './TagFormPanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { DeleteConfirmPanel } from '~/components/ui/DeleteConfirmPanel';
 import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
@@ -36,10 +36,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
   const [sidePanelVisible, setSidePanelVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
-  const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
-  const [itemTypeToDelete, setItemTypeToDelete] = useState<ItemType | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string; type: 'itemType' | 'tag' } | null>(null);
   const { renderPanel, clearPanel } = usePanelPortal();
   const { itemTypes, createItemType, updateItemType, deleteItemType } = useItemTypes();
   const { tags, createTag, updateTag, deleteTag } = useTags();
@@ -72,51 +69,32 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
     clearPanel();
   }, [clearPanel]);
 
-  const handleDeleteTagClick = useCallback((tag: Tag) => {
-    setTagToDelete(tag);
+  const handleRequestDeleteTag = useCallback((tag: Tag) => {
+    setPendingDelete({ id: tag.id, name: tag.label, type: 'tag' });
   }, []);
 
-  const handleConfirmDeleteTag = useCallback(async () => {
-    if (!tagToDelete) return;
+  const handleRequestDeleteItemType = useCallback((itemType: ItemType) => {
+    setPendingDelete({ id: itemType.id, name: itemType.name, type: 'itemType' });
+  }, []);
 
-    setIsDeleting(true);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!pendingDelete) return;
     try {
-      await deleteTag(tagToDelete.id);
-      showToast('Tag supprimé avec succès', 'success');
-      setTagToDelete(null);
+      if (pendingDelete.type === 'tag') {
+        await deleteTag(pendingDelete.id);
+        showToast('Tag supprimé avec succès', 'success');
+      } else {
+        await deleteItemType(pendingDelete.id);
+        showToast('Type d\'article supprimé avec succès', 'success');
+      }
     } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la suppression du tag');
+      showApiError(error, showToast, pendingDelete.type === 'tag'
+        ? 'Erreur lors de la suppression du tag'
+        : 'Erreur lors de la suppression du type d\'article');
     } finally {
-      setIsDeleting(false);
+      setPendingDelete(null);
     }
-  }, [tagToDelete, deleteTag, showToast]);
-
-  const handleCancelDeleteTag = useCallback(() => {
-    setTagToDelete(null);
-  }, []);
-
-  const handleDeleteItemTypeClick = useCallback((itemType: ItemType) => {
-    setItemTypeToDelete(itemType);
-  }, []);
-
-  const handleConfirmDeleteItemType = useCallback(async () => {
-    if (!itemTypeToDelete) return;
-
-    setIsDeleting(true);
-    try {
-      await deleteItemType(itemTypeToDelete.id);
-      showToast('Type d\'article supprimé avec succès', 'success');
-      setItemTypeToDelete(null);
-    } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la suppression du type d\'article');
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [itemTypeToDelete, deleteItemType, showToast]);
-
-  const handleCancelDeleteItemType = useCallback(() => {
-    setItemTypeToDelete(null);
-  }, []);
+  }, [pendingDelete, deleteTag, deleteItemType, showToast]);
 
   const handleSaveTag = useCallback(async (tagData: Partial<Tag>, options?: Partial<TagOption>[]) => {
     const payload = {
@@ -233,7 +211,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
               itemTypes={itemTypes}
               onCreateItemType={() => openSidePanelForItemType()}
               onEditItemType={(itemType) => openSidePanelForItemType(itemType)}
-              onDeleteItemType={handleDeleteItemTypeClick}
+              onDeleteItemType={handleRequestDeleteItemType}
             />
           )}
           {activeTab === 'tags' && (
@@ -241,7 +219,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
               tags={tags}
               onCreateTag={() => openSidePanelForTag()}
               onEditTag={(tag) => openSidePanelForTag(tag)}
-              onDeleteTag={handleDeleteTagClick}
+              onDeleteTag={handleRequestDeleteTag}
             />
           )}
           {activeTab === 'views' && (
@@ -259,28 +237,13 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
         {/* Panel rendu via usePanelPortal - pas de rendu local */}
       </View>
 
-      {/* Modal de confirmation pour la suppression de tag */}
-      <DeleteConfirmationModal
-        isVisible={!!tagToDelete}
-        onClose={handleCancelDeleteTag}
-        onConfirm={handleConfirmDeleteTag}
-        entityName={tagToDelete?.label || ''}
-        entityType="le tag"
-        isLoading={isDeleting}
-        usePortal={true}
-        portalName="delete-tag-modal"
-      />
-
-      {/* Modal de confirmation pour la suppression de type d'article */}
-      <DeleteConfirmationModal
-        isVisible={!!itemTypeToDelete}
-        onClose={handleCancelDeleteItemType}
-        onConfirm={handleConfirmDeleteItemType}
-        entityName={itemTypeToDelete?.name || ''}
-        entityType="le type d'article"
-        isLoading={isDeleting}
-        usePortal={true}
-        portalName="delete-item-type-modal"
+      <DeleteConfirmPanel
+        visible={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleConfirmDelete}
+        entityName={`"${pendingDelete?.name || ''}"`}
+        entityType={pendingDelete?.type === 'tag' ? 'le tag' : "le type d'article"}
+        delay={3}
       />
     </View>
   );
@@ -579,43 +542,40 @@ interface ItemTypeListItemProps {
 const ItemTypeListItem: React.FC<ItemTypeListItemProps> = React.memo(({ itemType, onEdit, onDelete }) => {
   const isBar = itemType.type === 'bar';
 
-  // Récupérer l'icône enregistrée
   const iconData = AVAILABLE_ICONS.find(i => i.name === itemType.icon);
   const iconName = iconData?.name || 'glass-wine';
 
   return (
-    <Pressable>
-      <View style={styles.tagItem}>
-        <View style={styles.tagItemHeader}>
-          <View style={styles.tagItemIcon}>
-            <MaterialCommunityIcons name={iconName as any} size={20} color={colors.brand.dark} />
-          </View>
-          <View style={styles.tagItemContent}>
-            <Text style={styles.tagItemTitle}>{itemType.name}</Text>
-            <View style={styles.tagItemMeta}>
-              <View style={[styles.tagBadge, { backgroundColor: isBar ? colors.neutral[50] : colors.success.bg, borderColor: isBar ? colors.purple.base : colors.success.base }]}>
-                <Text style={[styles.tagBadgeText, { color: isBar ? colors.purple.base : colors.success.base }]}>
-                  {isBar ? 'Bar' : 'Cuisine'}
-                </Text>
-              </View>
-              <View style={[styles.tagBadge, { backgroundColor: colors.neutral[100], borderColor: colors.neutral[300] }]}>
-                <Text style={[styles.tagBadgeText, { color: colors.neutral[500] }]}>
-                  Niveau {itemType.priorityOrder}
-                </Text>
-              </View>
+    <View style={styles.tagItem}>
+      <View style={styles.tagItemHeader}>
+        <View style={styles.tagItemIcon}>
+          <MaterialCommunityIcons name={iconName as any} size={20} color={colors.brand.dark} />
+        </View>
+        <View style={styles.tagItemContent}>
+          <Text style={styles.tagItemTitle}>{itemType.name}</Text>
+          <View style={styles.tagItemMeta}>
+            <View style={[styles.tagBadge, { backgroundColor: isBar ? colors.neutral[50] : colors.success.bg, borderColor: isBar ? colors.purple.base : colors.success.base }]}>
+              <Text style={[styles.tagBadgeText, { color: isBar ? colors.purple.base : colors.success.base }]}>
+                {isBar ? 'Bar' : 'Cuisine'}
+              </Text>
+            </View>
+            <View style={[styles.tagBadge, { backgroundColor: colors.neutral[100], borderColor: colors.neutral[300] }]}>
+              <Text style={[styles.tagBadgeText, { color: colors.neutral[500] }]}>
+                Niveau {itemType.priorityOrder}
+              </Text>
             </View>
           </View>
-          <View style={styles.tagItemActions}>
-            <Pressable style={styles.tagActionButton} onPress={onEdit}>
-              <Text style={styles.tagActionButtonText}>Modifier</Text>
-            </Pressable>
-            <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
-              <Trash2 size={16} color={colors.error.base} strokeWidth={1.5} />
-            </Pressable>
-          </View>
+        </View>
+        <View style={styles.tagItemActions}>
+          <Pressable style={styles.tagActionButton} onPress={onEdit}>
+            <Text style={styles.tagActionButtonText}>Modifier</Text>
+          </Pressable>
+          <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
+            <Trash2 size={16} color={colors.error.base} strokeWidth={1.5} />
+          </Pressable>
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 });
 
@@ -634,46 +594,44 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, onEdit, onDel
   const hasMore = optionsCount > 3;
 
   return (
-    <Pressable>
-      <View style={styles.tagItem}>
-        <View style={styles.tagItemHeader}>
-          <View style={styles.tagItemIcon}>
-            <TagsIcon size={20} color={colors.brand.dark} strokeWidth={2} />
-          </View>
-          <View style={styles.tagItemContent}>
-            <Text style={styles.tagItemTitle}>{tag.label}</Text>
-            <View style={styles.tagItemMeta}>
-              <View style={styles.tagBadge}>
-                <Text style={styles.tagBadgeText}>{getTagFieldTypeLabel(tag.fieldType)}</Text>
-              </View>
-              {tag.isRequired && (
-                <View style={[styles.tagBadge, styles.tagBadgeRequired]}>
-                  <Text style={styles.tagBadgeText}>Obligatoire</Text>
-                </View>
-              )}
-              {(tag.fieldType === 'select' || tag.fieldType === 'multi-select') && (
-                <View style={[styles.tagBadge, optionsCount === 0 ? styles.tagBadgeWarning : styles.tagBadgeSuccess]}>
-                  <Text style={styles.tagBadgeText}>{optionsCount} option{optionsCount > 1 ? 's' : ''}</Text>
-                </View>
-              )}
+    <View style={styles.tagItem}>
+      <View style={styles.tagItemHeader}>
+        <View style={styles.tagItemIcon}>
+          <TagsIcon size={20} color={colors.brand.dark} strokeWidth={2} />
+        </View>
+        <View style={styles.tagItemContent}>
+          <Text style={styles.tagItemTitle}>{tag.label}</Text>
+          <View style={styles.tagItemMeta}>
+            <View style={styles.tagBadge}>
+              <Text style={styles.tagBadgeText}>{getTagFieldTypeLabel(tag.fieldType)}</Text>
             </View>
-            {!!optionsPreview && (
-              <Text style={styles.tagItemOptions}>
-                {optionsPreview}{hasMore ? '...' : ''}
-              </Text>
+            {tag.isRequired && (
+              <View style={[styles.tagBadge, styles.tagBadgeRequired]}>
+                <Text style={styles.tagBadgeText}>Obligatoire</Text>
+              </View>
+            )}
+            {(tag.fieldType === 'select' || tag.fieldType === 'multi-select') && (
+              <View style={[styles.tagBadge, optionsCount === 0 ? styles.tagBadgeWarning : styles.tagBadgeSuccess]}>
+                <Text style={styles.tagBadgeText}>{optionsCount} option{optionsCount > 1 ? 's' : ''}</Text>
+              </View>
             )}
           </View>
-          <View style={styles.tagItemActions}>
-            <Pressable style={styles.tagActionButton} onPress={onEdit}>
-              <Text style={styles.tagActionButtonText}>Modifier</Text>
-            </Pressable>
-            <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
-              <Trash2 size={16} color={colors.error.base} strokeWidth={1.5} />
-            </Pressable>
-          </View>
+          {!!optionsPreview && (
+            <Text style={styles.tagItemOptions}>
+              {optionsPreview}{hasMore ? '...' : ''}
+            </Text>
+          )}
+        </View>
+        <View style={styles.tagItemActions}>
+          <Pressable style={styles.tagActionButton} onPress={onEdit}>
+            <Text style={styles.tagActionButtonText}>Modifier</Text>
+          </Pressable>
+          <Pressable style={[styles.tagActionButton, styles.tagActionButtonDanger]} onPress={onDelete}>
+            <Trash2 size={16} color={colors.error.base} strokeWidth={1.5} />
+          </Pressable>
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 });
 

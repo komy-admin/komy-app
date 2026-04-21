@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, TextInput, Switch, ActivityIndicator
 import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, Clock, CalendarOff, Info } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '~/components/ToastProvider';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { DeleteConfirmPanel } from '~/components/ui/DeleteConfirmPanel';
 import type {
   ReservationService,
   ReservationSchedule,
@@ -1008,27 +1008,27 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
       </View>
 
       {/* Delete modals */}
-      <DeleteConfirmationModal
-        isVisible={!!deleteServiceTarget}
+      <DeleteConfirmPanel
+        visible={!!deleteServiceTarget}
         onClose={() => setDeleteServiceTarget(null)}
         onConfirm={handleDeleteService}
-        entityName={deleteServiceTarget?.name || ''}
+        entityName={`"${deleteServiceTarget?.name || ''}"`}
         entityType="le service"
         isLoading={isDeletingService}
       />
-      <DeleteConfirmationModal
-        isVisible={!!deleteScheduleTarget}
+      <DeleteConfirmPanel
+        visible={!!deleteScheduleTarget}
         onClose={() => setDeleteScheduleTarget(null)}
         onConfirm={handleDeleteSchedule}
-        entityName={deleteScheduleTarget ? `${getServiceName(deleteScheduleTarget.serviceId)} - ${DAYS.find(d => d.value === deleteScheduleTarget.dayOfWeek)?.label}` : ''}
+        entityName={`"${deleteScheduleTarget ? `${getServiceName(deleteScheduleTarget.serviceId)} - ${DAYS.find(d => d.value === deleteScheduleTarget.dayOfWeek)?.label}` : ''}"`}
         entityType="le créneau"
         isLoading={isDeletingSchedule}
       />
-      <DeleteConfirmationModal
-        isVisible={!!deleteOverrideTarget}
+      <DeleteConfirmPanel
+        visible={!!deleteOverrideTarget}
         onClose={() => setDeleteOverrideTarget(null)}
         onConfirm={handleDeleteOverride}
-        entityName={deleteOverrideTarget ? formatDate(deleteOverrideTarget.date) : ''}
+        entityName={`"${deleteOverrideTarget ? formatDate(deleteOverrideTarget.date) : ''}"`}
         entityType="la fermeture"
         isLoading={isDeletingOverride}
       />

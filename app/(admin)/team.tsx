@@ -10,7 +10,6 @@ import { SlidePanel } from "~/components/ui/SlidePanel";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
-import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { QuickFormContent } from "~/components/admin/TeamForm";
 import { UserQrModal } from "~/components/admin/UserQrModal";
 import { colors } from '~/theme';
@@ -24,6 +23,7 @@ import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
 import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { DeleteConfirmPanel } from '~/components/ui/DeleteConfirmPanel';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { showApiError } from '~/lib/apiErrorHandler';
 
@@ -81,10 +81,6 @@ type FormPanel =
   | null
   | { mode: 'quick'; user?: User | null };
 
-type DeleteModal =
-  | null
-  | { user: User; deleting: boolean };
-
 export default function TeamPage() {
   const router = useRouter();
   const accountConfig = useSelector((state: RootState) => state.session.accountConfig);
@@ -103,7 +99,8 @@ export default function TeamPage() {
 
   // États consolidés
   const [formPanel, setFormPanel] = useState<FormPanel>(null);
-  const [deleteModal, setDeleteModal] = useState<DeleteModal>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
   const [qrUser, setQrUser] = useState<User | null>(null);
   const { renderPanel, clearPanel } = usePanelPortal();
 
@@ -167,12 +164,13 @@ export default function TeamPage() {
 
   const handleCreateUser = useCallback(() => {
     if (isManager) return;
-    // Aller directement sur la création rapide
+    setPendingDeleteId(null);
     setFormPanel({ mode: 'quick' });
   }, [isManager]);
 
   const handleEditUser = useCallback((id: string) => {
     if (isManager) return;
+    setPendingDeleteId(null);
     const found = users.find(u => u.id === id);
     if (!found) return;
     setFormPanel({ mode: 'quick', user: found });
@@ -194,22 +192,22 @@ export default function TeamPage() {
 
   const handleDeleteUser = useCallback((id: string) => {
     const found = users.find(u => u.id === id);
-    if (!found) return;
-    setDeleteModal({ user: found, deleting: false });
+    setPendingDeleteId(id);
+    setPendingDeleteName([found?.firstName, found?.lastName].filter(Boolean).join(' ') || '');
   }, [users]);
 
   const confirmDelete = useCallback(async () => {
-    if (!deleteModal) return;
-    setDeleteModal(prev => prev ? { ...prev, deleting: true } : null);
+    if (!pendingDeleteId) return;
     try {
-      await deleteUser(deleteModal.user.id);
+      await deleteUser(pendingDeleteId);
       showToast('Utilisateur supprimé avec succès', 'success');
     } catch (err) {
       showApiError(err, showToast, 'Erreur lors de la suppression de l\'utilisateur');
     } finally {
-      setDeleteModal(null);
+      setPendingDeleteId(null);
+      setPendingDeleteName('');
     }
-  }, [deleteModal, deleteUser, showToast]);
+  }, [pendingDeleteId, deleteUser, showToast]);
 
   const handleShowQrCode = useCallback((user: User) => {
     setQrUser(user);
@@ -294,6 +292,7 @@ export default function TeamPage() {
           value={activeTab}
           onValueChange={(newValue: string) => {
             const newTab = newValue as UserProfile | 'all';
+            setPendingDeleteId(null);
             setActiveTab(newTab);
           }}
         >
@@ -358,23 +357,19 @@ export default function TeamPage() {
         </View>
       </View>
 
-      {/* Modal de suppression - cachée pour les managers */}
-      {canModifyUsers && (
-        <DeleteConfirmationModal
-          isVisible={deleteModal !== null}
-          onClose={() => setDeleteModal(null)}
-          onConfirm={confirmDelete}
-          entityName={deleteModal ? `${deleteModal.user.firstName} ${deleteModal.user.lastName}` : ''}
-          entityType="le profil"
-          isLoading={deleteModal?.deleting ?? false}
-        />
-      )}
-
       {/* QR Code Modal */}
       <UserQrModal
         user={qrUser}
         visible={qrUser !== null}
         onClose={() => setQrUser(null)}
+      />
+
+      <DeleteConfirmPanel
+        visible={!!pendingDeleteId}
+        onClose={() => { setPendingDeleteId(null); setPendingDeleteName(''); }}
+        onConfirm={confirmDelete}
+        entityName={`"${pendingDeleteName}"`}
+        entityType="l'utilisateur"
       />
 
       {/* Panel rendu via usePanelPortal - pas de rendu local */}
