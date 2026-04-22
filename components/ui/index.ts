@@ -24,3 +24,4 @@ export * from './HeaderActionButton';
 export * from './SectionDivider';
 export * from './ValidationOverlay';
 export * from './TagBadge';
+export * from './StatusBadge';

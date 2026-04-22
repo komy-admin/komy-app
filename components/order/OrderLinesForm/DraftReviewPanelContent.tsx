@@ -1,14 +1,13 @@
 import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Text as RNText, Platform, Animated } from 'react-native';
-import { Trash2, ShoppingBag, ArrowLeftToLine, Lock } from 'lucide-react-native';
+import { Trash2, ShoppingBag, ArrowLeftToLine } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { ItemType } from '~/types/item-type.types';
 import { Status } from '~/types/status.enum';
-import { formatPrice, getStatusText } from '~/lib/utils';
+import { formatPrice } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
-import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
-import { SectionDivider, TagBadge } from '~/components/ui';
-import { getColorWithOpacity } from '~/lib/color-utils';
+import { getOrderLineStatus } from '@/lib/status.utils';
+import { SectionDivider, TagBadge, StatusBadge, PaymentBadge } from '~/components/ui';
 import { colors } from '~/theme';
 
 // Fingerprint: identical item + tags + note + status + paymentFraction = same line
@@ -348,40 +347,6 @@ const FlashOverlay: React.FC = () => {
 };
 
 // ========================================
-// STATUS BADGE INLINE (shared)
-// ========================================
-
-const StatusBadgeInline: React.FC<{
-  status: string | undefined;
-  paymentStatus?: 'unpaid' | 'partial' | 'paid';
-  showLock: boolean;
-}> = React.memo(({ status, paymentStatus, showLock }) => {
-  const s = (status || '') as Status;
-  const statusBg = getStatusColor(s);
-  const statusColor = getStatusTextColor(s);
-  const statusLabel = getStatusText(s);
-
-  const hasPaidBadge = paymentStatus === 'paid' || paymentStatus === 'partial';
-  const paidBg = paymentStatus === 'paid' ? colors.error.bg : colors.warning.bg;
-  const paidColor = paymentStatus === 'paid' ? colors.error.base : colors.warning.base;
-  const paidLabel = paymentStatus === 'paid' ? 'Payé' : 'Partiel';
-
-  return (
-    <View style={styles.statusBadgeRow}>
-      <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-        <RNText style={[styles.statusBadgeText, { color: statusColor }]}>{statusLabel}</RNText>
-      </View>
-      {hasPaidBadge && (
-        <View style={[styles.statusBadge, { backgroundColor: paidBg }]}>
-          {showLock && <Lock size={11} color={paidColor} strokeWidth={2.5} />}
-          <RNText style={[styles.statusBadgeText, { color: paidColor }]}>{paidLabel}</RNText>
-        </View>
-      )}
-    </View>
-  );
-});
-
-// ========================================
 // RECEIPT ITEM ROW
 // ========================================
 
@@ -442,11 +407,10 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(totalPrice)}</RNText>
           <View style={styles.rowActions}>
             {(isLocked || isDeleteLocked || showStatusBadge) && (
-              <StatusBadgeInline
-                status={line.status}
-                paymentStatus={paymentStatus}
-                showLock={isLocked || !!isDeleteLocked}
-              />
+              <View style={styles.statusBadgeRow}>
+                <StatusBadge status={getOrderLineStatus(line) || ''} />
+                {paymentStatus && <PaymentBadge paymentStatus={paymentStatus} showLock={isLocked || !!isDeleteLocked} />}
+              </View>
             )}
             {canDelete && (
               <Pressable
@@ -534,11 +498,10 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
           <View style={styles.rowActions}>
             {(isLocked || isDeleteLocked || showStatusBadge) && (
-              <StatusBadgeInline
-                status={getOrderLineStatus(line) || ''}
-                paymentStatus={paymentStatus}
-                showLock={isLocked || !!isDeleteLocked}
-              />
+              <View style={styles.statusBadgeRow}>
+                <StatusBadge status={getOrderLineStatus(line) || ''} />
+                {paymentStatus && <PaymentBadge paymentStatus={paymentStatus} showLock={isLocked || !!isDeleteLocked} />}
+              </View>
             )}
             {canDelete && (
               <Pressable
@@ -747,20 +710,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  statusBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
   },
   rowActions: {
     flexDirection: 'row',

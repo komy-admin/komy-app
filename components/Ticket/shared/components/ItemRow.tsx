@@ -4,6 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, inte
 import { Status } from '~/types/status.enum';
 import { TicketItem } from '../types/ticket.types';
 import { ItemCustomization } from './ItemCustomization';
+import { StatusBadge } from '~/components/ui';
 import { colors } from '~/theme';
 
 interface ItemRowProps {
@@ -60,19 +61,8 @@ export function ItemRow({ item, isLastItem, showStatusBadge = true, isFlashing }
             </RNText>
           </View>
 
-          {showStatusBadge && (
-            <>
-              {item.status === Status.PENDING && (
-                <View style={styles.statusBadgePending}>
-                  <RNText style={styles.statusBadgeText}>RÉCLAMÉ</RNText>
-                </View>
-              )}
-              {item.status === Status.READY && (
-                <View style={styles.statusBadgeReady}>
-                  <RNText style={styles.statusBadgeText}>PRÊT</RNText>
-                </View>
-              )}
-            </>
+          {showStatusBadge && item.status && (
+            <StatusBadge status={item.status} />
           )}
         </View>
 
@@ -137,29 +127,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.gray[800],
-  },
-  statusBadgePending: {
-    backgroundColor: colors.warning.border,
-    borderWidth: 1,
-    borderColor: colors.warning.base,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  statusBadgeReady: {
-    backgroundColor: colors.info.bg,
-    borderWidth: 1,
-    borderColor: colors.info.base,  // Bleu - cohérent avec utils.ts READY
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  statusBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.brand.dark,
-    letterSpacing: 0.5,
   },
 });

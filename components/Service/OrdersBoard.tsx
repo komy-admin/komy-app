@@ -7,11 +7,11 @@ import { isOrderActive } from '~/utils/orderUtils';
 import {
   getOrderGlobalStatus,
   getStatusColor,
-  getStatusText,
   getStatusTextColor,
 } from '~/lib/status.utils';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { formatPrice } from '~/lib/utils';
+import { StatusBadge, PaymentBadge } from '~/components/ui';
 import { shadows, colors } from '~/theme';
 
 const STATUS_PRIORITY: Record<string, number> = {
@@ -151,23 +151,9 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
                         {lineCount} {lineCount > 1 ? 'articles' : 'article'}
                       </RNText>
                       <View style={styles.cardBadges}>
-                        <View style={[styles.statusBadge, { backgroundColor: getColorWithOpacity(getStatusTextColor(globalStatus), 0.15) }]}>
-                          <RNText style={[styles.statusBadgeText, { color: getStatusTextColor(globalStatus) }]}>
-                            {getStatusText(globalStatus)}
-                          </RNText>
-                        </View>
-                        {(order.paymentStatus === 'paid' || order.paymentStatus === 'partial') && (
-                          <View style={[
-                            styles.statusBadge,
-                            order.paymentStatus === 'paid' ? styles.paidBadge : styles.partialBadge,
-                          ]}>
-                            <RNText style={[
-                              styles.statusBadgeText,
-                              order.paymentStatus === 'paid' ? styles.paidBadgeText : styles.partialBadgeText,
-                            ]}>
-                              {order.paymentStatus === 'paid' ? 'Payé' : 'Partiel'}
-                            </RNText>
-                          </View>
+                        <StatusBadge status={globalStatus} />
+                        {order.paymentStatus && (
+                          <PaymentBadge paymentStatus={order.paymentStatus} />
                         )}
                       </View>
                       <View style={styles.cardFooter}>
@@ -300,29 +286,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
     marginTop: 4,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  } as any,
-  paidBadge: {
-    backgroundColor: getColorWithOpacity(colors.success.base, 0.125),
-  },
-  paidBadgeText: {
-    color: colors.success.base,
-  },
-  partialBadge: {
-    backgroundColor: getColorWithOpacity(colors.warning.base, 0.125),
-  },
-  partialBadgeText: {
-    color: colors.warning.base,
   },
 });
