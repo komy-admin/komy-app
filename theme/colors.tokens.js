@@ -86,8 +86,8 @@ const colors = {
 
   // === Extra accents (low usage, kept for specific features) ===
   purple: {
-    base: '#A855F7',       // 24×
-    alt: '#8B5CF6',        // 12×
+    base: '#A855F7',       // 29×
+    alt: '#8B5CF6',        // 5×  (Payment scope, différé)
   },
   pink: '#EC4899',         // 10×
 

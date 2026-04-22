@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     color: colors.gray[700],
   },
   levelNamesActive: {
-    color: colors.purple.alt,
+    color: colors.purple.base,
     fontWeight: '500',
   },
   levelNameCurrent: {

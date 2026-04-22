@@ -86,7 +86,7 @@ const getFieldTypeIconColor = (fieldType: string): string => {
     case 'select':
       return colors.info.base;
     case 'multi-select':
-      return colors.purple.alt;
+      return colors.purple.base;
     case 'toggle':
       return colors.success.base;
     case 'number':
@@ -104,7 +104,7 @@ const getFieldTypeLightBgColor = (fieldType: string): string => {
     case 'select':
       return colors.info.bg;
     case 'multi-select':
-      return getColorWithOpacity(colors.purple.alt, 0.1);
+      return getColorWithOpacity(colors.purple.base, 0.1);
     case 'toggle':
       return colors.success.bg;
     case 'number':

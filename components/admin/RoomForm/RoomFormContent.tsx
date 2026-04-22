@@ -21,7 +21,7 @@ const DEFAULT_ROOM_COLOR = colors.brand.accent;
 
 const ROOM_COLORS = [
   { label: 'Indigo', hex: colors.brand.accent },
-  { label: 'Violet', hex: colors.purple.alt },
+  { label: 'Violet', hex: colors.purple.base },
   { label: 'Vert', hex: colors.success.base },
   { label: 'Orange', hex: colors.warning.base },
   { label: 'Rose', hex: colors.pink },

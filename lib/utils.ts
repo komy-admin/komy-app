@@ -90,6 +90,6 @@ export {
 
 export {
   getTagFieldTypeConfig,
-  getFieldTypeConfig,
+  // getFieldTypeConfig, // unused
   formatTagValue,
 } from './tag.utils';
