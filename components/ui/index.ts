@@ -23,3 +23,4 @@ export * from './ViewModeToggle';
 export * from './HeaderActionButton';
 export * from './SectionDivider';
 export * from './ValidationOverlay';
+export * from './TagBadge';

@@ -4,7 +4,7 @@ import { Minus, Plus } from 'lucide-react-native';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { Status } from '~/types/status.enum';
-import { getStatusText, getStatusTextColor, getStatusBackgroundColor } from '~/lib/status.utils';
+import { getStatusText, getStatusTextColor, getStatusColor } from '~/lib/status.utils';
 import { colors } from '~/theme';
 
 export type VoidReason = 'correction' | 'unpaid' | 'offered' | 'other'
@@ -163,7 +163,7 @@ function GroupDeletePickerContent({
 
         {/* Status warning */}
         {status && (
-          <View style={[styles.warningSection, { backgroundColor: getStatusBackgroundColor(status) }]}>
+          <View style={[styles.warningSection, { backgroundColor: getStatusColor(status) }]}>
             <Text style={[styles.warningText, { color: getStatusTextColor(status) }]}>
               Statut actuel : <Text style={styles.warningBold}>{getStatusText(status)}</Text>
             </Text>

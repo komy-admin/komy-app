@@ -7,7 +7,7 @@ import { Status } from '~/types/status.enum';
 import { formatPrice, getStatusText } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
 import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
-import { SectionDivider } from '~/components/ui';
+import { SectionDivider, TagBadge } from '~/components/ui';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { colors } from '~/theme';
 
@@ -347,13 +347,6 @@ const FlashOverlay: React.FC = () => {
   );
 };
 
-const formatTagValue = (tag: any): string => {
-  if (tag.value === null || tag.value === undefined) return '';
-  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
-  if (Array.isArray(tag.value)) return tag.value.join(', ');
-  return String(tag.value);
-};
-
 // ========================================
 // STATUS BADGE INLINE (shared)
 // ========================================
@@ -468,14 +461,9 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
         </View>
 
         {hasTags && (
-          <View style={styles.receiptDetails}>
+          <View style={[styles.receiptTagsRow, isLocked && styles.lockedText]}>
             {line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => (
-              <RNText key={idx} style={[styles.receiptTag, isLocked && styles.lockedText]}>
-                {tag.tagSnapshot.label}: {formatTagValue(tag)}
-                {tag.priceModifier != null && tag.priceModifier !== 0
-                  ? ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`
-                  : ''}
-              </RNText>
+              <TagBadge key={idx} tag={tag} showPrice />
             ))}
           </View>
         )}
@@ -566,34 +554,29 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
 
         <View style={styles.menuItemsList}>
           {line.items.map((menuItem: any, idx: number) => {
-            const itemHasTags = menuItem.tags && menuItem.tags.length > 0;
+            const itemTags = (menuItem.tags || []).filter((tag: SelectedTag) => tag && tag.tagSnapshot);
             const itemHasNote = menuItem.note && menuItem.note.trim().length > 0;
 
-            const details: string[] = [];
-            if (itemHasTags) {
-              menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).forEach((tag: SelectedTag) => {
-                let tagStr = `${tag.tagSnapshot.label}: ${formatTagValue(tag)}`;
-                if (tag.priceModifier != null && tag.priceModifier !== 0) {
-                  tagStr += ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`;
-                }
-                details.push(tagStr);
-              });
-            }
-            if (itemHasNote) {
-              details.push(`Note: ${menuItem.note}`);
-            }
-
             return (
-              <RNText key={idx} style={[styles.menuSubItemText, isLocked && styles.lockedText]}>
-                <RNText style={[styles.menuSubCategory, isLocked && styles.lockedText]}>{menuItem.categoryName}: </RNText>
-                {menuItem.item?.name || ''}
-                {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
-                {details.length > 0 && (
-                  <RNText style={[styles.menuSubItemDetail, isLocked && styles.lockedText]}>
-                    {' — '}{details.join(' · ')}
-                  </RNText>
+              <View key={idx}>
+                <RNText style={[styles.menuSubItemText, isLocked && styles.lockedText]}>
+                  <RNText style={[styles.menuSubCategory, isLocked && styles.lockedText]}>{menuItem.categoryName}: </RNText>
+                  {menuItem.item?.name || ''}
+                  {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
+                  {itemHasNote && (
+                    <RNText style={[styles.menuSubItemDetail, isLocked && styles.lockedText]}>
+                      {' — '}Note: {menuItem.note}
+                    </RNText>
+                  )}
+                </RNText>
+                {itemTags.length > 0 && (
+                  <View style={[styles.menuSubTagsRow, isLocked && styles.lockedText]}>
+                    {itemTags.map((tag: SelectedTag, tagIdx: number) => (
+                      <TagBadge key={tagIdx} tag={tag} showPrice />
+                    ))}
+                  </View>
                 )}
-              </RNText>
+              </View>
             );
           })}
         </View>
@@ -728,15 +711,10 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
 
-  // Tags & notes (simple inline)
-  receiptDetails: {
-    marginTop: 4,
+  // Tags
+  receiptTagsRow: {
     gap: 2,
-  },
-  receiptTag: {
-    fontSize: 11,
-    color: colors.gray[500],
-    paddingLeft: 4,
+    marginTop: 2,
   },
   receiptNote: {
     fontSize: 11,
@@ -828,6 +806,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.gray[400],
     fontStyle: 'italic',
+  },
+  menuSubTagsRow: {
+    gap: 2,
+    marginTop: 3,
   },
 
   // Footer
