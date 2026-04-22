@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Platform, Linking } from 'react-native';
 import { cashRegisterApiService, CashRegisterSession, CloseSummary } from '~/api/cash-register.api';
 import { extractApiError } from '~/lib/apiErrorHandler';
 
@@ -109,15 +110,30 @@ export function useCashRegister() {
   }, []);
 
   /**
-   * Générer un rapport Z
+   * Telecharge et ouvre le rapport Z en PDF
+   *
+   * @param sessionId ID de la session de caisse
    */
-  const generateZReport = useCallback(async (sessionId: string): Promise<any> => {
+  const downloadZReport = useCallback(async (sessionId: string): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const result = await cashRegisterApiService.generateZReport(sessionId);
-      return result;
+      const blob = await cashRegisterApiService.downloadZReport(sessionId);
+
+      if (Platform.OS === 'web') {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        const fileReader = new FileReader();
+        fileReader.onload = () => {
+          const base64 = (fileReader.result as string).split(',')[1];
+          const uri = `data:application/pdf;base64,${base64}`;
+          Linking.openURL(uri).catch(() => {});
+        };
+        fileReader.readAsDataURL(blob);
+      }
     } catch (err) {
       const info = extractApiError(err);
       setError(info.message);
@@ -145,7 +161,7 @@ export function useCashRegister() {
     openSession,
     closeSession,
     getSessionHistory,
-    generateZReport,
+    downloadZReport,
     refreshSession,
   };
 }

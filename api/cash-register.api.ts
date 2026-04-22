@@ -112,10 +112,15 @@ class CashRegisterApiService extends BaseApiService<CashRegisterSession> {
   }
 
   /**
-   * Générer un rapport Z pour une session
+   * Telecharge le rapport Z en PDF pour une session de caisse
+   *
+   * @param sessionId ID de la session de caisse
+   * @returns Blob du PDF
    */
-  async generateZReport(sessionId: string): Promise<any> {
-    const response = await this.axiosInstance.get(`/${this.endpoint}/${sessionId}/z-report`);
+  async downloadZReport(sessionId: string): Promise<Blob> {
+    const response = await this.axiosInstance.get(`/${this.endpoint}/${sessionId}/z-report`, {
+      responseType: 'blob',
+    });
     return response.data;
   }
 }

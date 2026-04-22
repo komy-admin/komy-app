@@ -5,7 +5,6 @@ import {
   RefreshControl,
   Pressable,
   TextInput,
-  Alert,
   ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
@@ -28,6 +27,8 @@ import {
   User,
   Clock,
   Hash,
+  FileText,
+  Check,
 } from 'lucide-react-native';
 
 /**
@@ -47,6 +48,7 @@ export default function CashRegisterScreen() {
     openSession,
     closeSession,
     refreshSession,
+    downloadZReport,
   } = useCashRegister();
 
   const { payments } = usePayments();
@@ -54,6 +56,12 @@ export default function CashRegisterScreen() {
   // État local
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showCloseSummary, setShowCloseSummary] = useState<{
+    zNumber: string;
+    discrepancy: number;
+    sessionId: string;
+  } | null>(null);
+  const [isDownloadingZ, setIsDownloadingZ] = useState(false);
   const [openingBalance, setOpeningBalance] = useState('');
   const [actualCash, setActualCash] = useState('');
   const [notes, setNotes] = useState('');
@@ -127,29 +135,11 @@ export default function CashRegisterScreen() {
       setActualCash('');
       setNotes('');
 
-      // Afficher le résumé
-      const { summary, zNumber } = result;
-      const { discrepancy } = summary;
-      const message = discrepancy === 0
-        ? 'Caisse équilibrée !'
-        : discrepancy > 0
-        ? `Surplus de ${formatPrice(discrepancy)}`
-        : `Manquant de ${formatPrice(Math.abs(discrepancy))}`;
-
-      // A SUPPRIMER POUR UNE MDOALE OU AUTRE
-      Alert.alert(
-        'Caisse fermée',
-        `${message}\nNuméro Z: ${zNumber}`,
-        [
-          { text: 'OK' },
-          {
-            text: 'Télécharger le Z',
-            onPress: () => {
-              // TODO: Implémenter le téléchargement
-            },
-          },
-        ]
-      );
+      setShowCloseSummary({
+        zNumber: result.zNumber,
+        discrepancy: result.summary.discrepancy,
+        sessionId: result.session.id,
+      });
     } catch (error) {
       showApiError(error, showToast, 'Impossible de fermer la caisse');
     }
@@ -329,6 +319,95 @@ export default function CashRegisterScreen() {
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
+      </Modal>
+    );
+  };
+
+  /**
+   * Telecharger le rapport Z
+   */
+  const handleDownloadZ = useCallback(async () => {
+    if (!showCloseSummary) return;
+    setIsDownloadingZ(true);
+    try {
+      await downloadZReport(showCloseSummary.sessionId);
+      showToast('Rapport Z ouvert', 'success');
+    } catch (error) {
+      showApiError(error, showToast, 'Impossible de télécharger le rapport Z');
+    } finally {
+      setIsDownloadingZ(false);
+    }
+  }, [showCloseSummary, downloadZReport]);
+
+  /**
+   * Modal de résumé de clôture avec téléchargement du rapport Z
+   */
+  const renderCloseSummaryModal = () => {
+    if (!showCloseSummary) return null;
+    const { zNumber, discrepancy } = showCloseSummary;
+
+    return (
+      <Modal
+        visible={true}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowCloseSummary(null)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center"
+          onPress={() => setShowCloseSummary(null)}
+        >
+          <Pressable
+            className="bg-white rounded-lg p-6 w-96"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="items-center mb-4">
+              <View className="w-12 h-12 rounded-full bg-green-100 items-center justify-center mb-3">
+                <Check size={24} color="#16A34A" />
+              </View>
+              <Text className="text-lg font-semibold text-center">Caisse fermée</Text>
+              <Text className="text-sm text-gray-500 mt-1">{zNumber}</Text>
+            </View>
+
+            <View className="bg-gray-50 rounded-lg p-3 mb-4">
+              <View className="flex-row justify-between">
+                <Text className="text-sm text-gray-600">Écart</Text>
+                <Text className={`font-semibold ${
+                  discrepancy === 0 ? 'text-green-600' :
+                  discrepancy > 0 ? 'text-blue-600' : 'text-red-600'
+                }`}>
+                  {discrepancy === 0
+                    ? 'Caisse équilibrée'
+                    : discrepancy > 0
+                    ? `Surplus de ${formatPrice(discrepancy)}`
+                    : `Manquant de ${formatPrice(Math.abs(discrepancy))}`}
+                </Text>
+              </View>
+            </View>
+
+            <View className="gap-2">
+              <Button
+                className="w-full bg-blue-500 h-11"
+                onPress={handleDownloadZ}
+                disabled={isDownloadingZ}
+              >
+                <View className="flex-row items-center justify-center gap-2">
+                  <FileText size={18} color="white" />
+                  <Text className="text-white font-medium">
+                    {isDownloadingZ ? 'Téléchargement...' : 'Télécharger le rapport Z'}
+                  </Text>
+                </View>
+              </Button>
+              <Button
+                className="w-full bg-gray-100 h-11"
+                onPress={() => setShowCloseSummary(null)}
+                disabled={isDownloadingZ}
+              >
+                <Text className="text-gray-700 font-medium">Fermer</Text>
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     );
   };
@@ -538,6 +617,7 @@ export default function CashRegisterScreen() {
     <View className="flex-1 bg-gray-50">
       {renderOpenModal()}
       {renderCloseModal()}
+      {renderCloseSummaryModal()}
 
       <FlatList
         data={cashTransactions}

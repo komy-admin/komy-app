@@ -472,8 +472,8 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
     try {
       await printTicket(showPrintDialog.paymentId);
       showToast('Ticket envoyé à l\'impression', 'success');
-    } catch {
-      showToast('Erreur lors de l\'impression du ticket', 'error');
+    } catch (error) {
+      showApiError(error, showToast, 'Erreur lors de l\'impression du ticket');
     } finally {
       setIsPrinting(false);
       setShowPrintDialog(null);
