@@ -23,7 +23,8 @@ import { getStatusColor } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { isTableInBounds } from "~/hooks/room/useRoomValidation";
 import { Status } from "~/types/status.enum";
-import { shadows } from "~/theme";
+import { getColorWithOpacity } from "~/lib/color-utils";
+import { shadows, colors } from "~/theme";
 import { RoomChairs, RoomChairsRounded } from "./RoomChairs";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
@@ -73,7 +74,7 @@ const RoomTable: React.FC<TableViewProps> = ({
   currentZoomScale,
   isSelected,
   roomColor,
-  tableBg = '#F5F4FA',
+  tableBg = colors.neutral[50],
   onPress,
   onLongPress,
   onUpdate,
@@ -507,10 +508,10 @@ const RoomTable: React.FC<TableViewProps> = ({
       opacity: ghostOpacity.value,
       zIndex: 999, // Juste en dessous de la table
       borderWidth: 2,
-      borderColor: '#2A2E33',
+      borderColor: colors.brand.dark,
       borderStyle: 'dashed',
       borderRadius: 5,
-      backgroundColor: 'rgba(42, 46, 51, 0.1)',
+      backgroundColor: getColorWithOpacity(colors.brand.dark, 0.1),
     };
   });
 
@@ -537,8 +538,8 @@ const RoomTable: React.FC<TableViewProps> = ({
     backgroundColor: status ? getStatusColor(status) : tableBg,
     borderRadius: tableBorderRadius,
     ...(isEditing
-      ? { borderWidth: 3, borderColor: '#2A2E33', borderStyle: 'solid' as const }
-      : { borderWidth: 2, borderColor: '#AAAAAA', borderStyle: 'solid' as const }
+      ? { borderWidth: 3, borderColor: colors.brand.dark, borderStyle: 'solid' as const }
+      : { borderWidth: 2, borderColor: colors.gray[400], borderStyle: 'solid' as const }
     ),
   }), [status, isEditing, tableBg, tableBorderRadius]);
 
@@ -573,8 +574,8 @@ const RoomTable: React.FC<TableViewProps> = ({
             <View style={styles.innerContainer}>
               <View style={[styles.table, tableStyle]}>
                 <View style={styles.emptyTableContent}>
-                  <View style={[styles.emptyTableIcon, isSelected && { backgroundColor: roomColor || '#6366F1' }]}>
-                    <MaterialCommunityIcons name="table-furniture" size={18} color={isSelected ? '#FFFFFF' : '#9CA3AF'} />
+                  <View style={[styles.emptyTableIcon, isSelected && { backgroundColor: roomColor || colors.brand.accent }]}>
+                    <MaterialCommunityIcons name="table-furniture" size={18} color={isSelected ? colors.white : colors.gray[400]} />
                   </View>
                   <RNText style={styles.emptyTableText} numberOfLines={1}>{table.name}</RNText>
                 </View>
@@ -664,14 +665,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 9999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyTableText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   // Resize handles
   rightHandle: {
@@ -725,7 +726,7 @@ const styles = StyleSheet.create({
   handleDot: {
     width: 14,
     height: 14,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 7,
   },
 });

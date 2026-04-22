@@ -4,6 +4,7 @@ import {
   Calculator,
   Download
 } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 /**
  * Layout pour la section Paiements avec navigation par tabs
@@ -18,12 +19,12 @@ export default function PaymentsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2563EB', // Bleu primaire
-        tabBarInactiveTintColor: '#6B7280', // Gris
+        tabBarActiveTintColor: colors.info.base, // Bleu primaire
+        tabBarInactiveTintColor: colors.gray[500], // Gris
         tabBarStyle: {
           backgroundColor: 'white',
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: colors.gray[200],
           paddingBottom: 5,
           paddingTop: 5,
           height: 60,

@@ -13,6 +13,8 @@ import { showApiError } from '~/lib/apiErrorHandler';
 import { accountConfigApiService } from '~/api/account-config.api';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 type TabType = 'restaurant' | 'info' | 'password' | 'pin';
 
@@ -37,7 +39,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('restaurant')}
             activeOpacity={1}
           >
-            <Landmark size={20} color={activeTab === 'restaurant' ? '#6366F1' : '#64748B'} strokeWidth={2} />
+            <Landmark size={20} color={activeTab === 'restaurant' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'restaurant' && styles.sidebarTabTextActive]}>
                 Restaurant
@@ -54,7 +56,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('password')}
             activeOpacity={1}
           >
-            <Lock size={20} color={activeTab === 'password' ? '#F59E0B' : '#64748B'} strokeWidth={2} />
+            <Lock size={20} color={activeTab === 'password' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'password' && styles.sidebarTabTextActive]}>
                 Mot de passe
@@ -71,7 +73,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('pin')}
             activeOpacity={1}
           >
-            <KeyRound size={20} color={activeTab === 'pin' ? '#8B5CF6' : '#64748B'} strokeWidth={2} />
+            <KeyRound size={20} color={activeTab === 'pin' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'pin' && styles.sidebarTabTextActive]}>
                 Code PIN
@@ -88,7 +90,7 @@ export default function ProfilePage({ isCompactSidebar }: { isCompactSidebar?: b
             onPress={() => setActiveTab('info')}
             activeOpacity={1}
           >
-            <User size={20} color={activeTab === 'info' ? '#11B981' : '#64748B'} strokeWidth={2} />
+            <User size={20} color={activeTab === 'info' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'info' && styles.sidebarTabTextActive]}>
                 Informations
@@ -170,7 +172,7 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: '#6366F1' },
+            { backgroundColor: colors.brand.dark },
             !canSave && styles.createButtonDisabled
           ]}
           onPress={handleSave}
@@ -192,8 +194,8 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-                <Landmark size={24} color="#6366F1" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Landmark size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Établissement</Text>
@@ -208,7 +210,7 @@ const RestaurantTab: React.FC<RestaurantTabProps> = ({ dispatch, showToast }) =>
                   value={name}
                   onChangeText={(text) => { setName(text); formErrors.clearError('name'); }}
                   placeholder="Ex: Le Petit Bistrot"
-                  placeholderTextColor="#A0A0A0"
+                  placeholderTextColor={colors.gray[400]}
                   style={[styles.formInput, formErrors.hasError('name') && styles.formInputError]}
                   autoComplete="off"
                   editable={!isSaving}
@@ -329,7 +331,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: '#11B981' },
+            { backgroundColor: colors.brand.dark },
             (!hasChanges || isSaving || hasValidationErrors()) && styles.createButtonDisabled
           ]}
           onPress={handleSave}
@@ -351,8 +353,8 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                <User size={24} color="#11B981" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <User size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Identité</Text>
@@ -368,7 +370,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
                     value={firstName}
                     onChangeText={setFirstName}
                     placeholder="Prénom"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.gray[400]}
                     style={styles.formInput}
                     autoComplete="off"
                     editable={!isSaving}
@@ -380,7 +382,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
                     value={lastName}
                     onChangeText={setLastName}
                     placeholder="Nom"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.gray[400]}
                     style={styles.formInput}
                     autoComplete="off"
                     editable={!isSaving}
@@ -396,7 +398,7 @@ const InfoTab: React.FC<InfoTabProps> = ({ user, dispatch, showToast }) => {
                     onChangeText={handlePhoneChange}
                     onBlur={() => markFieldAsTouched('phone')}
                     placeholder="Téléphone (optionnel)"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.gray[400]}
                     keyboardType="phone-pad"
                     style={[styles.formInput, getFieldError('phone') && styles.formInputError]}
                     autoComplete="off"
@@ -501,7 +503,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: '#F59E0B' },
+            { backgroundColor: colors.brand.dark },
             (!isPasswordFormValid || isSavingPassword) && styles.createButtonDisabled
           ]}
           onPress={handleSavePassword}
@@ -524,8 +526,8 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
           {/* Mot de passe */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                <Lock size={24} color="#F59E0B" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Lock size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Mot de passe</Text>
@@ -541,7 +543,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
                     value={currentPassword}
                     onChangeText={setCurrentPassword}
                     placeholder="Mot de passe actuel"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.gray[400]}
                     secureTextEntry={!showCurrentPassword}
                     style={[styles.formInput, styles.passwordInput]}
                     autoComplete="one-time-code"
@@ -550,8 +552,8 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
                   />
                   <TouchableOpacity style={styles.eyeButton} onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
                     {showCurrentPassword
-                      ? <EyeOff size={18} color="#94A3B8" />
-                      : <Eye size={18} color="#94A3B8" />
+                      ? <EyeOff size={18} color={colors.neutral[400]} />
+                      : <Eye size={18} color={colors.neutral[400]} />
                     }
                   </TouchableOpacity>
                 </View>
@@ -566,7 +568,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
                       onChangeText={setNewPassword}
                       onBlur={() => markFieldAsTouched('newPassword')}
                       placeholder="Nouveau mot de passe"
-                      placeholderTextColor="#A0A0A0"
+                      placeholderTextColor={colors.gray[400]}
                       secureTextEntry={!showNewPassword}
                       style={[styles.formInput, styles.passwordInput, getFieldError('newPassword') && styles.formInputError]}
                       autoComplete="new-password"
@@ -574,8 +576,8 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowNewPassword(!showNewPassword)}>
                       {showNewPassword
-                        ? <EyeOff size={18} color="#94A3B8" />
-                        : <Eye size={18} color="#94A3B8" />
+                        ? <EyeOff size={18} color={colors.neutral[400]} />
+                        : <Eye size={18} color={colors.neutral[400]} />
                       }
                     </TouchableOpacity>
                   </View>
@@ -592,7 +594,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
                       onChangeText={setConfirmPassword}
                       onBlur={() => markFieldAsTouched('confirmPassword')}
                       placeholder="Confirmer le mot de passe"
-                      placeholderTextColor="#A0A0A0"
+                      placeholderTextColor={colors.gray[400]}
                       secureTextEntry={!showConfirmPassword}
                       style={[styles.formInput, styles.passwordInput, getFieldError('confirmPassword') && styles.formInputError]}
                       autoComplete="new-password"
@@ -600,8 +602,8 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ user, dispatch, showToast }) 
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                       {showConfirmPassword
-                        ? <EyeOff size={18} color="#94A3B8" />
-                        : <Eye size={18} color="#94A3B8" />
+                        ? <EyeOff size={18} color={colors.neutral[400]} />
+                        : <Eye size={18} color={colors.neutral[400]} />
                       }
                     </TouchableOpacity>
                   </View>
@@ -684,7 +686,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: '#8B5CF6' },
+            { backgroundColor: colors.brand.dark },
             (!isPinFormValid || isSaving) && styles.createButtonDisabled
           ]}
           onPress={handleSavePin}
@@ -706,8 +708,8 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
         <Pressable style={styles.viewsCardsWrapper} onPress={() => { if (Platform.OS !== 'web') Keyboard.dismiss(); }}>
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-                <KeyRound size={24} color="#8B5CF6" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <KeyRound size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <Text style={styles.viewCardTitle}>Code PIN</Text>
@@ -723,7 +725,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
                     value={currentPin}
                     onChangeText={handleCurrentPinChange}
                     placeholder="4 chiffres"
-                    placeholderTextColor="#A0A0A0"
+                    placeholderTextColor={colors.gray[400]}
                     secureTextEntry={!showCurrentPin}
                     keyboardType="number-pad"
                     maxLength={4}
@@ -734,8 +736,8 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
                   />
                   <TouchableOpacity style={styles.eyeButton} onPress={() => setShowCurrentPin(!showCurrentPin)}>
                     {showCurrentPin
-                      ? <EyeOff size={18} color="#94A3B8" />
-                      : <Eye size={18} color="#94A3B8" />
+                      ? <EyeOff size={18} color={colors.neutral[400]} />
+                      : <Eye size={18} color={colors.neutral[400]} />
                     }
                   </TouchableOpacity>
                 </View>
@@ -749,7 +751,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
                       value={newPin}
                       onChangeText={handleNewPinChange}
                       placeholder="4 chiffres"
-                      placeholderTextColor="#A0A0A0"
+                      placeholderTextColor={colors.gray[400]}
                       secureTextEntry={!showNewPin}
                       keyboardType="number-pad"
                       maxLength={4}
@@ -759,8 +761,8 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowNewPin(!showNewPin)}>
                       {showNewPin
-                        ? <EyeOff size={18} color="#94A3B8" />
-                        : <Eye size={18} color="#94A3B8" />
+                        ? <EyeOff size={18} color={colors.neutral[400]} />
+                        : <Eye size={18} color={colors.neutral[400]} />
                       }
                     </TouchableOpacity>
                   </View>
@@ -776,7 +778,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
                       value={confirmPin}
                       onChangeText={handleConfirmPinChange}
                       placeholder="4 chiffres"
-                      placeholderTextColor="#A0A0A0"
+                      placeholderTextColor={colors.gray[400]}
                       secureTextEntry={!showConfirmPin}
                       keyboardType="number-pad"
                       maxLength={4}
@@ -790,8 +792,8 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
                     />
                     <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirmPin(!showConfirmPin)}>
                       {showConfirmPin
-                        ? <EyeOff size={18} color="#94A3B8" />
-                        : <Eye size={18} color="#94A3B8" />
+                        ? <EyeOff size={18} color={colors.neutral[400]} />
+                        : <Eye size={18} color={colors.neutral[400]} />
                       }
                     </TouchableOpacity>
                   </View>
@@ -817,7 +819,7 @@ const PinTab: React.FC<PinTabProps> = ({ showToast }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
   content: {
     flex: 1,
@@ -827,11 +829,11 @@ const styles = StyleSheet.create({
   // Sidebar
   sidebar: {
     width: 240,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
+    borderLeftColor: colors.neutral[200],
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: colors.neutral[200],
     padding: 16,
     gap: 8,
   },
@@ -852,15 +854,15 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   sidebarTabActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   sidebarTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   sidebarTabTextActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '600',
   },
 
@@ -881,28 +883,31 @@ const styles = StyleSheet.create({
   tabTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   tabSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
+    minHeight: 44,
   },
   createButtonDisabled: {
-    opacity: 0.4,
+    backgroundColor: colors.neutral[300],
   },
   createButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 
   // ScrollView
@@ -918,11 +923,11 @@ const styles = StyleSheet.create({
 
   // Cards
   viewCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
   },
   viewCardHeader: {
     flexDirection: 'row',
@@ -942,12 +947,12 @@ const styles = StyleSheet.create({
   viewCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   viewCardDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
 
   // Submenu section
@@ -955,7 +960,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
     gap: 4,
   },
 
@@ -971,15 +976,15 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 8,
   },
   formInput: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    color: '#1E293B',
+    backgroundColor: colors.white,
+    color: colors.neutral[800],
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -993,15 +998,15 @@ const styles = StyleSheet.create({
   },
   passwordRule: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
   },
   passwordRuleValid: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '600',
   },
   passwordRuleSep: {
     fontSize: 12,
-    color: '#CBD5E1',
+    color: colors.neutral[300],
   },
   passwordWrapper: {
     position: 'relative',
@@ -1022,11 +1027,11 @@ const styles = StyleSheet.create({
 
   // Field validation
   formInputError: {
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
   },
   fieldErrorText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: colors.error.base,
     fontWeight: '500',
     marginTop: 4,
   },

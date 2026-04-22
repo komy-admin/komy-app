@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import type { PaymentAllocation } from '~/types/payment.types';
 import { formatPrice } from '~/lib/utils';
+import { colors } from '~/theme';
 
 interface AllocationsListProps {
   allocations: PaymentAllocation[];
@@ -86,13 +87,13 @@ export function AllocationsList({ allocations, tipAmount }: AllocationsListProps
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     padding: 16,
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   itemRow: {
     flexDirection: 'row',
@@ -112,23 +113,23 @@ const styles = StyleSheet.create({
   },
   itemQuantity: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   itemAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   itemDivider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     marginTop: 12,
   },
   totalsSection: {
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#D1D5DB',
+    borderTopColor: colors.gray[300],
   },
   totalRow: {
     flexDirection: 'row',
@@ -138,25 +139,25 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   totalValue: {
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   totalDivider: {
     height: 1,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.gray[300],
     marginVertical: 8,
   },
   grandTotalLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   grandTotalValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
 });

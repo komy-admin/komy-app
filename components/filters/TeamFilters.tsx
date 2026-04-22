@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Text, TextInput, Pressable, Keyboard, Platform } from 'react-native';
 import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
+import { colors } from '~/theme';
 
 export interface TeamFilterState {
   name: string;
@@ -36,7 +37,7 @@ export const TeamFilters: React.FC<TeamFiltersProps> = ({
           value={filters.name}
           onChangeText={(text) => onFiltersChange({ ...filters, name: text })}
           placeholder="Rechercher..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.gray[400]}
         />
       </View>
 
@@ -77,26 +78,26 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 2,
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 15,
     minHeight: 40,
     fontSize: 14,
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   filterActions: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.gray[200],
   },
   clearButton: {
     paddingVertical: 10,
@@ -107,21 +108,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   clearButtonActive: {
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderWidth: 1,
-    borderColor: '#2A2E33',
+    borderColor: colors.brand.dark,
   },
   clearButtonInactive: {
     ...Platform.select({
       web: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: colors.gray[100],
       },
       default: {
         backgroundColor: 'transparent',
       }
     }),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
   },
   clearButtonText: {
     fontSize: 14,
@@ -129,9 +130,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   clearButtonTextActive: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   clearButtonTextInactive: {
-    color: '#A0A0A0',
+    color: colors.gray[400],
   },
 });

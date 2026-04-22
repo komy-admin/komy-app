@@ -12,6 +12,8 @@ import PinInput from '~/components/ui/pin-input';
 import * as Clipboard from 'expo-clipboard';
 import { useAccountConfig } from '~/hooks/useAccountConfig';
 import { showApiError } from '~/lib/apiErrorHandler';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 type SecurityTab = '2fa-account' | 'devices';
 
@@ -33,7 +35,7 @@ export default function SecurityPage({ isCompactSidebar }: { isCompactSidebar?: 
             onPress={() => setActiveTab('2fa-account')}
             activeOpacity={1}
           >
-            <ShieldCheck size={20} color={activeTab === '2fa-account' ? '#475569' : '#64748B'} strokeWidth={2} />
+            <ShieldCheck size={20} color={activeTab === '2fa-account' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === '2fa-account' && styles.sidebarTabTextActive]}>
                 2FA
@@ -50,7 +52,7 @@ export default function SecurityPage({ isCompactSidebar }: { isCompactSidebar?: 
             onPress={() => setActiveTab('devices')}
             activeOpacity={1}
           >
-            <Monitor size={20} color={activeTab === 'devices' ? '#475569' : '#64748B'} strokeWidth={2} />
+            <Monitor size={20} color={activeTab === 'devices' ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
             {isCompactSidebar === false && (
               <Text style={[styles.sidebarTabText, activeTab === 'devices' && styles.sidebarTabTextActive]}>
                 Appareils
@@ -358,8 +360,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* TOTP Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(71, 85, 105, 0.08)' }]}>
-                <Smartphone size={24} color="#475569" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Smartphone size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -406,8 +408,8 @@ const TwoFactorTab: React.FC<TwoFactorTabProps> = ({ showToast }) => {
           {/* Email Card */}
           <View style={styles.viewCard}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(71, 85, 105, 0.08)' }]}>
-                <Mail size={24} color="#475569" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Mail size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={[styles.viewCardContent, { flex: 1 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -504,9 +506,9 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
     switch (platform) {
       case 'ios':
       case 'android':
-        return <Smartphone size={20} color="#475569" strokeWidth={2} />;
+        return <Smartphone size={20} color={colors.brand.dark} strokeWidth={2} />;
       default:
-        return <Monitor size={20} color="#475569" strokeWidth={2} />;
+        return <Monitor size={20} color={colors.brand.dark} strokeWidth={2} />;
     }
   };
 
@@ -557,7 +559,7 @@ const AccountDevicesTab: React.FC<AccountDevicesTabProps> = ({ showToast }) => {
             </View>
           ) : devices.length === 0 ? (
             <View style={devicesStyles.emptyState}>
-              <Monitor size={40} color="#CBD5E1" strokeWidth={1.5} />
+              <Monitor size={40} color={colors.neutral[300]} strokeWidth={1.5} />
               <Text style={devicesStyles.emptyText}>Aucun appareil de confiance enregistré</Text>
               <Text style={devicesStyles.emptySubtext}>
                 Les appareils seront ajoutés automatiquement{'\n'}après <Text style={devicesStyles.emptyBold}>vérification 2FA</Text>
@@ -622,22 +624,22 @@ const twoFaStyles = StyleSheet.create({
     gap: 8,
     marginTop: 6,
     marginBottom: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   secretText: {
     fontSize: 12,
-    color: '#475569',
+    color: colors.brand.dark,
     fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
     fontWeight: '600',
   },
   secretCopyHint: {
     fontSize: 11,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
-    backgroundColor: '#475569',
+    backgroundColor: colors.brand.dark,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -645,7 +647,7 @@ const twoFaStyles = StyleSheet.create({
   },
   verifyLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 8,
     marginBottom: 12,
     textAlign: 'center',
@@ -658,7 +660,7 @@ const twoFaStyles = StyleSheet.create({
   backLink: {
     marginTop: 16,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
@@ -666,7 +668,7 @@ const twoFaStyles = StyleSheet.create({
   },
   backLinkText: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
     fontWeight: '600',
   },
   activeBadge: {
@@ -674,7 +676,7 @@ const twoFaStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: colors.success.base,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -683,11 +685,11 @@ const twoFaStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
   },
   activeBadgeText: {
     fontSize: 12,
-    color: '#10B981',
+    color: colors.success.base,
     fontWeight: '600',
   },
   inactiveBadge: {
@@ -695,7 +697,7 @@ const twoFaStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -704,15 +706,15 @@ const twoFaStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error.base,
   },
   inactiveBadgeText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: colors.error.base,
     fontWeight: '600',
   },
   enableButton: {
-    backgroundColor: '#475569',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -721,11 +723,11 @@ const twoFaStyles = StyleSheet.create({
   },
   enableButtonText: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
   },
   verifyButton: {
-    backgroundColor: '#475569',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -738,11 +740,11 @@ const twoFaStyles = StyleSheet.create({
   },
   verifyButtonText: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
   },
   disableButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error.base,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -755,7 +757,7 @@ const twoFaStyles = StyleSheet.create({
   },
   disableButtonText: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
   },
   sendEmailLink: {
@@ -764,7 +766,7 @@ const twoFaStyles = StyleSheet.create({
   },
   sendEmailLinkText: {
     fontSize: 13,
-    color: '#475569',
+    color: colors.brand.dark,
     fontWeight: '500',
     textDecorationLine: 'underline',
   },
@@ -775,7 +777,7 @@ const twoFaStyles = StyleSheet.create({
   },
   switchMethodLinkText: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     fontWeight: '400',
     textDecorationLine: 'underline',
   },
@@ -790,29 +792,29 @@ const devicesStyles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     fontWeight: '500',
   },
   emptySubtext: {
     fontSize: 13,
-    color: '#CBD5E1',
+    color: colors.neutral[300],
     textAlign: 'center',
     lineHeight: 20,
   },
   emptyBold: {
     fontWeight: '700',
-    color: '#94A3B8',
+    color: colors.neutral[400],
   },
   deviceCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
   },
   deviceCardCurrent: {
-    borderColor: '#475569',
-    backgroundColor: '#F3F4F6',
+    borderColor: colors.brand.dark,
+    backgroundColor: colors.gray[100],
   },
   deviceRow: {
     flexDirection: 'row',
@@ -823,12 +825,12 @@ const devicesStyles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
   },
   deviceIconWrapperCurrent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   deviceInfo: {
     flex: 1,
@@ -836,16 +838,16 @@ const devicesStyles = StyleSheet.create({
   deviceName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   deviceUser: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     fontWeight: '500',
     marginTop: 2,
   },
   currentTag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: getColorWithOpacity(colors.success.base, 0.12),
     paddingVertical: 8,
     borderRadius: 8,
     width: 100,
@@ -854,15 +856,15 @@ const devicesStyles = StyleSheet.create({
   currentTagText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#10B981',
+    color: colors.success.base,
   },
   deviceMeta: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     marginTop: 2,
   },
   revokeButton: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error.bg,
     paddingVertical: 8,
     borderRadius: 8,
     width: 100,
@@ -874,14 +876,14 @@ const devicesStyles = StyleSheet.create({
   revokeButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#EF4444',
+    color: colors.error.base,
   },
 });
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
   content: {
     flex: 1,
@@ -889,11 +891,11 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 240,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
+    borderLeftColor: colors.neutral[200],
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: colors.neutral[200],
     padding: 16,
     gap: 8,
   },
@@ -914,15 +916,15 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   sidebarTabActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   sidebarTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   sidebarTabTextActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '600',
   },
   mainContent: {
@@ -945,12 +947,12 @@ const styles = StyleSheet.create({
   tabTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   tabSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   viewsScrollContainer: {
     flex: 1,
@@ -962,11 +964,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   viewCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
   },
   viewCardHeader: {
     flexDirection: 'row',
@@ -986,18 +988,18 @@ const styles = StyleSheet.create({
   viewCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   viewCardDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   viewModeSection: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
     gap: 4,
   },
 });

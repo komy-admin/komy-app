@@ -1,6 +1,8 @@
 import React, { ReactNode } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { X } from 'lucide-react-native';
+import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface ForkModalProps {
   visible: boolean;
@@ -34,7 +36,7 @@ export const ForkModal = ({
             style={styles.closeButton}
             hitSlop={8}
           >
-            <X size={20} color="#666666" />
+            <X size={20} color={colors.gray[500]} />
           </Pressable>
 
           {title && (
@@ -53,7 +55,7 @@ export const ForkModal = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16

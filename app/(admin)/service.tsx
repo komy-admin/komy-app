@@ -13,6 +13,7 @@ import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { ViewModeToggle } from '~/components/ui/ViewModeToggle';
+import { colors } from '~/theme';
 import { EmptyRoomsState } from '~/components/Service/EmptyRoomsState';
 import {
   useRestaurant,
@@ -419,7 +420,7 @@ export default function ServicePage() {
                       name={room.name}
                       stats={`${count} commande${count !== 1 ? 's' : ''}`}
                       isActive={room.id === currentRoom?.id}
-                      activeColor={room.color || '#6366F1'}
+                      activeColor={room.color || colors.brand.accent}
                     />
                   </View>
                 )}
@@ -517,12 +518,12 @@ const styles = StyleSheet.create({
   roomDisabledTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 8,
   } as any,
   roomDisabledSubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
   } as any,
   normalLayoutContainer: {

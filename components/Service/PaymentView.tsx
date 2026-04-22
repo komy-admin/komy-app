@@ -17,6 +17,7 @@ import { formatPrice } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
 import { useToast } from '~/components/ToastProvider';
 import { showApiError } from '~/lib/apiErrorHandler';
+import { colors } from '~/theme';
 
 interface PaymentViewProps {
   order: Order;
@@ -212,7 +213,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
           <View className="w-10 items-center pt-0.5">
             {/* Affichage pour les lignes complètement payées */}
             {isPaid && (
-              <Check size={18} color="#10B981" strokeWidth={2} />
+              <Check size={18} color={colors.success.base} strokeWidth={2} />
             )}
 
             {/* Affichage pour les lignes non payées ou partiellement payées */}
@@ -342,7 +343,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
             }`}
           >
             <View className="flex-row items-center gap-1">
-              <Percent size={12} color={!fractionButtons.some(b => b.value === selectedFraction) ? 'white' : '#6B7280'} />
+              <Percent size={12} color={!fractionButtons.some(b => b.value === selectedFraction) ? 'white' : colors.gray[500]} />
               <Text className={`text-xs font-medium ${
                 !fractionButtons.some(b => b.value === selectedFraction)
                   ? 'text-white'
@@ -421,7 +422,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-lg font-semibold">Pourcentage personnalisé</Text>
               <Pressable onPress={() => setShowCustomDialog(null)}>
-                <X size={20} color="#6B7280" />
+                <X size={20} color={colors.gray[500]} />
               </Pressable>
             </View>
 
@@ -549,7 +550,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <Pressable onPress={onBack} className="mr-3">
-              <ChevronLeft size={24} color="#000" />
+              <ChevronLeft size={24} color={colors.brand.dark} />
             </Pressable>
             <Text className="text-lg font-semibold">Paiement - {tableName}</Text>
           </View>
@@ -558,7 +559,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
             <Pressable
               onPress={onTerminate}
               style={{
-                backgroundColor: '#2A2E33',
+                backgroundColor: colors.brand.dark,
                 height: 60,
                 paddingHorizontal: 20,
                 flexDirection: 'row',
@@ -571,7 +572,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
             >
               <Text style={{
                 fontSize: 14,
-                color: '#FBFBFB',
+                color: colors.gray[50],
                 fontWeight: '600',
                 textAlign: 'center',
                 letterSpacing: 0.5,
@@ -644,7 +645,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
             {orderTotals.remainingAmount === 0 && (
               <View className="mt-2 pt-2 border-t border-gray-300">
                 <View className="flex-row items-center justify-center gap-2">
-                  <Check size={20} color="#10B981" strokeWidth={3} />
+                  <Check size={20} color={colors.success.base} strokeWidth={3} />
                   <Text className="text-green-600 font-semibold">
                     Commande entièrement payée
                   </Text>
@@ -663,7 +664,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
               {orderTotals.remainingAmount === 0 ? (
                 <View className="flex-1 justify-center items-center py-12">
                   <View className="bg-green-100 rounded-full p-6 mb-4">
-                    <Check size={48} color="#10B981" strokeWidth={3} />
+                    <Check size={48} color={colors.success.base} strokeWidth={3} />
                   </View>
                   <Text className="text-xl font-bold text-green-700 mb-2">
                     Paiement complet
@@ -724,7 +725,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
                       : 'bg-white border-gray-300'
                   }`}
                 >
-                  <Banknote size={20} color={paymentMethod === 'cash' ? '#1D4ED8' : '#6B7280'} />
+                  <Banknote size={20} color={paymentMethod === 'cash' ? colors.info.text : colors.gray[500]} />
                   <Text className={`text-sm font-medium mt-1 ${
                     paymentMethod === 'cash' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
                   }`}>
@@ -743,7 +744,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
                       : 'bg-white border-gray-300'
                   }`}
                 >
-                  <CreditCard size={20} color={paymentMethod === 'card' ? '#1D4ED8' : '#6B7280'} />
+                  <CreditCard size={20} color={paymentMethod === 'card' ? colors.info.text : colors.gray[500]} />
                   <Text className={`text-sm font-medium mt-1 ${
                     paymentMethod === 'card' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
                   }`}>
@@ -762,7 +763,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
                       : 'bg-white border-gray-300'
                   }`}
                 >
-                  <Ticket size={20} color={paymentMethod === 'ticket_resto' ? '#1D4ED8' : '#6B7280'} />
+                  <Ticket size={20} color={paymentMethod === 'ticket_resto' ? colors.info.text : colors.gray[500]} />
                   <Text className={`text-sm font-medium mt-1 ${
                     paymentMethod === 'ticket_resto' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
                   }`}>
@@ -781,7 +782,7 @@ export default function PaymentView({ order, tableName, onBack, onPaymentComplet
                       : 'bg-white border-gray-300'
                   }`}
                 >
-                  <FileCheck size={20} color={paymentMethod === 'check' ? '#1D4ED8' : '#6B7280'} />
+                  <FileCheck size={20} color={paymentMethod === 'check' ? colors.info.text : colors.gray[500]} />
                   <Text className={`text-sm font-medium mt-1 ${
                     paymentMethod === 'check' ? 'text-blue-700' : selectedItems.size === 0 ? 'text-gray-400' : 'text-gray-700'
                   }`}>

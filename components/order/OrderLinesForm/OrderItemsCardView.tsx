@@ -9,10 +9,10 @@ import { useScrollSync, MENUS_SECTION_KEY, ScrollSyncSection } from '~/hooks/ord
 import { formatPrice } from '~/lib/utils';
 import { getColorWithOpacity, getMenuPrice, darkenColor } from '~/lib/color-utils';
 import { calculateOptimalColumns, chunkArray } from '~/lib/card-layout-utils';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 // Constantes de couleurs
-const MENU_COLOR = '#10B981';
+const MENU_COLOR = colors.success.base;
 const MENU_TEXT_COLOR = darkenColor(MENU_COLOR, 0.35);
 const MENU_BG_COLOR = getColorWithOpacity(MENU_COLOR, 0.08);
 
@@ -47,8 +47,8 @@ const OrderItemCard = memo<OrderItemCardProps>(({
     onOpenCustomization(item);
   }, [item, onOpenCustomization]);
 
-  const colors = useMemo(() => {
-    const itemColor = item.color || '#6B7280';
+  const cardColors = useMemo(() => {
+    const itemColor = item.color || colors.gray[500];
     return {
       bgColor: getColorWithOpacity(itemColor, 0.1),
       borderColor: itemColor,
@@ -62,8 +62,8 @@ const OrderItemCard = memo<OrderItemCardProps>(({
         style={[
           styles.card,
           {
-            backgroundColor: colors.bgColor,
-            borderColor: colors.borderColor,
+            backgroundColor: cardColors.bgColor,
+            borderColor: cardColors.borderColor,
           },
         ]}
       >
@@ -71,7 +71,7 @@ const OrderItemCard = memo<OrderItemCardProps>(({
           <View style={styles.cardContent}>
             <View style={styles.cardNameArea}>
               <RNText
-                style={[styles.cardName, { color: colors.textColor }]}
+                style={[styles.cardName, { color: cardColors.textColor }]}
                 numberOfLines={2}
               >
                 {item.name}
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   // Containers
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   gridContainer: {
     paddingVertical: 16,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontStyle: 'italic',
     textAlign: 'center',
   },
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     minHeight: 130,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     overflow: 'hidden' as const,
     ...shadows.all,
     ...(Platform.OS === 'web' ? {
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   // Glass overlay
   glassOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    backgroundColor: getColorWithOpacity(colors.white, 0.65),
     borderRadius: 9,
   },
 
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   menuDescription: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     letterSpacing: 0.8,
     lineHeight: 18,
     textAlign: 'center',
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   itemPriceLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.gray[500],
     letterSpacing: 0.8,
     textAlign: 'center',
   },
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   menuPriceLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     letterSpacing: 0.8,
     textAlign: 'center',
   },

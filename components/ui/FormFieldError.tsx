@@ -1,5 +1,6 @@
 import React from 'react'
 import { Text, StyleSheet } from 'react-native'
+import { colors } from '~/theme'
 
 interface FormFieldErrorProps {
   message?: string
@@ -13,7 +14,7 @@ export const FormFieldError: React.FC<FormFieldErrorProps> = ({ message }) => {
 const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: colors.error.base,
     marginTop: 4,
     fontWeight: '500',
   },

@@ -30,6 +30,7 @@ import {
   FileText,
   Check,
 } from 'lucide-react-native';
+import { colors } from '~/theme';
 
 /**
  * CashRegisterScreen
@@ -170,7 +171,7 @@ export default function CashRegisterScreen() {
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-xl font-semibold">Ouvrir la caisse</Text>
               <Pressable onPress={() => setShowOpenModal(false)}>
-                <X size={24} color="#6B7280" />
+                <X size={24} color={colors.gray[500]} />
               </Pressable>
             </View>
 
@@ -249,7 +250,7 @@ export default function CashRegisterScreen() {
               <View className="flex-row justify-between items-center mb-6">
                 <Text className="text-xl font-semibold">Fermer la caisse</Text>
                 <Pressable onPress={() => setShowCloseModal(false)}>
-                  <X size={24} color="#6B7280" />
+                  <X size={24} color={colors.gray[500]} />
                 </Pressable>
               </View>
 
@@ -455,14 +456,14 @@ export default function CashRegisterScreen() {
               Caisse ouverte
             </Text>
             <View className="flex-row items-center gap-1 ml-2">
-              <Clock size={14} color="#6B7280" />
+              <Clock size={14} color={colors.gray[500]} />
               <Text className="text-xs text-gray-600">
                 depuis {format(new Date(currentSession.openedAt), 'HH:mm', { locale: fr })}
               </Text>
             </View>
             {currentSession.user && (
               <View className="flex-row items-center gap-1 ml-2">
-                <User size={14} color="#6B7280" />
+                <User size={14} color={colors.gray[500]} />
                 <Text className="text-xs text-gray-600">
                   {currentSession.user.firstName}
                 </Text>
@@ -487,7 +488,7 @@ export default function CashRegisterScreen() {
             <View className="flex-row items-center justify-between">
               <View>
                 <View className="flex-row items-center gap-2 mb-1">
-                  <Banknote size={20} color="#2563EB" />
+                  <Banknote size={20} color={colors.info.base} />
                   <Text className="text-sm font-semibold text-blue-900">
                     Espèces en caisse
                   </Text>
@@ -511,7 +512,7 @@ export default function CashRegisterScreen() {
               {currentSession.stats && (
                 <View className="items-end">
                   <View className="flex-row items-center gap-1 mb-1">
-                    <Hash size={14} color="#6B7280" />
+                    <Hash size={14} color={colors.gray[500]} />
                     <Text className="text-sm font-medium text-gray-700">
                       {currentSession.stats.paymentsCount}
                     </Text>
@@ -555,7 +556,7 @@ export default function CashRegisterScreen() {
               </View>
               {item.user && (
                 <View className="flex-row items-center gap-1">
-                  <User size={12} color="#9CA3AF" />
+                  <User size={12} color={colors.gray[400]} />
                   <Text className="text-xs text-gray-500">
                     {item.user.firstName} {item.user.lastName}
                   </Text>
@@ -568,7 +569,7 @@ export default function CashRegisterScreen() {
               )}
             </View>
             <View className="flex-row items-center gap-2">
-              <Banknote size={18} color={isRefund ? "#EF4444" : "#10B981"} />
+              <Banknote size={18} color={isRefund ? colors.error.base : colors.success.base} />
               <Text className={`text-lg font-bold ${isRefund ? 'text-red-600' : 'text-gray-900'}`}>
                 {isRefund && '-'}{formatPrice(Math.abs(amount))}
               </Text>
@@ -585,7 +586,7 @@ export default function CashRegisterScreen() {
   const renderEmpty = () => {
     return (
       <View className="flex-1 items-center justify-center p-8">
-        <Banknote size={48} color="#D1D5DB" />
+        <Banknote size={48} color={colors.gray[300]} />
         <Text className="text-gray-500 text-center mt-4">
           {currentSession
             ? "Aucune transaction espèces aujourd'hui"
@@ -608,7 +609,7 @@ export default function CashRegisterScreen() {
   if (isLoading && !currentSession) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={colors.info.base} />
       </View>
     );
   }
@@ -630,7 +631,7 @@ export default function CashRegisterScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            colors={['#3B82F6']}
+            colors={[colors.info.base]}
           />
         }
         contentContainerStyle={{ flexGrow: 1 }}

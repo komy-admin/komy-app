@@ -6,7 +6,8 @@ import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
 
@@ -24,7 +25,7 @@ const ProfileAvatar = memo(({
       width: size,
       height: size,
       borderRadius: size / 2,
-      backgroundColor: '#F3F4F6',
+      backgroundColor: colors.gray[100],
     }}
     resizeMode="cover"
     onError={(error) => {
@@ -34,11 +35,11 @@ const ProfileAvatar = memo(({
 ));
 
 const CONFIG_ITEMS = [
-  { id: 'dashboard', Icon: Database, label: 'Dashboard', color: '#3B82F6' },
-  { id: 'profile', Icon: User, label: 'Mon compte', color: '#10B981' },
-  { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
-  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: '#475569' },
-  { id: 'configuration', Icon: Settings, label: 'Configuration', color: '#A855F7' },
+  { id: 'dashboard', Icon: Database, label: 'Dashboard', color: colors.brand.dark },
+  { id: 'profile', Icon: User, label: 'Mon compte', color: colors.brand.dark },
+  { id: 'notifications', Icon: Bell, label: 'Notifications', color: colors.brand.dark },
+  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: colors.brand.dark },
+  { id: 'configuration', Icon: Settings, label: 'Configuration', color: colors.brand.dark },
 ];
 
 // Configuration des breakpoints de hauteur - Extraite pour performance
@@ -252,7 +253,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
             disabled={isUploading}
           >
             <View style={styles.editIconContainer}>
-              <PenTool size={dynamicStyles.editIconSize} color="#2A2E33" />
+              <PenTool size={dynamicStyles.editIconSize} color={colors.brand.dark} />
             </View>
           </Pressable>
         </View>
@@ -280,23 +281,23 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
               onPress={() => onSectionChange(id as ConfigSection)}
               style={({ pressed }) => [
                 {
-                  backgroundColor: pressed ? '#F9FAFB' : 'transparent',
+                  backgroundColor: pressed ? colors.gray[50] : 'transparent',
                   borderRadius: 8,
                 }
               ]}
-              android_ripple={{ color: '#F9FAFB' }}
+              android_ripple={{ color: colors.gray[50] }}
             >
               <View style={[
                 styles.menuItem,
                 dynamicStyles.menuItem,
                 {
-                  backgroundColor: isActive ? '#F1F5F9' : 'transparent',
+                  backgroundColor: isActive ? getColorWithOpacity(colors.brand.dark, 0.05) : 'transparent',
                 }
               ]}>
                 <View style={dynamicStyles.iconContainer}>
                   <Icon
                     size={dynamicStyles.iconSize}
-                    color={isActive ? color : '#64748B'}
+                    color={isActive ? color : colors.neutral[500]}
                   />
                 </View>
                 <View style={dynamicStyles.textContainer}>
@@ -304,7 +305,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
                     style={[
                       dynamicStyles.menuText,
                       {
-                        color: isActive ? '#1E293B' : '#64748B',
+                        color: isActive ? colors.neutral[800] : colors.neutral[500],
                         fontWeight: isActive ? '600' : '400',
                       }
                     ]}
@@ -323,7 +324,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
       <Pressable
         style={({ pressed }) => [
           {
-            backgroundColor: pressed ? '#FEF2F2' : 'transparent',
+            backgroundColor: pressed ? colors.error.bg : 'transparent',
             borderRadius: 8,
           }
         ]}
@@ -331,7 +332,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
       >
         <View style={[styles.logoutButton, dynamicStyles.logoutButton]}>
           <View style={dynamicStyles.iconContainer}>
-            <LogOut size={dynamicStyles.iconSize} color="#DC2626" />
+            <LogOut size={dynamicStyles.iconSize} color={colors.error.text} />
           </View>
           <View style={dynamicStyles.textContainer}>
             <Text
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
     width: '25%',
     minWidth: 180, // Largeur minimum pour éviter l'écrasement
     maxWidth: 350, // Largeur maximum pour les très grands écrans
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.gray[50],
     height: '100%',
     paddingVertical: 35,
     paddingHorizontal: 24,
@@ -375,11 +376,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 5,
     borderWidth: 2,
-    borderColor: '#F3F4F6',
+    borderColor: colors.gray[100],
     minWidth: 32,
     minHeight: 32,
     justifyContent: 'center',
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 18,
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 4,
     fontWeight: '500',
     textAlign: 'center',
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
   },
   userRole: {
     fontSize: 14,
-    color: '#64666A',
+    color: colors.gray[500],
     fontWeight: '400',
     textAlign: 'center',
   },
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 14,
-    color: '#DC2626',
+    color: colors.error.text,
     fontWeight: '500',
     lineHeight: 20,
     ...Platform.select({

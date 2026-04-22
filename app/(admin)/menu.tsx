@@ -5,14 +5,15 @@ import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import { HeaderActionButton } from '~/components/ui/HeaderActionButton';
 import { SidePanel } from "~/components/SidePanel";
 import { SlidePanel } from "~/components/ui/SlidePanel";
+import { DeleteConfirmPanel } from "~/components/ui/DeleteConfirmPanel";
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { MenuFilters } from '~/components/filters/MenuFilters';
 import { X, PlusCircle, Layers, Lock } from 'lucide-react-native';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
 import { ItemFormPanel } from '@/components/admin/ItemForm/ItemFormPanel';
 import { MenuFormContent } from '@/components/admin/MenuForm/MenuFormContent';
 import { useMenuPage } from '~/hooks/useMenuPage';
+import { colors } from '~/theme';
 
 export default function MenuPage() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -27,10 +28,9 @@ export default function MenuPage() {
     filteredItems, filteredMenus, tousSections,
     panelType, currentItem, currentMenu, closePanel,
     handleCreateItem, handleEditItem, handleSaveItem,
-    isDeleteItemModalVisible, itemToDelete, isDeleting, confirmDeleteItem, handleCloseDeleteItemModal,
     handleCreateMenu, handleEditMenu, handleBulkMenuSave,
-    isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
     createMenuCategoryItem, loadMenuCategoryItems,
+    pendingDeleteId, pendingDeleteType, pendingDeleteName, confirmDelete, clearPendingDelete,
     getItemActions, getMenuActions, getTousActions, handleTousRowPress,
     itemTableColumns, menuTableColumns, tousColumns,
   } = useMenuPage();
@@ -122,7 +122,7 @@ export default function MenuPage() {
 
       <View style={{ flex: 1 }}>
         <Tabs
-          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+          style={{ flex: 1, backgroundColor: colors.white }}
           value={activeTab}
           onValueChange={setActiveTab}
           className="w-full mx-auto flex-col"
@@ -202,22 +202,12 @@ export default function MenuPage() {
         </Tabs>
       </View>
 
-      <DeleteConfirmationModal
-        isVisible={isDeleteItemModalVisible}
-        onClose={handleCloseDeleteItemModal}
-        onConfirm={confirmDeleteItem}
-        entityName={itemToDelete?.name || ''}
-        entityType="l'article"
-        isLoading={isDeleting}
-      />
-
-      <DeleteConfirmationModal
-        isVisible={isDeleteMenuModalVisible}
-        onClose={handleCloseDeleteMenuModal}
-        onConfirm={confirmDeleteMenu}
-        entityName={menuToDelete?.name || ''}
-        entityType="le menu"
-        isLoading={isDeletingMenu}
+      <DeleteConfirmPanel
+        visible={!!pendingDeleteId}
+        onClose={clearPendingDelete}
+        onConfirm={confirmDelete}
+        entityName={`"${pendingDeleteName}"`}
+        entityType={pendingDeleteType === 'menu' ? 'le menu' : "l'article"}
       />
     </View>
   );
@@ -239,7 +229,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
         <View style={styles.createPanelHeader}>
           <Text style={styles.createPanelTitle}>Ajouter</Text>
           <Pressable onPress={onClose}>
-            <X size={24} color="#64748B" strokeWidth={2} />
+            <X size={24} color={colors.neutral[500]} strokeWidth={2} />
           </Pressable>
         </View>
         <View style={styles.createPanelContent}>
@@ -251,8 +241,8 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
           >
             <View style={[styles.createPanelIconArticle, !hasItemTypes && styles.createPanelIconDisabled]}>
               {hasItemTypes
-                ? <PlusCircle size={22} color="#6366F1" strokeWidth={2.5} />
-                : <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+                ? <PlusCircle size={22} color={colors.brand.dark} strokeWidth={2.5} />
+                : <Lock size={18} color={colors.gray[400]} strokeWidth={2} />
               }
             </View>
             <View style={styles.createPanelCardContent}>
@@ -260,6 +250,11 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
               <Text style={[styles.createPanelCardDescArticle, !hasItemTypes && styles.createPanelCardDescDisabled]}>Ajouter un nouvel article au catalogue</Text>
             </View>
           </TouchableOpacity>
+          <View style={styles.createPanelDividerRow}>
+            <View style={styles.createPanelDividerLine} />
+            <Text style={styles.createPanelDividerText}>ou</Text>
+            <View style={styles.createPanelDividerLine} />
+          </View>
           <TouchableOpacity
             style={[styles.createPanelCardMenu, !hasItemTypes && styles.createPanelCardDisabled]}
             onPress={hasItemTypes ? onCreateMenu : undefined}
@@ -267,8 +262,8 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
           >
             <View style={[styles.createPanelIconMenu, !hasItemTypes && styles.createPanelIconDisabled]}>
               {hasItemTypes
-                ? <Layers size={22} color="#16A34A" strokeWidth={2.5} />
-                : <Lock size={18} color="#9CA3AF" strokeWidth={2} />
+                ? <Layers size={22} color={colors.brand.dark} strokeWidth={2.5} />
+                : <Lock size={18} color={colors.gray[400]} strokeWidth={2} />
               }
             </View>
             <View style={styles.createPanelCardContent}>
@@ -294,7 +289,7 @@ function CreatePanel({ onClose, onCreateItem, onCreateMenu, hasItemTypes }: {
 const styles = StyleSheet.create({
   createPanel: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   createPanelHeader: {
     flexDirection: 'row',
@@ -302,12 +297,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
   },
   createPanelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   createPanelContent: {
     flex: 1,
@@ -316,36 +311,36 @@ const styles = StyleSheet.create({
   createPanelSubtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 20,
   },
   createPanelCardArticle: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.gray[100],
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#C7D2FE',
+    borderColor: colors.brand.dark,
     gap: 14,
   },
   createPanelCardMenu: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: colors.gray[100],
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#BBF7D0',
+    borderColor: colors.brand.dark,
     gap: 14,
   },
   createPanelIconArticle: {
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#E0E7FF',
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -353,7 +348,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -363,40 +358,57 @@ const styles = StyleSheet.create({
   createPanelCardTitleArticle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#4338CA',
+    color: colors.brand.dark,
     marginBottom: 2,
   },
   createPanelCardDescArticle: {
     fontSize: 12,
-    color: '#6366F1',
+    color: colors.neutral[500],
   },
   createPanelCardTitleMenu: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#15803D',
+    color: colors.brand.dark,
     marginBottom: 2,
   },
   createPanelCardDescMenu: {
     fontSize: 12,
-    color: '#16A34A',
+    color: colors.neutral[500],
   },
   createPanelCardDisabled: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.neutral[50],
+    borderColor: colors.neutral[300],
     borderStyle: 'dashed' as const,
   },
   createPanelIconDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   createPanelCardTitleDisabled: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   createPanelCardDescDisabled: {
-    color: '#CBD5E1',
+    color: colors.neutral[400],
+  },
+  createPanelDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 12,
+  },
+  createPanelDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray[200],
+  },
+  createPanelDividerText: {
+    paddingHorizontal: 14,
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.gray[400],
   },
   createPanelHint: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,

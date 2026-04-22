@@ -1,13 +1,14 @@
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Text as RNText, Platform, Animated } from 'react-native';
-import { Trash2, ShoppingBag, ArrowLeftToLine, Lock } from 'lucide-react-native';
+import { Trash2, ShoppingBag, ArrowLeftToLine } from 'lucide-react-native';
 import { OrderLine, OrderLineType, SelectedTag } from '~/types/order-line.types';
 import { ItemType } from '~/types/item-type.types';
 import { Status } from '~/types/status.enum';
-import { formatPrice, getStatusText } from '~/lib/utils';
+import { formatPrice } from '~/lib/utils';
 import { usePayments } from '~/hooks/usePayments';
-import { getOrderLineStatus, getStatusColor, getStatusTextColor } from '@/lib/status.utils';
-import { SectionDivider } from '~/components/ui';
+import { getOrderLineStatus } from '@/lib/status.utils';
+import { SectionDivider, TagBadge, StatusBadge, PaymentBadge } from '~/components/ui';
+import { colors } from '~/theme';
 
 // Fingerprint: identical item + tags + note + status + paymentFraction = same line
 const getLineFingerprint = (line: OrderLine): string => {
@@ -51,7 +52,6 @@ interface DraftReviewPanelContentProps {
   onCancel?: () => void;
   hasChanges?: boolean;
   isProcessing?: boolean;
-  cancelDeleteRef?: React.RefObject<(() => void) | null>;
   hideFooter?: boolean;
   itemTypes?: ItemType[];
   allowEditAll?: boolean;
@@ -69,7 +69,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   onCancel,
   hasChanges = false,
   isProcessing = false,
-  cancelDeleteRef,
   hideFooter = false,
   itemTypes,
   allowEditAll = false,
@@ -78,36 +77,18 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
 }) => {
   const { isOrderLinePaid } = usePayments();
 
-  // Track which row is pending delete (by originalIndex + all group indices)
-  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
-  const [pendingDeleteIndices, setPendingDeleteIndices] = useState<number[]>([]);
-
   // Flash detection: track previous fingerprint quantities and menu IDs
   const prevFingerprintsRef = useRef<Map<string, number>>(new Map());
   const prevMenuIdsRef = useRef<Set<string>>(new Set());
   const isFirstRenderRef = useRef(true);
 
-  const handleDeleteRequest = useCallback((index: number, allIndices?: number[]) => {
-    setPendingDeleteIndex(index);
-    setPendingDeleteIndices(allIndices || [index]);
-  }, []);
-
-  const handleConfirmDelete = useCallback(() => {
-    if (pendingDeleteIndex !== null) {
-      if (onDeleteGroup && pendingDeleteIndices.length > 1) {
-        onDeleteGroup(pendingDeleteIndices);
-      } else {
-        onDelete(pendingDeleteIndex);
-      }
-      setPendingDeleteIndex(null);
-      setPendingDeleteIndices([]);
+  const handleDeleteDirect = useCallback((index: number, allIndices?: number[]) => {
+    if (onDeleteGroup && allIndices && allIndices.length > 1) {
+      onDeleteGroup(allIndices);
+    } else {
+      onDelete(index);
     }
-  }, [pendingDeleteIndex, pendingDeleteIndices, onDelete, onDeleteGroup]);
-
-  const handleCancelDelete = useCallback(() => {
-    setPendingDeleteIndex(null);
-    setPendingDeleteIndices([]);
-  }, []);
+  }, [onDelete, onDeleteGroup]);
 
 
   const isLineLocked = useCallback((line: OrderLine, hasAllocations: boolean): boolean => {
@@ -127,16 +108,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
     if (hasAllocations) return true;
     return false;
   }, []);
-
-  // Expose cancel to parent via ref
-  useEffect(() => {
-    if (cancelDeleteRef) {
-      cancelDeleteRef.current = handleCancelDelete;
-    }
-    return () => {
-      if (cancelDeleteRef) cancelDeleteRef.current = null;
-    };
-  }, [cancelDeleteRef, handleCancelDelete]);
 
   // Group ITEM lines by itemType, then merge identical lines
   const { itemSections, menuLines } = useMemo(() => {
@@ -237,11 +208,11 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
   const totalLines = draftLines.length;
 
   return (
-    <Pressable style={styles.panelContent} onPress={pendingDeleteIndex !== null ? handleCancelDelete : undefined}>
+    <View style={styles.panelContent}>
       {/* Header */}
       <View style={styles.panelHeader}>
         <Pressable onPress={onCancel} style={styles.backButton}>
-          <ArrowLeftToLine size={20} color="#2A2E33" />
+          <ArrowLeftToLine size={20} color={colors.brand.dark} />
         </Pressable>
         <View style={styles.titleContainer}>
           <RNText style={styles.titleText} numberOfLines={1}>
@@ -255,11 +226,10 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
         style={styles.scrollArea}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
-        onScrollBeginDrag={handleCancelDelete}
       >
         {totalLines === 0 ? (
           <View style={styles.emptyState}>
-            <ShoppingBag size={64} color="#CBD5E1" strokeWidth={1.5} />
+            <ShoppingBag size={64} color={colors.neutral[300]} strokeWidth={1.5} />
             <RNText style={styles.emptyTitle}>Commande vide</RNText>
             <RNText style={styles.emptyText}>
               Ajoutez des articles pour commencer
@@ -284,8 +254,6 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         totalPrice={group.totalPrice}
                         originalIndex={group.originalIndices[0]}
                         originalIndices={group.originalIndices}
-                        isPendingDelete={pendingDeleteIndex === group.originalIndices[0]}
-                        hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={isLineLocked(group.line, hasAllocations)}
                         isDeleteLocked={isLineDeleteLocked(group.line, hasAllocations)}
                         paymentStatus={paymentStatus}
@@ -293,9 +261,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         shouldFlash={flashFingerprints.has(getLineFingerprint(group.line))}
                         onEdit={onEdit}
                         onEditGroup={onEditGroup}
-                        onDeleteRequest={handleDeleteRequest}
-                        onConfirmDelete={handleConfirmDelete}
-                        onCancelDelete={handleCancelDelete}
+                        onDelete={handleDeleteDirect}
                       />
                     );
                   })}
@@ -317,17 +283,13 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
                         key={line.id || `temp-${originalIndex}`}
                         line={line}
                         originalIndex={originalIndex}
-                        isPendingDelete={pendingDeleteIndex === originalIndex}
-                        hasPendingDelete={pendingDeleteIndex !== null}
                         isLocked={isLineLocked(line, hasAllocations)}
                         isDeleteLocked={isLineDeleteLocked(line, hasAllocations)}
                         paymentStatus={paymentStatus}
                         showStatusBadge={allowEditAll}
                         shouldFlash={flashMenuIds.has(line.id)}
                         onEditMenu={onEditMenu}
-                        onDeleteRequest={handleDeleteRequest}
-                        onConfirmDelete={handleConfirmDelete}
-                        onCancelDelete={handleCancelDelete}
+                        onDelete={handleDeleteDirect}
                       />
                     );
                   })}
@@ -356,34 +318,7 @@ export const DraftReviewPanelContent: React.FC<DraftReviewPanelContentProps> = (
         </View>
       )}
 
-    </Pressable>
-  );
-};
-
-// ========================================
-// INLINE DELETE CONFIRMATION OVERLAY
-// ========================================
-
-const DeleteConfirmOverlay: React.FC<{
-  onConfirm: () => void;
-}> = ({ onConfirm }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  return (
-    <Animated.View style={[styles.deleteOverlay, { opacity }]}>
-      <Pressable onPress={onConfirm} style={styles.deleteOverlayButton}>
-        <Trash2 size={16} color="#FFFFFF" strokeWidth={2} />
-        <RNText style={styles.deleteOverlayText}>Confirmer la suppression</RNText>
-      </Pressable>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -396,58 +331,20 @@ const FlashOverlay: React.FC = () => {
   const opacity = useRef(new Animated.Value(0.30)).current;
 
   useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 0,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   return (
     <Animated.View style={[styles.flashOverlay, { opacity }]} pointerEvents="none" />
   );
 };
-
-const formatTagValue = (tag: any): string => {
-  if (tag.value === null || tag.value === undefined) return '';
-  if (typeof tag.value === 'boolean') return tag.value ? 'Oui' : 'Non';
-  if (Array.isArray(tag.value)) return tag.value.join(', ');
-  return String(tag.value);
-};
-
-// ========================================
-// STATUS BADGE INLINE (shared)
-// ========================================
-
-const StatusBadgeInline: React.FC<{
-  status: string | undefined;
-  paymentStatus?: 'unpaid' | 'partial' | 'paid';
-  showLock: boolean;
-}> = React.memo(({ status, paymentStatus, showLock }) => {
-  const s = (status || '') as Status;
-  const statusBg = getStatusColor(s);
-  const statusColor = getStatusTextColor(s);
-  const statusLabel = getStatusText(s);
-
-  const hasPaidBadge = paymentStatus === 'paid' || paymentStatus === 'partial';
-  const paidBg = paymentStatus === 'paid' ? '#FEF2F2' : '#FFF7ED';
-  const paidColor = paymentStatus === 'paid' ? '#EF4444' : '#EA580C';
-  const paidLabel = paymentStatus === 'paid' ? 'Payé' : 'Partiel';
-
-  return (
-    <View style={styles.statusBadgeRow}>
-      <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-        <RNText style={[styles.statusBadgeText, { color: statusColor }]}>{statusLabel}</RNText>
-      </View>
-      {hasPaidBadge && (
-        <View style={[styles.statusBadge, { backgroundColor: paidBg }]}>
-          {showLock && <Lock size={11} color={paidColor} strokeWidth={2.5} />}
-          <RNText style={[styles.statusBadgeText, { color: paidColor }]}>{paidLabel}</RNText>
-        </View>
-      )}
-    </View>
-  );
-});
 
 // ========================================
 // RECEIPT ITEM ROW
@@ -459,8 +356,6 @@ interface ReceiptItemRowProps {
   totalPrice: number;
   originalIndex: number;
   originalIndices: number[];
-  isPendingDelete: boolean;
-  hasPendingDelete: boolean;
   isLocked: boolean;
   isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
@@ -468,9 +363,7 @@ interface ReceiptItemRowProps {
   shouldFlash?: boolean;
   onEdit: (index: number) => void;
   onEditGroup?: (indices: number[]) => void;
-  onDeleteRequest: (index: number, allIndices?: number[]) => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
+  onDelete: (index: number, allIndices?: number[]) => void;
 }
 
 const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
@@ -479,8 +372,6 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   totalPrice,
   originalIndex,
   originalIndices,
-  isPendingDelete,
-  hasPendingDelete,
   isLocked,
   isDeleteLocked,
   paymentStatus,
@@ -488,20 +379,16 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   shouldFlash,
   onEdit,
   onEditGroup,
-  onDeleteRequest,
-  onConfirmDelete,
-  onCancelDelete,
+  onDelete,
 }) => {
   const hasNote = !!line.note && line.note.trim().length > 0;
   const hasTags = !!(line.tags && line.tags.length > 0);
   const itemName = line.item?.name || 'Article';
-  const canDelete = !isLocked && !isDeleteLocked;
+  const canDelete = !isDeleteLocked;
 
   const handlePress = () => {
     if (isLocked) return;
-    if (hasPendingDelete) {
-      onCancelDelete();
-    } else if (onEditGroup && originalIndices.length > 1) {
+    if (onEditGroup && originalIndices.length > 1) {
       onEditGroup(originalIndices);
     } else {
       onEdit(originalIndex);
@@ -509,7 +396,7 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
   };
 
   return (
-    <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
+    <View style={styles.receiptRowWrapper}>
       <Pressable onPress={handlePress} style={[styles.receiptRow, isLocked && styles.lockedRow]}>
         <View style={styles.receiptMainLine}>
           <RNText style={[styles.receiptQty, isLocked && styles.lockedText]}>{quantity}x</RNText>
@@ -520,33 +407,27 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(totalPrice)}</RNText>
           <View style={styles.rowActions}>
             {(isLocked || isDeleteLocked || showStatusBadge) && (
-              <StatusBadgeInline
-                status={line.status}
-                paymentStatus={paymentStatus}
-                showLock={isLocked || !!isDeleteLocked}
-              />
+              <View style={styles.statusBadgeRow}>
+                <StatusBadge status={getOrderLineStatus(line) || ''} />
+                {paymentStatus && <PaymentBadge paymentStatus={paymentStatus} showLock={isLocked || !!isDeleteLocked} />}
+              </View>
             )}
             {canDelete && (
               <Pressable
-                onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex, originalIndices); }}
+                onPress={(e) => { e.stopPropagation(); onDelete(originalIndex, originalIndices); }}
                 style={styles.trashButton}
                 hitSlop={6}
               >
-                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                <Trash2 size={18} color={colors.error.base} strokeWidth={2} />
               </Pressable>
             )}
           </View>
         </View>
 
         {hasTags && (
-          <View style={styles.receiptDetails}>
+          <View style={[styles.receiptTagsRow, isLocked && styles.lockedText]}>
             {line.tags!.filter(tag => tag && tag.tagSnapshot).map((tag, idx) => (
-              <RNText key={idx} style={[styles.receiptTag, isLocked && styles.lockedText]}>
-                {tag.tagSnapshot.label}: {formatTagValue(tag)}
-                {tag.priceModifier != null && tag.priceModifier !== 0
-                  ? ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`
-                  : ''}
-              </RNText>
+              <TagBadge key={idx} tag={tag} showPrice />
             ))}
           </View>
         )}
@@ -559,9 +440,6 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
       </Pressable>
 
       {shouldFlash && <FlashOverlay />}
-      {isPendingDelete && (
-        <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
-      )}
     </View>
   );
 });
@@ -573,51 +451,39 @@ const ReceiptItemRow: React.FC<ReceiptItemRowProps> = React.memo(({
 interface ReceiptMenuRowProps {
   line: OrderLine;
   originalIndex: number;
-  isPendingDelete: boolean;
-  hasPendingDelete: boolean;
   isLocked: boolean;
   isDeleteLocked?: boolean;
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
   showStatusBadge?: boolean;
   shouldFlash?: boolean;
   onEditMenu?: (menuLine: OrderLine) => void;
-  onDeleteRequest: (index: number) => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
+  onDelete: (index: number) => void;
 }
 
 const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
   line,
   originalIndex,
-  isPendingDelete,
-  hasPendingDelete,
   isLocked,
   isDeleteLocked,
   paymentStatus,
   showStatusBadge,
   shouldFlash,
   onEditMenu,
-  onDeleteRequest,
-  onConfirmDelete,
-  onCancelDelete,
+  onDelete,
 }) => {
   if (!line.menu || !line.items) return null;
 
   const hasNote = !!line.note && line.note.trim().length > 0;
   const menuName = line.menu.name || 'Menu';
-  const canDelete = !isLocked && !isDeleteLocked;
+  const canDelete = !isDeleteLocked;
 
   const handlePress = () => {
     if (isLocked) return;
-    if (hasPendingDelete) {
-      onCancelDelete();
-    } else {
-      onEditMenu?.(line);
-    }
+    onEditMenu?.(line);
   };
 
   return (
-    <View style={[styles.receiptRowWrapper, isPendingDelete && styles.receiptRowWrapperElevated]}>
+    <View style={styles.receiptRowWrapper}>
       <Pressable onPress={handlePress} style={[styles.receiptRow, isLocked && styles.lockedRow]}>
         <View style={styles.receiptMainLine}>
           <View style={styles.menuLabelWrap}>
@@ -632,19 +498,18 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
           <RNText style={[styles.receiptPrice, isLocked && styles.lockedText]}>{formatPrice(line.totalPrice || 0)}</RNText>
           <View style={styles.rowActions}>
             {(isLocked || isDeleteLocked || showStatusBadge) && (
-              <StatusBadgeInline
-                status={getOrderLineStatus(line) || ''}
-                paymentStatus={paymentStatus}
-                showLock={isLocked || !!isDeleteLocked}
-              />
+              <View style={styles.statusBadgeRow}>
+                <StatusBadge status={getOrderLineStatus(line) || ''} />
+                {paymentStatus && <PaymentBadge paymentStatus={paymentStatus} showLock={isLocked || !!isDeleteLocked} />}
+              </View>
             )}
             {canDelete && (
               <Pressable
-                onPress={(e) => { e.stopPropagation(); onDeleteRequest(originalIndex); }}
+                onPress={(e) => { e.stopPropagation(); onDelete(originalIndex); }}
                 style={styles.trashButton}
                 hitSlop={6}
               >
-                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                <Trash2 size={18} color={colors.error.base} strokeWidth={2} />
               </Pressable>
             )}
           </View>
@@ -652,34 +517,29 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
 
         <View style={styles.menuItemsList}>
           {line.items.map((menuItem: any, idx: number) => {
-            const itemHasTags = menuItem.tags && menuItem.tags.length > 0;
+            const itemTags = (menuItem.tags || []).filter((tag: SelectedTag) => tag && tag.tagSnapshot);
             const itemHasNote = menuItem.note && menuItem.note.trim().length > 0;
 
-            const details: string[] = [];
-            if (itemHasTags) {
-              menuItem.tags.filter((tag: SelectedTag) => tag && tag.tagSnapshot).forEach((tag: SelectedTag) => {
-                let tagStr = `${tag.tagSnapshot.label}: ${formatTagValue(tag)}`;
-                if (tag.priceModifier != null && tag.priceModifier !== 0) {
-                  tagStr += ` (${tag.priceModifier > 0 ? '+' : ''}${formatPrice(tag.priceModifier)})`;
-                }
-                details.push(tagStr);
-              });
-            }
-            if (itemHasNote) {
-              details.push(`Note: ${menuItem.note}`);
-            }
-
             return (
-              <RNText key={idx} style={[styles.menuSubItemText, isLocked && styles.lockedText]}>
-                <RNText style={[styles.menuSubCategory, isLocked && styles.lockedText]}>{menuItem.categoryName}: </RNText>
-                {menuItem.item?.name || ''}
-                {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
-                {details.length > 0 && (
-                  <RNText style={[styles.menuSubItemDetail, isLocked && styles.lockedText]}>
-                    {' — '}{details.join(' · ')}
-                  </RNText>
+              <View key={idx}>
+                <RNText style={[styles.menuSubItemText, isLocked && styles.lockedText]}>
+                  <RNText style={[styles.menuSubCategory, isLocked && styles.lockedText]}>{menuItem.categoryName}: </RNText>
+                  {menuItem.item?.name || ''}
+                  {menuItem.supplementPrice > 0 ? ` (+${formatPrice(menuItem.supplementPrice)})` : ''}
+                  {itemHasNote && (
+                    <RNText style={[styles.menuSubItemDetail, isLocked && styles.lockedText]}>
+                      {' — '}Note: {menuItem.note}
+                    </RNText>
+                  )}
+                </RNText>
+                {itemTags.length > 0 && (
+                  <View style={[styles.menuSubTagsRow, isLocked && styles.lockedText]}>
+                    {itemTags.map((tag: SelectedTag, tagIdx: number) => (
+                      <TagBadge key={tagIdx} tag={tag} showPrice />
+                    ))}
+                  </View>
                 )}
-              </RNText>
+              </View>
             );
           })}
         </View>
@@ -692,9 +552,6 @@ const ReceiptMenuRow: React.FC<ReceiptMenuRowProps> = React.memo(({
       </Pressable>
 
       {shouldFlash && <FlashOverlay />}
-      {isPendingDelete && (
-        <DeleteConfirmOverlay onConfirm={onConfirmDelete} />
-      )}
     </View>
   );
 });
@@ -708,7 +565,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   panelHeader: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     height: 53,
@@ -720,7 +577,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRightWidth: 1,
-    borderRightColor: '#F3F4F6',
+    borderRightColor: colors.gray[100],
     height: '100%',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
@@ -732,12 +589,12 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 0.5,
   },
   scrollArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
   },
 
   // Empty State
@@ -751,12 +608,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 16,
   },
   emptyText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
   },
 
@@ -767,7 +624,7 @@ const styles = StyleSheet.create({
 
   // Section block (white)
   sectionBlock: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
 
   // Receipt row wrapper (for overlay positioning)
@@ -775,17 +632,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  receiptRowWrapperElevated: {
-    zIndex: 20,
-  },
-
   // Receipt row
   receiptRow: {
     paddingLeft: 20,
     paddingRight: 10,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.gray[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   receiptMainLine: {
@@ -796,14 +649,14 @@ const styles = StyleSheet.create({
   receiptQty: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginRight: 6,
     flexShrink: 0,
   },
   receiptName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
     flexShrink: 1,
   },
   receiptDots: {
@@ -813,7 +666,7 @@ const styles = StyleSheet.create({
   receiptPrice: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
     flexShrink: 0,
   },
   trashButton: {
@@ -821,20 +674,15 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
 
-  // Tags & notes (simple inline)
-  receiptDetails: {
-    marginTop: 4,
+  // Tags
+  receiptTagsRow: {
     gap: 2,
-  },
-  receiptTag: {
-    fontSize: 11,
-    color: '#6B7280',
-    paddingLeft: 4,
+    marginTop: 2,
   },
   receiptNote: {
     fontSize: 11,
     fontStyle: 'italic',
-    color: '#92400E',
+    color: colors.warning.text,
     marginTop: 3,
     paddingLeft: 4,
   },
@@ -846,36 +694,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
     zIndex: 5,
   },
 
-  // Inline delete confirmation overlay
-  deleteOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(239, 68, 68, 0.88)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 30,
-  },
-  deleteOverlayButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    flex: 1,
-    width: '100%',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
-  },
-  deleteOverlayText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
 
   // Locked state
   lockedRow: {
@@ -888,20 +710,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  statusBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
   },
   rowActions: {
     flexDirection: 'row',
@@ -919,7 +727,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   menuBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -927,7 +735,7 @@ const styles = StyleSheet.create({
   menuBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 0.5,
   },
   menuItemsList: {
@@ -936,17 +744,21 @@ const styles = StyleSheet.create({
   },
   menuSubItemText: {
     fontSize: 12,
-    color: '#4B5563',
+    color: colors.gray[600],
   },
   menuSubCategory: {
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontSize: 11,
   },
   menuSubItemDetail: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontStyle: 'italic',
+  },
+  menuSubTagsRow: {
+    gap: 2,
+    marginTop: 3,
   },
 
   // Footer
@@ -955,21 +767,21 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: colors.neutral[200],
+    backgroundColor: colors.white,
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -978,7 +790,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -986,6 +798,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

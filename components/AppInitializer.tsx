@@ -7,6 +7,8 @@ import { RootState } from '~/store';
 import { InitializationProgress, useAppInit } from '~/hooks/useAppInit';
 import { WebSocketListener } from './WebSocketListener';
 import { getHomeRoute } from '~/constants/routes';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 const INIT_STEPS = [
   { key: 'accountConfig', label: 'Configuration du compte...' },
@@ -128,7 +130,7 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
           <View style={styles.contentContainer}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../assets/images/logo_komy_png/Logo_Komy_blancSF.webp')}
+                source={require('../assets/images/logo_komy_png/Logo_Komy_blancSF.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -158,7 +160,7 @@ export const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ childr
 const styles = StyleSheet.create({
   loaderOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
@@ -185,21 +187,21 @@ const styles = StyleSheet.create({
   progressBar: {
     width: '100%',
     height: 6,
-    backgroundColor: 'rgba(42, 46, 51, 0.15)',
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.15),
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 16,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 3,
     minWidth: 6,
   },
   progressText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     letterSpacing: 0.3,
     ...(Platform.OS === 'web' && {

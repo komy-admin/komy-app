@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { TagChip } from './TagChip';
+import { TagBadge } from '~/components/ui';
 import { NoteChip } from './NoteChip';
 
 interface ItemCustomizationProps {
@@ -10,7 +10,8 @@ interface ItemCustomizationProps {
       label: string;
       fieldType: string;
     };
-    priceModifier?: number;
+    value?: any;
+    priceModifier?: number | null;
   }>;
 }
 
@@ -33,7 +34,7 @@ export function ItemCustomization({ note, tags }: ItemCustomizationProps) {
       {hasNote && <NoteChip note={note} />}
 
       {hasTags && tags?.filter(tag => tag?.tagSnapshot).map((tag, index) => (
-        <TagChip key={index} tag={tag} />
+        <TagBadge key={index} tag={tag} />
       ))}
     </View>
   );
@@ -41,9 +42,7 @@ export function ItemCustomization({ note, tags }: ItemCustomizationProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
+    gap: 2,
     marginTop: 6,
   },
 });

@@ -6,6 +6,7 @@ import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
 import RoomComponent from '~/components/Room/Room';
 import { Room } from '~/types/room.types';
 import { Table } from '~/types/table.types';
+import { colors } from '~/theme';
 
 const NOOP = () => {};
 
@@ -97,7 +98,7 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
                         name={room.name}
                         stats={`${count} commande${count !== 1 ? 's' : ''}`}
                         isActive={room.id === reassignRoomId}
-                        activeColor={room.color || '#6366F1'}
+                        activeColor={room.color || colors.brand.accent}
                       />
                     </View>
                   )}
@@ -156,7 +157,7 @@ export const ReassignTablePanel = memo<ReassignTablePanelProps>(({
           ]}
         >
           {isReassigning ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <RNText style={styles.confirmText}>
               {selectedTable
@@ -175,18 +176,18 @@ ReassignTablePanel.displayName = 'ReassignTablePanel';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderLeftWidth: 1,
-    borderLeftColor: '#E5E7EB',
+    borderLeftColor: colors.gray[200],
   },
   banner: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.info.base,
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bannerText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.5,
@@ -198,15 +199,15 @@ const styles = StyleSheet.create({
   },
   roomContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   footer: {
     flexDirection: 'row',
     gap: 12,
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.gray[200],
   },
   actionButton: {
     flex: 1,
@@ -218,25 +219,25 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 2,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   confirmText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   cancelButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   cancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#475569',
+    color: colors.neutral[600],
   },
   pressed: {
     opacity: 0.6,
   },
   emptyText: {
-    color: '#999',
+    color: colors.gray[400],
   },
 });

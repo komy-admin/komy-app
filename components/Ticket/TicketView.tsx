@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View, Text, Pressable, Platform } from 'react-native';
 import { TicketCard } from './cards/TicketCard';
 import { ItemGroup } from '~/types/kitchen.types';
 import { Status } from '~/types/status.enum';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface TicketViewProps {
   itemGroups: ItemGroup[];
@@ -19,7 +19,6 @@ interface TicketViewProps {
  * - État "notified" local → card grisée + bandeau "À SERVIR"
  */
 export function TicketView({ itemGroups, onStatusChange }: TicketViewProps) {
-  const [notifiedIds, setNotifiedIds] = useState<Set<string>>(new Set());
   const [containerHeight, setContainerHeight] = useState<number | null>(null);
 
   const handleLayout = (event: any) => {
@@ -58,10 +57,6 @@ export function TicketView({ itemGroups, onStatusChange }: TicketViewProps) {
     });
   }, [itemGroups]);
 
-  const handleNotify = (itemGroupId: string) => {
-    setNotifiedIds(prev => new Set(prev).add(itemGroupId));
-  };
-
   if (groupedByOrder.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -88,19 +83,14 @@ export function TicketView({ itemGroups, onStatusChange }: TicketViewProps) {
       onLayout={handleLayout}
     >
       <Pressable style={styles.ticketsRow}>
-        {containerHeight != null && groupedByOrder.map((itemGroup) => {
-          const isNotified = notifiedIds.has(itemGroup.id);
-          return (
+        {containerHeight != null && groupedByOrder.map((itemGroup) => (
             <View key={itemGroup.orderId} style={[styles.cardContainer, { height: containerHeight }]}>
               <TicketCard
                 itemGroup={itemGroup}
                 onStatusChange={onStatusChange}
-                isNotified={isNotified}
-                onNotify={() => handleNotify(itemGroup.id)}
               />
             </View>
-          );
-        })}
+        ))}
       </Pressable>
     </ScrollView>
   );
@@ -109,7 +99,7 @@ export function TicketView({ itemGroups, onStatusChange }: TicketViewProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
   },
   contentContainer: {
     paddingVertical: 16,
@@ -123,6 +113,8 @@ const styles = StyleSheet.create({
     width: 300,
     position: 'relative',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.gray[300],
     ...shadows.all,
   },
   emptyContainer: {
@@ -133,7 +125,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
   },
 });

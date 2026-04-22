@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { Item } from '~/types/item.types';
 import { Menu } from '~/types/menu.types';
@@ -13,6 +13,7 @@ import { ActionItem } from '~/components/ActionMenu';
 import { formatPrice, sortActiveFirst } from '~/lib/utils';
 import { getMenuPrice, getColorWithOpacity } from '~/lib/color-utils';
 import { showApiError } from '~/lib/apiErrorHandler';
+import { colors } from '~/theme';
 
 // ============================================================
 // Types
@@ -39,18 +40,25 @@ export function useMenuPage() {
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
   const [currentMenu, setCurrentMenu] = useState<Menu | null>(null);
 
-  // Delete modals
-  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
-  const [isDeleteItemModalVisible, setIsDeleteItemModalVisible] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
-  const [isDeleteMenuModalVisible, setIsDeleteMenuModalVisible] = useState(false);
-  const [isDeletingMenu, setIsDeletingMenu] = useState(false);
+  // Delete confirmation panel
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteType, setPendingDeleteType] = useState<'item' | 'menu' | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
 
   // ============================================================
   // Panel handlers
   // ============================================================
+
+  const clearPendingDelete = useCallback(() => {
+    setPendingDeleteId(null);
+    setPendingDeleteType(null);
+    setPendingDeleteName('');
+  }, []);
+
+  // Clear pending delete when tab changes
+  useEffect(() => {
+    clearPendingDelete();
+  }, [activeTab]);
 
   const closePanel = useCallback(() => {
     setPanelType('none');
@@ -63,18 +71,20 @@ export function useMenuPage() {
   // ============================================================
 
   const handleCreateItem = useCallback(() => {
+    clearPendingDelete();
     setCurrentItem(null);
     setCurrentMenu(null);
     setPanelType('item');
-  }, []);
+  }, [clearPendingDelete]);
 
   const handleEditItem = useCallback((id: string) => {
+    clearPendingDelete();
     const item = items.find(i => i.id === id);
     if (!item) return;
     setCurrentItem(item);
     setCurrentMenu(null);
     setPanelType('item');
-  }, [items]);
+  }, [items, clearPendingDelete]);
 
   const handleSaveItem = useCallback(async (item: Item) => {
     const itemType = itemTypes.find(type => type.id === item.itemType?.id);
@@ -98,30 +108,10 @@ export function useMenuPage() {
 
   const handleDeleteItem = useCallback((id: string) => {
     const item = items.find(i => i.id === id);
-    if (!item) return;
-    setItemToDelete(item);
-    setIsDeleteItemModalVisible(true);
+    setPendingDeleteId(id);
+    setPendingDeleteType('item');
+    setPendingDeleteName(item?.name || '');
   }, [items]);
-
-  const confirmDeleteItem = useCallback(async () => {
-    if (!itemToDelete) return;
-    setIsDeleting(true);
-    try {
-      await deleteMenuItem(itemToDelete.id);
-      showToast('Article supprimé avec succès', 'success');
-    } catch (error) {
-      showApiError(error, showToast, "Erreur lors de la suppression de l'article");
-    } finally {
-      setIsDeleting(false);
-      setIsDeleteItemModalVisible(false);
-      setItemToDelete(null);
-    }
-  }, [itemToDelete, deleteMenuItem, showToast]);
-
-  const handleCloseDeleteItemModal = useCallback(() => {
-    setIsDeleteItemModalVisible(false);
-    setItemToDelete(null);
-  }, []);
 
   const handleToggleItemStatus = useCallback(async (id: string) => {
     try {
@@ -137,18 +127,20 @@ export function useMenuPage() {
   // ============================================================
 
   const handleCreateMenu = useCallback(() => {
+    clearPendingDelete();
     setCurrentMenu(null);
     setCurrentItem(null);
     setPanelType('menu');
-  }, []);
+  }, [clearPendingDelete]);
 
   const handleEditMenu = useCallback((id: string) => {
+    clearPendingDelete();
     const menu = allMenus.find(m => m.id === id);
     if (!menu) return;
     setCurrentMenu(menu);
     setCurrentItem(null);
     setPanelType('menu');
-  }, [allMenus]);
+  }, [allMenus, clearPendingDelete]);
 
   const handleToggleMenuStatus = useCallback(async (id: string) => {
     const menu = allMenus.find(m => m.id === id);
@@ -212,30 +204,29 @@ export function useMenuPage() {
 
   const handleDeleteMenu = useCallback((id: string) => {
     const menu = allMenus.find(m => m.id === id);
-    if (!menu) return;
-    setMenuToDelete(menu);
-    setIsDeleteMenuModalVisible(true);
+    setPendingDeleteId(id);
+    setPendingDeleteType('menu');
+    setPendingDeleteName(menu?.name || '');
   }, [allMenus]);
 
-  const confirmDeleteMenu = useCallback(async () => {
-    if (!menuToDelete) return;
-    setIsDeletingMenu(true);
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDeleteId || !pendingDeleteType) return;
     try {
-      await deleteMenu(menuToDelete.id);
-      showToast('Menu supprimé avec succès', 'success');
+      if (pendingDeleteType === 'item') {
+        await deleteMenuItem(pendingDeleteId);
+        showToast('Article supprimé avec succès', 'success');
+      } else {
+        await deleteMenu(pendingDeleteId);
+        showToast('Menu supprimé avec succès', 'success');
+      }
     } catch (error) {
-      showApiError(error, showToast, 'Erreur lors de la suppression du menu');
+      showApiError(error, showToast, pendingDeleteType === 'item'
+        ? "Erreur lors de la suppression de l'article"
+        : 'Erreur lors de la suppression du menu');
     } finally {
-      setIsDeletingMenu(false);
-      setIsDeleteMenuModalVisible(false);
-      setMenuToDelete(null);
+      clearPendingDelete();
     }
-  }, [menuToDelete, deleteMenu, showToast]);
-
-  const handleCloseDeleteMenuModal = useCallback(() => {
-    setIsDeleteMenuModalVisible(false);
-    setMenuToDelete(null);
-  }, []);
+  }, [pendingDeleteId, pendingDeleteType, deleteMenuItem, deleteMenu, showToast, clearPendingDelete]);
 
   // ============================================================
   // Filtres
@@ -288,15 +279,15 @@ export function useMenuPage() {
   // ============================================================
 
   const getItemActions = useCallback((item: Item): ActionItem[] => [
-    { label: 'Modifier', icon: <Edit2 size={16} color="#4F46E5" />, onPress: () => handleEditItem(item.id ?? '') },
-    { label: item.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={item.isActive ? '#EF4444' : '#10B981'} />, onPress: () => handleToggleItemStatus(item.id ?? '') },
-    { label: 'Supprimer', icon: <Trash size={16} color="#ef4444" />, type: 'destructive', onPress: () => handleDeleteItem(item.id ?? '') },
+    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accent} />, onPress: () => handleEditItem(item.id ?? '') },
+    { label: item.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={item.isActive ? colors.error.base : colors.success.base} />, onPress: () => handleToggleItemStatus(item.id ?? '') },
+    { label: 'Supprimer', icon: <Trash size={16} color={colors.error.base} />, type: 'destructive', onPress: () => handleDeleteItem(item.id ?? '') },
   ], [handleEditItem, handleToggleItemStatus, handleDeleteItem]);
 
   const getMenuActions = useCallback((menu: Menu): ActionItem[] => [
-    { label: 'Modifier', icon: <Edit2 size={16} color="#4F46E5" />, onPress: () => handleEditMenu(menu.id) },
-    { label: menu.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={menu.isActive ? '#EF4444' : '#10B981'} />, onPress: () => handleToggleMenuStatus(menu.id) },
-    { label: 'Supprimer', icon: <Trash size={16} color="#ef4444" />, type: 'destructive', onPress: () => handleDeleteMenu(menu.id) },
+    { label: 'Modifier', icon: <Edit2 size={16} color={colors.brand.accent} />, onPress: () => handleEditMenu(menu.id) },
+    { label: menu.isActive ? 'Désactiver' : 'Activer', icon: <Power size={16} color={menu.isActive ? colors.error.base : colors.success.base} />, onPress: () => handleToggleMenuStatus(menu.id) },
+    { label: 'Supprimer', icon: <Trash size={16} color={colors.error.base} />, type: 'destructive', onPress: () => handleDeleteMenu(menu.id) },
   ], [handleEditMenu, handleToggleMenuStatus, handleDeleteMenu]);
 
   const getTousActions = useCallback((entry: any): ActionItem[] => {
@@ -326,24 +317,24 @@ export function useMenuPage() {
   ), []);
 
   const renderStatus = useCallback((isActive: boolean) => (
-    <Text style={{ color: isActive ? '#10B981' : '#EF4444', fontWeight: '500' }}>
+    <Text style={{ color: isActive ? colors.success.base : colors.error.base, fontWeight: '500' }}>
       {isActive ? 'Actif' : 'Inactif'}
     </Text>
   ), []);
 
   const itemTableColumns = useMemo(() => [
-    { label: '', key: 'color', width: 64, render: (item: Item) => renderColorCircle(item.color || '#6B7280', item.name) },
+    { label: '', key: 'color', width: 64, render: (item: Item) => renderColorCircle(item.color || colors.gray[500], item.name) },
     { label: 'Nom', key: 'name', width: '46%' },
     { label: 'Prix', key: 'price', width: '23%', render: (item: Item) => <Text>{formatPrice(item.price)}</Text> },
     { label: 'Statut', key: 'statut', width: '24%', render: (item: Item) => renderStatus(item.isActive) },
   ], [renderColorCircle, renderStatus]);
 
   const menuTableColumns = useMemo(() => [
-    { label: '', key: 'color', width: 64, render: (menu: Menu) => renderColorCircle('#10B981', menu.name) },
+    { label: '', key: 'color', width: 64, render: (menu: Menu) => renderColorCircle(colors.success.base, menu.name) },
     { label: 'Nom', key: 'name', width: '34%' },
     { label: 'Prix', key: 'basePrice', width: '17%', render: (menu: Menu) => <Text>{formatPrice(getMenuPrice(menu))}</Text> },
     { label: 'Catégories', key: 'categories', width: '28%', render: (menu: Menu) => (
-      <Text style={{ fontSize: 12, color: '#666666' }}>
+      <Text style={{ fontSize: 12, color: colors.gray[500] }}>
         {menu.categories?.length || 0} catégorie{(menu.categories?.length || 0) > 1 ? 's' : ''}
       </Text>
     ) },
@@ -353,7 +344,7 @@ export function useMenuPage() {
   const tousColumns = useMemo(() => [
     { label: '', key: 'color', width: 64, render: (entry: any) => {
       const isMenu = entry._type === 'menu';
-      return renderColorCircle(isMenu ? '#10B981' : (entry.color || '#6B7280'), entry.name);
+      return renderColorCircle(isMenu ? colors.success.base : (entry.color || colors.gray[500]), entry.name);
     } },
     { label: 'Nom', key: 'name', width: '46%' },
     { label: 'Prix', key: 'price', width: '23%', render: (entry: any) => (
@@ -381,12 +372,13 @@ export function useMenuPage() {
 
     // Items CRUD
     handleCreateItem, handleEditItem, handleSaveItem,
-    isDeleteItemModalVisible, itemToDelete, isDeleting, confirmDeleteItem, handleCloseDeleteItemModal,
 
     // Menus CRUD
     handleCreateMenu, handleEditMenu, handleBulkMenuSave,
-    isDeleteMenuModalVisible, menuToDelete, isDeletingMenu, confirmDeleteMenu, handleCloseDeleteMenuModal,
     createMenuCategoryItem, loadMenuCategoryItems,
+
+    // Delete confirmation panel
+    pendingDeleteId, pendingDeleteType, pendingDeleteName, confirmDelete, clearPendingDelete,
 
     // Actions & colonnes
     getItemActions, getMenuActions, getTousActions, handleTousRowPress,

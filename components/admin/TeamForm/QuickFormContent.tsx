@@ -8,6 +8,7 @@ import { SelectButton } from '~/components/ui';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 
 // Profils affichables (exclure superadmin et admin)
 const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
@@ -69,7 +70,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
       <View style={styles.panelHeader}>
         <Text style={styles.panelTitle}>{isEditMode ? 'Modification utilisateur' : 'Création utilisateur'}</Text>
         <TouchableOpacity onPress={onCancel}>
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -108,7 +109,7 @@ export const QuickTeamFormPanelContent: React.FC<QuickTeamFormPanelContentProps>
               value={displayName}
               onChangeText={(text) => { setDisplayName(text); formErrors.clearError('firstName'); }}
               placeholder="Ex: Jean Dupont, Chef Principal, etc."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
               style={[styles.formInput, formErrors.hasError('firstName') && styles.formInputError]}
               autoComplete="off"
             />
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -152,12 +153,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
   },
   panelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formGroup: {
     marginBottom: 20,
@@ -165,27 +166,27 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 12,
   },
   formHelpText: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 8,
   },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   profileButtons: {
     flexDirection: 'row',
@@ -194,9 +195,9 @@ const styles = StyleSheet.create({
   },
   selectorError: {
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
     borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     padding: 4,
   },
   panelFooter: {
@@ -204,20 +205,20 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonSaving: {
     opacity: 0.5,
@@ -234,6 +235,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
 import { SessionExpiredError } from '~/api/base.api';
+import { colors } from '~/theme';
 
 export default function PinVerificationScreen() {
   const { isInAppLock, isPinVerified: isPinAlreadyVerified } = useSelector((state: RootState) => state.session);
@@ -265,7 +266,7 @@ export default function PinVerificationScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   contentContainer: {
     alignItems: 'center',
@@ -278,14 +279,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
@@ -312,16 +313,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   forgotPinContainer: {
     width: '100%',
@@ -330,13 +331,13 @@ const styles = StyleSheet.create({
   },
   forgotPinText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
     textDecorationLine: 'underline',
   },
   infoContainer: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -344,7 +345,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoText: {
-    color: '#6B7280',
+    color: colors.gray[500],
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -357,14 +358,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   resetButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   lockedContainer: {
     alignItems: 'center',
@@ -375,16 +378,16 @@ const styles = StyleSheet.create({
   lockedTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   countdownBox: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error.border,
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 20,
@@ -393,25 +396,25 @@ const styles = StyleSheet.create({
   countdownBoxTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 1,
     marginBottom: 10,
   },
   countdownLabel: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     letterSpacing: 0.5,
   },
   lockedCountdown: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#DC2626',
+    color: colors.error.text,
     fontVariant: ['tabular-nums'],
   } as any,
   lockedHint: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
     lineHeight: 19,
     maxWidth: 260,

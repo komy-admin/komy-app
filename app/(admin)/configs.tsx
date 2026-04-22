@@ -10,6 +10,7 @@ import { PinConfirmationModal } from '~/components/ui/PinConfirmationModal';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
+import { colors } from '~/theme';
 
 type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security';
 
@@ -61,7 +62,7 @@ export default function ConfigPage() {
   };
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#FFFFFF' }}>
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.white }}>
       <ConfigSidebar
         currentSection={currentSection}
         onSectionChange={setCurrentSection}
@@ -85,11 +86,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.gray[50],
   },
   blockedText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
   },
 });

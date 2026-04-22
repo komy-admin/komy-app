@@ -2,7 +2,7 @@
  * Room Edition Mode - Édition des rooms et tables.
  *
  * Composants : RoomComponent (grille interactive), RoomFormContent (settings room),
- *              TableFormContent (édition table), DeleteConfirmationModal
+ *              TableFormContent (édition table), DeleteConfirmPanel
  * Hooks : useRooms, useTables, useTableEditor, usePanelPortal
  */
 
@@ -13,11 +13,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import RoomComponent from '~/components/Room/Room';
 import { AppHeader } from '~/components/ui/AppHeader';
 import { TabBadgeItem } from '~/components/ui/TabBadgeItem';
+import { colors } from '~/theme';
 import { Room } from '~/types/room.types';
 import { Table } from "~/types/table.types";
 import { TableFormContent } from '~/components/admin/TableForm/TableFormContent';
 import { SlidePanel } from '~/components/ui/SlidePanel';
-import { DeleteConfirmationModal } from '~/components/ui/DeleteConfirmationModal';
+import { DeleteConfirmPanel } from '~/components/ui/DeleteConfirmPanel';
 import { useToast } from '~/components/ToastProvider';
 import { useRooms, useTables } from '~/hooks/useRestaurant';
 import { useTableEditor } from '~/hooks/useTableEditor';
@@ -344,7 +345,7 @@ export default function RoomEditionMode() {
                     name={room.name}
                     stats={`${count} commande${count !== 1 ? 's' : ''}`}
                     isActive={room.id === currentRoom?.id}
-                    activeColor={room.color || '#6366F1'}
+                    activeColor={room.color || colors.brand.accent}
                     isInactive={isInactive}
                   />
                 </View>
@@ -390,7 +391,7 @@ export default function RoomEditionMode() {
               accessibilityRole="button"
             >
               <View style={styles.deleteButton}>
-                <Trash2 size={24} color="#FFFFFF" strokeWidth={2} />
+                <Trash2 size={24} color={colors.white} strokeWidth={2} />
               </View>
             </Pressable>
           )}
@@ -402,16 +403,16 @@ export default function RoomEditionMode() {
         </Text>
       </View>
 
-      <DeleteConfirmationModal
-        isVisible={isDeleteModalVisible}
+      <DeleteConfirmPanel
+        visible={isDeleteModalVisible}
         onClose={handleCloseModal}
         onConfirm={handleConfirmDelete}
         entityName={`"${selectedTable?.name}"`}
         entityType="la table"
       />
 
-      <DeleteConfirmationModal
-        isVisible={isRoomDeleteModalVisible}
+      <DeleteConfirmPanel
+        visible={isRoomDeleteModalVisible}
         onClose={handleCloseRoomDeleteModal}
         onConfirm={handleConfirmDeleteRoom}
         entityName={`"${roomToDelete?.name}"`}
@@ -425,19 +426,19 @@ export default function RoomEditionMode() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   pressed: {
     opacity: 0.6,
   },
   editionBanner: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.warning.base,
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   editionBannerText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.5,
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error.base,
     justifyContent: 'center',
     alignItems: 'center',
   },

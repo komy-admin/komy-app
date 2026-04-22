@@ -7,6 +7,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 
 interface TableFormContentProps {
   table: Table;
@@ -72,7 +73,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={styles.closeButton}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -92,7 +93,7 @@ export const TableFormContent: React.FC<TableFormContentProps> = ({
               onChangeText={(text) => { setFormData(prev => ({ ...prev, name: text })); formErrors.clearError('name'); }}
               maxLength={3}
               placeholder="Ex: A01, T1..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
               style={[styles.formInput, formErrors.hasError('name') && styles.formInputError]}
             />
             <FormFieldError message={formErrors.getError('name')} />
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -183,8 +184,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FAFAFA',
+    borderBottomColor: colors.neutral[200],
+    backgroundColor: colors.gray[50],
   },
   headerText: {
     flex: 1,
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   closeButton: {
     padding: 4,
@@ -203,47 +204,47 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 8,
   },
   formHelpText: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 6,
   },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   footer: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   saveButtonSaving: {
     opacity: 0.5,
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   shapeSelector: {
     flexDirection: 'row',
@@ -273,25 +274,25 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   shapeOptionActive: {
-    borderColor: '#2A2E33',
-    backgroundColor: '#F8FAFC',
+    borderColor: colors.brand.dark,
+    backgroundColor: colors.neutral[50],
   },
   shapePreview: {
     width: 40,
     height: 40,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: colors.neutral[300],
   },
   shapeLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   shapeLabelActive: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
 });

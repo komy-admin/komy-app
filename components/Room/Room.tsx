@@ -19,6 +19,7 @@ import { CELL_SIZE, EXTRA_LINES } from '~/hooks/room/constants';
 import { useRoomDimensions } from '~/hooks/room/useRoomDimensions';
 import { useRoomZoom } from '~/hooks/room/useRoomZoom';
 import { useRoomValidation } from '~/hooks/room/useRoomValidation';
+import { colors } from '~/theme';
 
 interface RoomProps {
   tables: Table[];
@@ -56,7 +57,7 @@ const Room: React.FC<RoomProps> = ({
   disabledTableIds,
 }) => {
   // Couleurs dérivées de la room (calculées une seule fois pour toutes les tables)
-  const resolvedColor = roomColor || '#6366F1';
+  const resolvedColor = roomColor || colors.brand.accent;
   const roomBg = useMemo(() => getRoomLightBackground(resolvedColor), [resolvedColor]);
   const tableBg = useMemo(() => getRoomLightBackground(resolvedColor, 0.04), [resolvedColor]);
   // Dimensions et zoom optimal
@@ -187,11 +188,11 @@ const Room: React.FC<RoomProps> = ({
   return (
     <GestureHandlerRootView
       nativeID="room-zoom-container"
-      style={[styles.container, { backgroundColor: '#FFFFFF' }]}
+      style={[styles.container, { backgroundColor: colors.white }]}
     >
       <GestureDetector gesture={composedGesture}>
         {/* Zone de détection des gestures : fixe, plein conteneur, jamais transformée */}
-        <Animated.View style={[styles.gestureArea, { backgroundColor: '#FFFFFF' }]}>
+        <Animated.View style={[styles.gestureArea, { backgroundColor: colors.white }]}>
           {/* Translate (déplacement) */}
           <Animated.View style={[styles.transformLayer, translateStyle]}>
             {/* Scale (zoom visuel) */}
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
   loadingGrid: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray[100],
   },
   gestureArea: {
     flex: 1,

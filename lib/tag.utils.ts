@@ -1,36 +1,39 @@
+import { colors } from '~/theme';
+
 export const getTagFieldTypeConfig = (fieldType: string): { bgColor: string; textColor: string } => {
   switch (fieldType) {
     case 'select':
-      return { bgColor: '#DBEAFE', textColor: '#1D4ED8' };
+      return { bgColor: colors.info.bg, textColor: colors.info.text };
     case 'multi-select':
-      return { bgColor: '#EDE9FE', textColor: '#6D28D9' };
+      return { bgColor: colors.neutral[100], textColor: colors.purple.base };
     case 'toggle':
-      return { bgColor: '#D1FAE5', textColor: '#047857' };
+      return { bgColor: colors.success.bg, textColor: colors.success.text };
     case 'number':
-      return { bgColor: '#FDE68A', textColor: '#D97706' };
+      return { bgColor: colors.warning.border, textColor: colors.warning.base };
     case 'text':
-      return { bgColor: '#FBCFE8', textColor: '#BE185D' };
+      return { bgColor: colors.pink, textColor: colors.pink };
     default:
-      return { bgColor: '#E2E8F0', textColor: '#475569' };
+      return { bgColor: colors.neutral[200], textColor: colors.neutral[600] };
   }
 };
 
-export const getFieldTypeConfig = (fieldType: string) => {
-  switch (fieldType) {
-    case 'select':
-      return { bgColor: '#DBEAFE', textColor: '#1D4ED8', priceBgColor: '#BFDBFE' };
-    case 'multi-select':
-      return { bgColor: '#EDE9FE', textColor: '#6D28D9', priceBgColor: '#DDD6FE' };
-    case 'toggle':
-      return { bgColor: '#D1FAE5', textColor: '#047857', priceBgColor: '#A7F3D0' };
-    case 'number':
-      return { bgColor: '#FDE68A', textColor: '#D97706', priceBgColor: '#FCD34D' };
-    case 'text':
-      return { bgColor: '#FBCFE8', textColor: '#BE185D', priceBgColor: '#F9A8D4' };
-    default:
-      return { bgColor: '#E2E8F0', textColor: '#475569', priceBgColor: '#CBD5E1' };
-  }
-};
+// Unused — kept commented for reference.
+// export const getFieldTypeConfig = (fieldType: string) => {
+//   switch (fieldType) {
+//     case 'select':
+//       return { bgColor: colors.info.bg, textColor: colors.info.text, priceBgColor: colors.info.bg };
+//     case 'multi-select':
+//       return { bgColor: colors.neutral[100], textColor: colors.purple.base, priceBgColor: colors.neutral[200] };
+//     case 'toggle':
+//       return { bgColor: colors.success.bg, textColor: colors.success.text, priceBgColor: colors.success.border };
+//     case 'number':
+//       return { bgColor: colors.warning.border, textColor: colors.warning.base, priceBgColor: colors.warning.border };
+//     case 'text':
+//       return { bgColor: colors.pink, textColor: colors.pink, priceBgColor: colors.pink };
+//     default:
+//       return { bgColor: colors.neutral[200], textColor: colors.neutral[600], priceBgColor: colors.neutral[300] };
+//   }
+// };
 
 export const formatTagValue = (tag: any): string => {
   if (tag.value === null || tag.value === undefined) return '';

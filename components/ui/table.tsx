@@ -14,6 +14,7 @@ import { Trash2, ListFilter } from 'lucide-react-native';
 import { ActionMenu, ActionItem } from '~/components/ActionMenu';
 import { TableLoader } from '~/components/TableLoader';
 import { SectionDivider } from './SectionDivider';
+import { colors } from '~/theme';
 
 interface ColumnData {
   label?: string;
@@ -101,7 +102,7 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
 
 const HeaderFilterIcon = () => (
   <View style={styles.filterIcon}>
-    <ListFilter size={18} color="#2A2E33" strokeWidth={2.5} />
+    <ListFilter size={18} color={colors.brand.dark} strokeWidth={2.5} />
   </View>
 );
 
@@ -178,7 +179,7 @@ const ForkTable = React.memo(({
                 }}
                 style={styles.deleteButton}
               >
-                <Trash2 size={20} color="#ef4444" />
+                <Trash2 size={20} color={colors.error.base} />
               </Pressable>
             ) : null}
           </View>
@@ -317,11 +318,11 @@ const styles = StyleSheet.create({
   },
   header: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F4F5F5',
+    borderBottomColor: colors.gray[100],
   },
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: '#ECEEF0',
+    backgroundColor: colors.gray[100],
     minHeight: 52,
     alignItems: 'center',
   },
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 13,
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -363,9 +364,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
+    borderColor: colors.gray[300],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     borderBottomWidth: 0.5,
-    borderBottomColor: '#F4F5F5',
+    borderBottomColor: colors.gray[100],
     height: 58,
     alignItems: 'center',
   },
@@ -390,10 +391,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   evenRow: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   oddRow: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.gray[50],
   },
   cell: {
     padding: 16,
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
   },
   cellText: {
     fontSize: 15,
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontWeight: '400',
   },
   actionCell: {
@@ -428,11 +429,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.gray[50],
   },
   emptyMessage: {
     fontSize: 16,
-    color: '#999999',
+    color: colors.gray[400],
     fontWeight: '400',
     textAlign: 'center',
   },

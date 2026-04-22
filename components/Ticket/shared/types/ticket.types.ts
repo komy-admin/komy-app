@@ -32,6 +32,4 @@ export interface TicketItem {
 export interface TicketCardProps {
   itemGroup: ItemGroup;
   onStatusChange: (itemGroup: ItemGroup, newStatus: Status) => void;
-  isNotified?: boolean;
-  onNotify?: () => void;
 }

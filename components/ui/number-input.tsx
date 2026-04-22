@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextInput, Platform, StyleSheet, View, Text } from 'react-native';
 import { cn } from '~/lib/utils';
+import { colors } from '~/theme';
 
 interface NumberInputProps {
   value: number | null;
@@ -23,7 +24,7 @@ export function NumberInput({
   min = 0,
   max = Number.MAX_SAFE_INTEGER,
   placeholder,
-  placeholderTextColor = "#D7D7D7",
+  placeholderTextColor = colors.gray[300],
   currency,
   style,
   containerStyle,
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   currencyText: {
     position: Platform.OS === 'ios' ? 'relative' : 'absolute',
     right: Platform.OS === 'ios' ? 0 : 12,
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontSize: 16,
     marginLeft: Platform.OS === 'ios' ? 4 : 0,
   }

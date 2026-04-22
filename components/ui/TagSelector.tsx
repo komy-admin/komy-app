@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { Text } from './text';
 import { Tag } from '~/types/tag.types';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 interface TagSelectorProps {
   tags: Tag[];
@@ -11,8 +13,8 @@ interface TagSelectorProps {
 
 // Styles dynamiques pour le bouton selon l'état
 const getButtonStyle = (isSelected: boolean) => ({
-  backgroundColor: isSelected ? '#ECFDF5' : '#FAFAFA',
-  borderColor: isSelected ? '#34D399' : '#E5E7EB',
+  backgroundColor: isSelected ? colors.success.bg : colors.gray[50],
+  borderColor: isSelected ? colors.success.border : colors.gray[200],
 });
 
 export const TagSelector: React.FC<TagSelectorProps> = ({
@@ -34,17 +36,17 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           >
             <View style={styles.iconContainer}>
               <View style={[styles.pulse, {
-                backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                borderColor: isSelected ? '#10B981' : '#D1D5DB',
+                backgroundColor: isSelected ? getColorWithOpacity(colors.success.base, 0.1) : 'transparent',
+                borderColor: isSelected ? colors.success.base : colors.gray[300],
               }]} />
               <View style={[styles.core, {
-                backgroundColor: isSelected ? '#10B981' : '#9CA3AF',
+                backgroundColor: isSelected ? colors.success.base : colors.gray[400],
               }]} />
             </View>
             <Text style={[styles.label, {
               fontSize: 13,
               fontWeight: isSelected ? '700' : '600',
-              color: isSelected ? '#047857' : '#6B7280',
+              color: isSelected ? colors.success.text : colors.gray[500],
               ...(Platform.OS === 'web' && {
                 fontSize: 13,
                 fontWeight: isSelected ? 700 : 600,

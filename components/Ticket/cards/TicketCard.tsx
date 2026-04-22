@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Platform, Text as RNText } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { formatDate, getTableShortId, DateFormat } from '~/lib/utils';
 import { TicketCardProps } from '../shared/types/ticket.types';
 import { useItemPriorityMap } from '../shared/hooks/useItemPriorityMap';
@@ -10,18 +10,17 @@ import { ItemRow } from '../shared/components/ItemRow';
 import { ActionButtons } from '../shared/components/ActionButtons';
 import { SectionDivider } from '~/components/ui';
 import { Status } from '~/types/status.enum';
+import { ItemGroup } from '~/types/kitchen.types';
+import { colors } from '~/theme';
 
 /**
  * Composant unique pour les cartes cuisine/bar (mode ticket)
  *
- * Affiche un ticket avec header, catégories d'items, bouton d'action,
- * et bandeau "À SERVIR" quand la commande est notifiée.
+ * Affiche un ticket avec header, catégories d'items et bouton d'action.
  */
 export function TicketCard({
   itemGroup,
   onStatusChange,
-  isNotified,
-  onNotify,
 }: TicketCardProps) {
   const priorityMap = useItemPriorityMap();
   const itemsByCategory = useItemsByCategory(itemGroup.items, priorityMap);
@@ -45,9 +44,14 @@ export function TicketCard({
   const tableShortId = getTableShortId(itemGroup.tableName).replace(/^T/, '');
   const orderTime = formatDate(itemGroup.createdAt, DateFormat.TIME);
 
-  const isDraft = useMemo(() => {
-    return itemGroup.items.every(item => item.status === Status.DRAFT);
-  }, [itemGroup.items]);
+  const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
+
+  const handleStatusChange = useCallback((filteredGroup: ItemGroup, newStatus: Status) => {
+    const ids = new Set(filteredGroup.items.map(i => i.id));
+    setFlashingIds(ids);
+    setTimeout(() => setFlashingIds(new Set()), 2000);
+    onStatusChange(filteredGroup, newStatus);
+  }, [onStatusChange]);
 
   const categoriesContent = itemsByCategory.map(([category, items]) => (
     <View key={category}>
@@ -57,6 +61,7 @@ export function TicketCard({
           key={item.id}
           item={item}
           isLastItem={index === items.length - 1}
+          isFlashing={flashingIds.has(item.id)}
         />
       ))}
     </View>
@@ -64,10 +69,7 @@ export function TicketCard({
 
   return (
     <Pressable style={styles.wrapper}>
-      <View style={[
-        styles.card,
-        isNotified && styles.cardNotified,
-      ]}>
+      <View style={styles.card}>
         <CardHeader
           tableShortId={tableShortId}
           orderTime={orderTime}
@@ -92,18 +94,9 @@ export function TicketCard({
         <ActionButtons
           mode="dual"
           itemGroup={itemGroup}
-          onStatusChange={onStatusChange}
-          showModal
-          onNotify={onNotify}
-          tableShortId={tableShortId}
+          onStatusChange={handleStatusChange}
         />
       </View>
-
-      {isNotified && !isDraft && (
-        <View style={styles.notifiedBanner}>
-          <RNText style={styles.notifiedBannerText}>À SERVIR</RNText>
-        </View>
-      )}
     </Pressable>
   );
 }
@@ -121,12 +114,9 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     overflow: 'hidden',
-  },
-  cardNotified: {
-    opacity: 0.6,
   },
   content: {
     flex: 1,
@@ -140,26 +130,5 @@ const styles = StyleSheet.create({
   },
   contentPressable: {
     flex: 1,
-  },
-  notifiedBanner: {
-    position: 'absolute',
-    top: 18,
-    right: -38,
-    backgroundColor: '#3B82F6',
-    paddingVertical: 6,
-    paddingHorizontal: 45,
-    transform: [{ rotate: '45deg' }],
-    zIndex: 101,
-    minWidth: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifiedBannerText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    textAlign: 'center',
   },
 });

@@ -8,6 +8,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useMemo, useCallback } from 'react';
 import { navigationEvents } from '~/lib/navigation-events';
+import { colors } from '~/theme';
 
 const ServiceIcon = ({ size, color, style }: { size: number; color: string; style?: any }) => (
   <MaterialCommunityIcons name="room-service-outline" size={size} color={color} style={style} />
@@ -64,7 +65,8 @@ export function AdminSidebar() {
            className="py-0.5 items-center"
            onPress={() => handleNavPress(href, isActive)}
          >
-            <View className="flex items-center justify-center rounded-md w-[78px] h-[72px] overflow-hidden" style={isActive ? {backgroundColor: '#54575B', opacity: 1} : {}}>
+            <View className="flex items-center justify-center rounded-md w-[78px] h-[72px] overflow-hidden">
+              {isActive && <View style={styles.activeOverlay} />}
               <Icon
                 size={26}
                 color={isActive ? 'white' : 'gray'}
@@ -91,11 +93,16 @@ export function AdminSidebar() {
 const styles = StyleSheet.create({
   container: {
     width: 100,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     paddingTop: 8,
     zIndex: 100,
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  activeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.gray[500],
+    opacity: 0.5,
   },
 });

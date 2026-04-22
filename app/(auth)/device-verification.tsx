@@ -17,7 +17,7 @@ import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { extractApiError, showApiError } from '~/lib/apiErrorHandler';
 import { SessionExpiredError } from '~/api/base.api';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 export default function DeviceVerificationScreen() {
   const [code, setCode] = useState('');
@@ -327,11 +327,11 @@ export default function DeviceVerificationScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   switchContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     borderRadius: 10,
     padding: 4,
     width: '100%',
@@ -345,26 +345,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   switchOptionActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     ...shadows.bottom,
   },
   switchName: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   switchNameActive: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontWeight: '600',
   },
   switchSub: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#C4C9D1',
+    color: colors.neutral[300],
     marginTop: 1,
   },
   switchSubActive: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   contentContainer: {
     alignItems: 'center',
@@ -377,14 +377,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -392,9 +392,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -402,14 +402,16 @@ const styles = StyleSheet.create({
   sendEmailButtonText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   pinContainer: {
     marginBottom: 24,
     width: '100%',
   },
   errorText: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
@@ -422,7 +424,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -430,10 +432,12 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   primaryButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.gray[300],
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -447,16 +451,16 @@ const styles = StyleSheet.create({
   lockedTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   countdownBox: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error.border,
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 20,
@@ -465,25 +469,25 @@ const styles = StyleSheet.create({
   countdownBoxTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 1,
     marginBottom: 10,
   },
   countdownLabel: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     letterSpacing: 0.5,
   },
   lockedCountdown: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#DC2626',
+    color: colors.error.text,
     fontVariant: ['tabular-nums'],
   } as any,
   lockedHint: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
     lineHeight: 19,
     maxWidth: 260,
@@ -492,9 +496,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
@@ -502,6 +506,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
 });

@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text as RNText, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, interpolateColor } from 'react-native-reanimated';
 import { Status } from '~/types/status.enum';
 import { TicketItem } from '../types/ticket.types';
 import { ItemCustomization } from './ItemCustomization';
+import { StatusBadge } from '~/components/ui';
+import { colors } from '~/theme';
 
 interface ItemRowProps {
   item: TicketItem;
   isLastItem: boolean;
   showStatusBadge?: boolean;
+  isFlashing?: boolean;
 }
 
 /**
@@ -16,17 +20,35 @@ interface ItemRowProps {
  * Affiche le nom, badge menu, badge statut, et personnalisations (notes + tags).
  * Items DRAFT grisés (opacity réduite).
  */
-export function ItemRow({ item, isLastItem, showStatusBadge = true }: ItemRowProps) {
+export function ItemRow({ item, isLastItem, showStatusBadge = true, isFlashing }: ItemRowProps) {
   const hasCustomization = (item.note && item.note.trim().length > 0) || (item.tags && item.tags.length > 0);
   const isDraft = item.status === Status.DRAFT;
 
+  const flashProgress = useSharedValue(0);
+
+  useEffect(() => {
+    if (isFlashing) {
+      flashProgress.value = 1;
+      flashProgress.value = withDelay(200, withTiming(0, { duration: 700 }));
+    }
+  }, [isFlashing]);
+
+  const flashStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      flashProgress.value,
+      [0, 1],
+      [colors.white, colors.success.bg],
+    ),
+  }));
+
   return (
-    <View
+    <Animated.View
       style={[
         styles.container,
         isLastItem && styles.containerLast,
         item.isOverdue && styles.containerOverdue,
         isDraft && styles.containerDraft,
+        flashStyle,
       ]}
     >
       {item.status === Status.PENDING && <View style={styles.statusBarPending} />}
@@ -39,19 +61,8 @@ export function ItemRow({ item, isLastItem, showStatusBadge = true }: ItemRowPro
             </RNText>
           </View>
 
-          {showStatusBadge && (
-            <>
-              {item.status === Status.PENDING && (
-                <View style={styles.statusBadgePending}>
-                  <RNText style={styles.statusBadgeText}>RÉCLAMÉ</RNText>
-                </View>
-              )}
-              {item.status === Status.READY && (
-                <View style={styles.statusBadgeReady}>
-                  <RNText style={styles.statusBadgeText}>PRÊT</RNText>
-                </View>
-              )}
-            </>
+          {showStatusBadge && item.status && (
+            <StatusBadge status={item.status} />
           )}
         </View>
 
@@ -59,7 +70,7 @@ export function ItemRow({ item, isLastItem, showStatusBadge = true }: ItemRowPro
           <ItemCustomization note={item.note} tags={item.tags} />
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -70,14 +81,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: colors.gray[100],
+    backgroundColor: colors.white,
   },
   containerLast: {
     borderBottomWidth: 0,
   },
   containerOverdue: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error.bg,
   },
   containerDraft: {
     opacity: 0.3, // Items DRAFT grisés (pas encore demandés)
@@ -85,14 +96,14 @@ const styles = StyleSheet.create({
   statusBarPending: {
     width: 3,
     alignSelf: 'stretch',
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.warning.base,
     borderRadius: 2,
     marginRight: 10,
   },
   statusBarReady: {
     width: 3,
     alignSelf: 'stretch',
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.info.base,
     borderRadius: 2,
     marginRight: 10,
   },
@@ -115,30 +126,6 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1F2937',
-  },
-  statusBadgePending: {
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#F59E0B',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  statusBadgeReady: {
-    backgroundColor: '#DBEAFE',
-    borderWidth: 1,
-    borderColor: '#3B82F6',  // Bleu - cohérent avec utils.ts READY
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  statusBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#2A2E33',
-    letterSpacing: 0.5,
+    color: colors.gray[800],
   },
 });

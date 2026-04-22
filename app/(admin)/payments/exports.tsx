@@ -22,6 +22,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-f
 import { fr } from 'date-fns/locale';
 import { formatPrice } from '~/lib/utils';
 import { useToast } from '~/components/ToastProvider';
+import { colors } from '~/theme';
 
 /**
  * ExportsScreen
@@ -98,7 +99,7 @@ export default function ExportsScreen() {
           </View>
           <Text className="text-sm text-gray-600">{description}</Text>
         </View>
-        <Download size={20} color="#6B7280" />
+        <Download size={20} color={colors.gray[500]} />
       </View>
     </Pressable>
   );
@@ -139,7 +140,7 @@ export default function ExportsScreen() {
 
           {/* Affichage de la période sélectionnée */}
           <View className="mt-2 flex-row items-center gap-2">
-            <Calendar size={16} color="#6B7280" />
+            <Calendar size={16} color={colors.gray[500]} />
             <Text className="text-sm text-gray-600">
               {selectedPeriod === 'month' &&
                 `${format(startOfMonth(new Date()), 'dd MMM', { locale: fr })} - ${format(
@@ -171,7 +172,7 @@ export default function ExportsScreen() {
                   : 'bg-white border-gray-300'
               }`}
             >
-              <FileText size={20} color={selectedFormat === 'csv' ? '#2563EB' : '#6B7280'} />
+              <FileText size={20} color={selectedFormat === 'csv' ? colors.info.base : colors.gray[500]} />
               <Text
                 className={`text-sm font-medium mt-1 ${
                   selectedFormat === 'csv' ? 'text-blue-600' : 'text-gray-700'
@@ -189,7 +190,7 @@ export default function ExportsScreen() {
                   : 'bg-white border-gray-300'
               }`}
             >
-              <FileText size={20} color={selectedFormat === 'pdf' ? '#2563EB' : '#6B7280'} />
+              <FileText size={20} color={selectedFormat === 'pdf' ? colors.info.base : colors.gray[500]} />
               <Text
                 className={`text-sm font-medium mt-1 ${
                   selectedFormat === 'pdf' ? 'text-blue-600' : 'text-gray-700'
@@ -209,7 +210,7 @@ export default function ExportsScreen() {
             >
               <FileSpreadsheet
                 size={20}
-                color={selectedFormat === 'xlsx' ? '#2563EB' : '#6B7280'}
+                color={selectedFormat === 'xlsx' ? colors.info.base : colors.gray[500]}
               />
               <Text
                 className={`text-sm font-medium mt-1 ${
@@ -228,7 +229,7 @@ export default function ExportsScreen() {
         <Text className="text-lg font-semibold mb-3">Exports disponibles</Text>
 
         <ExportCard
-          icon={<ReceiptEuro size={20} color="#2563EB" />}
+          icon={<ReceiptEuro size={20} color={colors.info.base} />}
           title="Journal des encaissements"
           description="Liste chronologique de tous les paiements avec détails complets"
           type="journal"
@@ -236,21 +237,21 @@ export default function ExportsScreen() {
         />
 
         <ExportCard
-          icon={<Euro size={20} color="#10B981" />}
+          icon={<Euro size={20} color={colors.success.base} />}
           title="Ventilation TVA"
           description="Répartition de la TVA par taux pour déclaration fiscale"
           type="tva"
         />
 
         <ExportCard
-          icon={<TrendingUp size={20} color="#F59E0B" />}
+          icon={<TrendingUp size={20} color={colors.warning.base} />}
           title="Rapport détaillé"
           description="Analyse complète avec statistiques et graphiques"
           type="detailed"
         />
 
         <ExportCard
-          icon={<FilePlus size={20} color="#8B5CF6" />}
+          icon={<FilePlus size={20} color={colors.purple.alt} />}
           title="Résumé comptable"
           description="Synthèse pour rapprochement bancaire et comptabilité"
           type="summary"
@@ -264,35 +265,35 @@ export default function ExportsScreen() {
         <View className="bg-white rounded-lg border border-gray-200">
           <Pressable className="p-3 border-b border-gray-100 flex-row items-center justify-between">
             <View className="flex-row items-center gap-3">
-              <FileText size={20} color="#6B7280" />
+              <FileText size={20} color={colors.gray[500]} />
               <View>
                 <Text className="text-sm font-medium">Journal_Novembre_2024.csv</Text>
                 <Text className="text-xs text-gray-500">Généré le 01/12/2024 à 09:00</Text>
               </View>
             </View>
-            <Download size={18} color="#3B82F6" />
+            <Download size={18} color={colors.info.base} />
           </Pressable>
 
           <Pressable className="p-3 border-b border-gray-100 flex-row items-center justify-between">
             <View className="flex-row items-center gap-3">
-              <FileText size={20} color="#6B7280" />
+              <FileText size={20} color={colors.gray[500]} />
               <View>
                 <Text className="text-sm font-medium">TVA_T3_2024.pdf</Text>
                 <Text className="text-xs text-gray-500">Généré le 01/10/2024 à 14:30</Text>
               </View>
             </View>
-            <Download size={18} color="#3B82F6" />
+            <Download size={18} color={colors.info.base} />
           </Pressable>
 
           <Pressable className="p-3 flex-row items-center justify-between">
             <View className="flex-row items-center gap-3">
-              <FileSpreadsheet size={20} color="#6B7280" />
+              <FileSpreadsheet size={20} color={colors.gray[500]} />
               <View>
                 <Text className="text-sm font-medium">Rapport_Septembre_2024.xlsx</Text>
                 <Text className="text-xs text-gray-500">Généré le 01/10/2024 à 10:15</Text>
               </View>
             </View>
-            <Download size={18} color="#3B82F6" />
+            <Download size={18} color={colors.info.base} />
           </Pressable>
         </View>
       </View>

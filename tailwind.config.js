@@ -1,5 +1,6 @@
 const { hairlineWidth } = require('nativewind/theme');
 const { shadowsCss } = require('./theme/shadows.tokens');
+const { colors } = require('./theme/colors.tokens');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -12,8 +13,31 @@ module.exports = {
         sans: ['Mona-Sans', 'system-ui', 'sans-serif']
       },
       colors: {
-        success: '#78CEBC',
-        error: '#EB5A47',
+        // === Global design tokens (theme/colors.tokens.js) ===
+        brand: colors.brand,
+        neutral: colors.neutral,
+        gray: colors.gray,
+        success: {
+          DEFAULT: colors.success.base,
+          foreground: colors.success.text,
+          bg: colors.success.bg,
+          border: colors.success.border,
+        },
+        error: {
+          DEFAULT: colors.error.base,
+          foreground: colors.error.text,
+          bg: colors.error.bg,
+          border: colors.error.border,
+        },
+        warning: {
+          DEFAULT: colors.warning.base,
+          foreground: colors.warning.text,
+          bg: colors.warning.bg,
+          border: colors.warning.border,
+        },
+        info: colors.info,
+
+        // === Radix/shadcn HSL variables (kept for existing ui primitives) ===
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

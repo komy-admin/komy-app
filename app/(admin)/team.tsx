@@ -10,9 +10,9 @@ import { SlidePanel } from "~/components/ui/SlidePanel";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { User, UserProfile } from "~/types/user.types";
 import { getUserProfileText } from "~/lib/utils";
-import { DeleteConfirmationModal } from "~/components/ui/DeleteConfirmationModal";
 import { QuickFormContent } from "~/components/admin/TeamForm";
-import { UserQrModal } from "~/components/admin/UserQrModal";
+import { UserQrPanelContent } from "~/components/admin/UserQrPanel";
+import { colors } from '~/theme';
 import { useToast } from '~/components/ToastProvider';
 import { CreditCard as Edit2, QrCode, Trash } from 'lucide-react-native';
 import { ActionItem } from '~/components/ActionMenu';
@@ -23,6 +23,7 @@ import { TeamFilters, TeamFilterState } from '~/components/filters/TeamFilters';
 import { filterTeamUsers, createEmptyTeamFilters } from '~/utils/teamFilters';
 import { useRouter } from 'expo-router';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
+import { DeleteConfirmPanel } from '~/components/ui/DeleteConfirmPanel';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { showApiError } from '~/lib/apiErrorHandler';
 
@@ -36,13 +37,13 @@ const TEAM_TABLE_COLUMNS = [
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: getColorWithOpacity('#2A2E33', 0.12),
+        backgroundColor: getColorWithOpacity(colors.brand.dark, 0.12),
         borderWidth: 1.5,
-        borderColor: '#2A2E33',
+        borderColor: colors.brand.dark,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <Text style={{ color: '#2A2E33', fontSize: 14, fontWeight: '600' }}>
+        <Text style={{ color: colors.brand.dark, fontSize: 14, fontWeight: '600' }}>
           {user.firstName?.charAt(0)?.toUpperCase() || '?'}
         </Text>
       </View>
@@ -53,7 +54,7 @@ const TEAM_TABLE_COLUMNS = [
     key: 'name',
     width: '60%',
     render: (user: User) => (
-      <Text style={{ fontSize: 15, color: '#2A2E33' }}>
+      <Text style={{ fontSize: 15, color: colors.brand.dark }}>
         {[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}
       </Text>
     ),
@@ -63,7 +64,7 @@ const TEAM_TABLE_COLUMNS = [
     key: 'createdAt',
     width: '33%',
     render: (user: any) => (
-      <Text style={{ fontSize: 15, color: '#2A2E33' }}>
+      <Text style={{ fontSize: 15, color: colors.brand.dark }}>
         {user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR') : '—'}
       </Text>
     ),
@@ -79,10 +80,6 @@ const DISPLAYABLE_PROFILES = Object.values(UserProfile).filter(
 type FormPanel =
   | null
   | { mode: 'quick'; user?: User | null };
-
-type DeleteModal =
-  | null
-  | { user: User; deleting: boolean };
 
 export default function TeamPage() {
   const router = useRouter();
@@ -102,7 +99,8 @@ export default function TeamPage() {
 
   // États consolidés
   const [formPanel, setFormPanel] = useState<FormPanel>(null);
-  const [deleteModal, setDeleteModal] = useState<DeleteModal>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
   const [qrUser, setQrUser] = useState<User | null>(null);
   const { renderPanel, clearPanel } = usePanelPortal();
 
@@ -166,12 +164,13 @@ export default function TeamPage() {
 
   const handleCreateUser = useCallback(() => {
     if (isManager) return;
-    // Aller directement sur la création rapide
+    setPendingDeleteId(null);
     setFormPanel({ mode: 'quick' });
   }, [isManager]);
 
   const handleEditUser = useCallback((id: string) => {
     if (isManager) return;
+    setPendingDeleteId(null);
     const found = users.find(u => u.id === id);
     if (!found) return;
     setFormPanel({ mode: 'quick', user: found });
@@ -193,49 +192,61 @@ export default function TeamPage() {
 
   const handleDeleteUser = useCallback((id: string) => {
     const found = users.find(u => u.id === id);
-    if (!found) return;
-    setDeleteModal({ user: found, deleting: false });
+    setPendingDeleteId(id);
+    setPendingDeleteName([found?.firstName, found?.lastName].filter(Boolean).join(' ') || '');
   }, [users]);
 
   const confirmDelete = useCallback(async () => {
-    if (!deleteModal) return;
-    setDeleteModal(prev => prev ? { ...prev, deleting: true } : null);
+    if (!pendingDeleteId) return;
     try {
-      await deleteUser(deleteModal.user.id);
+      await deleteUser(pendingDeleteId);
       showToast('Utilisateur supprimé avec succès', 'success');
     } catch (err) {
       showApiError(err, showToast, 'Erreur lors de la suppression de l\'utilisateur');
     } finally {
-      setDeleteModal(null);
+      setPendingDeleteId(null);
+      setPendingDeleteName('');
     }
-  }, [deleteModal, deleteUser, showToast]);
+  }, [pendingDeleteId, deleteUser, showToast]);
 
   const handleShowQrCode = useCallback((user: User) => {
+    setFormPanel(null);
+    setPendingDeleteId(null);
     setQrUser(user);
   }, []);
 
+  const handleCloseQrPanel = useCallback(() => {
+    setQrUser(null);
+    clearPanel();
+  }, [clearPanel]);
+
   // Synchroniser le panel avec le portal global
   useEffect(() => {
-    if (!formPanel) {
-      clearPanel();
+    if (qrUser) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseQrPanel} width={450}>
+          <UserQrPanelContent user={qrUser} onClose={handleCloseQrPanel} />
+        </SlidePanel>
+      );
       return;
     }
 
-    const panelContent = (
-      <QuickFormContent
-        user={formPanel.user}
-        onSave={handleQuickSave}
-        onCancel={handleCloseFormPanel}
-        activeTab={activeTab}
-      />
-    );
+    if (formPanel) {
+      renderPanel(
+        <SlidePanel visible={true} onClose={handleCloseFormPanel} width={430}>
+          <QuickFormContent
+            user={formPanel.user}
+            onSave={handleQuickSave}
+            onCancel={handleCloseFormPanel}
+            activeTab={activeTab}
+          />
+        </SlidePanel>
+      );
+      return;
+    }
 
-    renderPanel(
-      <SlidePanel visible={true} onClose={handleCloseFormPanel} width={430}>
-        {panelContent}
-      </SlidePanel>
-    );
-  }, [formPanel, activeTab, handleCloseFormPanel, handleQuickSave, renderPanel, clearPanel]);
+    clearPanel();
+  }, [qrUser, formPanel, activeTab, handleCloseFormPanel, handleCloseQrPanel, handleQuickSave, renderPanel, clearPanel]);
 
   const getUserActions = useCallback((user: User): ActionItem[] => {
     const actions: ActionItem[] = [];
@@ -244,7 +255,7 @@ export default function TeamPage() {
     if (canModifyUsers) {
       actions.push({
         label: 'Modifier',
-        icon: <Edit2 size={16} color="#4F46E5" />,
+        icon: <Edit2 size={16} color={colors.brand.accent} />,
         onPress: () => handleEditUser(user.id)
       });
     }
@@ -252,7 +263,7 @@ export default function TeamPage() {
     // QR Code accessible à tous (admin, superadmin, manager)
     actions.push({
       label: 'QR Code',
-      icon: <QrCode size={16} color="#4F46E5" />,
+      icon: <QrCode size={16} color={colors.brand.accent} />,
       onPress: () => handleShowQrCode(user)
     });
 
@@ -260,7 +271,7 @@ export default function TeamPage() {
     if (canModifyUsers) {
       actions.push({
         label: 'Supprimer',
-        icon: <Trash size={16} color="#ef4444" />,
+        icon: <Trash size={16} color={colors.error.base} />,
         type: 'destructive',
         onPress: () => handleDeleteUser(user.id)
       });
@@ -289,10 +300,11 @@ export default function TeamPage() {
 
         <View style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Tabs
-          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+          style={{ flex: 1, backgroundColor: colors.white }}
           value={activeTab}
           onValueChange={(newValue: string) => {
             const newTab = newValue as UserProfile | 'all';
+            setPendingDeleteId(null);
             setActiveTab(newTab);
           }}
         >
@@ -328,14 +340,14 @@ export default function TeamPage() {
           <TabsContent style={{ flex: 1 }} value={activeTab}>
             {!canManageUsers ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                <Text style={{ color: '#ef4444', fontSize: 16, textAlign: 'center' }}>
+                <Text style={{ color: colors.error.base, fontSize: 16, textAlign: 'center' }}>
                   Accès non autorisé{'\n'}
                   Vous n'avez pas les droits nécessaires pour gérer les utilisateurs.
                 </Text>
               </View>
             ) : loading || error ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                <Text style={{ color: error ? '#ef4444' : '#666', fontSize: 16 }}>
+                <Text style={{ color: error ? colors.error.base : colors.gray[500], fontSize: 16 }}>
                   {loading ? 'Chargement...' : error || 'Erreur lors du chargement'}
                 </Text>
               </View>
@@ -357,23 +369,12 @@ export default function TeamPage() {
         </View>
       </View>
 
-      {/* Modal de suppression - cachée pour les managers */}
-      {canModifyUsers && (
-        <DeleteConfirmationModal
-          isVisible={deleteModal !== null}
-          onClose={() => setDeleteModal(null)}
-          onConfirm={confirmDelete}
-          entityName={deleteModal ? `${deleteModal.user.firstName} ${deleteModal.user.lastName}` : ''}
-          entityType="le profil"
-          isLoading={deleteModal?.deleting ?? false}
-        />
-      )}
-
-      {/* QR Code Modal */}
-      <UserQrModal
-        user={qrUser}
-        visible={qrUser !== null}
-        onClose={() => setQrUser(null)}
+      <DeleteConfirmPanel
+        visible={!!pendingDeleteId}
+        onClose={() => { setPendingDeleteId(null); setPendingDeleteName(''); }}
+        onConfirm={confirmDelete}
+        entityName={`"${pendingDeleteName}"`}
+        entityType="l'utilisateur"
       />
 
       {/* Panel rendu via usePanelPortal - pas de rendu local */}

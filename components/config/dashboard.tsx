@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Database, TrendingUp, Users, Activity } from 'lucide-react-native';
-import { shadows } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { shadows, colors } from '~/theme';
 
 export default function DashboardPage() {
   return (
@@ -12,7 +13,7 @@ export default function DashboardPage() {
         <View style={styles.comingSoonCard}>
           {/* Icône avec animation */}
           <View style={styles.iconContainer}>
-            <Database size={48} color="#6366F1" strokeWidth={1.5} />
+            <Database size={48} color={colors.brand.accent} strokeWidth={1.5} />
           </View>
 
           <View style={{ alignItems: 'center' }}>
@@ -36,15 +37,15 @@ export default function DashboardPage() {
           {/* Fonctionnalités à venir */}
           <View style={styles.featuresContainer}>
             <View style={styles.featureItem}>
-              <TrendingUp size={16} color="#10B981" />
+              <TrendingUp size={16} color={colors.success.base} />
               <Text style={styles.featureText}>Graphiques en temps réel</Text>
             </View>
             <View style={styles.featureItem}>
-              <Users size={16} color="#10B981" />
+              <Users size={16} color={colors.success.base} />
               <Text style={styles.featureText}>Statistiques utilisateurs</Text>
             </View>
             <View style={styles.featureItem}>
-              <Activity size={16} color="#10B981" />
+              <Activity size={16} color={colors.success.base} />
               <Text style={styles.featureText}>Métriques de performance</Text>
             </View>
           </View>
@@ -57,13 +58,13 @@ export default function DashboardPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.brand.dark,
   },
   blurOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(248, 250, 252, 0.9)',
+    backgroundColor: getColorWithOpacity(colors.neutral[50], 0.9),
     ...Platform.select({
       web: {
         backdropFilter: 'blur(8px)',
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     }),
   },
   comingSoonCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 20,
     paddingVertical: 50,
     paddingHorizontal: 40,
@@ -83,14 +84,14 @@ const styles = StyleSheet.create({
     height: 500,
     width: '60%',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.8),
     ...shadows.bottom,
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: getColorWithOpacity(colors.brand.accent, 0.1),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -98,14 +99,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 32,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748B',
+    color: colors.neutral[500],
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
@@ -117,19 +118,19 @@ const styles = StyleSheet.create({
   progressBar: {
     width: '100%',
     height: 6,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     borderRadius: 3,
     marginBottom: 8,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#6366F1',
+    backgroundColor: colors.brand.accent,
     borderRadius: 3,
   },
   progressText: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 14,
-    color: '#475569',
+    color: colors.neutral[600],
     fontWeight: '500',
   },
 });

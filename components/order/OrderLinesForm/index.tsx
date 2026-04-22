@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useOrderLinesForm } from '~/hooks/order/useOrderLinesForm';
 import { OrderLinesNavigation } from '~/components/order/OrderLinesForm/OrderLinesNavigation';
@@ -16,6 +16,7 @@ import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { MenuCategoryItem, MenuItemWithCustomization } from '~/types/menu-configuration.types';
 import { MenuItemSelection } from '~/components/order/OrderLinesForm/MenuConfiguration';
+import { colors } from '~/theme';
 
 /**
  * OrderLinesForm - Version refactorisée (composant présentationnel)
@@ -56,9 +57,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 
   // Panel Portal
   const { renderPanel, clearPanel } = usePanelPortal();
-
-  // Ref to cancel pending delete from outside the side panel
-  const cancelDeleteRef = useRef<(() => void) | null>(null);
 
   // Navigation
   const {
@@ -116,9 +114,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
    */
   const handleOpenCustomization = useCallback(
     (item: Item) => {
-      // Annuler toute suppression en cours
-      cancelDeleteRef.current?.();
-
       // Récupérer l'item complet depuis la liste
       const fullItem = items.find((i) => i.id === item.id) || item;
 
@@ -472,7 +467,6 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
               onCancel={handleBackPress}
               hasChanges={hasChanges}
               isProcessing={isProcessing}
-              cancelDeleteRef={cancelDeleteRef}
               itemTypes={itemTypes}
             />
           </View>
@@ -532,7 +526,7 @@ export const OrderLinesForm: React.FC<OrderLinesFormProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   mainContentRow: {
     flex: 1,
@@ -540,11 +534,11 @@ const styles = StyleSheet.create({
   },
   sidePanelContent: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
   mainContent: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
   },
   contentWithNav: {
     flex: 1,

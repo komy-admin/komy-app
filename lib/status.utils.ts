@@ -2,6 +2,7 @@ import { Table } from "@/types/table.types";
 import { Status } from "~/types/status.enum";
 import { OrderLine, OrderLineType } from "~/types/order-line.types";
 import { Order } from "~/types/order.types";
+import { colors } from "~/theme";
 
 // ========================================
 // Calcul de statut
@@ -93,41 +94,28 @@ export const getStatusText = (status: Status) => {
   return texts[status];
 };
 
-export const getStatusColor = (status: Status) => {
-  const colors = {
-    [Status.READY]: "#D7E3FC",
-    [Status.PENDING]: "#F9F1C8",
-    [Status.SERVED]: "#B7E1CC",
-    [Status.ERROR]: "#F7BFB5",
-    [Status.TERMINATED]: "#EBEBEB",
-    [Status.DRAFT]: "#D1D5DB",
-  };
-  return colors[status] || colors[Status.ERROR];
+const STATUS_TOKEN_KEY = {
+  [Status.READY]: 'ready',
+  [Status.PENDING]: 'pending',
+  [Status.SERVED]: 'served',
+  [Status.ERROR]: 'error',
+  [Status.TERMINATED]: 'terminated',
+  [Status.DRAFT]: 'draft',
+} as const;
+
+export const getStatusColor = (status: Status): string => {
+  const key = STATUS_TOKEN_KEY[status] ?? STATUS_TOKEN_KEY[Status.ERROR];
+  return colors.status[key].badge;
 };
 
 export const getStatusBackgroundColor = (status: Status): string => {
-  const colors = {
-    [Status.READY]: "#F5F8FE",
-    [Status.PENDING]: "#FEFAF1",
-    [Status.SERVED]: "#F0FAF5",
-    [Status.ERROR]: "#FEF5F4",
-    [Status.TERMINATED]: "#FAFAFA",
-    [Status.DRAFT]: "#FAFAFA",
-  };
-  return colors[status] || colors[Status.ERROR];
+  const key = STATUS_TOKEN_KEY[status] ?? STATUS_TOKEN_KEY[Status.ERROR];
+  return colors.status[key].bg;
 };
 
-
 export const getStatusTextColor = (status: Status): string => {
-  const colors = {
-    [Status.READY]: "#1E3A5F",
-    [Status.PENDING]: "#92400E",
-    [Status.SERVED]: "#065F46",
-    [Status.ERROR]: "#991B1B",
-    [Status.TERMINATED]: "#374151",
-    [Status.DRAFT]: "#374151",
-  };
-  return colors[status] || colors[Status.ERROR];
+  const key = STATUS_TOKEN_KEY[status] ?? STATUS_TOKEN_KEY[Status.ERROR];
+  return colors.status[key].text;
 };
 
 // ========================================

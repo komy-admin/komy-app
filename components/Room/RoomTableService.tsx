@@ -9,7 +9,7 @@ import { Platform, StyleSheet, View, Text as RNText } from "react-native";
 import { getStatusColor, getPriorityItemTypeDetailsForStatus } from "~/lib/utils";
 import { Table } from "~/types/table.types";
 import { Status } from "~/types/status.enum";
-import { shadows } from "~/theme";
+import { shadows, colors } from "~/theme";
 import { RoomChairs, RoomChairsRounded } from "./RoomChairs";
 import {
   GestureDetector,
@@ -45,7 +45,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   editionMode,
   outOfBounds = false,
   roomColor,
-  tableBg = '#F5F4FA',
+  tableBg = colors.neutral[50],
   onPress,
   onLongPress,
   selectedIcon = 'play',
@@ -108,9 +108,9 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
   const tableStyle = useMemo(() => {
     if (outOfBounds) {
       return {
-        backgroundColor: '#FEE2E2',
+        backgroundColor: colors.error.bg,
         borderWidth: 2,
-        borderColor: '#EF4444',
+        borderColor: colors.error.base,
         borderStyle: 'dashed' as const,
         borderRadius: tableBorderRadius,
       };
@@ -119,7 +119,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
       return {
         backgroundColor: status ? getStatusColor(status) : tableBg,
         borderWidth: 3,
-        borderColor: '#2A2E33',
+        borderColor: colors.brand.dark,
         borderStyle: 'solid' as const,
         borderRadius: tableBorderRadius,
       };
@@ -127,7 +127,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
     return {
       backgroundColor: status ? getStatusColor(status) : tableBg,
       borderWidth: status ? 2 : 0,
-      borderColor: '#2A2E33',
+      borderColor: colors.brand.dark,
       borderStyle: 'solid' as const,
       borderRadius: tableBorderRadius,
     };
@@ -167,7 +167,7 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
               <View style={[styles.table, tableStyle]}>
                 <View style={styles.emptyTableContent}>
                   <View style={styles.emptyTableIcon}>
-                    <MaterialCommunityIcons name="table-furniture" size={18} color="#9CA3AF" />
+                    <MaterialCommunityIcons name="table-furniture" size={18} color={colors.gray[400]} />
                   </View>
                   <RNText style={styles.emptyTableText} numberOfLines={1}>{table.name}</RNText>
                 </View>
@@ -175,17 +175,17 @@ const RoomTableService: React.FC<RoomTableServiceProps> = ({
             ) : (
               <View style={[styles.table, tableStyle]}>
                 <View style={styles.emptyTableContent}>
-                  <View style={[styles.emptyTableIcon, hasOrder && { backgroundColor: roomColor || '#6366F1' }, isSelected && !hasOrder && styles.emptyTableIconSelected]}>
+                  <View style={[styles.emptyTableIcon, hasOrder && { backgroundColor: roomColor || colors.brand.accent }, isSelected && !hasOrder && styles.emptyTableIconSelected]}>
                     {hasOrder && priorityIcon ? (
-                      <MaterialCommunityIcons name={priorityIcon as any} size={ICON_SIZE} color="#FFFFFF" />
+                      <MaterialCommunityIcons name={priorityIcon as any} size={ICON_SIZE} color={colors.white} />
                     ) : isSelected ? (
                       selectedIcon === 'move' ? (
-                        <Repeat size={ICON_SIZE} color="#FFFFFF" strokeWidth={2.5} />
+                        <Repeat size={ICON_SIZE} color={colors.white} strokeWidth={2.5} />
                       ) : (
-                        <Play size={ICON_SIZE - 2} color="#FFFFFF" fill="#FFFFFF" />
+                        <Play size={ICON_SIZE - 2} color={colors.white} fill={colors.white} />
                       )
                     ) : (
-                      <Plus size={ICON_SIZE} color={roomColor || '#6366F1'} />
+                      <Plus size={ICON_SIZE} color={roomColor || colors.brand.accent} />
                     )}
                   </View>
                   <RNText style={styles.emptyTableText} numberOfLines={1}>
@@ -264,21 +264,21 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 9999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyTableIconSelected: {
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
   },
   emptyTableText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
   timeText: {
     fontWeight: '400',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
 });
 

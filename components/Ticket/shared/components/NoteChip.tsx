@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text as RNText, StyleSheet } from 'react-native';
+import { colors } from '~/theme';
 
 interface NoteChipProps {
   note: string;
@@ -25,17 +26,17 @@ export function NoteChip({ note }: NoteChipProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warning.bg,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.warning.border,
     maxWidth: '100%',
   },
   text: {
     fontSize: 11,
-    color: '#92400E',
+    color: colors.warning.text,
     fontWeight: '500',
     fontStyle: 'italic',
   },

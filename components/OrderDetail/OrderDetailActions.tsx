@@ -24,6 +24,8 @@ import {
   getStatusTextColor,
   getOrderGlobalStatus,
 } from '~/lib/utils';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 export interface OrderDetailActionsProps {
   onAddItem: () => void;
@@ -62,17 +64,17 @@ const ActionButton = memo<ActionButtonProps>(({ icon: Icon, label, onPress, colo
       <View style={[
         styles.card,
         disabled
-          ? { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }
+          ? { backgroundColor: colors.gray[100], borderColor: colors.gray[300] }
           : { backgroundColor: bg, borderColor: border },
         pressed && !disabled && { opacity: 0.7, transform: [{ scale: 0.97 }] },
       ]}>
         <View style={[styles.glassOverlay, compact && styles.glassOverlayCompact]}>
-          <Icon size={compact ? 16 : 20} color={disabled ? '#9CA3AF' : color} strokeWidth={1.8} />
-          <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact, { color: disabled ? '#9CA3AF' : color }]} numberOfLines={1}>{label}</RNText>
+          <Icon size={compact ? 16 : 20} color={disabled ? colors.gray[400] : color} strokeWidth={1.8} />
+          <RNText style={[styles.cardLabel, compact && styles.cardLabelCompact, { color: disabled ? colors.gray[400] : color }]} numberOfLines={1}>{label}</RNText>
         </View>
         {disabled && (
           <View style={[styles.lockOverlay, compact && styles.lockOverlayCompact]}>
-            <Lock size={compact ? 16 : 20} color="#9CA3AF" strokeWidth={1.8} />
+            <Lock size={compact ? 16 : 20} color={colors.gray[400]} strokeWidth={1.8} />
             <RNText style={[styles.lockLabel, compact && styles.lockLabelCompact]} numberOfLines={1}>{label}</RNText>
             {disabledReason && (
               <RNText style={[styles.disabledReason, compact && styles.disabledReasonCompact]} numberOfLines={1}>({disabledReason})</RNText>
@@ -175,9 +177,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         {(hasDraftItems || hasReadyItems) && (
           <ActionButton
             icon={Send}
-            color={hasReadyItems ? '#059669' : '#D97706'}
-            bg={hasReadyItems ? '#ECFDF5' : '#FFFBEB'}
-            border={hasReadyItems ? '#6EE7B7' : '#FBBF24'}
+            color={hasReadyItems ? colors.success.base : colors.warning.base}
+            bg={hasReadyItems ? colors.success.bg : colors.warning.bg}
+            border={hasReadyItems ? colors.success.border : colors.warning.base}
             label={hasReadyItems ? 'Servir' : 'Réclamer'}
             onPress={hasReadyItems ? onServe : onClaim}
             compact={compact}
@@ -185,9 +187,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         )}
         <ActionButton
           icon={Plus}
-          color="#4F46E5"
-          bg="#EEF2FF"
-          border="#A5B4FC"
+          color={colors.brand.accent}
+          bg={getColorWithOpacity(colors.brand.accent, 0.1)}
+          border={colors.brand.accent}
           label="Ajouter"
           onPress={onAddItem}
           compact={compact}
@@ -197,9 +199,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         {onReassignTable && (
           <ActionButton
             icon={Repeat}
-            color="#2563EB"
-            bg="#EFF6FF"
-            border="#93C5FD"
+            color={colors.info.base}
+            bg={colors.info.bg}
+            border={colors.info.base}
             label="Changer table"
             onPress={onReassignTable}
             compact={compact}
@@ -207,9 +209,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         )}
         <ActionButton
           icon={Wallet}
-          color="#059669"
-          bg="#ECFDF5"
-          border="#6EE7B7"
+          color={colors.success.base}
+          bg={colors.success.bg}
+          border={colors.success.border}
           label="Paiement"
           onPress={onPayment}
           disabled={order.paymentStatus === 'paid'}
@@ -224,9 +226,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         {order.status !== Status.TERMINATED && (
           <ActionButton
             icon={CircleCheck}
-            color="#D97706"
-            bg="#FFFBEB"
-            border="#FBBF24"
+            color={colors.warning.base}
+            bg={colors.warning.bg}
+            border={colors.warning.base}
             label="Terminer"
             onPress={onTerminate}
             disabled={order.paymentStatus !== 'paid'}
@@ -236,9 +238,9 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
         )}
         <ActionButton
           icon={Trash2}
-          color="#DC2626"
-          bg="#FEF2F2"
-          border="#FCA5A5"
+          color={colors.error.text}
+          bg={colors.error.bg}
+          border={colors.error.base}
           label="Supprimer"
           onPress={onDelete}
           disabled={hasPayments}
@@ -254,7 +256,7 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           <TextInput
             style={styles.noteInput}
             placeholder="Ajouter une note..."
-            placeholderTextColor="#C4C9D1"
+            placeholderTextColor={colors.neutral[300]}
             multiline
             textAlignVertical="top"
             value={noteText}
@@ -269,12 +271,12 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
       <RNText style={styles.sectionLabel}>Informations</RNText>
       <View style={styles.row}>
         <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
-          <MapPin size={compact ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
+          <MapPin size={compact ? 14 : 16} color={colors.gray[400]} strokeWidth={1.8} />
           <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{orderInfo.tableName}</RNText>
           {!compact && <RNText style={styles.infoTileLabel}>Table</RNText>}
         </View>
         <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
-          <ShoppingBag size={compact ? 14 : 16} color="#9CA3AF" strokeWidth={1.8} />
+          <ShoppingBag size={compact ? 14 : 16} color={colors.gray[400]} strokeWidth={1.8} />
           <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{summary.totalItems}</RNText>
           {!compact && <RNText style={styles.infoTileLabel}>Article{summary.totalItems > 1 ? 's' : ''}</RNText>}
         </View>
@@ -290,12 +292,12 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
       {/* Récap */}
       <View style={styles.row}>
         <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
-          {!compact && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
+          {!compact && <Clock size={16} color={colors.gray[400]} strokeWidth={1.8} />}
           <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{formatDate(order.createdAt, DateFormat.TIME)}</RNText>
           <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact]}>Début</RNText>
         </View>
         <View style={[styles.infoTile, compact && styles.infoTileCompact]}>
-          {!compact && <Clock size={16} color="#9CA3AF" strokeWidth={1.8} />}
+          {!compact && <Clock size={16} color={colors.gray[400]} strokeWidth={1.8} />}
           <RNText style={[styles.infoTileValue, compact && styles.infoTileValueCompact]}>{orderInfo.duration}</RNText>
           <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact]}>Durée</RNText>
         </View>
@@ -303,36 +305,36 @@ export const OrderDetailActions = memo<OrderDetailActionsProps>(({
           styles.infoTile,
           compact && styles.infoTileCompact,
           summary.remaining > 0 && summary.paidAmount > 0 && {
-            backgroundColor: '#FFFBEB',
-            borderColor: '#FBBF24',
+            backgroundColor: colors.warning.bg,
+            borderColor: colors.warning.base,
           },
           summary.remaining === 0 && summary.paidAmount > 0 && {
-            backgroundColor: '#ECFDF5',
-            borderColor: '#6EE7B7',
+            backgroundColor: colors.success.bg,
+            borderColor: colors.success.border,
           },
         ]}>
-          {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? '#D97706' : summary.remaining === 0 && summary.paidAmount > 0 ? '#059669' : '#9CA3AF'} strokeWidth={1.8} />}
+          {!compact && <Wallet size={16} color={summary.remaining > 0 && summary.paidAmount > 0 ? colors.warning.base : summary.remaining === 0 && summary.paidAmount > 0 ? colors.success.base : colors.gray[400]} strokeWidth={1.8} />}
           {summary.paidAmount > 0 && summary.remaining > 0 ? (
             <>
               <View style={styles.remainingRow}>
                 <RNText style={[styles.remainingValue, compact && { fontSize: 13 }]}>{formatPrice(summary.remaining)}</RNText>
                 <RNText style={styles.totalStrikethrough}>{formatPrice(summary.totalAmount)}</RNText>
               </View>
-              <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact, { color: '#D97706' }]}>À payer</RNText>
+              <RNText style={[styles.infoTileLabel, compact && styles.infoTileLabelCompact, { color: colors.warning.base }]}>À payer</RNText>
             </>
           ) : (
             <>
               <RNText style={[
                 styles.infoTileValue,
                 compact && styles.infoTileValueCompact,
-                summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
+                summary.remaining === 0 && summary.paidAmount > 0 && { color: colors.success.base },
               ]}>
                 {formatPrice(summary.totalAmount)}
               </RNText>
               <RNText style={[
                 styles.infoTileLabel,
                 compact && styles.infoTileLabelCompact,
-                summary.remaining === 0 && summary.paidAmount > 0 && { color: '#059669' },
+                summary.remaining === 0 && summary.paidAmount > 0 && { color: colors.success.base },
               ]}>
                 {summary.remaining === 0 && summary.paidAmount > 0 ? 'Payé' : 'Total'}
               </RNText>
@@ -349,14 +351,14 @@ OrderDetailActions.displayName = 'OrderDetailActions';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     padding: 16,
     gap: 6,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     paddingLeft: 2,
@@ -377,10 +379,10 @@ const styles = StyleSheet.create({
   // Boutons — mode normal (vertical)
   card: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     overflow: 'hidden',
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
@@ -390,7 +392,7 @@ const styles = StyleSheet.create({
   // Glass overlay iso item cards
   glassOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    backgroundColor: getColorWithOpacity(colors.white, 0.65),
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
@@ -407,7 +409,7 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#374151',
+    color: colors.gray[700],
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
   },
   lockOverlayCompact: {
     flexDirection: 'row',
@@ -438,7 +440,7 @@ const styles = StyleSheet.create({
   lockLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -449,7 +451,7 @@ const styles = StyleSheet.create({
   disabledReason: {
     fontSize: 9,
     fontWeight: '600',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textAlign: 'center',
     letterSpacing: 0.2,
   },
@@ -460,10 +462,10 @@ const styles = StyleSheet.create({
   // Info tiles — mode normal
   infoTile: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
@@ -480,7 +482,7 @@ const styles = StyleSheet.create({
   infoTileValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     textAlign: 'center',
   },
   infoTileValueCompact: {
@@ -489,7 +491,7 @@ const styles = StyleSheet.create({
   infoTileLabel: {
     fontSize: 10,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -511,17 +513,17 @@ const styles = StyleSheet.create({
   },
   noteCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     overflow: 'hidden',
   },
   noteInput: {
     flex: 1,
     fontSize: 13,
     fontWeight: '500',
-    color: '#374151',
+    color: colors.gray[700],
     paddingTop: 8,
     paddingBottom: 8,
     paddingLeft: 14,
@@ -541,12 +543,12 @@ const styles = StyleSheet.create({
   totalStrikethrough: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textDecorationLine: 'line-through',
   },
   remainingValue: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#D97706',
+    color: colors.warning.base,
   },
 });

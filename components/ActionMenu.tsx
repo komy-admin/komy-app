@@ -4,11 +4,15 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  interpolate,
+  interpolateColor,
   runOnJS,
 } from 'react-native-reanimated';
 import { LucideIcon, Menu as MenuIcon } from 'lucide-react-native';
-import { shadows } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { shadows, colors } from '~/theme';
+
+const BACKDROP_TRANSPARENT = getColorWithOpacity(colors.brand.dark, 0);
+const BACKDROP_VISIBLE = getColorWithOpacity(colors.brand.dark, 0.2);
 
 export type ActionItem = {
   label?: string;
@@ -86,14 +90,18 @@ export function ActionMenu({ actions, width = 180, withSeparator = false, fullWi
   }));
 
   const backdropAnimatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0, 0, 0, ${interpolate(opacity.value, [0, 1], [0, 0.2])})`,
+    backgroundColor: interpolateColor(
+      opacity.value,
+      [0, 1],
+      [BACKDROP_TRANSPARENT, BACKDROP_VISIBLE]
+    ),
   }));
 
   return (
     <View style={styles.container}>
       <Pressable onPress={handlePress} style={styles.button}>
         <View style={styles.buttonInner}>
-          <MenuIcon size={18} color="#2A2E33" strokeWidth={2.5} />
+          <MenuIcon size={18} color={colors.brand.dark} strokeWidth={2.5} />
         </View>
       </Pressable>
 
@@ -126,7 +134,7 @@ export function ActionMenu({ actions, width = 180, withSeparator = false, fullWi
                     {action.icon && (
                       <View style={styles.icon}>
                         {typeof action.icon === 'function' ? (
-                          <action.icon size={20} color="#2A2E33" strokeWidth={1.5} />
+                          <action.icon size={20} color={colors.brand.dark} strokeWidth={1.5} />
                         ) : (
                           action.icon
                         )}
@@ -164,11 +172,11 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { cursor: 'pointer' } }),
   },
   buttonInner: {
-    borderColor: '#D7D7D7',
+    borderColor: colors.gray[300],
     borderWidth: 1,
     borderRadius: 20,
     padding: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     minWidth: 36,
     minHeight: 36,
     justifyContent: 'center',
@@ -180,10 +188,10 @@ const styles = StyleSheet.create({
   },
   menu: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.6)',
+    borderColor: getColorWithOpacity(colors.neutral[200], 0.6),
     overflow: 'hidden',
     ...shadows.bottom,
   },
@@ -194,12 +202,12 @@ const styles = StyleSheet.create({
       web: {
         cursor: 'pointer',
         transition: 'background-color 0.15s ease',
-        ':hover': { backgroundColor: 'rgba(248, 250, 252, 0.8)' },
+        ':hover': { backgroundColor: getColorWithOpacity(colors.neutral[50], 0.8) },
       },
     }),
   },
   itemPressed: {
-    backgroundColor: 'rgba(248, 250, 252, 0.8)',
+    backgroundColor: getColorWithOpacity(colors.neutral[50], 0.8),
   },
   itemContent: {
     flexDirection: 'row',
@@ -218,16 +226,16 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     flex: 1,
     letterSpacing: -0.1,
   },
   destructiveText: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontWeight: '600',
   },
   separator: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
   },
 });

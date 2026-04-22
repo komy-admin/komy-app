@@ -32,6 +32,7 @@ import RefundModal from '~/components/Payment/RefundModal';
 import type { Payment } from '~/types/payment.types';
 import { showApiError } from '~/lib/apiErrorHandler';
 import { useToast } from '~/components/ToastProvider';
+import { colors } from '~/theme';
 
 // Types pour le journal
 interface Allocation {
@@ -364,15 +365,15 @@ export default function PaymentJournalScreen() {
   const getPaymentMethodIcon = (method: string) => {
     switch (method) {
       case 'cash':
-        return <Banknote size={20} color="#10B981" />;
+        return <Banknote size={20} color={colors.success.base} />;
       case 'card':
-        return <CreditCard size={20} color="#3B82F6" />;
+        return <CreditCard size={20} color={colors.info.base} />;
       case 'ticket_resto':
-        return <Ticket size={20} color="#F59E0B" />;
+        return <Ticket size={20} color={colors.warning.base} />;
       case 'check':
-        return <FileCheck size={20} color="#8B5CF6" />;
+        return <FileCheck size={20} color={colors.purple.alt} />;
       default:
-        return <Euro size={20} color="#6B7280" />;
+        return <Euro size={20} color={colors.gray[500]} />;
     }
   };
 
@@ -396,12 +397,12 @@ export default function PaymentJournalScreen() {
                 {isExpanded ? (
                   <ChevronDown
                     size={16}
-                    color="#6B7280"
+                    color={colors.gray[500]}
                   />
                 ) : (
                   <ChevronRight
                     size={16}
-                    color="#6B7280"
+                    color={colors.gray[500]}
                   />
                 )}
               </View>
@@ -411,7 +412,7 @@ export default function PaymentJournalScreen() {
                 {/* Header : Table/Room + Heure */}
                 <View className="flex-row items-center gap-3 mb-1">
                   <View className="flex-row items-center gap-1">
-                    <MapPin size={16} color="#6B7280" />
+                    <MapPin size={16} color={colors.gray[500]} />
                     <Text className="text-sm font-semibold text-gray-900">
                       {item.table?.name || 'Sans table'}
                       {item.table?.room && ` • ${item.table.room.name}`}
@@ -431,7 +432,7 @@ export default function PaymentJournalScreen() {
 
                   {item.server && (
                     <View className="flex-row items-center gap-1">
-                      <User size={12} color="#9CA3AF" />
+                      <User size={12} color={colors.gray[400]} />
                       <Text className="text-xs text-gray-500">
                         {item.server.firstName}
                       </Text>
@@ -506,7 +507,7 @@ export default function PaymentJournalScreen() {
 
                             {payment.user && (
                               <View className="flex-row items-center gap-1">
-                                <User size={12} color="#9CA3AF" />
+                                <User size={12} color={colors.gray[400]} />
                                 <Text className="text-xs text-gray-500">
                                   {payment.user.firstName}
                                 </Text>
@@ -552,7 +553,7 @@ export default function PaymentJournalScreen() {
                               onPress={() => handlePrintTicket(payment.id)}
                               className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 active:bg-gray-100"
                             >
-                              <Printer size={14} color="#6B7280" />
+                              <Printer size={14} color={colors.gray[500]} />
                             </Pressable>
 
                             {payment.status === 'completed' && !isNegative && (
@@ -560,7 +561,7 @@ export default function PaymentJournalScreen() {
                                 onPress={() => handleRefund(payment)}
                                 className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 active:bg-gray-100"
                               >
-                                <RotateCcw size={14} color="#6B7280" />
+                                <RotateCcw size={14} color={colors.gray[500]} />
                               </Pressable>
                             )}
                           </View>
@@ -599,7 +600,7 @@ export default function PaymentJournalScreen() {
                 {/* Header : Table/Room + Heure */}
                 <View className="flex-row items-center gap-3 mb-1">
                   <View className="flex-row items-center gap-1">
-                    <MapPin size={16} color="#6B7280" />
+                    <MapPin size={16} color={colors.gray[500]} />
                     <Text className="text-sm font-semibold text-gray-900">
                       {item.order.table?.name || 'Sans table'}
                       {item.order.table?.room && ` • ${item.order.table.room.name}`}
@@ -619,7 +620,7 @@ export default function PaymentJournalScreen() {
 
                   {item.user && (
                     <View className="flex-row items-center gap-1">
-                      <User size={12} color="#9CA3AF" />
+                      <User size={12} color={colors.gray[400]} />
                       <Text className="text-xs text-gray-500">
                         {item.user.firstName}
                       </Text>
@@ -673,7 +674,7 @@ export default function PaymentJournalScreen() {
                     onPress={() => handlePrintTicket(item.id)}
                     className="p-2 bg-gray-50 rounded-lg border border-gray-200 active:bg-gray-100"
                   >
-                    <Printer size={16} color="#6B7280" />
+                    <Printer size={16} color={colors.gray[500]} />
                   </Pressable>
 
                   {item.status === 'completed' && !isNegative && (
@@ -681,7 +682,7 @@ export default function PaymentJournalScreen() {
                       onPress={() => handleRefund(item)}
                       className="p-2 bg-gray-50 rounded-lg border border-gray-200 active:bg-gray-100"
                     >
-                      <RotateCcw size={16} color="#6B7280" />
+                      <RotateCcw size={16} color={colors.gray[500]} />
                     </Pressable>
                   )}
                 </View>
@@ -720,7 +721,7 @@ export default function PaymentJournalScreen() {
               <View className="flex-row gap-4">
                 {periodSummary.byMethod.cash > 0 && (
                   <View className="flex-row items-center gap-1">
-                    <Banknote size={14} color="#10B981" />
+                    <Banknote size={14} color={colors.success.base} />
                     <Text className="text-xs font-medium text-gray-600">
                       {formatPrice(periodSummary.byMethod.cash)}
                     </Text>
@@ -728,7 +729,7 @@ export default function PaymentJournalScreen() {
                 )}
                 {periodSummary.byMethod.card > 0 && (
                   <View className="flex-row items-center gap-1">
-                    <CreditCard size={14} color="#3B82F6" />
+                    <CreditCard size={14} color={colors.info.base} />
                     <Text className="text-xs font-medium text-gray-600">
                       {formatPrice(periodSummary.byMethod.card)}
                     </Text>
@@ -736,7 +737,7 @@ export default function PaymentJournalScreen() {
                 )}
                 {periodSummary.byMethod.ticket_resto > 0 && (
                   <View className="flex-row items-center gap-1">
-                    <Ticket size={14} color="#F59E0B" />
+                    <Ticket size={14} color={colors.warning.base} />
                     <Text className="text-xs font-medium text-gray-600">
                       {formatPrice(periodSummary.byMethod.ticket_resto)}
                     </Text>
@@ -744,7 +745,7 @@ export default function PaymentJournalScreen() {
                 )}
                 {periodSummary.byMethod.check > 0 && (
                   <View className="flex-row items-center gap-1">
-                    <FileCheck size={14} color="#8B5CF6" />
+                    <FileCheck size={14} color={colors.purple.alt} />
                     <Text className="text-xs font-medium text-gray-600">
                       {formatPrice(periodSummary.byMethod.check)}
                     </Text>
@@ -763,7 +764,7 @@ export default function PaymentJournalScreen() {
               viewMode === 'chronological' ? 'bg-white shadow-sm' : ''
             }`}
           >
-            <List size={20} color={viewMode === 'chronological' ? '#3B82F6' : '#6B7280'} />
+            <List size={20} color={viewMode === 'chronological' ? colors.info.base : colors.gray[500]} />
           </Pressable>
           <Pressable
             onPress={() => setViewMode('byOrder')}
@@ -771,7 +772,7 @@ export default function PaymentJournalScreen() {
               viewMode === 'byOrder' ? 'bg-white shadow-sm' : ''
             }`}
           >
-            <Layers size={20} color={viewMode === 'byOrder' ? '#3B82F6' : '#6B7280'} />
+            <Layers size={20} color={viewMode === 'byOrder' ? colors.info.base : colors.gray[500]} />
           </Pressable>
         </View>
       </View>
@@ -780,7 +781,7 @@ export default function PaymentJournalScreen() {
       <View className="px-4 py-3 flex-row items-center justify-between">
         {/* Filtres période */}
         <View className="flex-row items-center gap-2">
-          <Calendar size={16} color="#6B7280" />
+          <Calendar size={16} color={colors.gray[500]} />
           {(['today', 'yesterday', 'week', 'month', 'all'] as const).map((period) => (
             <Pressable
               key={period}
@@ -808,7 +809,7 @@ export default function PaymentJournalScreen() {
 
         {/* Filtres méthode */}
         <View className="flex-row items-center gap-2">
-          <Euro size={16} color="#6B7280" />
+          <Euro size={16} color={colors.gray[500]} />
           <Pressable
             onPress={() => setSelectedMethod(null)}
             className={`px-3 py-1.5 rounded-full ${
@@ -832,10 +833,10 @@ export default function PaymentJournalScreen() {
                 selectedMethod === method ? 'bg-blue-500 shadow-sm' : 'bg-gray-100'
               }`}
             >
-              {method === 'cash' && <Banknote size={18} color={selectedMethod === method ? '#FFFFFF' : '#6B7280'} />}
-              {method === 'card' && <CreditCard size={18} color={selectedMethod === method ? '#FFFFFF' : '#6B7280'} />}
-              {method === 'ticket_resto' && <Ticket size={18} color={selectedMethod === method ? '#FFFFFF' : '#6B7280'} />}
-              {method === 'check' && <FileCheck size={18} color={selectedMethod === method ? '#FFFFFF' : '#6B7280'} />}
+              {method === 'cash' && <Banknote size={18} color={selectedMethod === method ? colors.white : colors.gray[500]} />}
+              {method === 'card' && <CreditCard size={18} color={selectedMethod === method ? colors.white : colors.gray[500]} />}
+              {method === 'ticket_resto' && <Ticket size={18} color={selectedMethod === method ? colors.white : colors.gray[500]} />}
+              {method === 'check' && <FileCheck size={18} color={selectedMethod === method ? colors.white : colors.gray[500]} />}
             </Pressable>
           ))}
         </View>
@@ -851,7 +852,7 @@ export default function PaymentJournalScreen() {
 
     return (
       <View className="py-4 items-center">
-        <ActivityIndicator size="small" color="#3B82F6" />
+        <ActivityIndicator size="small" color={colors.info.base} />
       </View>
     );
   };
@@ -864,7 +865,7 @@ export default function PaymentJournalScreen() {
 
     return (
       <View className="flex-1 items-center justify-center p-8">
-        <ReceiptEuro size={48} color="#D1D5DB" />
+        <ReceiptEuro size={48} color={colors.gray[300]} />
         <Text className="text-gray-500 text-center mt-4">
           Aucun encaissement trouvé pour cette période
         </Text>
@@ -888,7 +889,7 @@ export default function PaymentJournalScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              colors={['#3B82F6']}
+              colors={[colors.info.base]}
             />
           }
           onEndReached={handleLoadMore}
@@ -926,7 +927,7 @@ export default function PaymentJournalScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            colors={['#3B82F6']}
+            colors={[colors.info.base]}
           />
         }
         onEndReached={handleLoadMore}

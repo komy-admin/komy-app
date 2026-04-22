@@ -29,13 +29,8 @@ export const useOrderLines = () => {
         status
       });
 
-      const enrichedOrder = {
-        ...newOrder,
-        table: newOrder.table || (tableId ? { id: tableId, name: `Table ${tableId}` } : null)
-      };
-
-      dispatch(entitiesActions.createOrder({ order: enrichedOrder }));
-      return enrichedOrder;
+      dispatch(entitiesActions.createOrder({ order: newOrder }));
+      return newOrder;
     } catch (error) {
       throw error;
     }

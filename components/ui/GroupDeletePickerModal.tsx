@@ -4,7 +4,8 @@ import { Minus, Plus } from 'lucide-react-native';
 import { SlidePanel } from '~/components/ui/SlidePanel';
 import { usePanelPortal } from '~/hooks/usePanelPortal';
 import { Status } from '~/types/status.enum';
-import { getStatusText, getStatusTextColor, getStatusBackgroundColor } from '~/lib/status.utils';
+import { getStatusText, getStatusTextColor, getStatusColor } from '~/lib/status.utils';
+import { colors } from '~/theme';
 
 export type VoidReason = 'correction' | 'unpaid' | 'offered' | 'other'
 
@@ -162,7 +163,7 @@ function GroupDeletePickerContent({
 
         {/* Status warning */}
         {status && (
-          <View style={[styles.warningSection, { backgroundColor: getStatusBackgroundColor(status) }]}>
+          <View style={[styles.warningSection, { backgroundColor: getStatusColor(status) }]}>
             <Text style={[styles.warningText, { color: getStatusTextColor(status) }]}>
               Statut actuel : <Text style={styles.warningBold}>{getStatusText(status)}</Text>
             </Text>
@@ -206,7 +207,7 @@ function GroupDeletePickerContent({
                   style={styles.notesInput}
                   multiline
                   numberOfLines={2}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.gray[400]}
                 />
               </View>
             )}
@@ -225,7 +226,7 @@ function GroupDeletePickerContent({
                 style={[styles.pickerButton, quantity <= 1 && styles.pickerButtonDisabled]}
                 disabled={quantity <= 1}
               >
-                <Minus size={18} color={quantity <= 1 ? '#D1D5DB' : '#374151'} strokeWidth={2.5} />
+                <Minus size={18} color={quantity <= 1 ? colors.gray[300] : colors.gray[700]} strokeWidth={2.5} />
               </Pressable>
 
               <View style={styles.quantityDisplay}>
@@ -238,32 +239,33 @@ function GroupDeletePickerContent({
                 style={[styles.pickerButton, quantity >= max && styles.pickerButtonDisabled]}
                 disabled={quantity >= max}
               >
-                <Plus size={18} color={quantity >= max ? '#D1D5DB' : '#374151'} strokeWidth={2.5} />
+                <Plus size={18} color={quantity >= max ? colors.gray[300] : colors.gray[700]} strokeWidth={2.5} />
               </Pressable>
             </View>
           </View>
         )}
-
-        {/* Delete button */}
-        <View style={styles.deleteSection}>
-          <Pressable
-            onPress={onConfirm}
-            disabled={!canConfirm}
-            style={({ pressed }) => [
-              styles.deleteButton,
-              !canConfirm && styles.deleteButtonDisabled,
-              pressed && canConfirm && { opacity: 0.8, transform: [{ scale: 0.98 }] },
-            ]}
-          >
-            <Text style={styles.deleteButtonText}>Confirmer la suppression</Text>
-          </Pressable>
-        </View>
 
         {/* Spacer */}
         <View style={styles.spacer} />
 
         {/* Footer */}
         <View style={styles.footer}>
+          <Pressable
+            onPress={onConfirm}
+            disabled={!canConfirm}
+            style={[styles.confirmButton, !canConfirm && styles.confirmButtonDisabled]}
+          >
+            <Text style={styles.confirmButtonText}>
+              Confirmer la suppression
+            </Text>
+          </Pressable>
+
+          <View style={styles.separatorRow}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>ou</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
           <Pressable onPress={onClose} style={styles.cancelButton}>
             <Text style={styles.cancelText}>Annuler</Text>
           </Pressable>
@@ -279,13 +281,13 @@ const styles = StyleSheet.create({
   },
   // Banner
   banner: {
-    backgroundColor: '#DC2626',
+    backgroundColor: colors.error.text,
     paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bannerText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.5,
@@ -303,18 +305,18 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 18,
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.gray[50],
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   itemName: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#1E293B',
+    color: colors.neutral[800],
     letterSpacing: 0.3,
   },
   countBadge: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -322,19 +324,19 @@ const styles = StyleSheet.create({
   countBadgeText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#DC2626',
+    color: colors.error.text,
   },
   // Warning
   warningSection: {
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   warningText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
   },
   warningBold: {
@@ -343,9 +345,9 @@ const styles = StyleSheet.create({
   },
   // Reason
   reasonSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   reasonList: {
     paddingHorizontal: 16,
@@ -357,20 +359,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.neutral[50],
   },
   reasonButtonSelected: {
-    backgroundColor: '#DC2626',
-    borderColor: '#DC2626',
+    backgroundColor: colors.brand.dark,
+    borderColor: colors.brand.dark,
   },
   reasonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: colors.gray[700],
   },
   reasonTextSelected: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
   },
   notesContainer: {
@@ -379,13 +381,13 @@ const styles = StyleSheet.create({
   },
   notesInput: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#374151',
-    backgroundColor: '#FFFFFF',
+    color: colors.gray[700],
+    backgroundColor: colors.white,
     minHeight: 60,
     textAlignVertical: 'top',
   },
@@ -393,20 +395,20 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
+    color: colors.gray[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   // Quantity
   quantitySection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   pickerRow: {
     flexDirection: 'row',
@@ -419,11 +421,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   pickerButtonDisabled: {
@@ -440,40 +442,12 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   quantityMax: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#9CA3AF',
-  },
-  // Delete button
-  deleteSection: {
-    padding: 20,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#DC2626',
-    paddingVertical: 16,
-    borderRadius: 12,
-    ...(Platform.OS === 'web' ? {
-      cursor: 'pointer',
-      transition: 'all 0.12s ease',
-    } as any : {}),
-  },
-  deleteButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    ...(Platform.OS === 'web' ? { cursor: 'default' as any } : {}),
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    color: colors.gray[400],
   },
   // Spacer
   spacer: {
@@ -483,13 +457,46 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: colors.neutral[200],
+    backgroundColor: colors.white,
+  },
+  confirmButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.error.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  confirmButtonDisabled: {
+    backgroundColor: colors.gray[300],
+    ...(Platform.OS === 'web' ? { cursor: 'default' as any } : {}),
+  },
+  confirmButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  separatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 10,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.neutral[200],
+  },
+  separatorText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.gray[400],
   },
   cancelButton: {
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[200],
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
@@ -497,6 +504,6 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[600],
   },
 });

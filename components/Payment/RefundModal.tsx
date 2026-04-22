@@ -18,6 +18,7 @@ import type { Payment } from '~/types/payment.types'
 import { formatPrice } from '~/lib/utils'
 import { Portal } from '@rn-primitives/portal'
 import { extractApiError } from '~/lib/apiErrorHandler'
+import { colors } from '~/theme'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
@@ -173,7 +174,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
               {/* Confirmation message */}
               {showConfirmation && (
                 <View style={styles.alertWarning}>
-                  <AlertCircle size={16} color="#EA580C" />
+                  <AlertCircle size={16} color={colors.warning.base} />
                   <Text style={styles.alertWarningText}>
                     Confirmer le remboursement de {formatPrice(refundAmount)} ?
                     Cette action est irréversible.
@@ -184,7 +185,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
               {/* Error message */}
               {error && (
                 <View style={styles.alertError}>
-                  <AlertCircle size={16} color="#DC2626" />
+                  <AlertCircle size={16} color={colors.error.text} />
                   <Text style={styles.alertErrorText}>{error}</Text>
                 </View>
               )}
@@ -198,7 +199,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
                     isActive={refundType === 'full'}
                     onPress={() => setRefundType('full')}
                     variant="main"
-                    activeColor="#3B82F6"
+                    activeColor={colors.info.base}
                     flex
                   />
                   <View style={{ width: 12 }} />
@@ -207,7 +208,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
                     isActive={refundType === 'partial'}
                     onPress={() => setRefundType('partial')}
                     variant="main"
-                    activeColor="#3B82F6"
+                    activeColor={colors.info.base}
                     flex
                   />
                 </View>
@@ -247,7 +248,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
                   ]}>
                     {selectedReasonLabel}
                   </Text>
-                  <ChevronDown size={20} color="#6B7280" />
+                  <ChevronDown size={20} color={colors.gray[500]} />
                 </Pressable>
               </View>
 
@@ -276,7 +277,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
                     isActive={refundMethod === 'original'}
                     onPress={() => setRefundMethod('original')}
                     variant="sub"
-                    activeColor="#3B82F6"
+                    activeColor={colors.info.base}
                     flex
                   />
                   <View style={{ width: 12 }} />
@@ -285,7 +286,7 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
                     isActive={refundMethod === 'cash'}
                     onPress={() => setRefundMethod('cash')}
                     variant="sub"
-                    activeColor="#3B82F6"
+                    activeColor={colors.info.base}
                     flex
                   />
                 </View>
@@ -338,9 +339,9 @@ export default function RefundModal({ isOpen, onClose, payment, onRefund }: Refu
               style={{ flex: 1 }}
             >
               {isLoading ? (
-                <Loader2 size={20} color="#FFFFFF" />
+                <Loader2 size={20} color={colors.white} />
               ) : (
-                <Text style={{ color: '#FFFFFF' }}>
+                <Text style={{ color: colors.white }}>
                   {showConfirmation ? 'Confirmer' : 'Rembourser'}
                 </Text>
               )}
@@ -388,7 +389,7 @@ const styles = StyleSheet.create({
   paymentInfo: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     borderRadius: 8,
     marginBottom: 16,
     marginHorizontal: 4,
@@ -396,12 +397,12 @@ const styles = StyleSheet.create({
   paymentInfoText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
     marginBottom: 4,
   },
   paymentMethod: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   scrollView: {
     flex: 1,
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.gray[700],
     marginBottom: 10,
   },
   buttonRow: {
@@ -425,13 +426,13 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1F2937',
-    backgroundColor: '#FFFFFF',
+    color: colors.gray[800],
+    backgroundColor: colors.white,
   },
   textArea: {
     minHeight: 80,
@@ -442,23 +443,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   selectButtonText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   selectButtonTextActive: {
-    color: '#1F2937',
+    color: colors.gray[800],
     fontWeight: '500',
   },
   helperText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.gray[500],
     marginTop: 6,
   },
   alertWarning: {
@@ -467,15 +468,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warning.border,
     borderWidth: 1,
-    borderColor: '#FCD34D',
+    borderColor: colors.warning.border,
     gap: 8,
   },
   alertWarningText: {
     flex: 1,
     fontSize: 14,
-    color: '#78350F',
+    color: colors.warning.text,
     lineHeight: 20,
   },
   alertError: {
@@ -484,19 +485,19 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error.bg,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: colors.error.border,
     gap: 8,
   },
   alertErrorText: {
     flex: 1,
     fontSize: 14,
-    color: '#991B1B',
+    color: colors.error.text,
     lineHeight: 20,
   },
   summary: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     borderRadius: 8,
     padding: 16,
     marginTop: 8,
@@ -508,11 +509,11 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   summaryValue: {
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.gray[800],
     fontWeight: '600',
   },
   footer: {
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.gray[200],
   },
   pickerScroll: {
     maxHeight: 400,
@@ -529,14 +530,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.gray[100],
   },
   pickerItemText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   pickerItemTextActive: {
-    color: '#3B82F6',
+    color: colors.info.base,
     fontWeight: '600',
   },
 })

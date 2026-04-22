@@ -9,6 +9,7 @@ import { usePayments } from '~/hooks/usePayments'
 import type { Payment } from '~/types/payment.types'
 import { showApiError } from '~/lib/apiErrorHandler'
 import { useToast } from '~/components/ToastProvider'
+import { colors } from '~/theme'
 
 export default function PaymentListScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>()
@@ -76,11 +77,11 @@ export default function PaymentListScreen() {
       {/* Header */}
       <View className="flex-row justify-between items-center p-4 border-b border-gray-200">
         <Button variant="ghost" onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#374151" />
+          <ArrowLeft size={24} color={colors.gray[700]} />
         </Button>
         <Text className="text-lg font-bold">Paiements</Text>
         <Button variant="ghost" onPress={() => router.push('/payment-history')}>
-          <X size={24} color="#374151" />
+          <X size={24} color={colors.gray[700]} />
         </Button>
       </View>
 
@@ -88,9 +89,9 @@ export default function PaymentListScreen() {
       <View className="px-4 py-2 bg-gray-50 border-b border-gray-200">
         <View className="flex-row items-center gap-1">
           <Text className="text-sm text-gray-600">Historique</Text>
-          <ChevronRight size={12} color="#9CA3AF" />
+          <ChevronRight size={12} color={colors.gray[400]} />
           <Text className="text-sm text-gray-600">Commandes</Text>
-          <ChevronRight size={12} color="#9CA3AF" />
+          <ChevronRight size={12} color={colors.gray[400]} />
           <Text className="text-sm text-gray-900 font-medium">Paiements</Text>
         </View>
       </View>

@@ -1,5 +1,7 @@
 import { ReactNode, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
+import { colors } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
 
 interface SlidePanelProps {
   visible: boolean;
@@ -86,7 +88,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.5),
     // Pas de zIndex élevé - le portalContainer gère déjà le stacking
   },
   panel: {
@@ -95,7 +97,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     ...Platform.select({
       web: {
         // Animation smooth sur web

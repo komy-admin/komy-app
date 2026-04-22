@@ -9,6 +9,8 @@ import {
   Text,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 interface PinInputProps {
   length?: number;
@@ -180,53 +182,53 @@ const styles = StyleSheet.create({
     width: 56,
     height: 64,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: colors.gray[300],
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   boxActive: {
-    borderColor: '#6366F1',
-    backgroundColor: '#F0F9FF',
+    borderColor: colors.brand.accent,
+    backgroundColor: colors.info.bg,
   },
   boxError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   boxFilled: {
-    borderColor: '#1F2937',
+    borderColor: colors.gray[800],
   },
   boxDisabled: {
     opacity: 0.5,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
   },
   digit: {
     fontSize: 28,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   digitDisabled: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   // Dark variant
   boxDark: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: getColorWithOpacity(colors.white, 0.08),
+    borderColor: getColorWithOpacity(colors.white, 0.2),
   },
   boxActiveDark: {
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: getColorWithOpacity(colors.white, 0.6),
+    backgroundColor: getColorWithOpacity(colors.white, 0.12),
   },
   boxErrorDark: {
-    borderColor: '#FF6B6B',
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    borderColor: colors.error.base,
+    backgroundColor: getColorWithOpacity(colors.error.base, 0.15),
   },
   boxFilledDark: {
-    borderColor: '#FFFFFF',
+    borderColor: colors.white,
   },
   digitDark: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   // The real input - positioned over the boxes but transparent
   realInput: {
@@ -235,7 +237,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    color: 'rgba(0, 0, 0, 0.01)',
+    color: getColorWithOpacity(colors.brand.dark, 0.01),
     backgroundColor: 'transparent',
     fontSize: 1,
     textAlign: 'center',

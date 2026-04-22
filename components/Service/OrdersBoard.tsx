@@ -7,12 +7,12 @@ import { isOrderActive } from '~/utils/orderUtils';
 import {
   getOrderGlobalStatus,
   getStatusColor,
-  getStatusText,
   getStatusTextColor,
 } from '~/lib/status.utils';
 import { getColorWithOpacity } from '~/lib/color-utils';
 import { formatPrice } from '~/lib/utils';
-import { shadows } from '~/theme';
+import { StatusBadge, PaymentBadge } from '~/components/ui';
+import { shadows, colors } from '~/theme';
 
 const STATUS_PRIORITY: Record<string, number> = {
   [Status.READY]: 0,
@@ -22,6 +22,10 @@ const STATUS_PRIORITY: Record<string, number> = {
   [Status.ERROR]: 4,
   [Status.TERMINATED]: 5,
 };
+
+const GRID_PADDING = 16;
+const GRID_GAP = 12;
+const MIN_CARD_WIDTH = 220;
 
 function buildDailyOrderLabels(orders: Order[]): Map<string, string> {
   const labels = new Map<string, string>();
@@ -74,10 +78,6 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
 
   const dailyLabels = useMemo(() => buildDailyOrderLabels(allOrders), [allOrders]);
 
-  const GRID_PADDING = 16;
-  const GRID_GAP = 12;
-  const MIN_CARD_WIDTH = 220;
-
   const numColumns = useMemo(() => {
     if (!containerWidth) return 2;
     const availableWidth = containerWidth - (GRID_PADDING * 2);
@@ -96,14 +96,14 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
     <View style={styles.flex1} onLayout={handleContainerLayout}>
       {activeOrders.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <ShoppingBag size={48} color="#CBD5E1" strokeWidth={1.5} />
+          <ShoppingBag size={48} color={colors.neutral[300]} strokeWidth={1.5} />
           <RNText style={styles.emptyTitle}>Aucune commande</RNText>
           <RNText style={styles.emptySubtitle}>
             {onCreateOrder ? 'Créez une nouvelle commande pour commencer' : 'Créez une commande depuis la vue salles'}
           </RNText>
           {onCreateOrder && (
             <Pressable onPress={onCreateOrder} style={styles.emptyBtn}>
-              <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <Plus size={18} color={colors.white} strokeWidth={2.5} />
               <RNText style={styles.emptyBtnText}>Nouvelle commande</RNText>
             </Pressable>
           )}
@@ -127,25 +127,22 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
               const borderColor = getColorWithOpacity(getStatusTextColor(globalStatus), 0.5);
 
               return (
-                <View
+                <Pressable
                   key={order.id}
-                  style={[
-                    styles.card,
-                    {
-                      width: cardWidth,
-                      borderColor: borderColor,
-                      backgroundColor: statusColor,
-                    },
-                  ]}
+                  onPress={() => onOrderPress(order)}
+                  style={({ pressed }) => pressed && styles.cardPressed}
                 >
-                  <Pressable
-                    onPress={() => onOrderPress(order)}
-                    style={({ pressed }) => [
-                      styles.cardPressable,
-                      pressed && styles.cardPressed,
+                  <View
+                    style={[
+                      styles.card,
+                      {
+                        width: cardWidth,
+                        borderColor: borderColor,
+                        backgroundColor: statusColor,
+                      },
                     ]}
                   >
-                    <View style={styles.cardInner}>
+                    <View style={styles.glassOverlay}>
                       <View style={styles.cardHeader}>
                         <RNText style={styles.cardLabel}>{label}</RNText>
                         <RNText style={styles.cardTime}>{time}</RNText>
@@ -154,32 +151,18 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
                         {lineCount} {lineCount > 1 ? 'articles' : 'article'}
                       </RNText>
                       <View style={styles.cardBadges}>
-                        <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-                          <RNText style={[styles.statusBadgeText, { color: getStatusTextColor(globalStatus) }]}>
-                            {getStatusText(globalStatus)}
-                          </RNText>
-                        </View>
-                        {(order.paymentStatus === 'paid' || order.paymentStatus === 'partial') && (
-                          <View style={[
-                            styles.statusBadge,
-                            order.paymentStatus === 'paid' ? styles.paidBadge : styles.partialBadge,
-                          ]}>
-                            <RNText style={[
-                              styles.statusBadgeText,
-                              order.paymentStatus === 'paid' ? styles.paidBadgeText : styles.partialBadgeText,
-                            ]}>
-                              {order.paymentStatus === 'paid' ? 'Payé' : 'Partiel'}
-                            </RNText>
-                          </View>
+                        <StatusBadge status={globalStatus} />
+                        {order.paymentStatus && (
+                          <PaymentBadge paymentStatus={order.paymentStatus} />
                         )}
                       </View>
                       <View style={styles.cardFooter}>
-                        <RNText style={styles.cardUpdatedAt}>Dernière maj : {updatedAt}</RNText>
+                        <RNText style={styles.cardUpdatedAt}>Maj {updatedAt}</RNText>
                         <RNText style={styles.cardPrice}>{formatPrice(order.totalAmount)}</RNText>
                       </View>
                     </View>
-                  </Pressable>
-                </View>
+                  </View>
+                </Pressable>
               );
             })}
           </View>
@@ -190,7 +173,7 @@ export default function OrdersBoard({ allOrders, onOrderPress, onCreateOrder }: 
 }
 
 const styles = StyleSheet.create({
-  flex1: { flex: 1, backgroundColor: '#FFFFFF' },
+  flex1: { flex: 1, backgroundColor: colors.white },
 
   emptyContainer: {
     flex: 1,
@@ -201,19 +184,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 8,
   } as any,
   emptySubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
   } as any,
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
@@ -223,7 +206,7 @@ const styles = StyleSheet.create({
     }),
   } as any,
   emptyBtnText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   } as any,
@@ -237,19 +220,17 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
     borderWidth: 1.5,
-    ...shadows.bottom,
+    overflow: 'hidden',
+    ...shadows.all,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
-      transition: 'all 0.15s ease',
+      transition: 'opacity 0.15s ease, transform 0.15s ease',
     } as any : {}),
   },
-  cardPressable: {
-    flex: 1,
-  },
-  cardInner: {
+  glassOverlay: {
     flex: 1,
     padding: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    backgroundColor: getColorWithOpacity(colors.white, 0.65),
     borderRadius: 9,
     gap: 8,
   },
@@ -263,62 +244,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-    letterSpacing: 0.5,
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.neutral[800],
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   } as any,
   cardTime: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.gray[500],
+    letterSpacing: 0.3,
   } as any,
   cardArticles: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.gray[400],
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   } as any,
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'baseline',
   },
   cardUpdatedAt: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#9CA3AF',
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.gray[400],
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   } as any,
   cardPrice: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.neutral[800],
+    letterSpacing: 0.3,
   } as any,
   cardBadges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  } as any,
-  paidBadge: {
-    backgroundColor: '#10B98120',
-  },
-  paidBadgeText: {
-    color: '#059669',
-  },
-  partialBadge: {
-    backgroundColor: '#F59E0B20',
-  },
-  partialBadgeText: {
-    color: '#D97706',
+    marginTop: 4,
   },
 });

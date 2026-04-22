@@ -196,7 +196,6 @@ function analyzeChanges(
  * Hook centralisé pour gérer les OrderLines (création, modification, suppression)
  *
  * Utilisé par:
- * - app/(server)/order/form.tsx
  * - app/(admin)/service.tsx
  *
  * Responsabilités:

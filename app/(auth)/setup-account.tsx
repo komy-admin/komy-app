@@ -18,6 +18,7 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { getHomeRoute } from '~/constants/routes';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { extractApiError } from '~/lib/apiErrorHandler';
+import { colors } from '~/theme';
 
 export default function SetupAccountScreen() {
   const [password, setPassword] = useState('');
@@ -258,7 +259,7 @@ export default function SetupAccountScreen() {
                     placeholder="Minimum 8 caractères"
                     secureTextEntry={!showPassword}
                     style={[styles.input, errors.password ? styles.inputError : null]}
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.gray[400]}
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
@@ -268,9 +269,9 @@ export default function SetupAccountScreen() {
                     style={styles.eyeButton}
                   >
                     {showPassword ? (
-                      <EyeOff size={20} color="#9CA3AF" />
+                      <EyeOff size={20} color={colors.gray[400]} />
                     ) : (
-                      <Eye size={20} color="#9CA3AF" />
+                      <Eye size={20} color={colors.gray[400]} />
                     )}
                   </Pressable>
                 </View>
@@ -287,7 +288,7 @@ export default function SetupAccountScreen() {
                     placeholder="Confirmez votre mot de passe"
                     secureTextEntry={!showConfirmPassword}
                     style={[styles.input, errors.confirmPassword ? styles.inputError : null]}
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.gray[400]}
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
@@ -297,9 +298,9 @@ export default function SetupAccountScreen() {
                     style={styles.eyeButton}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff size={20} color="#9CA3AF" />
+                      <EyeOff size={20} color={colors.gray[400]} />
                     ) : (
-                      <Eye size={20} color="#9CA3AF" />
+                      <Eye size={20} color={colors.gray[400]} />
                     )}
                   </Pressable>
                 </View>
@@ -360,7 +361,7 @@ export default function SetupAccountScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   contentContainer: {
     alignItems: 'center',
@@ -373,19 +374,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontSize: 14,
     textAlign: 'center',
     fontWeight: '500',
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4B5563',
+    color: colors.gray[600],
     marginBottom: 8,
   },
   inputWrapper: {
@@ -418,13 +419,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingRight: 48,
     fontSize: 15,
-    backgroundColor: '#F9FAFB',
-    color: '#2A2E33',
+    backgroundColor: colors.gray[50],
+    color: colors.brand.dark,
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
@@ -432,7 +433,7 @@ const styles = StyleSheet.create({
     }),
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
   },
   eyeButton: {
     position: 'absolute',
@@ -444,7 +445,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fieldError: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontSize: 13,
     marginTop: 6,
     marginLeft: 2,
@@ -458,23 +459,23 @@ const styles = StyleSheet.create({
   },
   passwordRule: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   passwordRuleValid: {
-    color: '#2A2E33',
+    color: colors.brand.dark,
     fontWeight: '600',
   },
   passwordRuleError: {
-    color: '#EF4444',
+    color: colors.error.base,
     fontWeight: '500',
   },
   passwordRuleSep: {
     fontSize: 12,
-    color: '#D1D5DB',
+    color: colors.gray[300],
   },
   pinHelp: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
     lineHeight: 20,
   },
@@ -484,7 +485,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -492,14 +493,15 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    color: colors.white,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   primaryButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.gray[300],
   },
   infoText: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,

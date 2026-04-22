@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, Platform, Text as RNText } from 'react-native';
-import { shadows } from '~/theme';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { shadows, colors } from '~/theme';
 
 export interface ValidationOverlayProps {
   title: string;
@@ -89,15 +90,15 @@ const styles = StyleSheet.create({
     zIndex: 200,
     ...Platform.select({
       web: {
-        backgroundColor: 'rgba(255, 255, 255, 0.75)',
+        backgroundColor: getColorWithOpacity(colors.white, 0.60),
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
       } as any,
       android: {
-        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+        backgroundColor: getColorWithOpacity(colors.white, 0.88),
       },
       default: {
-        backgroundColor: 'rgba(255, 255, 255, 0.75)',
+        backgroundColor: getColorWithOpacity(colors.white, 0.65),
       },
     }),
   },
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
   },
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   confirmBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 1.5,
   },
   cancelBtn: {
@@ -132,9 +133,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.gray[100],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.all,
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textTransform: 'uppercase',
     letterSpacing: 1,
   },

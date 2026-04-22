@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { CheckCircle } from 'lucide-react-native';
 import type { Payment, LedgerEvent } from '~/types/payment.types';
 import { InfoRow } from '../shared/InfoRow';
+import { colors } from '~/theme';
 
 interface TechnicalInfoProps {
   payment: Payment;
@@ -39,7 +40,7 @@ export function TechnicalInfo({ payment, auditLogs }: TechnicalInfoProps) {
               label="Audit NF525:"
               value={
                 <View style={styles.auditContainer}>
-                  <CheckCircle size={16} color="#059669" />
+                  <CheckCircle size={16} color={colors.success.base} />
                   <Text style={styles.auditText}>Vérifié</Text>
                 </View>
               }
@@ -61,15 +62,15 @@ export function TechnicalInfo({ payment, auditLogs }: TechnicalInfoProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.gray[200],
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -79,16 +80,16 @@ const styles = StyleSheet.create({
   monoText: {
     fontFamily: 'monospace',
     fontSize: 14,
-    color: '#374151',
+    color: colors.gray[700],
   },
   monoTextSmall: {
     fontFamily: 'monospace',
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     marginVertical: 8,
   },
   auditContainer: {
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
   },
   auditText: {
     fontSize: 14,
-    color: '#059669',
+    color: colors.success.base,
     fontWeight: '500',
   },
 });

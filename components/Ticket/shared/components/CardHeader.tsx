@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text as RNText, StyleSheet } from 'react-native';
+import { colors } from '~/theme';
 
 interface CardHeaderProps {
   tableShortId: string;
@@ -51,8 +52,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 47,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    backgroundColor: '#FAFAFA',
+    borderBottomColor: colors.gray[100],
+    backgroundColor: colors.gray[50],
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     gap: 4,
@@ -73,40 +74,40 @@ const styles = StyleSheet.create({
   tableId: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     flexShrink: 0,
     letterSpacing: 0.5,
   },
   separator: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontWeight: '600',
     flexShrink: 0,
   },
   orderTime: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '600',
     flexShrink: 0,
     letterSpacing: 0.3,
   },
   overdueTimer: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.error.bg,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#DC2626',
+    borderColor: colors.error.text,
     flexShrink: 0,
   },
   overdueTimerText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#DC2626',
+    color: colors.error.text,
     letterSpacing: 0.3,
   },
   itemCountBadge: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     borderRadius: 10,
     paddingHorizontal: 7,
     paddingVertical: 3,
@@ -117,6 +118,6 @@ const styles = StyleSheet.create({
   itemCountText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#4B5563',
+    color: colors.gray[600],
   },
 });

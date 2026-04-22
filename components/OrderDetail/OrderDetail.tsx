@@ -16,6 +16,7 @@ import { Status } from '~/types/status.enum';
 import { useOrderStatusActions } from '~/hooks/order/useOrderStatusActions';
 import { useOrderDetailLineActions } from '~/hooks/order/useOrderDetailLineActions';
 import { useReassignTable } from '~/hooks/order/useReassignTable';
+import { colors } from '~/theme';
 
 export type OrderStatusActionsApi = ReturnType<typeof useOrderStatusActions>;
 export type OrderDetailLineActionsApi = ReturnType<typeof useOrderDetailLineActions>;
@@ -216,7 +217,7 @@ export const OrderDetail = memo<OrderDetailProps>(({
         <ValidationOverlay
           title="Terminer cette commande ?"
           confirmLabel="TERMINER"
-          confirmColor="#2A2E33"
+          confirmColor={colors.brand.dark}
           onConfirm={handleConfirmTerminate}
           onCancel={handleCloseTerminateDialog}
         />
@@ -225,8 +226,8 @@ export const OrderDetail = memo<OrderDetailProps>(({
         <ValidationOverlay
           title="Supprimer cette commande ?"
           confirmLabel="SUPPRIMER"
-          confirmColor="#DC2626"
-          confirmColorDisabled="#F4ADAB"
+          confirmColor={colors.error.text}
+          confirmColorDisabled={colors.error.border}
           countdownSeconds={3}
           onConfirm={handleConfirmDelete}
           onCancel={handleCloseDeleteDialog}

@@ -1,6 +1,6 @@
 import { ComponentType } from 'react';
 import { View, Pressable, StyleSheet, Platform, ViewStyle } from 'react-native';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 type IconComponent = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 
@@ -18,8 +18,8 @@ interface ViewModeToggleProps<T extends string = string> {
   bordered?: boolean;
 }
 
-const ACTIVE_COLOR = '#2A2E33';
-const INACTIVE_COLOR = '#9CA3AF';
+const ACTIVE_COLOR = colors.brand.dark;
+const INACTIVE_COLOR = colors.gray[400];
 const BUTTON_SIZE = 36;
 const ICON_SIZE = 18;
 
@@ -73,7 +73,7 @@ export function ViewModeToggle<T extends string>({
 const styles = StyleSheet.create({
   separatorH: {
     width: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     marginVertical: 8,
   },
   containerH: {
@@ -100,11 +100,11 @@ const styles = StyleSheet.create({
     }),
   } as ViewStyle,
   buttonActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     ...shadows.bottom,
   },
   buttonActiveBordered: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
   },
 });

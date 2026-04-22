@@ -14,6 +14,8 @@ import type { PinInputRef } from '~/components/ui/pin-input';
 import { authApiService } from '~/api/auth.api';
 import * as Haptics from 'expo-haptics';
 import { extractApiError } from '~/lib/apiErrorHandler';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 interface PinConfirmationModalProps {
   isVisible: boolean;
@@ -250,15 +252,15 @@ const styles = StyleSheet.create({
     zIndex: 2000,
     ...Platform.select({
       web: {
-        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        backgroundColor: getColorWithOpacity(colors.white, 0.5),
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
       },
       android: {
-        backgroundColor: 'rgba(255, 255, 255, 0.99)',
+        backgroundColor: getColorWithOpacity(colors.white, 0.99),
       },
       default: {
-        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        backgroundColor: getColorWithOpacity(colors.white, 0.5),
       },
     }),
   } as any,
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 1.5,
@@ -304,7 +306,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     fontWeight: '400',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
     marginTop: 6,
   },
@@ -322,16 +324,16 @@ const styles = StyleSheet.create({
   lockedTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#DC2626',
+    color: colors.error.text,
   },
   lockedCountdown: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#DC2626',
+    color: colors.error.text,
     fontVariant: ['tabular-nums'],
   } as any,
   errorText: {
-    color: '#DC2626',
+    color: colors.error.text,
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
@@ -344,7 +346,7 @@ const styles = StyleSheet.create({
     width: 280,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -355,7 +357,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
     textTransform: 'uppercase',
     letterSpacing: 1,
   } as any,

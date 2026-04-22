@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ChevronRight, CreditCard, Banknote, FileText, Ticket, Clock } from 'lucide-react-native';
 import type { Payment } from '~/types/payment.types';
 import { formatPrice, DateFormat, formatDate } from '~/lib/utils';
+import { colors } from '~/theme';
 
 interface PaymentListCardProps {
   payment: Payment;
@@ -13,15 +14,15 @@ const getPaymentMethodIcon = (method: Payment['paymentMethod']) => {
   const iconProps = { size: 20, strokeWidth: 2 };
   switch (method) {
     case 'card':
-      return <CreditCard {...iconProps} color="#6366F1" />;
+      return <CreditCard {...iconProps} color={colors.brand.accent} />;
     case 'cash':
-      return <Banknote {...iconProps} color="#10B981" />;
+      return <Banknote {...iconProps} color={colors.success.base} />;
     case 'check':
-      return <FileText {...iconProps} color="#F59E0B" />;
+      return <FileText {...iconProps} color={colors.warning.base} />;
     case 'ticket_resto':
-      return <Ticket {...iconProps} color="#EC4899" />;
+      return <Ticket {...iconProps} color={colors.pink} />;
     default:
-      return <CreditCard {...iconProps} color="#9CA3AF" />;
+      return <CreditCard {...iconProps} color={colors.gray[400]} />;
   }
 };
 
@@ -38,15 +39,15 @@ const getPaymentMethodLabel = (method: Payment['paymentMethod']) => {
 const getPaymentStatusColor = (status: Payment['status']) => {
   switch (status) {
     case 'completed':
-      return '#10B981'; // green
+      return colors.success.base; // green
     case 'pending':
-      return '#F59E0B'; // amber
+      return colors.warning.base; // amber
     case 'failed':
-      return '#EF4444'; // red
+      return colors.error.base; // red
     case 'refunded':
-      return '#8B5CF6'; // violet
+      return colors.purple.alt; // violet
     default:
-      return '#9CA3AF'; // gray
+      return colors.gray[400]; // gray
   }
 };
 
@@ -99,7 +100,7 @@ export const PaymentListCard = memo<PaymentListCardProps>(({ payment, onPress })
       <View style={styles.footer}>
         <View style={styles.metaInfo}>
           <View style={styles.timeContainer}>
-            <Clock size={10} color="#9CA3AF" strokeWidth={2} />
+            <Clock size={10} color={colors.gray[400]} strokeWidth={2} />
             <Text style={styles.metaText}>
               {formatDate(payment.createdAt, DateFormat.TIME)}
             </Text>
@@ -122,7 +123,7 @@ export const PaymentListCard = memo<PaymentListCardProps>(({ payment, onPress })
           <Text style={styles.itemsCount}>
             {payment.allocations?.length || 0} items
           </Text>
-          <ChevronRight size={16} color="#9CA3AF" strokeWidth={2} />
+          <ChevronRight size={16} color={colors.gray[400]} strokeWidth={2} />
         </View>
       </View>
     </Pressable>
@@ -133,13 +134,13 @@ PaymentListCard.displayName = 'PaymentListCard';
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 10,
     borderWidth: 2,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: colors.brand.dark,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -161,13 +162,13 @@ const styles = StyleSheet.create({
   methodLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.gray[800],
     flexShrink: 1,
   },
   amount: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.gray[800],
   },
   tipContainer: {
     flexDirection: 'row',
@@ -179,17 +180,17 @@ const styles = StyleSheet.create({
   tipLabel: {
     fontSize: 12,
     fontStyle: 'italic',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   tipAmount: {
     fontSize: 14,
     fontWeight: '600',
     fontStyle: 'italic',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
     marginVertical: 8,
   },
   footer: {
@@ -212,12 +213,12 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.gray[500],
     fontWeight: '500',
   },
   separator: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
   },
   itemsCount: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     fontWeight: '500',
   },
 });

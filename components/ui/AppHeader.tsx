@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 interface AppHeaderProps {
   tabs?: ReactNode;
@@ -26,7 +26,7 @@ export function AppHeader({
   tabs,
   rightSlot,
   height = 61,
-  backgroundColor = '#FFFFFF',
+  backgroundColor = colors.white,
   style,
 }: AppHeaderProps) {
   return (
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     zIndex: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.gray[200],
     ...shadows.bottom,
   } as ViewStyle,
   tabsScroll: {

@@ -9,26 +9,11 @@ import { useToast } from '~/components/ToastProvider';
 import { AuthScreenLayout } from '~/components/auth/AuthScreenLayout';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
-import { shadows } from '~/theme';
+import { shadows, colors } from '~/theme';
 
 const BREAKPOINT = 768;
 const APP_VERSION = 'Komy - v3.7.1';
 
-// Inject CSS to override browser autofill styles on web
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    input:-webkit-autofill,
-    input:-webkit-autofill:hover,
-    input:-webkit-autofill:focus,
-    input:-webkit-autofill:active {
-      -webkit-box-shadow: 0 0 0 30px #F9FAFB inset !important;
-      -webkit-text-fill-color: #2A2E33 !important;
-      transition: background-color 5000s ease-in-out 0s;
-    }
-  `;
-  document.head.appendChild(style);
-}
 
 export default function LoginScreen() {
   const [loginId, setLoginId] = useState('');
@@ -103,7 +88,7 @@ export default function LoginScreen() {
             onPress={() => setShowQrScanner(true)}
           >
             <View style={styles.qrButtonContent}>
-              <QrCode size={18} color="#2A2E33" strokeWidth={2} />
+              <QrCode size={18} color={colors.brand.dark} strokeWidth={2} />
               <RNText style={styles.qrButtonText}>Connexion via QR code</RNText>
             </View>
           </Pressable>
@@ -122,7 +107,7 @@ export default function LoginScreen() {
             onChangeText={(text) => { setLoginId(text); formErrors.clearError('loginId'); }}
             placeholder="Identifiant"
             style={[styles.input, formErrors.hasError('loginId') && styles.inputError]}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.gray[400]}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="next"
@@ -139,7 +124,7 @@ export default function LoginScreen() {
               placeholder="Mot de passe"
               secureTextEntry={!showPassword}
               style={[styles.input, styles.passwordInput, formErrors.hasError('password') && styles.inputError]}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.gray[400]}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="done"
@@ -151,8 +136,8 @@ export default function LoginScreen() {
               hitSlop={8}
             >
               {showPassword
-                ? <EyeOff size={20} color="#9CA3AF" />
-                : <Eye size={20} color="#9CA3AF" />
+                ? <EyeOff size={20} color={colors.gray[400]} />
+                : <Eye size={20} color={colors.gray[400]} />
               }
             </Pressable>
           </View>
@@ -182,7 +167,7 @@ export default function LoginScreen() {
         <View style={[styles.formPanel, isWide && styles.formPanelWide]}>
           <AuthScreenLayout style={{ backgroundColor: 'transparent' }} centered noCard>
             <Image
-              source={require('../../assets/images/logo_komy_png/Logo_Komy_blancSF.webp')}
+              source={require('../../assets/images/logo_komy_png/Logo_Komy_blancSF.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -212,7 +197,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
 
   // === Form panel ===
@@ -232,7 +217,7 @@ const styles = StyleSheet.create({
   formCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     paddingHorizontal: 32,
     paddingVertical: 36,
@@ -257,14 +242,14 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: -0.5,
     marginBottom: 6,
   },
   welcomeSubtitle: {
     fontSize: 15,
     fontWeight: '400',
-    color: '#6B7280',
+    color: colors.gray[500],
     marginBottom: 32,
   },
 
@@ -277,9 +262,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.gray[50],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -292,7 +277,7 @@ const styles = StyleSheet.create({
   qrButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2A2E33',
+    color: colors.brand.dark,
   },
 
   // === Divider ===
@@ -305,13 +290,13 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.gray[200],
   },
   dividerText: {
     paddingHorizontal: 14,
     fontSize: 13,
     fontWeight: '400',
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
 
   // === Inputs ===
@@ -337,12 +322,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 48,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.gray[200],
     borderRadius: 10,
     paddingHorizontal: 16,
     fontSize: 15,
-    backgroundColor: '#F9FAFB',
-    color: '#2A2E33',
+    backgroundColor: colors.gray[50],
+    color: colors.brand.dark,
     ...(Platform.OS === 'web' ? {
       outlineStyle: 'none',
     } as any : {
@@ -350,8 +335,8 @@ const styles = StyleSheet.create({
     }),
   },
   inputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
 
   // === Forgot password ===
@@ -363,7 +348,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.gray[500],
     textDecorationLine: 'underline',
   },
 
@@ -371,7 +356,7 @@ const styles = StyleSheet.create({
   loginButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -379,8 +364,9 @@ const styles = StyleSheet.create({
   loginButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    color: colors.white,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 
   // === Version ===
@@ -389,7 +375,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 12,
     fontWeight: '400',
-    color: '#9CA3AF',
+    color: colors.gray[400],
     letterSpacing: 0.5,
   },
 });

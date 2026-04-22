@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable,
   Keyboard, Platform, ScrollView, Animated,
@@ -19,6 +19,7 @@ import { getColorWithOpacity, darkenColor } from '~/lib/color-utils';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
 import { LocalMenuCategoryItem, MenuCategoryFormData } from './MenuEditor/MenuEditor.types';
+import { colors } from '~/theme';
 
 // ============================================================
 // Types
@@ -42,31 +43,6 @@ interface MenuFormContentProps {
 
 const supplementContainerStyle = { minHeight: 32 };
 const flexStyle = { flex: 1 };
-
-// ============================================================
-// Inline delete overlay (second-click to confirm)
-// ============================================================
-
-const InlineDeleteOverlay: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  return (
-    <Animated.View style={[styles.inlineDeleteOverlay, { opacity }]}>
-      <Pressable onPress={onConfirm} style={styles.inlineDeleteOverlayButton}>
-        <Trash2 size={16} color="#FFFFFF" strokeWidth={2} />
-        <Text style={styles.inlineDeleteOverlayText}>Supprimer</Text>
-      </Pressable>
-    </Animated.View>
-  );
-};
 
 // ============================================================
 // Component
@@ -248,7 +224,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
       <View style={styles.panelContent}>
         <View style={styles.panelHeaderBack}>
           <Pressable onPress={navigateBackToCategory} style={styles.backButtonIcon}>
-            <ArrowLeftToLine size={20} color="#2A2E33" />
+            <ArrowLeftToLine size={20} color={colors.brand.dark} />
           </Pressable>
           <View style={styles.backTitleContainer}>
             <Text style={styles.backTitle} numberOfLines={1}>Sélectionner des articles</Text>
@@ -267,7 +243,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
             <View style={styles.itemsGrid}>
               {allTypeItems.map((item) => {
                 const isAssigned = assignedIds.includes(item.id);
-                const itemColor = item.color || '#6B7280';
+                const itemColor = item.color || colors.gray[500];
                 return (
                   <Pressable
                     key={item.id}
@@ -307,7 +283,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Package size={24} color="#D1D5DB" />
+              <Package size={24} color={colors.gray[300]} />
               <Text style={styles.emptyStateText}>Aucun article dans ce type</Text>
             </View>
           )}
@@ -345,7 +321,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
       <View style={styles.panelContent}>
         <View style={styles.panelHeaderBack}>
           <Pressable onPress={navigateBackToMain} style={styles.backButtonIcon}>
-            <ArrowLeftToLine size={20} color="#2A2E33" />
+            <ArrowLeftToLine size={20} color={colors.brand.dark} />
           </Pressable>
           <View style={styles.backTitleContainer}>
             <Text style={styles.backTitle} numberOfLines={1}>
@@ -444,8 +420,8 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
                         activeOpacity={hasArticles ? 0.7 : 1}
                       >
                         {hasArticles
-                          ? <Plus size={18} color="#64748B" strokeWidth={2} />
-                          : <Lock size={16} color="#9CA3AF" strokeWidth={2} />
+                          ? <Plus size={18} color={colors.neutral[500]} strokeWidth={2} />
+                          : <Lock size={16} color={colors.gray[400]} strokeWidth={2} />
                         }
                         <Text style={[styles.addArticlesText, !hasArticles && styles.addArticlesTextDisabled]}>
                           Sélectionner des articles
@@ -466,7 +442,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
                     {categoryItems.map((ci) => {
                       const item = items.find(i => i.id === ci.itemId);
                       if (!item) return null;
-                      const itemColor = item.color || '#6B7280';
+                      const itemColor = item.color || colors.gray[500];
                       return (
                         <View
                           key={ci.tempId}
@@ -519,22 +495,22 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
                               }
                             >
                               {ci.isAvailable
-                                ? <Eye size={16} color="#10B981" strokeWidth={2} />
-                                : <EyeOff size={16} color="#9CA3AF" strokeWidth={2} />
+                                ? <Eye size={16} color={colors.success.base} strokeWidth={2} />
+                                : <EyeOff size={16} color={colors.gray[400]} strokeWidth={2} />
                               }
                             </Pressable>
                             <Pressable
                               style={styles.assignedItemRemove}
                               onPress={() => setPendingDeleteItemTempId(prev => prev === ci.tempId ? null : ci.tempId)}
                             >
-                              <X size={16} color="#EF4444" strokeWidth={2} />
+                              <X size={16} color={colors.error.base} strokeWidth={2} />
                             </Pressable>
                           </View>
                           {pendingDeleteItemTempId === ci.tempId && (
-                            <InlineDeleteOverlay onConfirm={() => {
+                            <DeleteConfirmOverlay onConfirm={() => {
                               editor.removeItemFromCategory(activeCategoryIndex, ci.tempId);
                               setPendingDeleteItemTempId(null);
-                            }} />
+                            }} label="Supprimer" />
                           )}
                         </View>
                       );
@@ -599,7 +575,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
           onPress={onCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -618,7 +594,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
               value={editor.formData.name}
               onChangeText={(text) => { editor.updateFormField('name', text); formErrors.clearError('name'); }}
               placeholder="Ex: Menu Déjeuner"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
             />
             <FormFieldError message={formErrors.getError('name')} />
           </View>
@@ -670,7 +646,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
               value={editor.formData.description}
               onChangeText={(text) => editor.updateFormField('description', text)}
               placeholder="Ex: Un menu complet avec entrée, plat et dessert..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
               multiline
               scrollEnabled={false}
               onContentSizeChange={(e) => {
@@ -725,11 +701,11 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
                         style={styles.categoryDeleteButton}
                         onPress={() => handleRequestDeleteCategory(index)}
                       >
-                        <Trash2 size={16} color="#EF4444" strokeWidth={2} />
+                        <Trash2 size={16} color={colors.error.base} strokeWidth={2} />
                       </Pressable>
                     </View>
                     {pendingDeleteCategoryIndex === index && (
-                      <InlineDeleteOverlay onConfirm={() => handleConfirmDeleteCategory(index)} />
+                      <DeleteConfirmOverlay onConfirm={() => handleConfirmDeleteCategory(index)} label="Supprimer" />
                     )}
                   </View>
                   <FormFieldError message={hasError ? formErrors.getError(`categories.${index}`) : undefined} />
@@ -745,7 +721,7 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
               ]}
               onPress={handleAddCategory}
             >
-              <Plus size={18} color={formErrors.hasError('categories') && editor.formData.categories.length === 0 ? '#EF4444' : '#64748B'} strokeWidth={2} />
+              <Plus size={18} color={formErrors.hasError('categories') && editor.formData.categories.length === 0 ? colors.error.base : colors.neutral[500]} strokeWidth={2} />
               <Text style={[
                 styles.addCategoryText,
                 formErrors.hasError('categories') && editor.formData.categories.length === 0 && styles.addCategoryTextError,
@@ -777,6 +753,63 @@ export const MenuFormContent: React.FC<MenuFormContentProps> = ({
 };
 
 // ============================================================
+// Inline Delete Overlay (local to MenuFormContent)
+// ============================================================
+
+const DeleteConfirmOverlay: React.FC<{ onConfirm: () => void; label?: string }> = ({
+  onConfirm,
+  label = 'Confirmer la suppression',
+}) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[overlayStyles.overlay, { opacity }]}>
+      <Pressable onPress={onConfirm} style={overlayStyles.button}>
+        <Trash2 size={16} color={colors.white} strokeWidth={2} />
+        <Text style={overlayStyles.text}>{label}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+};
+
+const overlayStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: getColorWithOpacity(colors.error.base, 0.88),
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+    borderRadius: 12,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    flex: 1,
+    width: '100%',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
+  },
+  text: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+  },
+});
+
+// ============================================================
 // Styles
 // ============================================================
 
@@ -786,7 +819,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -799,7 +832,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     gap: 16,
   },
   headerTextContainer: {
@@ -816,13 +849,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   panelHeaderBack: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     height: 89,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
   },
   backButtonIcon: {
     alignItems: 'center',
@@ -830,7 +863,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRightWidth: 1,
-    borderRightColor: '#F3F4F6',
+    borderRightColor: colors.gray[100],
     height: '100%',
   },
   backTitleContainer: {
@@ -841,23 +874,23 @@ const styles = StyleSheet.create({
   backTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2A2E33',
+    color: colors.brand.dark,
     letterSpacing: 0.3,
   },
   backSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 1,
   },
   panelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   panelSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
   formGroup: {
@@ -866,22 +899,22 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 10,
   },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   textArea: {
     textAlignVertical: 'top',
@@ -901,7 +934,7 @@ const styles = StyleSheet.create({
   },
   formHint: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
     marginTop: 6,
     lineHeight: 16,
   },
@@ -912,7 +945,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     marginTop: 4,
     marginBottom: 16,
   },
@@ -924,42 +957,42 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   toggleOptionActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#34D399',
+    backgroundColor: colors.success.bg,
+    borderColor: colors.success.border,
   },
   toggleOptionWarning: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: colors.warning.border,
+    borderColor: colors.warning.base,
   },
   toggleIndicator: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.gray[400],
     marginRight: 12,
   },
   toggleIndicatorActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
   },
   toggleIndicatorWarning: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.warning.base,
   },
   toggleText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   toggleTextActive: {
-    color: '#047857',
+    color: colors.success.text,
   },
   toggleTextWarning: {
-    color: '#92400E',
+    color: colors.warning.text,
   },
 
   // Category cards (main view) — iso RoomModeSelection
@@ -972,21 +1005,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: colors.neutral[100],
     gap: 12,
   },
   categoryBadge: {
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.neutral[800],
     alignItems: 'center',
     justifyContent: 'center',
   },
   categoryBadgeText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -996,7 +1029,7 @@ const styles = StyleSheet.create({
   categoryCardTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 2,
   },
   categoryCardTags: {
@@ -1010,24 +1043,24 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   categoryTagRequired: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warning.border,
   },
   categoryTagOptional: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
   },
   categoryTagText: {
     fontSize: 11,
     fontWeight: '700',
   },
   categoryTagTextRequired: {
-    color: '#92400E',
+    color: colors.warning.text,
   },
   categoryTagTextOptional: {
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   categoryCardItemCount: {
     fontSize: 12,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   categoryCardActions: {
     flexDirection: 'row',
@@ -1038,7 +1071,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 38,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
@@ -1046,75 +1079,48 @@ const styles = StyleSheet.create({
   categoryEditButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   categoryDeleteButton: {
     width: 38,
     height: 38,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error.border,
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   categoryCardError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
-  },
-
-  // Inline delete overlay
-  inlineDeleteOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(239, 68, 68, 0.88)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 30,
-  },
-  inlineDeleteOverlayButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    flex: 1,
-    width: '100%',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
-  },
-  inlineDeleteOverlayText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
 
   addCategoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderRadius: 10,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderStyle: 'dashed',
     gap: 8,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   addCategoryButtonError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   addCategoryText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   addCategoryTextError: {
-    color: '#EF4444',
+    color: colors.error.base,
   },
 
   // Articles section (category view)
@@ -1122,11 +1128,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderRadius: 10,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderStyle: 'dashed',
     gap: 8,
     marginBottom: 6,
@@ -1135,20 +1141,20 @@ const styles = StyleSheet.create({
   addArticlesText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   addArticlesButtonDisabled: {
     opacity: 0.6,
     borderStyle: 'solid',
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F3F4F6',
+    borderColor: colors.gray[200],
+    backgroundColor: colors.gray[100],
   },
   addArticlesTextDisabled: {
-    color: '#9CA3AF',
+    color: colors.gray[400],
   },
   addArticlesHint: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.gray[400],
     textAlign: 'center',
     marginTop: 2,
   },
@@ -1160,9 +1166,9 @@ const styles = StyleSheet.create({
   assignedItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
@@ -1172,7 +1178,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
   assignedItemControls: {
     flexDirection: 'row',
@@ -1186,9 +1192,9 @@ const styles = StyleSheet.create({
     width: 120,
     height: 32,
     borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
@@ -1196,18 +1202,18 @@ const styles = StyleSheet.create({
   supplementButtonText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
     letterSpacing: 0.2,
   },
   assignedItemSupplement: {
     height: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 6,
     paddingHorizontal: 6,
     fontSize: 12,
-    color: '#1E293B',
+    color: colors.neutral[800],
     textAlign: 'center' as const,
   },
   assignedItemToggle: {
@@ -1220,20 +1226,20 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   assignedItemToggleActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: colors.success.bg,
+    borderColor: colors.success.border,
   },
   assignedItemToggleInactive: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
+    backgroundColor: colors.gray[100],
+    borderColor: colors.gray[200],
   },
   assignedItemRemove: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error.border,
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
@@ -1256,8 +1262,8 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   itemGridCardInactive: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.neutral[50],
+    borderColor: colors.neutral[200],
     borderStyle: 'dashed' as const,
   },
   itemGridCardName: {
@@ -1267,7 +1273,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   itemGridCardNameInactive: {
-    color: '#94A3B8',
+    color: colors.neutral[400],
   },
   emptyState: {
     alignItems: 'center',
@@ -1277,7 +1283,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textAlign: 'center',
   },
 
@@ -1287,19 +1293,19 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
@@ -1308,7 +1314,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     gap: 8,
   },
   saveButtonBlue: {
@@ -1318,7 +1324,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     gap: 8,
   },
   saveButtonDisabled: {
@@ -1327,6 +1333,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });
