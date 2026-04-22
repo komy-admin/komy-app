@@ -383,7 +383,7 @@ const TagCardHeader: React.FC<{ tag: Tag }> = ({ tag }) => {
           {tag.label}
         </RNText>
         <View style={styles.tagHeaderBadges}>
-          <View style={[styles.fieldTypeBadge, { backgroundColor: colorConfig.bgColor }]}>
+          <View style={[styles.fieldTypeBadge, { backgroundColor: colors.white }]}>
             <Icon size={10} color={colorConfig.textColor} strokeWidth={2.5} />
             <RNText style={[styles.fieldTypeBadgeText, { color: colorConfig.textColor }]}>
               {label}
