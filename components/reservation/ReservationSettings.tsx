@@ -1138,20 +1138,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  stripeDisconnectButton: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
-  },
-  stripeDisconnectText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#EF4444',
-  },
   stripeWarning: {
     backgroundColor: '#FFFBEB',
     borderWidth: 1,

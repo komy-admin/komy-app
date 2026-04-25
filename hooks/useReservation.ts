@@ -156,32 +156,6 @@ export const useReservation = () => {
     }
   }, [restaurantId, initialize]);
 
-  const deactivate = useCallback(async () => {
-    if (!restaurantId) return;
-    setState(prev => ({ ...prev, isLoading: true }));
-    try {
-      await reservationBridgeApiService.deactivate(restaurantId);
-      reservationApiService.setToken(null);
-      setState(prev => ({
-        ...prev,
-        isActivated: false,
-        token: null,
-        professionalId: null,
-        slug: null,
-        profile: null,
-        stripeStatus: null,
-        services: [],
-        schedules: [],
-        overrides: [],
-        reservations: [],
-        isLoading: false,
-      }));
-    } catch (error) {
-      setState(prev => ({ ...prev, isLoading: false }));
-      throw error;
-    }
-  }, [restaurantId]);
-
   // === PROFILE ===
 
   const loadProfile = useCallback(async () => {
@@ -489,7 +463,6 @@ export const useReservation = () => {
 
     // Activation
     activate,
-    deactivate,
 
     // Profile
     loadProfile,

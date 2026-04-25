@@ -341,26 +341,26 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
 
       {/* Delete modals */}
       <DeleteConfirmPanel
-        visible={!!deleteServiceTarget}
-        onClose={() => setDeleteServiceTarget(null)}
-        onConfirm={handleDeleteService}
-        entityName={`"${deleteServiceTarget?.name || ''}"`}
+        visible={!!serviceToDelete}
+        onClose={() => setServiceToDelete(null)}
+        onConfirm={confirmDeleteService}
+        entityName={`"${serviceToDelete?.name || ''}"`}
         entityType="le service"
         isLoading={isDeleting}
       />
       <DeleteConfirmPanel
-        visible={!!deleteScheduleTarget}
-        onClose={() => setDeleteScheduleTarget(null)}
-        onConfirm={handleDeleteSchedule}
-        entityName={`"${deleteScheduleTarget ? `${getServiceName(deleteScheduleTarget.serviceId)} - ${DAYS.find(d => d.value === deleteScheduleTarget.dayOfWeek)?.label}` : ''}"`}
+        visible={!!scheduleToDelete}
+        onClose={() => setScheduleToDelete(null)}
+        onConfirm={confirmDeleteSchedule}
+        entityName={`"${scheduleToDelete ? `${getServiceName(scheduleToDelete.serviceId)} - ${DAYS.find(d => d.value === scheduleToDelete.dayOfWeek)?.label}` : ''}"`}
         entityType="le créneau"
         isLoading={isDeleting}
       />
       <DeleteConfirmPanel
-        visible={!!deleteOverrideTarget}
-        onClose={() => setDeleteOverrideTarget(null)}
-        onConfirm={handleDeleteOverride}
-        entityName={`"${deleteOverrideTarget ? formatDate(deleteOverrideTarget.date) : ''}"`}
+        visible={!!overrideToDelete}
+        onClose={() => setOverrideToDelete(null)}
+        onConfirm={confirmDeleteOverride}
+        entityName={`"${overrideToDelete ? formatFullDate(overrideToDelete.date) : ''}"`}
         entityType="la fermeture"
         isLoading={isDeleting}
       />
