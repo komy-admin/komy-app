@@ -41,10 +41,6 @@ class ReservationBridgeApiService extends BaseApiService<any> {
     );
     return response.data;
   }
-
-  async deactivate(restaurantId: string): Promise<void> {
-    await this.axiosInstance.post(`/restaurants/${restaurantId}/reservation/deactivate`);
-  }
 }
 
 export const reservationBridgeApiService = new ReservationBridgeApiService();
