@@ -6,6 +6,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 import type { ReservationService, CreateReservationScheduleDto } from '~/types/reservation.types';
 
 const DAYS = [
@@ -35,7 +36,7 @@ function NativeSelect({ value, onChange, options }: { value: string; onChange: (
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <View style={selectStyles.webChevron as any} pointerEvents="none">
-          <ChevronDown size={14} color="#64748B" />
+          <ChevronDown size={14} color={colors.neutral[500]} />
         </View>
       </View>
     );
@@ -56,10 +57,10 @@ const selectStyles = StyleSheet.create<any>({
     width: '100%',
     paddingLeft: 12,
     paddingRight: 32,
-    fontSize: 13,
-    color: '#1E293B',
-    backgroundColor: '#F8FAFC',
-    border: '1px solid #E2E8F0',
+    fontSize: 14,
+    color: colors.neutral[800],
+    backgroundColor: colors.neutral[50],
+    border: `1px solid ${colors.neutral[200]}`,
     borderRadius: 8,
     outline: 'none',
     appearance: 'none',
@@ -73,9 +74,9 @@ const selectStyles = StyleSheet.create<any>({
     justifyContent: 'center',
   },
   nativeWrapper: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -147,7 +148,7 @@ export const ScheduleFormPanel: React.FC<ScheduleFormPanelProps> = ({ services, 
           onPress={onCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -255,7 +256,7 @@ export const ScheduleFormPanel: React.FC<ScheduleFormPanelProps> = ({ services, 
 const styles = StyleSheet.create({
   flexContainer: { flex: 1 },
   panelContent: { flex: 1 },
-  scrollView: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollView: { flex: 1, backgroundColor: colors.white },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingVertical: 20 },
   panelHeader: {
     flexDirection: 'row',
@@ -263,60 +264,65 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     gap: 16,
   },
   headerTextContainer: { flex: 1, minWidth: 0 },
   closeButton: { flexShrink: 0 },
-  panelTitle: { fontSize: 18, fontWeight: '600', color: '#1E293B', marginBottom: 4 },
-  panelSubtitle: { fontSize: 13, color: '#64748B', lineHeight: 18 },
+  panelTitle: { fontSize: 18, fontWeight: '600', color: colors.neutral[800], marginBottom: 4 },
+  panelSubtitle: { fontSize: 13, color: colors.neutral[500], lineHeight: 18 },
   formGroup: { marginBottom: 20 },
   formRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  formRowItem: { flex: 1 },
-  formLabel: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 12 },
-  divider: { height: 1, backgroundColor: '#E2E8F0', marginTop: 4, marginBottom: 16 },
+  formRowItem: { flex: 1, minWidth: 0 },
+  formLabel: { fontSize: 14, fontWeight: '600', color: colors.neutral[800], marginBottom: 12 },
+  divider: { height: 1, backgroundColor: colors.neutral[200], marginTop: 4, marginBottom: 16 },
   timeRow: { flexDirection: 'row', gap: 8 },
-  timePart: { flex: 1 },
+  timePart: { flex: 1, minWidth: 0 },
   errorWrap: {
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error.base,
     borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     padding: 4,
   },
   emptyBox: {
-    height: 44,
+    minHeight: 44,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.error.bg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.error.border,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  emptyBoxText: { fontSize: 13, color: '#DC2626', fontWeight: '500' },
+  emptyBoxText: { fontSize: 13, color: colors.error.text, fontWeight: '500' },
   panelFooter: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelButtonText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+  cancelButtonText: { fontSize: 14, fontWeight: '600', color: colors.neutral[500] },
   saveButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveButtonDisabled: { opacity: 0.5 },
-  saveButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  saveButtonText: { fontSize: 14, fontWeight: '600', color: colors.white },
 });

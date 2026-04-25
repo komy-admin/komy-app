@@ -6,6 +6,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 import type {
   ReservationService,
   ReservationOverride,
@@ -35,7 +36,7 @@ function NativeSelect({ value, onChange, options }: { value: string; onChange: (
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <View style={selectStyles.webChevron as any} pointerEvents="none">
-          <ChevronDown size={14} color="#64748B" />
+          <ChevronDown size={14} color={colors.neutral[500]} />
         </View>
       </View>
     );
@@ -56,10 +57,10 @@ const selectStyles = StyleSheet.create<any>({
     width: '100%',
     paddingLeft: 12,
     paddingRight: 32,
-    fontSize: 13,
-    color: '#1E293B',
-    backgroundColor: '#F8FAFC',
-    border: '1px solid #E2E8F0',
+    fontSize: 14,
+    color: colors.neutral[800],
+    backgroundColor: colors.neutral[50],
+    border: `1px solid ${colors.neutral[200]}`,
     borderRadius: 8,
     outline: 'none',
     appearance: 'none',
@@ -73,9 +74,9 @@ const selectStyles = StyleSheet.create<any>({
     justifyContent: 'center',
   },
   nativeWrapper: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -190,7 +191,7 @@ export const OverrideFormPanel: React.FC<OverrideFormPanelProps> = ({
           onPress={onCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -209,12 +210,12 @@ export const OverrideFormPanel: React.FC<OverrideFormPanelProps> = ({
             <Text style={styles.formLabel}>Date</Text>
             <View style={[styles.calendar, formErrors.hasError('date') && styles.calendarError]}>
               <View style={styles.calNav}>
-                <Pressable onPress={() => navigateCalendar(-1)} style={styles.calNavBtn}>
-                  <ChevronLeft size={16} color="#64748B" />
+                <Pressable onPress={() => navigateCalendar(-1)} style={styles.calNavBtn} hitSlop={6}>
+                  <ChevronLeft size={18} color={colors.neutral[600]} />
                 </Pressable>
                 <Text style={styles.calNavText}>{MONTHS[calMonth]} {calYear}</Text>
-                <Pressable onPress={() => navigateCalendar(1)} style={styles.calNavBtn}>
-                  <ChevronRight size={16} color="#64748B" />
+                <Pressable onPress={() => navigateCalendar(1)} style={styles.calNavBtn} hitSlop={6}>
+                  <ChevronRight size={18} color={colors.neutral[600]} />
                 </Pressable>
               </View>
               <View style={styles.calWeekdays}>
@@ -265,8 +266,8 @@ export const OverrideFormPanel: React.FC<OverrideFormPanelProps> = ({
             <Switch
               value={isClosed}
               onValueChange={setIsClosed}
-              trackColor={{ false: '#D1D5DB', true: '#FECACA' }}
-              thumbColor={isClosed ? '#EF4444' : '#9CA3AF'}
+              trackColor={{ false: colors.gray[300], true: colors.success.base }}
+              thumbColor={isClosed ? colors.white : colors.gray[100]}
             />
           </View>
 
@@ -337,7 +338,7 @@ export const OverrideFormPanel: React.FC<OverrideFormPanelProps> = ({
               value={reason}
               onChangeText={setReason}
               placeholder="Ex: Jour férié, Travaux, Événement privé..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
             />
           </View>
         </Pressable>
@@ -362,7 +363,7 @@ export const OverrideFormPanel: React.FC<OverrideFormPanelProps> = ({
 const styles = StyleSheet.create({
   flexContainer: { flex: 1 },
   panelContent: { flex: 1 },
-  scrollView: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollView: { flex: 1, backgroundColor: colors.white },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingVertical: 20 },
   panelHeader: {
     flexDirection: 'row',
@@ -370,28 +371,28 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     gap: 16,
   },
   headerTextContainer: { flex: 1, minWidth: 0 },
   closeButton: { flexShrink: 0 },
-  panelTitle: { fontSize: 18, fontWeight: '600', color: '#1E293B', marginBottom: 4 },
-  panelSubtitle: { fontSize: 13, color: '#64748B', lineHeight: 18 },
+  panelTitle: { fontSize: 18, fontWeight: '600', color: colors.neutral[800], marginBottom: 4 },
+  panelSubtitle: { fontSize: 13, color: colors.neutral[500], lineHeight: 18 },
   formGroup: { marginBottom: 20 },
   formRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  formRowItem: { flex: 1 },
-  formLabel: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 12 },
-  helpText: { fontSize: 12, color: '#94A3B8', marginTop: -8, marginBottom: 0 },
-  divider: { height: 1, backgroundColor: '#E2E8F0', marginTop: 4, marginBottom: 16 },
+  formRowItem: { flex: 1, minWidth: 0 },
+  formLabel: { fontSize: 14, fontWeight: '600', color: colors.neutral[800], marginBottom: 12 },
+  helpText: { fontSize: 12, color: colors.neutral[400], marginTop: -8, marginBottom: 0 },
+  divider: { height: 1, backgroundColor: colors.neutral[200], marginTop: 4, marginBottom: 16 },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
-    fontSize: 13,
-    color: '#1E293B',
+    fontSize: 14,
+    color: colors.neutral[800],
   },
 
   switchGroup: {
@@ -400,80 +401,89 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     gap: 12,
   },
-  switchTextWrap: { flex: 1 },
+  switchTextWrap: { flex: 1, minWidth: 0 },
 
   timeRow: { flexDirection: 'row', gap: 8 },
-  timePart: { flex: 1 },
+  timePart: { flex: 1, minWidth: 0 },
 
   // Calendar
   calendar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 10,
     padding: 14,
   },
-  calendarError: { borderColor: '#EF4444', backgroundColor: '#FEF2F2' },
+  calendarError: { borderColor: colors.error.base, backgroundColor: colors.error.bg },
   calNav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   calNavBtn: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.neutral[100],
+    alignItems: 'center',
+    justifyContent: 'center',
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any, userSelect: 'none' as any }),
   },
-  calNavText: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
+  calNavText: { fontSize: 14, fontWeight: '600', color: colors.neutral[800], textTransform: 'capitalize' },
   calWeekdays: { flexDirection: 'row', marginBottom: 6 },
   calWeekdayText: {
     flex: 1,
     textAlign: 'center',
     fontSize: 11,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontWeight: '700',
+    color: colors.neutral[400],
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calDayEmpty: { width: '14.28%', height: 32 },
+  calDayEmpty: { width: '14.28%', aspectRatio: 1, minHeight: 36 },
   calDay: {
     width: '14.28%',
-    height: 32,
+    aspectRatio: 1,
+    minHeight: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 8,
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
   },
-  calDaySelected: { backgroundColor: '#2A2E33' },
-  calDayHasOverride: { backgroundColor: '#FEF2F2' },
-  calDayText: { fontSize: 13, color: '#1E293B' },
-  calDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
-  selectedDateText: { fontSize: 12, color: '#64748B', marginTop: 8 },
+  calDaySelected: { backgroundColor: colors.brand.dark },
+  calDayHasOverride: { backgroundColor: colors.error.bg },
+  calDayText: { fontSize: 13, color: colors.neutral[800], fontVariant: ['tabular-nums'] },
+  calDayTextSelected: { color: colors.white, fontWeight: '700' },
+  selectedDateText: { fontSize: 12, color: colors.neutral[500], marginTop: 8 },
 
   panelFooter: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelButtonText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+  cancelButtonText: { fontSize: 14, fontWeight: '600', color: colors.neutral[500] },
   saveButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveButtonDisabled: { opacity: 0.5 },
-  saveButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  saveButtonText: { fontSize: 14, fontWeight: '600', color: colors.white },
 });

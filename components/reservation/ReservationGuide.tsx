@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, Platform, ScrollView, useWindowDimensions } from 'react-native';
-import { Lightbulb, Utensils, Clock, CalendarOff, Settings, Share2, AlertTriangle } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import { Utensils, Clock, CalendarOff, Settings, Share2, AlertTriangle } from 'lucide-react-native';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors } from '~/theme';
 
 const GUIDE_STEPS = [
   {
     number: '1',
     Icon: Utensils,
     title: 'Créez vos services',
-    bgColor: '#DBEAFE',
-    textColor: '#3B82F6',
     description: 'Commencez par définir les différents services que vous proposez à vos clients.',
     details: [
       'Rendez-vous dans l\'onglet Configuration puis dans la section "Services".',
@@ -22,8 +22,6 @@ const GUIDE_STEPS = [
     number: '2',
     Icon: Clock,
     title: 'Définissez vos horaires',
-    bgColor: '#FEF3C7',
-    textColor: '#D97706',
     description: 'Indiquez les jours et heures d\'ouverture pour chaque service.',
     details: [
       'Dans Configuration, allez dans la section "Horaires".',
@@ -38,8 +36,6 @@ const GUIDE_STEPS = [
     number: '3',
     Icon: CalendarOff,
     title: 'Ajoutez vos fermetures exceptionnelles',
-    bgColor: '#FEE2E2',
-    textColor: '#EF4444',
     description: 'Bloquez les dates où votre établissement ne prend pas de réservations.',
     details: [
       'Dans Configuration, accédez à la section "Fermetures".',
@@ -54,8 +50,6 @@ const GUIDE_STEPS = [
     number: '4',
     Icon: Settings,
     title: 'Ajustez vos paramètres',
-    bgColor: '#E0E7FF',
-    textColor: '#6366F1',
     description: 'Personnalisez les règles de réservation et les communications.',
     details: [
       'Dans l\'onglet Paramètres, configurez les contraintes : délai minimum de réservation, taille des groupes acceptés.',
@@ -70,8 +64,6 @@ const GUIDE_STEPS = [
     number: '5',
     Icon: Share2,
     title: 'Partagez votre page de réservation',
-    bgColor: '#D1FAE5',
-    textColor: '#10B981',
     description: 'Rendez votre système de réservation accessible à vos clients.',
     details: [
       'Votre page publique de réservation est accessible via le lien "Page publique" en haut de la barre latérale.',
@@ -86,162 +78,189 @@ const GUIDE_STEPS = [
 
 export function ReservationGuide() {
   const { width } = useWindowDimensions();
-  const isCompact = width < 1100;
+  const isWide = width >= 1100;
+  const isMobile = width < 640;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIconWrap}>
-          <Lightbulb size={22} color="#F59E0B" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Guide de configuration</Text>
-          <Text style={styles.headerSubtitle}>
-            Suivez ces étapes pour configurer votre système de réservation et être opérationnel en quelques minutes.
-          </Text>
-        </View>
-      </View>
-
-      {/* Steps grid */}
-      <View style={[styles.stepsGrid, isCompact && styles.stepsGridCompact]}>
-        {GUIDE_STEPS.map((step, index) => (
-          <View key={index} style={[styles.stepCard, (isCompact || (GUIDE_STEPS.length % 2 !== 0 && index === GUIDE_STEPS.length - 1)) && styles.stepCardFull]}>
-            {/* Step header */}
-            <View style={styles.stepHeader}>
-              <View style={[styles.stepNumber, { backgroundColor: step.bgColor }]}>
-                <Text style={[styles.stepNumberText, { color: step.textColor }]}>{step.number}</Text>
-              </View>
-              <View style={styles.stepHeaderContent}>
-                <Text style={styles.stepTitle}>{step.title}</Text>
-                <Text style={styles.stepDescription}>{step.description}</Text>
-              </View>
-            </View>
-
-            {/* Step details */}
-            <View style={styles.stepDetails}>
-              {step.details.map((detail, i) => (
-                <View key={i} style={styles.detailRow}>
-                  <View style={[styles.detailBullet, { backgroundColor: step.textColor }]} />
-                  <Text style={styles.detailText}>{detail}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Tip */}
-            <View style={styles.tipContainer}>
-              <AlertTriangle size={14} color="#D97706" />
-              <Text style={styles.tipText}>{step.tip}</Text>
-            </View>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Page header (iso autres écrans config) */}
+        <View style={styles.tabHeader}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.tabTitle}>Guide</Text>
+            <Text style={styles.tabSubtitle}>
+              Suivez ces étapes pour configurer votre système de réservation
+            </Text>
           </View>
-        ))}
-      </View>
-    </ScrollView>
+        </View>
+
+        {/* Steps */}
+        <View style={isWide ? styles.stepsGrid : styles.stepsList}>
+          {GUIDE_STEPS.map((step, index) => {
+            const { Icon } = step;
+            const isLastOrphan = isWide && GUIDE_STEPS.length % 2 !== 0 && index === GUIDE_STEPS.length - 1;
+            return (
+              <View key={index} style={[styles.stepCard, isWide && styles.stepCardHalf, isLastOrphan && styles.stepCardFull]}>
+                <View style={styles.stepHeader}>
+                  <View style={styles.stepIconWrap}>
+                    <Icon size={22} color={colors.brand.dark} strokeWidth={2} />
+                  </View>
+                  <View style={styles.stepHeaderContent}>
+                    <View style={styles.stepTitleRow}>
+                      <View style={styles.stepNumber}>
+                        <Text style={styles.stepNumberText}>{step.number}</Text>
+                      </View>
+                      <Text style={styles.stepTitle} numberOfLines={2}>{step.title}</Text>
+                    </View>
+                    <Text style={styles.stepDescription}>{step.description}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.stepBody}>
+                  <View style={styles.stepDetails}>
+                    {step.details.map((detail, i) => (
+                      <View key={i} style={styles.detailRow}>
+                        <View style={styles.detailBullet} />
+                        <Text style={styles.detailText}>{detail}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={styles.tipContainer}>
+                    <AlertTriangle size={14} color={colors.warning.text} />
+                    <Text style={styles.tipText}>{step.tip}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  contentContainer: { padding: 24, paddingBottom: 40 },
+  container: { flex: 1, backgroundColor: colors.neutral[50] },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 24, paddingBottom: 24, gap: 16 },
+  scrollContentMobile: { padding: 16, gap: 12 },
 
-  // Header
-  header: {
+  // Page header (iso configuration.tsx, security.tsx, notifications.tsx)
+  tabHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 28,
-    backgroundColor: '#FFFBEB',
-    borderRadius: 14,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
+    gap: 16,
   },
-  headerIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#FEF3C7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#92400E',
+  tabTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
-  headerSubtitle: {
+  tabSubtitle: {
     fontSize: 14,
-    color: '#B45309',
-    lineHeight: 20,
+    color: colors.neutral[500],
   },
 
-  // Steps grid
+  // Steps layout
   stepsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 20,
+    gap: 16,
   },
-  stepsGridCompact: {
-    flexDirection: 'column',
+  stepsList: {
+    gap: 16,
   },
+
+  // viewCard pattern (iso le reste de la config)
   stepCard: {
-    width: '48.5%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 24,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    ...(Platform.OS === 'web' && {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 6,
-    }),
+    borderColor: colors.neutral[200],
+  },
+  stepCardHalf: {
+    width: '48.5%',
+    minWidth: 0,
   },
   stepCardFull: {
     width: '100%',
   },
+
+  // Header (icon + number + title + description)
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 14,
-    marginBottom: 16,
   },
-  stepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  stepIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 2,
-  },
-  stepNumberText: {
-    fontSize: 15,
-    fontWeight: '700',
+    flexShrink: 0,
   },
   stepHeaderContent: {
     flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  stepTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  stepNumberText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.neutral[600],
   },
   stepTitle: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 16,
     fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
+    color: colors.neutral[800],
   },
   stepDescription: {
-    fontSize: 14,
-    color: '#64748B',
-    lineHeight: 20,
+    fontSize: 13,
+    color: colors.neutral[500],
+    lineHeight: 18,
+  },
+
+  // Body section under header (iso viewModeSection)
+  stepBody: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral[200],
+    gap: 12,
   },
 
   // Details
   stepDetails: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderRadius: 10,
-    padding: 16,
+    padding: 14,
     gap: 10,
-    marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
@@ -249,15 +268,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   detailBullet: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: 3,
-    marginTop: 6,
+    marginTop: 7,
+    backgroundColor: colors.brand.dark,
   },
   detailText: {
     flex: 1,
     fontSize: 13,
-    color: '#475569',
+    color: colors.neutral[600],
     lineHeight: 19,
   },
 
@@ -266,16 +286,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warning.bg,
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.warning.border,
   },
   tipText: {
     flex: 1,
     fontSize: 12,
-    color: '#92400E',
+    color: colors.warning.text,
     lineHeight: 18,
     fontWeight: '500',
   },

@@ -5,6 +5,7 @@ import { KeyboardAwareScrollViewWrapper } from '~/components/Keyboard';
 import { useToast } from '~/components/ToastProvider';
 import { useFormErrors } from '~/hooks/useFormErrors';
 import { FormFieldError } from '~/components/ui/FormFieldError';
+import { colors } from '~/theme';
 import type {
   ReservationService,
   CreateReservationServiceDto,
@@ -77,7 +78,7 @@ export const ServiceFormPanel: React.FC<ServiceFormPanelProps> = ({ service, onS
           onPress={onCancel}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <X size={24} color="#64748B" strokeWidth={2} />
+          <X size={24} color={colors.neutral[500]} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -99,7 +100,7 @@ export const ServiceFormPanel: React.FC<ServiceFormPanelProps> = ({ service, onS
               value={name}
               onChangeText={(t) => { setName(t); formErrors.clearError('name'); }}
               placeholder="Ex: Déjeuner, Dîner, Brunch..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.neutral[400]}
             />
             <FormFieldError message={formErrors.getError('name')} />
           </View>
@@ -114,7 +115,7 @@ export const ServiceFormPanel: React.FC<ServiceFormPanelProps> = ({ service, onS
                 onChangeText={(t) => { setMaxCapacity(t.replace(/[^0-9]/g, '')); formErrors.clearError('maxCapacity'); }}
                 keyboardType="number-pad"
                 placeholder="50"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.neutral[400]}
               />
               <FormFieldError message={formErrors.getError('maxCapacity')} />
             </View>
@@ -126,7 +127,7 @@ export const ServiceFormPanel: React.FC<ServiceFormPanelProps> = ({ service, onS
                 onChangeText={(t) => { setSlotInterval(t.replace(/[^0-9]/g, '')); formErrors.clearError('slotIntervalMinutes'); }}
                 keyboardType="number-pad"
                 placeholder="30"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.neutral[400]}
               />
               <FormFieldError message={formErrors.getError('slotIntervalMinutes')} />
             </View>
@@ -138,7 +139,7 @@ export const ServiceFormPanel: React.FC<ServiceFormPanelProps> = ({ service, onS
                 onChangeText={(t) => { setServiceDuration(t.replace(/[^0-9]/g, '')); formErrors.clearError('serviceDurationMinutes'); }}
                 keyboardType="number-pad"
                 placeholder="90"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.neutral[400]}
               />
               <FormFieldError message={formErrors.getError('serviceDurationMinutes')} />
             </View>
@@ -180,8 +181,8 @@ export const ServiceFormPanel: React.FC<ServiceFormPanelProps> = ({ service, onS
               <Switch
                 value={isActive}
                 onValueChange={setIsActive}
-                trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
-                thumbColor={isActive ? '#10B981' : '#9CA3AF'}
+                trackColor={{ false: colors.gray[300], true: colors.success.base }}
+                thumbColor={isActive ? colors.white : colors.gray[100]}
               />
             </TouchableOpacity>
           </View>
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
   panelContent: { flex: 1 },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     gap: 16,
   },
   headerTextContainer: { flex: 1, minWidth: 0 },
@@ -231,40 +232,40 @@ const styles = StyleSheet.create({
   panelTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   panelSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
   formGroup: { marginBottom: 20 },
   formRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  formRowItem: { flex: 1 },
+  formRowItem: { flex: 1, minWidth: 0 },
   formLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 12,
   },
   formInput: {
     height: 44,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
-    fontSize: 13,
-    color: '#1E293B',
+    fontSize: 14,
+    color: colors.neutral[800],
   },
   formInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.error.base,
+    backgroundColor: colors.error.bg,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.neutral[200],
     marginTop: 4,
     marginBottom: 16,
   },
@@ -274,49 +275,49 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   colorSwatch: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 2,
     borderColor: 'transparent',
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
   },
   colorSwatchSelected: {
-    borderColor: '#1E293B',
+    borderColor: colors.neutral[800],
     borderWidth: 3,
   },
   toggleOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   toggleOptionActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#34D399',
+    backgroundColor: colors.success.bg,
+    borderColor: colors.success.border,
   },
   toggleIndicator: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.gray[400],
     marginRight: 12,
   },
   toggleIndicatorActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success.base,
   },
   toggleText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.gray[500],
   },
   toggleTextActive: {
-    color: '#047857',
+    color: colors.success.text,
   },
   toggleSpacer: { flex: 1 },
   panelFooter: {
@@ -324,25 +325,28 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
   },
   cancelButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   saveButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#2A2E33',
+    backgroundColor: colors.brand.dark,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -350,6 +354,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });

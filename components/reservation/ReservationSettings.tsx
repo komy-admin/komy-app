@@ -4,6 +4,8 @@ import { Store, Settings, Bell, Mail, Info, Link2, Shield, ChevronDown, Copy, Ex
 import { Picker } from '@react-native-picker/picker';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from '~/components/ToastProvider';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors, shadows } from '~/theme';
 import type { ReservationProfessionalProfile, UpdateReservationSettingsDto, StripeConnectStatus } from '~/types/reservation.types';
 
 interface ReservationSettingsPageProps {
@@ -221,7 +223,7 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2A2E33" />
+        <ActivityIndicator size="large" color={colors.brand.dark} />
       </View>
     );
   }
@@ -284,7 +286,7 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
         </View>
         {hasChanges && (
           <Pressable
-            style={[styles.createButton, { backgroundColor: '#2A2E33' }, isSaving && styles.createButtonDisabled]}
+            style={[styles.createButton, isSaving && styles.createButtonDisabled]}
             onPress={handleSave}
             disabled={isSaving}
           >
@@ -305,8 +307,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
           {/* Établissement */}
           <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                <Store size={24} color="#3B82F6" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Store size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <View style={styles.titleRow}>
@@ -366,8 +368,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
           {/* Contraintes */}
           <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(100, 116, 139, 0.1)' }]}>
-                <Settings size={24} color="#64748B" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Settings size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <View style={styles.titleRow}>
@@ -425,8 +427,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
           {/* Notifications & Rappels */}
           <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                <Bell size={24} color="#F59E0B" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Bell size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <View style={styles.titleRow}>
@@ -479,8 +481,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
           {/* Emails */}
           <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
             <View style={styles.viewCardHeader}>
-              <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
-                <Mail size={24} color="#A855F7" strokeWidth={2} />
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <Mail size={24} color={colors.brand.dark} strokeWidth={2} />
               </View>
               <View style={styles.viewCardContent}>
                 <View style={styles.titleRow}>
@@ -500,7 +502,7 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
                 value={form.customEmailMessage}
                 onChangeText={(v) => updateField('customEmailMessage', v.slice(0, 2000))}
                 placeholder="Ex : Merci d'avoir réservé chez nous ! N'hésitez pas à nous contacter pour toute demande spéciale."
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.gray[400]}
                 multiline
                 numberOfLines={6}
                 maxLength={2000}
@@ -515,8 +517,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
         {/* Stripe */}
         <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
           <View style={styles.viewCardHeader}>
-            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-              <Link2 size={24} color="#6366F1" strokeWidth={2} />
+            <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+              <Link2 size={24} color={colors.brand.dark} strokeWidth={2} />
             </View>
             <View style={styles.viewCardContent}>
               <View style={styles.titleRow}>
@@ -529,27 +531,27 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
 
           <View style={styles.viewModeSection}>
             {isStripeActionLoading ? (
-              <ActivityIndicator size="small" color="#6366F1" style={{ alignSelf: 'flex-start' }} />
+              <ActivityIndicator size="small" color={colors.brand.dark} style={{ alignSelf: 'flex-start' }} />
             ) : (
               <>
                 <View style={styles.stripeStatusRow}>
                   <View style={[
                     styles.stripeStatusBadge,
-                    isFullyConnected && { backgroundColor: '#F0FDF4' },
-                    isOnboarding && { backgroundColor: '#FFFBEB' },
-                    isNotConnected && { backgroundColor: '#F1F5F9' },
+                    isFullyConnected && { backgroundColor: colors.success.bg },
+                    isOnboarding && { backgroundColor: colors.warning.bg },
+                    isNotConnected && { backgroundColor: colors.neutral[100] },
                   ]}>
                     <View style={[
                       styles.stripeStatusDot,
-                      isFullyConnected && { backgroundColor: '#10B981' },
-                      isOnboarding && { backgroundColor: '#F59E0B' },
-                      isNotConnected && { backgroundColor: '#94A3B8' },
+                      isFullyConnected && { backgroundColor: colors.success.base },
+                      isOnboarding && { backgroundColor: colors.warning.base },
+                      isNotConnected && { backgroundColor: colors.neutral[400] },
                     ]} />
                     <Text style={[
                       styles.stripeStatusText,
-                      isFullyConnected && { color: '#10B981' },
-                      isOnboarding && { color: '#D97706' },
-                      isNotConnected && { color: '#64748B' },
+                      isFullyConnected && { color: colors.success.base },
+                      isOnboarding && { color: colors.warning.text },
+                      isNotConnected && { color: colors.neutral[500] },
                     ]}>
                       {isFullyConnected ? 'Connecté' : isOnboarding ? 'Onboarding en cours' : 'Non connecté'}
                     </Text>
@@ -593,8 +595,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
         {/* Garantie no-show */}
         <View style={[styles.viewCard, isWide && styles.cardsRowItem]}>
           <View style={styles.viewCardHeader}>
-            <View style={[styles.viewIconWrapper, { backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
-              <Shield size={24} color="#F97316" strokeWidth={2} />
+            <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+              <Shield size={24} color={colors.brand.dark} strokeWidth={2} />
             </View>
             <View style={styles.viewCardContent}>
               <View style={styles.titleRow}>
@@ -606,8 +608,8 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
             <Switch
               value={form.requireCardGuarantee}
               onValueChange={(v) => updateField('requireCardGuarantee', v)}
-              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-              thumbColor={form.requireCardGuarantee ? '#FFFFFF' : '#F3F4F6'}
+              trackColor={{ false: colors.gray[300], true: colors.success.base }}
+              thumbColor={form.requireCardGuarantee ? colors.white : colors.gray[100]}
             />
           </View>
 
@@ -634,7 +636,7 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
                       value={form.noShowFeeAmountEur}
                       onChangeText={(v) => updateField('noShowFeeAmountEur', v.replace(',', '.'))}
                       placeholder="00.00"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={colors.gray[400]}
                       keyboardType="decimal-pad"
                     />
                     <Text style={styles.inputSuffix}>€</Text>
@@ -708,43 +710,38 @@ interface BookingLinkPanelProps {
 }
 
 function BookingLinkPanel({ url, enabled, isToggling, onToggle, onCopy, onOpen }: BookingLinkPanelProps) {
-  const accent = enabled ? '#10B981' : '#F59E0B';
-  const accentSoft = enabled ? '#F0FDF4' : '#FFFBEB';
-  const accentBorder = enabled ? '#BBF7D0' : '#FDE68A';
-
   return (
-    <View style={[bookingLinkStyles.root, { borderColor: accentBorder, backgroundColor: accentSoft }]}>
+    <View style={bookingLinkStyles.root}>
       <View style={bookingLinkStyles.header}>
-        <View style={[bookingLinkStyles.iconWrap, { backgroundColor: '#FFFFFF', borderColor: accentBorder }]}>
-          {enabled ? <Globe size={18} color={accent} /> : <PauseCircle size={18} color={accent} />}
+        <View style={bookingLinkStyles.iconWrap}>
+          {enabled ? <Globe size={18} color={colors.brand.dark} /> : <PauseCircle size={18} color={colors.neutral[500]} />}
         </View>
         <View style={bookingLinkStyles.headerText}>
-          <View style={bookingLinkStyles.statusRow}>
-            <Text style={bookingLinkStyles.title}>Page de réservation publique</Text>
-            <View style={[bookingLinkStyles.pill, { backgroundColor: '#FFFFFF', borderColor: accentBorder }]}>
-              <View style={[bookingLinkStyles.pillDot, { backgroundColor: accent }]} />
-              <Text style={[bookingLinkStyles.pillText, { color: accent }]}>
-                {enabled ? 'Active' : 'Suspendue'}
-              </Text>
-            </View>
+          <Text style={bookingLinkStyles.title}>Page de réservation publique</Text>
+          <View style={enabled ? bookingLinkStyles.activeBadge : bookingLinkStyles.inactiveBadge}>
+            <View style={enabled ? bookingLinkStyles.activeDot : bookingLinkStyles.inactiveDot} />
+            <Text style={enabled ? bookingLinkStyles.activeBadgeText : bookingLinkStyles.inactiveBadgeText}>
+              {enabled ? 'Active' : 'Suspendue'}
+            </Text>
           </View>
-          <Text style={bookingLinkStyles.description}>
-            {enabled
-              ? 'Vos clients peuvent réserver en ligne via ce lien.'
-              : 'Le lien renvoie une page d\'indisponibilité — les réservations existantes restent gérables.'}
-          </Text>
         </View>
         {isToggling ? (
-          <ActivityIndicator size="small" color={accent} />
+          <ActivityIndicator size="small" color={colors.brand.dark} />
         ) : (
           <Switch
             value={enabled}
             onValueChange={onToggle}
-            trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-            thumbColor={enabled ? '#FFFFFF' : '#F3F4F6'}
+            trackColor={{ false: colors.gray[300], true: colors.success.base }}
+            thumbColor={enabled ? colors.white : colors.gray[100]}
           />
         )}
       </View>
+
+      <Text style={bookingLinkStyles.description}>
+        {enabled
+          ? 'Vos clients peuvent réserver en ligne via ce lien.'
+          : 'Le lien renvoie une page d\'indisponibilité — les réservations existantes restent gérables.'}
+      </Text>
 
       <View style={[bookingLinkStyles.urlRow, !enabled && bookingLinkStyles.urlRowDisabled]}>
         <Text
@@ -760,9 +757,10 @@ function BookingLinkPanel({ url, enabled, isToggling, onToggle, onCopy, onOpen }
             (hovered || pressed) && bookingLinkStyles.iconBtnHover,
           ]}
           onPress={onCopy}
+          hitSlop={4}
           accessibilityLabel="Copier le lien"
         >
-          <Copy size={15} color="#475569" />
+          <Copy size={16} color={colors.neutral[600]} />
         </Pressable>
         <Pressable
           style={({ hovered, pressed }: any) => [
@@ -770,9 +768,10 @@ function BookingLinkPanel({ url, enabled, isToggling, onToggle, onCopy, onOpen }
             (hovered || pressed) && bookingLinkStyles.iconBtnHover,
           ]}
           onPress={onOpen}
+          hitSlop={4}
           accessibilityLabel="Ouvrir le lien"
         >
-          <ExternalLink size={15} color="#475569" />
+          <ExternalLink size={16} color={colors.neutral[600]} />
         </Pressable>
       </View>
     </View>
@@ -781,9 +780,11 @@ function BookingLinkPanel({ url, enabled, isToggling, onToggle, onCopy, onOpen }
 
 const bookingLinkStyles = StyleSheet.create({
   root: {
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
+    borderColor: colors.neutral[200],
     borderRadius: 12,
-    padding: 14,
+    padding: 16,
     gap: 12,
   },
   header: {
@@ -792,80 +793,111 @@ const bookingLinkStyles = StyleSheet.create({
     gap: 12,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 10,
-    borderWidth: 1,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerText: { flex: 1, minWidth: 0, gap: 4 },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
-  pill: {
+  activeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
+    gap: 6,
+    alignSelf: 'flex-start',
     borderWidth: 1,
+    borderColor: colors.success.base,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
-  pillDot: { width: 6, height: 6, borderRadius: 3 },
-  pillText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.success.base,
+  },
+  activeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.success.base,
+    letterSpacing: 0.2,
+  },
+  inactiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  inactiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.neutral[400],
+  },
+  inactiveBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.neutral[500],
+    letterSpacing: 0.2,
+  },
   description: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 17,
+    fontSize: 13,
+    color: colors.neutral[500],
+    lineHeight: 18,
   },
   urlRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FFFFFF',
+    gap: 8,
+    backgroundColor: colors.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    minHeight: 44,
   },
   urlRowDisabled: {
-    backgroundColor: '#FAFAF9',
+    backgroundColor: colors.neutral[50],
   },
   urlText: {
     flex: 1,
     minWidth: 0,
     fontSize: 13,
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
   },
   urlTextDisabled: {
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textDecorationLine: 'line-through',
   },
   iconBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: colors.neutral[100],
     ...(Platform.OS === 'web' && { cursor: 'pointer' }),
   },
   iconBtnHover: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
+    backgroundColor: colors.neutral[200],
   },
 });
 
@@ -876,8 +908,8 @@ function StyledSelect({ value, onChange, options, disabled }: { value: string; o
     if (disabled) {
       const label = options.find(o => o.value === value)?.label ?? value;
       return (
-        <View style={{ height: 42, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#F8FAFC', paddingHorizontal: 12, justifyContent: 'center' }}>
-          <Text style={{ fontSize: 14, color: '#64748B' }}>{label}</Text>
+        <View style={{ height: 42, borderWidth: 1, borderColor: colors.neutral[200], borderRadius: 8, backgroundColor: colors.neutral[50], paddingHorizontal: 12, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 14, color: colors.neutral[500] }}>{label}</Text>
         </View>
       );
     }
@@ -886,18 +918,18 @@ function StyledSelect({ value, onChange, options, disabled }: { value: string; o
         <select
           value={value}
           onChange={(e) => onChange((e.target as HTMLSelectElement).value)}
-          style={{ height: 42, width: '100%', paddingLeft: 12, paddingRight: 32, fontSize: 14, color: '#1E293B', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, outline: 'none', appearance: 'none', cursor: 'pointer' } as any}
+          style={{ height: 42, width: '100%', paddingLeft: 12, paddingRight: 32, fontSize: 14, color: colors.neutral[800], backgroundColor: colors.white, border: `1px solid ${colors.neutral[200]}`, borderRadius: 8, outline: 'none', appearance: 'none', cursor: 'pointer' } as any}
         >
           {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <View style={{ position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center', pointerEvents: 'none' } as any}>
-          <ChevronDown size={14} color="#64748B" />
+          <ChevronDown size={14} color={colors.neutral[500]} />
         </View>
       </View>
     );
   }
   return (
-    <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, backgroundColor: '#FFFFFF', overflow: 'hidden' }}>
+    <View style={{ borderWidth: 1, borderColor: colors.neutral[200], borderRadius: 8, backgroundColor: colors.white, overflow: 'hidden' }}>
       <Picker selectedValue={value} onValueChange={onChange} enabled={!disabled} style={{ height: 42 }}>
         {options.map(o => <Picker.Item key={o.value} label={o.label} value={o.value} />)}
       </Picker>
@@ -921,7 +953,7 @@ function LabeledInput({ label, value, onChange, placeholder, keyboardType, autoC
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={colors.gray[400]}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
       />
@@ -945,7 +977,7 @@ function ConstraintItem({ label, value, onChange, unit, isNarrow }: {
           value={value}
           onChangeText={onChange}
           keyboardType="number-pad"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.gray[400]}
         />
         <Text style={styles.constraintUnit}>{unit}</Text>
       </View>
@@ -968,17 +1000,17 @@ function SettingSwitch({ label, description, value, onChange }: {
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-        thumbColor={value ? '#FFFFFF' : '#F3F4F6'}
+        trackColor={{ false: colors.gray[300], true: colors.success.base }}
+        thumbColor={value ? colors.white : colors.gray[100]}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.white },
 
-  // ── Page wrapper (iso notifications.tsx) ──────────────────────────────
+  // Page wrapper
   tabContent: {
     flex: 1,
     padding: 24,
@@ -993,29 +1025,33 @@ const styles = StyleSheet.create({
   tabTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   tabSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    backgroundColor: colors.brand.dark,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
+    minHeight: 44,
     ...(Platform.OS === 'web' && { cursor: 'pointer' }),
   },
   createButtonDisabled: {
     opacity: 0.5,
   },
   createButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 
   scroll: { flex: 1 },
@@ -1024,7 +1060,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // ── Grid wrapper (cards côte-à-côte) ──────────────────────────────────
+  // Grid wrapper
   cardsRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -1035,13 +1071,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
 
-  // ── viewCard (iso) ────────────────────────────────────────────────────
+  // viewCard
   viewCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
   },
   viewCardHeader: {
     flexDirection: 'row',
@@ -1062,12 +1098,12 @@ const styles = StyleSheet.create({
   viewCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginBottom: 4,
   },
   viewCardDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   titleRow: {
     flexDirection: 'row',
@@ -1077,40 +1113,40 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
 
-  // ── Body section under header ─────────────────────────────────────────
+  // Body section under header
   viewModeSection: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colors.neutral[200],
     gap: 16,
   },
 
-  // ── Help text / labels ────────────────────────────────────────────────
+  // Help text / labels
   helpText: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     lineHeight: 18,
   },
   groupLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: colors.neutral[600],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: colors.neutral[600],
     marginBottom: 6,
   },
 
-  // ── Inline row ────────────────────────────────────────────────────────
+  // Inline row
   inlineRow: {
     flexDirection: 'row',
     gap: 12,
@@ -1122,48 +1158,47 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  // ── Labeled input ─────────────────────────────────────────────────────
+  // Labeled input
   labeledInputContainer: {
     flex: 1,
     minWidth: 0,
   },
   textInputBlock: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1E293B',
+    color: colors.neutral[800],
   },
 
-
-  // ── Amount input wrapper ──────────────────────────────────────────────
+  // Amount input wrapper
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   textInput: {
     flex: 1,
     fontSize: 14,
-    color: '#1F2937',
+    color: colors.neutral[800],
     padding: 0,
   },
   inputSuffix: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.neutral[500],
     fontWeight: '500',
     marginLeft: 8,
   },
 
-  // ── Constraints grid (cards) ──────────────────────────────────────────
+  // Constraints grid
   constraintsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1172,11 +1207,11 @@ const styles = StyleSheet.create({
   constraintItem: {
     flexBasis: '47%',
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
     borderRadius: 10,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: colors.neutral[100],
     minWidth: 180,
   },
   constraintItemFull: {
@@ -1186,7 +1221,7 @@ const styles = StyleSheet.create({
   constraintLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.neutral[500],
     marginBottom: 8,
   },
   constraintInputRow: {
@@ -1195,26 +1230,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   constraintInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 15,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     width: 64,
     textAlign: 'center',
   },
   constraintUnit: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     fontWeight: '500',
     flex: 1,
   },
 
-  // ── Switch ────────────────────────────────────────────────────────────
+  // Switch
   switchField: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1223,25 +1258,25 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   switchInfo: { flex: 1, minWidth: 0 },
-  switchLabel: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 2 },
-  switchDescription: { fontSize: 12, color: '#94A3B8' },
+  switchLabel: { fontSize: 14, fontWeight: '600', color: colors.neutral[800], marginBottom: 2 },
+  switchDescription: { fontSize: 12, color: colors.neutral[400] },
 
-  // ── Textarea ──────────────────────────────────────────────────────────
+  // Textarea
   textAreaInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#1E293B',
+    color: colors.neutral[800],
     minHeight: 130,
     textAlignVertical: 'top',
   },
-  charCount: { fontSize: 11, color: '#94A3B8', textAlign: 'right' },
+  charCount: { fontSize: 11, color: colors.neutral[400], textAlign: 'right' },
 
-  // ── Stripe ────────────────────────────────────────────────────────────
+  // Stripe
   stripeStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1265,11 +1300,11 @@ const styles = StyleSheet.create({
   },
   stripeAccountId: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
   },
   stripeConnectButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: colors.brand.dark,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -1279,19 +1314,19 @@ const styles = StyleSheet.create({
   stripeConnectText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   stripeWarning: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.warning.bg,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.warning.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   stripeWarningText: {
     fontSize: 13,
-    color: '#D97706',
+    color: colors.warning.text,
   },
 });
 
@@ -1304,7 +1339,7 @@ function SettingsTooltip({ tooltipKey, visible, onToggle }: { tooltipKey: string
   return (
     <View style={{ position: 'relative', zIndex: 9999 }}>
       <Pressable onPress={() => onToggle(isVisible ? null : tooltipKey)} style={tooltipStyles.tooltipBtn}>
-        <Info size={15} color={isVisible ? '#3B82F6' : '#94A3B8'} />
+        <Info size={15} color={isVisible ? colors.brand.dark : colors.neutral[400]} />
       </Pressable>
       {isVisible && (
         <>
@@ -1342,7 +1377,7 @@ const tooltipStyles = StyleSheet.create({
     position: 'absolute',
     top: 28,
     left: -8,
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.neutral[800],
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -1350,15 +1385,12 @@ const tooltipStyles = StyleSheet.create({
     gap: 6,
     zIndex: 9999,
     elevation: 20,
-    ...(Platform.OS === 'web' && {
-      boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-      overflow: 'visible',
-    } as any),
+    ...shadows.all,
   },
   tooltipTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     marginBottom: 4,
   },
   tooltipItem: {
@@ -1368,13 +1400,13 @@ const tooltipStyles = StyleSheet.create({
   },
   tooltipBullet: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.neutral[400],
     lineHeight: 18,
     marginTop: 1,
   },
   tooltipText: {
     fontSize: 12,
-    color: '#CBD5E1',
+    color: colors.neutral[300],
     lineHeight: 18,
     flex: 1,
   },

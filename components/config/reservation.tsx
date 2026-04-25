@@ -5,13 +5,14 @@ import { useReservation } from '~/hooks/useReservation';
 import { ReservationConfiguration } from '~/components/reservation/ReservationConfiguration';
 import { ReservationSettingsPage } from '~/components/reservation/ReservationSettings';
 import { ReservationGuide } from '~/components/reservation/ReservationGuide';
+import { colors } from '~/theme';
 
 type ReservationConfigTab = 'configuration' | 'settings' | 'guide';
 
-const SUB_NAV_ITEMS: Array<{ id: ReservationConfigTab; Icon: typeof Sliders; label: string; color: string }> = [
-  { id: 'configuration', Icon: Settings, label: 'Configuration', color: '#10B981' },
-  { id: 'settings', Icon: Sliders, label: 'Paramètres', color: '#A855F7' },
-  { id: 'guide', Icon: BookOpen, label: 'Guide', color: '#F59E0B' },
+const SUB_NAV_ITEMS: Array<{ id: ReservationConfigTab; Icon: typeof Sliders; label: string }> = [
+  { id: 'configuration', Icon: Settings, label: 'Configuration' },
+  { id: 'settings', Icon: Sliders, label: 'Paramètres' },
+  { id: 'guide', Icon: BookOpen, label: 'Guide' },
 ];
 
 interface Props {
@@ -25,7 +26,7 @@ export default function ReservationConfigPage({ isCompactSidebar }: Props) {
   if (reservation.isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2A2E33" />
+        <ActivityIndicator size="large" color={colors.brand.dark} />
       </View>
     );
   }
@@ -35,7 +36,7 @@ export default function ReservationConfigPage({ isCompactSidebar }: Props) {
       <View style={styles.content}>
         {/* Sub-nav vertical (left) */}
         <View style={[styles.sidebar, isCompactSidebar !== false && styles.sidebarCompact]}>
-          {SUB_NAV_ITEMS.map(({ id, Icon, label, color }) => {
+          {SUB_NAV_ITEMS.map(({ id, Icon, label }) => {
             const isActive = activeTab === id;
             return (
               <TouchableOpacity
@@ -48,7 +49,7 @@ export default function ReservationConfigPage({ isCompactSidebar }: Props) {
                 onPress={() => setActiveTab(id)}
                 activeOpacity={1}
               >
-                <Icon size={20} color={isActive ? color : '#64748B'} strokeWidth={2} />
+                <Icon size={20} color={isActive ? colors.brand.dark : colors.neutral[500]} strokeWidth={2} />
                 {isCompactSidebar === false && (
                   <Text style={[styles.sidebarTabText, isActive && styles.sidebarTabTextActive]}>
                     {label}
@@ -73,13 +74,13 @@ export default function ReservationConfigPage({ isCompactSidebar }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.neutral[50],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   content: {
     flex: 1,
@@ -87,11 +88,11 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 240,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
+    borderLeftColor: colors.neutral[200],
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: colors.neutral[200],
     padding: 16,
     gap: 8,
   },
@@ -112,15 +113,15 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   sidebarTabActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.neutral[100],
   },
   sidebarTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748B',
+    color: colors.neutral[500],
   },
   sidebarTabTextActive: {
-    color: '#1E293B',
+    color: colors.neutral[800],
     fontWeight: '600',
   },
   mainContent: {

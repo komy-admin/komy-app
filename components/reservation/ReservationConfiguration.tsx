@@ -8,6 +8,8 @@ import { ServiceFormPanel } from '~/components/reservation/forms/ServiceFormPane
 import { ScheduleFormPanel } from '~/components/reservation/forms/ScheduleFormPanel';
 import { OverrideFormPanel } from '~/components/reservation/forms/OverrideFormPanel';
 import { DeleteConfirmPanel } from '~/components/ui/DeleteConfirmPanel';
+import { getColorWithOpacity } from '~/lib/color-utils';
+import { colors, shadows } from '~/theme';
 import type {
   ReservationService,
   ReservationSchedule,
@@ -60,8 +62,8 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
   const { showToast } = useToast();
   const { renderPanel, clearPanel } = usePanelPortal();
   const { width } = useWindowDimensions();
-  const isNarrow = width < 1280;
-  const isCompact = width < 900;
+  const isStacked = width < 1024;
+  const isMobile = width < 640;
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -238,7 +240,7 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2A2E33" />
+        <ActivityIndicator size="large" color={colors.brand.dark} />
       </View>
     );
   }
@@ -247,30 +249,37 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
 
   return (
     <View style={styles.container}>
-      <View style={[styles.body, isCompact && styles.bodyCompact]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, isMobile && styles.scrollContentMobile]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.tabHeader}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.tabTitle}>Configuration</Text>
+            <Text style={styles.tabSubtitle}>Services, horaires et fermetures de votre établissement</Text>
+          </View>
+        </View>
+
         {/* Top row : Services + Fermetures */}
-        <View style={[styles.topRow, isNarrow && styles.topRowStacked]}>
-          {/* Services */}
+        <View style={[styles.topRow, isStacked && styles.topRowStacked]}>
           <SectionCard
+            icon={<Users size={24} color={colors.brand.dark} strokeWidth={2} />}
             title="Services"
-            subtitle="Périodes d'ouverture de votre restaurant"
-            actionLabel="Nouveau service"
+            subtitle="Périodes d'ouverture"
+            actionLabel="Ajouter"
             onAction={() => { setEditingService(null); setPanelType('service'); }}
           >
             {reservation.services.length === 0 ? (
               <EmptyState
-                icon={<Users size={28} color="#94A3B8" strokeWidth={1.5} />}
+                icon={<Users size={36} color={colors.neutral[300]} strokeWidth={1.5} />}
                 title="Aucun service configuré"
                 text="Créez votre premier service pour commencer"
                 actionLabel="Créer un service"
                 onAction={() => { setEditingService(null); setPanelType('service'); }}
               />
             ) : (
-              <ScrollView
-                style={styles.list}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-              >
+              <View style={styles.list}>
                 {reservation.services.map(service => (
                   <ServiceListItem
                     key={service.id}
@@ -280,51 +289,49 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
                     onDelete={() => setServiceToDelete(service)}
                   />
                 ))}
-              </ScrollView>
+              </View>
             )}
           </SectionCard>
 
-          {/* Fermetures */}
           <SectionCard
-            title="Fermetures exceptionnelles"
-            subtitle="Jours fériés, vacances et horaires spéciaux"
-            actionLabel="Nouvelle fermeture"
+            icon={<CalendarOff size={24} color={colors.brand.dark} strokeWidth={2} />}
+            title="Fermetures"
+            subtitle="Jours fériés et horaires spéciaux"
+            actionLabel="Ajouter"
             onAction={() => openOverridePanel()}
             actionDisabled={noServices}
           >
             {noServices ? (
               <EmptyState
-                icon={<CalendarOff size={28} color="#94A3B8" strokeWidth={1.5} />}
+                icon={<CalendarOff size={36} color={colors.neutral[300]} strokeWidth={1.5} />}
                 title="Créez d'abord un service"
                 text="Aucun service à fermer pour le moment"
               />
             ) : (
-              <View style={styles.overridesScroll}>
-                <OverridesCalendar
-                  overrides={reservation.overrides}
-                  getServiceName={getServiceName}
-                  formatFullDate={formatFullDate}
-                  timezone={reservation.profile?.timezone}
-                  onAddForDate={(d) => openOverridePanel(d)}
-                  onDeleteOverride={(o) => setOverrideToDelete(o)}
-                />
-              </View>
+              <OverridesCalendar
+                overrides={reservation.overrides}
+                getServiceName={getServiceName}
+                formatFullDate={formatFullDate}
+                timezone={reservation.profile?.timezone}
+                onAddForDate={(d) => openOverridePanel(d)}
+                onDeleteOverride={(o) => setOverrideToDelete(o)}
+              />
             )}
           </SectionCard>
         </View>
 
-        {/* Horaires d'ouverture — pleine largeur */}
+        {/* Horaires d'ouverture */}
         <SectionCard
+          icon={<Clock size={24} color={colors.brand.dark} strokeWidth={2} />}
           title="Horaires d'ouverture"
           subtitle="Définissez les créneaux de réservation pour chaque jour"
-          actionLabel="Nouveau créneau"
+          actionLabel="Ajouter"
           onAction={() => setPanelType('schedule')}
           actionDisabled={noServices}
-          bodyFixed
         >
           {noServices ? (
             <EmptyState
-              icon={<Clock size={28} color="#94A3B8" strokeWidth={1.5} />}
+              icon={<Clock size={36} color={colors.neutral[300]} strokeWidth={1.5} />}
               title="Créez d'abord un service"
               text="Vous devez avoir au moins un service pour définir des horaires"
             />
@@ -333,11 +340,11 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
               schedulesByDay={schedulesByDay}
               getServiceName={getServiceName}
               onDeleteSchedule={(s) => setScheduleToDelete(s)}
-              isCompact={isCompact}
+              isMobile={isMobile}
             />
           )}
         </SectionCard>
-      </View>
+      </ScrollView>
 
       {/* Delete modals */}
       <DeleteConfirmPanel
@@ -369,26 +376,27 @@ export function ReservationConfiguration({ reservation }: ReservationConfigurati
 }
 
 // ===========================================================================
-// SectionCard — carte blanche avec header (titre + sous-titre + action)
+// SectionCard — viewCard pattern (icon + title + action)
 // ===========================================================================
 
 interface SectionCardProps {
+  icon: React.ReactNode;
   title: string;
   subtitle: string;
   actionLabel?: string;
   onAction?: () => void;
   actionDisabled?: boolean;
-  bodyFixed?: boolean;
   children: React.ReactNode;
 }
 
-function SectionCard({ title, subtitle, actionLabel, onAction, actionDisabled, bodyFixed, children }: SectionCardProps) {
+function SectionCard({ icon, title, subtitle, actionLabel, onAction, actionDisabled, children }: SectionCardProps) {
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderText}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{title}</Text>
-          <Text style={styles.cardSubtitle} numberOfLines={1}>{subtitle}</Text>
+    <View style={styles.viewCard}>
+      <View style={styles.viewCardHeader}>
+        <View style={styles.viewIconWrapper}>{icon}</View>
+        <View style={styles.viewCardContent}>
+          <Text style={styles.viewCardTitle} numberOfLines={1}>{title}</Text>
+          <Text style={styles.viewCardDescription} numberOfLines={2}>{subtitle}</Text>
         </View>
         {actionLabel && onAction && (
           <Pressable
@@ -400,12 +408,12 @@ function SectionCard({ title, subtitle, actionLabel, onAction, actionDisabled, b
               actionDisabled && styles.createButtonDisabled,
             ]}
           >
-            <Plus size={15} color="#FFFFFF" strokeWidth={2.2} />
+            <Plus size={16} color={colors.white} strokeWidth={2.2} />
             <Text style={styles.createButtonText}>{actionLabel}</Text>
           </Pressable>
         )}
       </View>
-      <View style={[styles.cardBody, bodyFixed && styles.cardBodyFixed]}>{children}</View>
+      <View style={styles.viewModeSection}>{children}</View>
     </View>
   );
 }
@@ -424,18 +432,18 @@ function EmptyState({ icon, title, text, actionLabel, onAction }: {
   return (
     <View style={styles.emptyState}>
       {icon}
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyText}>{text}</Text>
+      <Text style={styles.emptyStateTitle}>{title}</Text>
+      <Text style={styles.emptyStateText}>{text}</Text>
       {actionLabel && onAction && (
         <Pressable
           onPress={onAction}
           style={({ hovered, pressed }: any) => [
-            styles.emptyButton,
-            (hovered || pressed) && styles.emptyButtonHover,
+            styles.emptyStateButton,
+            (hovered || pressed) && styles.emptyStateButtonHover,
           ]}
         >
-          <Plus size={16} color="#1E293B" strokeWidth={2} />
-          <Text style={styles.emptyButtonText}>{actionLabel}</Text>
+          <Plus size={16} color={colors.brand.dark} strokeWidth={2} />
+          <Text style={styles.emptyStateButtonText}>{actionLabel}</Text>
         </Pressable>
       )}
     </View>
@@ -464,46 +472,58 @@ function ServiceListItem({ service, onEdit, onToggleActive, onDelete }: ServiceL
   const isActive = service.isActive;
   const meta = `${service.maxCapacity} couverts · Créneaux ${service.slotIntervalMinutes} min · Durée ${formatDuration(service.serviceDurationMinutes)}`;
   return (
-    <View style={[styles.listItem, isActive ? styles.serviceItemActive : styles.serviceItemInactive]}>
-      <View style={[styles.serviceAccentBar, !isActive && { backgroundColor: '#CBD5E1' }]} />
-      <View style={[styles.listItemIcon, isActive ? styles.serviceIconActive : styles.serviceIconInactive]}>
-        <Users size={18} color={isActive ? '#3B82F6' : '#94A3B8'} strokeWidth={2} />
-      </View>
-      <View style={styles.listItemContent}>
-        <View style={styles.listItemTitleRow}>
-          <Text style={styles.listItemTitle} numberOfLines={1}>{service.name}</Text>
-          {!isActive && <Text style={styles.inactivePill}>Inactif</Text>}
+    <View style={[styles.tagItem, !isActive && styles.tagItemInactive]}>
+      <View style={styles.tagItemHeader}>
+        <View style={[styles.tagItemIcon, !isActive && styles.tagItemIconInactive]}>
+          <Users size={20} color={isActive ? colors.brand.dark : colors.neutral[400]} strokeWidth={2} />
         </View>
-        <Text style={styles.serviceMeta} numberOfLines={1}>{meta}</Text>
-      </View>
-      <View style={styles.listItemActions}>
-        <Pressable
-          onPress={onToggleActive}
-          style={({ hovered, pressed }: any) => [
-            styles.iconButton,
-            (hovered || pressed) && styles.iconButtonHover,
-          ]}
-        >
-          <Power size={14} color={isActive ? '#10B981' : '#94A3B8'} strokeWidth={2} />
-        </Pressable>
-        <Pressable
-          onPress={onEdit}
-          style={({ hovered, pressed }: any) => [
-            styles.iconButton,
-            (hovered || pressed) && styles.iconButtonHover,
-          ]}
-        >
-          <Pencil size={14} color="#64748B" strokeWidth={2} />
-        </Pressable>
-        <Pressable
-          onPress={onDelete}
-          style={({ hovered, pressed }: any) => [
-            styles.iconButton,
-            (hovered || pressed) && styles.iconButtonDangerHover,
-          ]}
-        >
-          <Trash2 size={14} color="#EF4444" strokeWidth={2} />
-        </Pressable>
+        <View style={styles.tagItemContent}>
+          <View style={styles.tagItemTitleRow}>
+            <Text style={styles.tagItemTitle} numberOfLines={1}>{service.name}</Text>
+            {!isActive && (
+              <View style={styles.inactiveBadge}>
+                <Text style={styles.inactiveBadgeText}>Inactif</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.tagItemMeta} numberOfLines={2}>{meta}</Text>
+        </View>
+        <View style={styles.tagItemActions}>
+          <Pressable
+            onPress={onToggleActive}
+            style={({ hovered, pressed }: any) => [
+              styles.iconActionButton,
+              (hovered || pressed) && styles.iconActionButtonHover,
+            ]}
+            hitSlop={4}
+            accessibilityLabel={isActive ? 'Désactiver' : 'Activer'}
+          >
+            <Power size={16} color={isActive ? colors.success.base : colors.neutral[400]} strokeWidth={2} />
+          </Pressable>
+          <Pressable
+            onPress={onEdit}
+            style={({ hovered, pressed }: any) => [
+              styles.iconActionButton,
+              (hovered || pressed) && styles.iconActionButtonHover,
+            ]}
+            hitSlop={4}
+            accessibilityLabel="Modifier"
+          >
+            <Pencil size={16} color={colors.neutral[500]} strokeWidth={2} />
+          </Pressable>
+          <Pressable
+            onPress={onDelete}
+            style={({ hovered, pressed }: any) => [
+              styles.iconActionButton,
+              styles.iconActionButtonDanger,
+              (hovered || pressed) && styles.iconActionButtonDangerHover,
+            ]}
+            hitSlop={4}
+            accessibilityLabel="Supprimer"
+          >
+            <Trash2 size={16} color={colors.error.base} strokeWidth={2} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -523,8 +543,6 @@ interface OverridesCalendarProps {
 }
 
 function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone, onAddForDate, onDeleteOverride }: OverridesCalendarProps) {
-  // "Aujourd'hui" et mois initial dans la TZ du pro — évite qu'un employé à l'étranger
-  // voie un calendrier désaligné d'un jour ou d'un mois.
   const tz = timezone || 'Europe/Paris';
   const nowTz = nowInTz(tz);
   const [month, setMonth] = useState(nowTz.month - 1);
@@ -568,12 +586,12 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
   return (
     <View style={styles.overridesCalRoot}>
       <View style={styles.overridesCalNav}>
-        <Pressable onPress={() => navigate(-1)} style={styles.overridesCalNavBtn}>
-          <ChevronLeft size={16} color="#64748B" />
+        <Pressable onPress={() => navigate(-1)} style={styles.overridesCalNavBtn} hitSlop={6}>
+          <ChevronLeft size={18} color={colors.neutral[600]} />
         </Pressable>
         <Text style={styles.overridesCalNavText}>{MONTHS[month]} {year}</Text>
-        <Pressable onPress={() => navigate(1)} style={styles.overridesCalNavBtn}>
-          <ChevronRight size={16} color="#64748B" />
+        <Pressable onPress={() => navigate(1)} style={styles.overridesCalNavBtn} hitSlop={6}>
+          <ChevronRight size={18} color={colors.neutral[600]} />
         </Pressable>
       </View>
 
@@ -616,8 +634,8 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
                 </Text>
                 {(hasClosed || hasSpecial) && (
                   <View style={styles.overridesCalDots}>
-                    {hasClosed && <View style={[styles.overridesCalDot, { backgroundColor: '#EF4444' }]} />}
-                    {hasSpecial && <View style={[styles.overridesCalDot, { backgroundColor: '#F59E0B' }]} />}
+                    {hasClosed && <View style={[styles.overridesCalDot, { backgroundColor: colors.error.base }]} />}
+                    {hasSpecial && <View style={[styles.overridesCalDot, { backgroundColor: colors.warning.base }]} />}
                   </View>
                 )}
               </Pressable>
@@ -628,11 +646,11 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
 
       <View style={styles.overridesCalLegend}>
         <View style={styles.overridesCalLegendItem}>
-          <View style={[styles.overridesCalDot, { backgroundColor: '#EF4444' }]} />
+          <View style={[styles.overridesCalDot, { backgroundColor: colors.error.base }]} />
           <Text style={styles.overridesCalLegendText}>Fermé</Text>
         </View>
         <View style={styles.overridesCalLegendItem}>
-          <View style={[styles.overridesCalDot, { backgroundColor: '#F59E0B' }]} />
+          <View style={[styles.overridesCalDot, { backgroundColor: colors.warning.base }]} />
           <Text style={styles.overridesCalLegendText}>Horaire spécial</Text>
         </View>
       </View>
@@ -643,21 +661,21 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
             style={StyleSheet.absoluteFill}
             onPress={() => setSelectedDate(null)}
           />
-            <View style={styles.overridesPopover}>
-              <View style={styles.overridesPopoverHeader}>
-                <Text style={styles.overridesPopoverTitle} numberOfLines={1}>
-                  {formatFullDate(selectedDate)}
-                </Text>
-                <Pressable onPress={() => setSelectedDate(null)} hitSlop={6} style={styles.overridesPopoverClose}>
-                  <XIcon size={14} color="#94A3B8" strokeWidth={2} />
-                </Pressable>
-              </View>
+          <View style={styles.overridesPopover}>
+            <View style={styles.overridesPopoverHeader}>
+              <Text style={styles.overridesPopoverTitle} numberOfLines={1}>
+                {formatFullDate(selectedDate)}
+              </Text>
+              <Pressable onPress={() => setSelectedDate(null)} hitSlop={8} style={styles.overridesPopoverClose}>
+                <XIcon size={16} color={colors.neutral[500]} strokeWidth={2} />
+              </Pressable>
+            </View>
 
-              <ScrollView
-                style={styles.overridesPopoverScroll}
-                contentContainerStyle={styles.overridesPopoverScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
+            <ScrollView
+              style={styles.overridesPopoverScroll}
+              contentContainerStyle={styles.overridesPopoverScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
               {selectedOverrides.length === 0 ? (
                 <Pressable
                   onPress={() => onAddForDate(selectedDate)}
@@ -666,13 +684,13 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
                     (hovered || pressed) && styles.overridesDetailAddHover,
                   ]}
                 >
-                  <Plus size={14} color="#1E293B" strokeWidth={2} />
+                  <Plus size={16} color={colors.brand.dark} strokeWidth={2} />
                   <Text style={styles.overridesDetailAddText}>Ajouter une fermeture</Text>
                 </Pressable>
               ) : (
                 <>
                   {selectedOverrides.map(o => {
-                    const accent = o.isClosed ? '#EF4444' : '#F59E0B';
+                    const accent = o.isClosed ? colors.error.base : colors.warning.base;
                     return (
                       <View key={o.id} style={styles.overridesDetailItem}>
                         <View style={[styles.overridesDetailAccent, { backgroundColor: accent }]} />
@@ -687,11 +705,13 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
                         <Pressable
                           onPress={() => onDeleteOverride(o)}
                           style={({ hovered, pressed }: any) => [
-                            styles.iconButton,
-                            (hovered || pressed) && styles.iconButtonDangerHover,
+                            styles.iconActionButton,
+                            styles.iconActionButtonDanger,
+                            (hovered || pressed) && styles.iconActionButtonDangerHover,
                           ]}
+                          hitSlop={4}
                         >
-                          <Trash2 size={13} color="#EF4444" strokeWidth={2} />
+                          <Trash2 size={16} color={colors.error.base} strokeWidth={2} />
                         </Pressable>
                       </View>
                     );
@@ -703,13 +723,13 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
                       (hovered || pressed) && styles.overridesDetailAddHover,
                     ]}
                   >
-                    <Plus size={14} color="#1E293B" strokeWidth={2} />
+                    <Plus size={16} color={colors.brand.dark} strokeWidth={2} />
                     <Text style={styles.overridesDetailAddText}>Ajouter</Text>
                   </Pressable>
                 </>
               )}
-              </ScrollView>
-            </View>
+            </ScrollView>
+          </View>
         </View>
       )}
     </View>
@@ -717,67 +737,104 @@ function OverridesCalendar({ overrides, getServiceName, formatFullDate, timezone
 }
 
 // ===========================================================================
-// Weekly calendar (grid 7 colonnes, style neutre)
+// Weekly calendar
 // ===========================================================================
 
 interface WeeklyCalendarProps {
   schedulesByDay: Record<number, ReservationSchedule[]>;
   getServiceName: (id: string | null | undefined) => string;
   onDeleteSchedule: (s: ReservationSchedule) => void;
-  isCompact?: boolean;
+  isMobile?: boolean;
 }
 
-function WeeklyCalendar({ schedulesByDay, getServiceName, onDeleteSchedule, isCompact }: WeeklyCalendarProps) {
-  const inner = (
-    <View style={[styles.calendarContainer, isCompact && styles.calendarContainerCompact]}>
-      {DAYS.map((day, idx) => {
-        const slots = schedulesByDay[day.value] || [];
-        const isLast = idx === DAYS.length - 1;
-        return (
-          <View
-            key={day.value}
-            style={[
-              styles.calendarColumn,
-              isCompact && styles.calendarColumnCompact,
-              !isLast && styles.calendarColumnDivider,
-            ]}
-          >
-            <View style={styles.calendarColumnHeader}>
-              <Text style={styles.calendarDayName}>{day.short}</Text>
-              <Text style={styles.calendarDayCount}>
-                {slots.length === 0 ? 'Fermé' : `${slots.length} créneau${slots.length > 1 ? 'x' : ''}`}
-              </Text>
-            </View>
-
-            <ScrollView style={styles.calendarColumnScroll} contentContainerStyle={styles.calendarColumnBody}>
-              {slots.map(slot => (
-                <CalendarSlot
-                  key={slot.id}
-                  slot={slot}
-                  serviceName={getServiceName(slot.serviceId)}
-                  onDelete={() => onDeleteSchedule(slot)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        );
-      })}
-    </View>
-  );
-
-  if (isCompact) {
+function WeeklyCalendar({ schedulesByDay, getServiceName, onDeleteSchedule, isMobile }: WeeklyCalendarProps) {
+  // Sur mobile : liste verticale jour par jour. Sur tablet/desktop : grille 7 colonnes scrollable
+  // horizontalement si pas assez large pour tout afficher.
+  if (isMobile) {
     return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.calendarHorizontalScroll}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
-        {inner}
-      </ScrollView>
+      <View style={styles.weeklyMobileList}>
+        {DAYS.map(day => {
+          const slots = schedulesByDay[day.value] || [];
+          return (
+            <View key={day.value} style={styles.weeklyMobileDay}>
+              <View style={styles.weeklyMobileDayHeader}>
+                <Text style={styles.weeklyMobileDayName}>{day.label}</Text>
+                <Text style={styles.weeklyMobileDayCount}>
+                  {slots.length === 0 ? 'Fermé' : `${slots.length} créneau${slots.length > 1 ? 'x' : ''}`}
+                </Text>
+              </View>
+              {slots.length > 0 && (
+                <View style={styles.weeklyMobileDayBody}>
+                  {slots.map(slot => (
+                    <View key={slot.id} style={styles.weeklyMobileSlot}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.weeklyMobileSlotService} numberOfLines={1}>{getServiceName(slot.serviceId)}</Text>
+                        <Text style={styles.weeklyMobileSlotTime}>{slot.startTime} – {slot.endTime}</Text>
+                      </View>
+                      <Pressable
+                        onPress={() => onDeleteSchedule(slot)}
+                        style={({ hovered, pressed }: any) => [
+                          styles.iconActionButton,
+                          styles.iconActionButtonDanger,
+                          (hovered || pressed) && styles.iconActionButtonDangerHover,
+                        ]}
+                        hitSlop={4}
+                      >
+                        <Trash2 size={16} color={colors.error.base} strokeWidth={2} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
     );
   }
-  return inner;
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.calendarHorizontalScroll}
+      contentContainerStyle={{ flexGrow: 1 }}
+    >
+      <View style={styles.calendarContainer}>
+        {DAYS.map((day, idx) => {
+          const slots = schedulesByDay[day.value] || [];
+          const isLast = idx === DAYS.length - 1;
+          return (
+            <View
+              key={day.value}
+              style={[
+                styles.calendarColumn,
+                !isLast && styles.calendarColumnDivider,
+              ]}
+            >
+              <View style={styles.calendarColumnHeader}>
+                <Text style={styles.calendarDayName}>{day.short}</Text>
+                <Text style={styles.calendarDayCount}>
+                  {slots.length === 0 ? 'Fermé' : `${slots.length} créneau${slots.length > 1 ? 'x' : ''}`}
+                </Text>
+              </View>
+
+              <View style={styles.calendarColumnBody}>
+                {slots.map(slot => (
+                  <CalendarSlot
+                    key={slot.id}
+                    slot={slot}
+                    serviceName={getServiceName(slot.serviceId)}
+                    onDelete={() => onDeleteSchedule(slot)}
+                  />
+                ))}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
 }
 
 interface CalendarSlotProps {
@@ -798,13 +855,13 @@ function CalendarSlot({ slot, serviceName, onDelete }: CalendarSlotProps) {
     >
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.calendarSlotService} numberOfLines={1}>{serviceName}</Text>
-        <Text style={styles.calendarSlotTime} numberOfLines={1} ellipsizeMode="clip">
-          {slot.startTime}–{slot.endTime}
+        <Text style={styles.calendarSlotTime} numberOfLines={1}>
+          {slot.startTime} – {slot.endTime}
         </Text>
       </View>
       {showDelete && (
-        <Pressable onPress={onDelete} hitSlop={8} style={styles.calendarSlotDelete}>
-          <XIcon size={13} color="#94A3B8" strokeWidth={2} />
+        <Pressable onPress={onDelete} hitSlop={6} style={styles.calendarSlotDelete}>
+          <XIcon size={14} color={colors.neutral[400]} strokeWidth={2} />
         </Pressable>
       )}
     </View>
@@ -812,247 +869,328 @@ function CalendarSlot({ slot, serviceName, onDelete }: CalendarSlotProps) {
 }
 
 // ===========================================================================
-// Styles
+// Styles — alignés sur les autres écrans config (notifications, security…)
 // ===========================================================================
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: colors.neutral[50] },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.white },
 
-  body: {
-    flex: 1,
-    padding: 24,
+  scroll: { flex: 1 },
+  scrollContent: { padding: 24, paddingBottom: 24, gap: 16 },
+  scrollContentMobile: { padding: 16, gap: 12 },
+
+  // Page header (iso autres écrans config)
+  tabHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: 16,
   },
-  bodyCompact: {
-    padding: 16,
-    gap: 12,
+  tabTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: colors.neutral[800],
+    marginBottom: 4,
   },
+  tabSubtitle: {
+    fontSize: 14,
+    color: colors.neutral[500],
+  },
+
+  // Top row (Services + Fermetures côte-à-côte)
   topRow: {
     flexDirection: 'row',
     gap: 16,
-    minHeight: 280,
-    maxHeight: 340,
+    alignItems: 'stretch',
   },
   topRowStacked: {
     flexDirection: 'column',
-    maxHeight: undefined as any,
   },
 
-  // ── Card (section) ────────────────────────────────────────────────────
-  card: {
+  // viewCard pattern (iso security.tsx, configuration.tsx, notifications.tsx)
+  viewCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    minWidth: 0,
+    backgroundColor: colors.white,
     borderRadius: 12,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
+    borderColor: colors.neutral[200],
+  },
+  viewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  viewIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewCardContent: {
+    flex: 1,
     minWidth: 0,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+  viewCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.neutral[800],
+    marginBottom: 4,
   },
-  cardHeaderText: { flex: 1, minWidth: 0 },
-  cardTitle: { fontSize: 18, fontWeight: '600', color: '#1E293B', marginBottom: 2 },
-  cardSubtitle: { fontSize: 13, color: '#64748B' },
-  cardBody: { flex: 1, padding: 16, minHeight: 0 },
-  cardBodyFixed: { padding: 16 },
+  viewCardDescription: {
+    fontSize: 13,
+    color: colors.neutral[500],
+    lineHeight: 18,
+  },
+  viewModeSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral[200],
+  },
 
-  // ── Create button (dark neutre) ───────────────────────────────────────
+  // Create button (iso configuration.tsx)
   createButton: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: '#2A2E33',
-    borderRadius: 8,
-    minHeight: 38,
-    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
-  },
-  createButtonHover: { backgroundColor: '#1E293B' },
-  createButtonDisabled: { opacity: 0.4, ...(Platform.OS === 'web' && { cursor: 'not-allowed' } as any) },
-  createButtonText: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
-
-  // ── Empty state ───────────────────────────────────────────────────────
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 16,
-    gap: 4,
-  },
-  emptyTitle: { fontSize: 14, fontWeight: '600', color: '#64748B', marginTop: 12 },
-  emptyText: { fontSize: 12, color: '#94A3B8', textAlign: 'center', maxWidth: 260, marginBottom: 8 },
-  emptyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    backgroundColor: colors.brand.dark,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#F8FAFC',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginTop: 4,
+    gap: 8,
+    minHeight: 44,
     ...(Platform.OS === 'web' && { cursor: 'pointer' }),
   },
-  emptyButtonHover: { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' },
-  emptyButtonText: { fontSize: 13, fontWeight: '600', color: '#1E293B' },
+  createButtonHover: { opacity: 0.9 },
+  createButtonDisabled: { opacity: 0.4, ...(Platform.OS === 'web' && { cursor: 'not-allowed' } as any) },
+  createButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
 
-  // ── List ──────────────────────────────────────────────────────────────
-  list: { flex: 1 },
-  listContent: { gap: 10, paddingBottom: 4 },
+  // Empty state (iso configuration.tsx)
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.neutral[500],
+    marginTop: 12,
+  },
+  emptyStateText: {
+    fontSize: 13,
+    color: colors.neutral[400],
+    textAlign: 'center',
+    marginBottom: 8,
+    maxWidth: 280,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: colors.neutral[50],
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brand.dark,
+    marginTop: 4,
+    minHeight: 44,
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  emptyStateButtonHover: { backgroundColor: colors.neutral[100] },
+  emptyStateButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.brand.dark,
+  },
 
-  // ── List item (inspiré de configuration.tsx tagItem) ──────────────────
-  listItem: {
+  // List (services)
+  list: { gap: 10 },
+
+  // tagItem pattern (iso configuration.tsx)
+  tagItem: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+  tagItemInactive: {
+    backgroundColor: colors.neutral[50],
+  },
+  tagItemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
-    paddingLeft: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    position: 'relative',
-    overflow: 'hidden',
   },
-  serviceItemActive: {
-    borderColor: '#DBEAFE',
-  },
-  serviceItemInactive: {
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FAFBFC',
-  },
-  serviceAccentBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: '#3B82F6',
-  },
-  listItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
+  tagItemIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08),
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  serviceIconActive: {
-    backgroundColor: '#DBEAFE',
+  tagItemIconInactive: {
+    backgroundColor: colors.neutral[100],
   },
-  serviceIconInactive: {
-    backgroundColor: '#F1F5F9',
+  tagItemContent: { flex: 1, minWidth: 0, gap: 4 },
+  tagItemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  tagItemTitle: { fontSize: 15, fontWeight: '600', color: colors.neutral[800], flexShrink: 1 },
+  tagItemMeta: { fontSize: 12, color: colors.neutral[500], lineHeight: 16 },
+  inactiveBadge: {
+    backgroundColor: colors.neutral[100],
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  listItemContent: { flex: 1, minWidth: 0, gap: 3 },
-  listItemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  listItemTitle: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
-  serviceMeta: { fontSize: 12, color: '#94A3B8' },
-  inactivePill: {
+  inactiveBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: colors.neutral[500],
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
-  listItemMeta: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  listItemNote: { fontSize: 12, color: '#94A3B8', fontStyle: 'italic', marginTop: 2 },
-  listItemActions: { flexDirection: 'row', gap: 4, alignItems: 'center' },
+  tagItemActions: { flexDirection: 'row', gap: 6, alignItems: 'center' },
 
-  // ── Badges neutres ────────────────────────────────────────────────────
-  mutedBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  mutedBadgeText: { fontSize: 11, fontWeight: '600', color: '#64748B' },
-
-  // ── Boutons neutres ───────────────────────────────────────────────────
-  iconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+  // Icon action buttons (min 36pt for tablet/desktop, used everywhere)
+  iconActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' && { cursor: 'pointer' }),
   },
-  iconButtonHover: { backgroundColor: '#E2E8F0' },
-  iconButtonDangerHover: { backgroundColor: '#FEF2F2' },
+  iconActionButtonHover: { backgroundColor: colors.neutral[200] },
+  iconActionButtonDanger: { backgroundColor: colors.error.bg },
+  iconActionButtonDangerHover: { backgroundColor: colors.error.bg, opacity: 0.85 },
 
-  // ── Calendrier hebdomadaire (neutre) ──────────────────────────────────
+  // Weekly calendar (desktop/tablet — horizontal scroll)
+  calendarHorizontalScroll: { flexGrow: 0 },
   calendarContainer: {
-    flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     overflow: 'hidden',
+    minWidth: 7 * 130,
   },
-  calendarContainerCompact: {
-    flex: 0,
-    minWidth: 7 * 110,
-  },
-  calendarHorizontalScroll: {
-    flex: 1,
-  },
-  calendarColumn: { flex: 1, minWidth: 0, flexDirection: 'column' },
-  calendarColumnCompact: { flex: 0, width: 110 },
-  calendarColumnDivider: { borderRightWidth: 1, borderRightColor: '#F1F5F9' },
+  calendarColumn: { width: 130, flexDirection: 'column' },
+  calendarColumnDivider: { borderRightWidth: 1, borderRightColor: colors.neutral[100] },
   calendarColumnHeader: {
     paddingHorizontal: 8,
-    paddingVertical: 10,
-    backgroundColor: '#F8FAFC',
+    paddingVertical: 12,
+    backgroundColor: colors.neutral[50],
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colors.neutral[200],
     alignItems: 'center',
     gap: 2,
   },
-  calendarDayName: { fontSize: 12, fontWeight: '700', color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.4 },
-  calendarDayCount: { fontSize: 10, color: '#94A3B8', fontWeight: '500' },
-
-  calendarColumnScroll: { flex: 1 },
-  calendarColumnBody: { padding: 6, paddingBottom: 12, gap: 5 },
+  calendarDayName: { fontSize: 12, fontWeight: '700', color: colors.neutral[800], textTransform: 'uppercase', letterSpacing: 0.4 },
+  calendarDayCount: { fontSize: 11, color: colors.neutral[500], fontWeight: '500' },
+  calendarColumnBody: { padding: 8, gap: 6 },
   calendarSlot: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: '#F8FAFC',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 4,
-    minHeight: 44,
+    borderColor: colors.neutral[200],
+    gap: 6,
+    minHeight: 50,
   },
-  calendarSlotService: { fontSize: 11, fontWeight: '700', color: '#1E293B' },
-  calendarSlotTime: { fontSize: 10, color: '#64748B', marginTop: 2, fontVariant: ['tabular-nums'] },
+  calendarSlotService: { fontSize: 12, fontWeight: '700', color: colors.neutral[800] },
+  calendarSlotTime: { fontSize: 11, color: colors.neutral[500], marginTop: 2, fontVariant: ['tabular-nums'] },
   calendarSlotDelete: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.neutral[100],
   },
 
-  // ── Overrides monthly calendar ────────────────────────────────────────
-  overridesScroll: { flex: 1, overflow: 'hidden' },
+  // Weekly calendar (mobile — vertical list)
+  weeklyMobileList: {
+    gap: 12,
+  },
+  weeklyMobileDay: {
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    overflow: 'hidden',
+  },
+  weeklyMobileDayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.neutral[50],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[100],
+  },
+  weeklyMobileDayName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.neutral[800],
+  },
+  weeklyMobileDayCount: {
+    fontSize: 12,
+    color: colors.neutral[500],
+    fontWeight: '500',
+  },
+  weeklyMobileDayBody: {
+    padding: 12,
+    gap: 8,
+  },
+  weeklyMobileSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.neutral[50],
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    minHeight: 56,
+  },
+  weeklyMobileSlotService: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.neutral[800],
+  },
+  weeklyMobileSlotTime: {
+    fontSize: 13,
+    color: colors.neutral[500],
+    marginTop: 2,
+    fontVariant: ['tabular-nums'],
+  },
+
+  // Overrides monthly calendar
   overridesCalRoot: {
-    flex: 1,
-    gap: 6,
+    gap: 8,
     position: 'relative',
   },
   overridesCalNav: {
@@ -1062,15 +1200,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   overridesCalNavBtn: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.neutral[100],
+    alignItems: 'center',
+    justifyContent: 'center',
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
   },
   overridesCalNavText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     textTransform: 'capitalize',
   },
   overridesCalWeekdays: {
@@ -1080,11 +1221,11 @@ const styles = StyleSheet.create({
   overridesCalWeekdayText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: colors.neutral[400],
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
   overridesCalGridWrapper: {
     position: 'relative',
@@ -1104,25 +1245,17 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   overridesPopover: {
-    width: '85%',
-    maxWidth: 220,
-    maxHeight: 180,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    width: '100%',
+    maxWidth: 280,
+    maxHeight: 240,
+    backgroundColor: colors.white,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 8,
-    gap: 4,
+    borderColor: colors.neutral[200],
+    padding: 12,
+    gap: 8,
     overflow: 'hidden',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 8px 24px rgba(15, 23, 42, 0.15)',
-    } as any : {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.15,
-      shadowRadius: 16,
-      elevation: 12,
-    }),
+    ...shadows.all,
   },
   overridesPopoverHeader: {
     flexDirection: 'row',
@@ -1133,76 +1266,58 @@ const styles = StyleSheet.create({
   overridesPopoverTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.neutral[800],
     flex: 1,
     textTransform: 'capitalize',
   },
   overridesPopoverClose: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: colors.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
   },
-  overridesPopoverScroll: {
-    flexShrink: 1,
-  },
-  overridesPopoverScrollContent: {
-    gap: 8,
-    paddingBottom: 2,
-  },
+  overridesPopoverScroll: { flexShrink: 1 },
+  overridesPopoverScrollContent: { gap: 8, paddingBottom: 4 },
   overridesCalDayEmpty: {
     width: '14.2857%',
-    height: 28,
+    aspectRatio: 1,
+    minHeight: 36,
   },
   overridesCalDay: {
     width: '14.2857%',
-    height: 28,
+    aspectRatio: 1,
+    minHeight: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
+    borderRadius: 8,
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
   },
-  overridesCalDayHover: {
-    backgroundColor: '#F1F5F9',
-  },
-  overridesCalDayToday: {
-    backgroundColor: '#EFF6FF',
-  },
-  overridesCalDaySelected: {
-    backgroundColor: '#1E293B',
-  },
+  overridesCalDayHover: { backgroundColor: colors.neutral[100] },
+  overridesCalDayToday: { backgroundColor: colors.neutral[100] },
+  overridesCalDaySelected: { backgroundColor: colors.brand.dark },
   overridesCalDayText: {
-    fontSize: 12,
-    color: '#1E293B',
+    fontSize: 13,
+    color: colors.neutral[800],
     fontVariant: ['tabular-nums'],
   },
-  overridesCalDayTextToday: {
-    color: '#3B82F6',
-    fontWeight: '700',
-  },
-  overridesCalDayTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
+  overridesCalDayTextToday: { color: colors.brand.dark, fontWeight: '700' },
+  overridesCalDayTextSelected: { color: colors.white, fontWeight: '700' },
   overridesCalDots: {
     flexDirection: 'row',
     gap: 2,
     marginTop: 2,
   },
-  overridesCalDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
+  overridesCalDot: { width: 5, height: 5, borderRadius: 3 },
   overridesCalLegend: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 16,
-    paddingTop: 4,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: colors.neutral[100],
   },
   overridesCalLegendItem: {
     flexDirection: 'row',
@@ -1211,18 +1326,18 @@ const styles = StyleSheet.create({
   },
   overridesCalLegendText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: colors.neutral[500],
     fontWeight: '500',
   },
   overridesDetailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 6,
-    padding: 8,
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    padding: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.neutral[200],
     position: 'relative',
     overflow: 'hidden',
   },
@@ -1234,37 +1349,38 @@ const styles = StyleSheet.create({
     width: 3,
   },
   overridesDetailItemTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.neutral[800],
     marginLeft: 4,
   },
   overridesDetailItemMeta: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: colors.neutral[500],
     marginLeft: 4,
-    marginTop: 1,
+    marginTop: 2,
   },
   overridesDetailAdd: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 6,
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.neutral[300],
+    backgroundColor: colors.white,
+    minHeight: 44,
     ...(Platform.OS === 'web' && { cursor: 'pointer' as any }),
   },
   overridesDetailAddHover: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#94A3B8',
+    backgroundColor: colors.neutral[50],
+    borderColor: colors.neutral[400],
   },
   overridesDetailAddText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#1E293B',
+    color: colors.brand.dark,
   },
 });
