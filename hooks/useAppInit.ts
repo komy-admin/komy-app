@@ -103,6 +103,7 @@ export const useAppInit = () => {
           kitchenEnabled: accountConfig.kitchenEnabled,
           barEnabled: accountConfig.barEnabled,
           roomEnabled: accountConfig.roomEnabled ?? true,
+          reservationEnabled: accountConfig.reservationEnabled ?? false,
           twoFactorEnabled: accountConfig.twoFactorEnabled ?? false,
           twoFactorMethod: accountConfig.twoFactorMethod ?? null
         }));

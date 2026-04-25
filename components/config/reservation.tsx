@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Sliders, Settings, BookOpen } from 'lucide-react-native';
 import { useReservation } from '~/hooks/useReservation';
-import { ReservationActivation } from '~/components/reservation/ReservationActivation';
 import { ReservationConfiguration } from '~/components/reservation/ReservationConfiguration';
 import { ReservationSettingsPage } from '~/components/reservation/ReservationSettings';
 import { ReservationGuide } from '~/components/reservation/ReservationGuide';
@@ -29,10 +28,6 @@ export default function ReservationConfigPage({ isCompactSidebar }: Props) {
         <ActivityIndicator size="large" color="#2A2E33" />
       </View>
     );
-  }
-
-  if (!reservation.isActivated) {
-    return <ReservationActivation reservation={reservation} />;
   }
 
   return (

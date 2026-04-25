@@ -223,10 +223,6 @@ export interface ReservationApiListResponse<T> {
 
 // === Activation ===
 
-export interface ReservationActivationResponse {
-  success: boolean;
-}
-
 export interface ReservationTokenResponse {
   token: string | null;
   professionalId: string | null;

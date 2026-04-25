@@ -30,6 +30,7 @@ export const useAccountConfig = () => {
         kitchenEnabled: accountConfig.kitchenEnabled,
         barEnabled: accountConfig.barEnabled,
         roomEnabled: accountConfig.roomEnabled ?? true,
+        reservationEnabled: accountConfig.reservationEnabled ?? false,
         twoFactorEnabled: accountConfig.twoFactorEnabled ?? false,
         twoFactorMethod: accountConfig.twoFactorMethod ?? null,
       }));
@@ -53,6 +54,7 @@ export const useAccountConfig = () => {
     kitchenEnabled?: boolean;
     barEnabled?: boolean;
     roomEnabled?: boolean;
+    reservationEnabled?: boolean;
   }) => {
     setIsLoading(true);
     setError(null);
@@ -72,6 +74,7 @@ export const useAccountConfig = () => {
         kitchenEnabled: updatedConfig.kitchenEnabled,
         barEnabled: updatedConfig.barEnabled,
         roomEnabled: updatedConfig.roomEnabled ?? true,
+        reservationEnabled: updatedConfig.reservationEnabled ?? false,
         twoFactorEnabled: updatedConfig.twoFactorEnabled ?? false,
         twoFactorMethod: updatedConfig.twoFactorMethod ?? null,
       }));
@@ -106,6 +109,7 @@ export const useAccountConfig = () => {
     kitchenEnabled: config?.kitchenEnabled ?? true,
     barEnabled: config?.barEnabled ?? true,
     roomEnabled: config?.roomEnabled ?? true,
+    reservationEnabled: config?.reservationEnabled ?? false,
 
     // Compatibilité avec l'ancien code
     isAlertEnabled,

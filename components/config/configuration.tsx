@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Switch } from 'react-native';
-import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye, LayoutDashboard } from 'lucide-react-native';
+import { Plus, Trash2, Check, Utensils, Tags as TagsIcon, ChefHat, Wine, Users, Eye, LayoutDashboard, CalendarDays } from 'lucide-react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AVAILABLE_ICONS } from '~/components/ui/IconSelector';
 import { useItemTypes } from '~/hooks/useItemTypes';
@@ -45,6 +45,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
     kitchenEnabled,
     barEnabled,
     roomEnabled,
+    reservationEnabled,
     updateConfig,
     isLoading: configLoading
   } = useAccountConfig();
@@ -228,6 +229,7 @@ export default function ConfigurationRestoPage({ isCompactSidebar }: { isCompact
               teamEnabled={teamEnabled}
               kitchenEnabled={kitchenEnabled}
               barEnabled={barEnabled}
+              reservationEnabled={reservationEnabled}
               updateConfig={updateConfig}
               configLoading={configLoading}
             />
@@ -355,11 +357,13 @@ interface ViewsTabProps {
   teamEnabled: boolean;
   kitchenEnabled: boolean;
   barEnabled: boolean;
+  reservationEnabled: boolean;
   updateConfig: (config: {
     roomEnabled?: boolean;
     teamEnabled?: boolean;
     kitchenEnabled?: boolean;
     barEnabled?: boolean;
+    reservationEnabled?: boolean;
   }) => Promise<any>;
   configLoading: boolean;
 }
@@ -369,6 +373,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
   teamEnabled,
   kitchenEnabled,
   barEnabled,
+  reservationEnabled,
   updateConfig,
   configLoading
 }) => {
@@ -377,6 +382,7 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
   const [localTeamEnabled, setLocalTeamEnabled] = useState(teamEnabled);
   const [localKitchenEnabled, setLocalKitchenEnabled] = useState(kitchenEnabled);
   const [localBarEnabled, setLocalBarEnabled] = useState(barEnabled);
+  const [localReservationEnabled, setLocalReservationEnabled] = useState(reservationEnabled);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -384,16 +390,18 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
     setLocalTeamEnabled(teamEnabled);
     setLocalKitchenEnabled(kitchenEnabled);
     setLocalBarEnabled(barEnabled);
-  }, [roomEnabled, teamEnabled, kitchenEnabled, barEnabled]);
+    setLocalReservationEnabled(reservationEnabled);
+  }, [roomEnabled, teamEnabled, kitchenEnabled, barEnabled, reservationEnabled]);
 
   useEffect(() => {
     const changed =
       localRoomEnabled !== roomEnabled ||
       localTeamEnabled !== teamEnabled ||
       localKitchenEnabled !== kitchenEnabled ||
-      localBarEnabled !== barEnabled;
+      localBarEnabled !== barEnabled ||
+      localReservationEnabled !== reservationEnabled;
     setHasChanges(changed);
-  }, [localRoomEnabled, localTeamEnabled, localKitchenEnabled, localBarEnabled, roomEnabled, teamEnabled, kitchenEnabled, barEnabled]);
+  }, [localRoomEnabled, localTeamEnabled, localKitchenEnabled, localBarEnabled, localReservationEnabled, roomEnabled, teamEnabled, kitchenEnabled, barEnabled, reservationEnabled]);
 
   const handleSaveChanges = async () => {
     if (!hasChanges) return;
@@ -404,17 +412,19 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
         teamEnabled: localTeamEnabled,
         kitchenEnabled: localKitchenEnabled,
         barEnabled: localBarEnabled,
+        reservationEnabled: localReservationEnabled,
       });
       setHasChanges(false);
       showToast('Configuration des vues sauvegardée avec succès', 'success');
     } catch (error) {
       const info = extractApiError(error);
       if (info.status === 409) {
-        // Revert all local state on conflict (active orders exist)
+        // Revert all local state on conflict (active orders or active reservations)
         setLocalRoomEnabled(roomEnabled);
         setLocalTeamEnabled(teamEnabled);
         setLocalKitchenEnabled(kitchenEnabled);
         setLocalBarEnabled(barEnabled);
+        setLocalReservationEnabled(reservationEnabled);
       }
       showToast(info.message || 'Erreur lors de la sauvegarde de la configuration', 'error');
     }
@@ -525,6 +535,26 @@ const ViewsTab: React.FC<ViewsTabProps> = ({
               />
             </View>
 
+          </View>
+
+        {/* Vue Réservation */}
+          <View style={styles.viewCard}>
+            <View style={styles.viewCardHeader}>
+              <View style={[styles.viewIconWrapper, { backgroundColor: getColorWithOpacity(colors.brand.dark, 0.08) }]}>
+                <CalendarDays size={24} color={colors.brand.dark} strokeWidth={2} />
+              </View>
+              <View style={styles.viewCardContent}>
+                <Text style={styles.viewCardTitle}>Réservation</Text>
+                <Text style={styles.viewCardDescription}>Gestion des réservations en ligne</Text>
+              </View>
+              <Switch
+                value={localReservationEnabled}
+                onValueChange={setLocalReservationEnabled}
+                trackColor={{ false: colors.gray[300], true: colors.success.base }}
+                thumbColor={localReservationEnabled ? colors.white : colors.gray[100]}
+                disabled={configLoading}
+              />
+            </View>
           </View>
         </Pressable>
       </ScrollView>

@@ -17,7 +17,6 @@ import {
   CreateManualReservationDto,
   ReservationApiResponse,
   ReservationApiListResponse,
-  ReservationActivationResponse,
   ReservationTokenResponse,
   StripeConnectStatus,
 } from '~/types/reservation.types';
@@ -27,13 +26,6 @@ import { BaseApiService } from './base.api';
 
 class ReservationBridgeApiService extends BaseApiService<any> {
   protected endpoint = '/reservation';
-
-  async activate(restaurantId: string): Promise<ReservationActivationResponse> {
-    const response = await this.axiosInstance.post<ReservationActivationResponse>(
-      `/restaurants/${restaurantId}/reservation/activate`
-    );
-    return response.data;
-  }
 
   async getToken(restaurantId: string): Promise<ReservationTokenResponse> {
     const response = await this.axiosInstance.get<ReservationTokenResponse>(
