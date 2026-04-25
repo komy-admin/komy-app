@@ -2,16 +2,18 @@ import { configureStore } from '@reduxjs/toolkit';
 import entitiesReducer from './slices/entities.slice';
 import sessionReducer from './slices/session.slice';
 import uiReducer from './slices/ui.slice';
+import printersReducer from './slices/printers.slice';
 
 /**
  * Store Redux avec architecture simplifiée
- * 3 slices au lieu de 8+ : entities, session, ui
+ * 4 slices : entities, session, ui, printers
  */
 export const store = configureStore({
   reducer: {
     entities: entitiesReducer,
     session: sessionReducer,
     ui: uiReducer,
+    printers: printersReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -52,3 +54,4 @@ export {
   selectIsConnected,
 } from './slices/session.slice';
 export { uiActions } from './slices/ui.slice';
+export { printersActions } from './slices/printers.slice';

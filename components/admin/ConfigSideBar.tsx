@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, memo } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform, Dimensions, ImageSourcePropType } from 'react-native';
-import { User, Bell, LogOut, PenTool, Database, Settings, ShieldCheck, CalendarCheck } from 'lucide-react-native';
+import { User, Bell, LogOut, PenTool, Database, Settings, ShieldCheck, Printer, CalendarCheck } from 'lucide-react-native';
 import { sessionService } from '~/services/SessionService';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
@@ -9,7 +9,14 @@ import { useProfileImageUpload } from '~/hooks/useProfileImageUpload';
 import { shadows, colors } from '~/theme';
 import { getColorWithOpacity } from '~/lib/color-utils';
 
-type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security' | 'reservation';
+type ConfigSection =
+  | 'dashboard'
+  | 'profile'
+  | 'notifications'
+  | 'configuration'
+  | 'printers'
+  | 'reservation'
+  | 'security';
 
 // Composant Avatar mémorisé pour éviter les reloads d'image sur resize
 const ProfileAvatar = memo(({
@@ -34,18 +41,13 @@ const ProfileAvatar = memo(({
   />
 ));
 
-const CONFIG_ITEMS: Array<{
-  id: ConfigSection;
-  Icon: typeof User;
-  label: string;
-  color: string;
-  configKey?: 'reservationEnabled';
-}> = [
-  { id: 'dashboard', Icon: Database, label: 'Dashboard', color: colors.brand.dark },
-  { id: 'profile', Icon: User, label: 'Mon compte', color: colors.brand.dark },
-  { id: 'notifications', Icon: Bell, label: 'Notifications', color: colors.brand.dark },
-  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: colors.brand.dark },
-  { id: 'configuration', Icon: Settings, label: 'Configuration', color: colors.brand.dark },
+const CONFIG_ITEMS = [
+  { id: 'dashboard', Icon: Database, label: 'Dashboard', color: '#3B82F6' },
+  { id: 'profile', Icon: User, label: 'Mon compte', color: '#10B981' },
+  { id: 'notifications', Icon: Bell, label: 'Notifications', color: '#EF4444' },
+  { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: '#475569' },
+  { id: 'configuration', Icon: Settings, label: 'Configuration', color: '#A855F7' },
+  { id: 'printers', Icon: Printer, label: 'Impression', color: '#F97316' },
   { id: 'reservation', Icon: CalendarCheck, label: 'Réservations', color: colors.brand.dark, configKey: 'reservationEnabled' },
 ];
 

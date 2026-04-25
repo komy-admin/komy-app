@@ -7,13 +7,21 @@ import DashboardPage from '~/components/config/dashboard';
 import ConfigurationRestoPage from '@/components/config/configuration';
 import SecurityPage from '~/components/config/security';
 import ReservationConfigPage from '~/components/config/reservation';
+import PrintersConfigPage from '~/components/config/printers-config';
 import { PinConfirmationModal } from '~/components/ui/PinConfirmationModal';
 import { useSelector } from 'react-redux';
 import { RootState } from '~/store';
 import { useRouter } from 'expo-router';
 import { colors } from '~/theme';
 
-type ConfigSection = 'dashboard' | 'profile' | 'notifications' | 'configuration' | 'security' | 'reservation';
+type ConfigSection =
+  | 'dashboard'
+  | 'profile'
+  | 'notifications'
+  | 'configuration'
+  | 'printers'
+  | 'reservation'
+  | 'security';
 
 export default function ConfigPage() {
   const [currentSection, setCurrentSection] = useState<ConfigSection>('dashboard');
@@ -59,6 +67,8 @@ export default function ConfigPage() {
         return <ConfigurationRestoPage isCompactSidebar={isCompactSidebar}/>;
       case 'reservation':
         return <ReservationConfigPage isCompactSidebar={isCompactSidebar}/>;
+      case 'printers':
+        return <PrintersConfigPage/>;
       default:
         return <DashboardPage/>;
     }
