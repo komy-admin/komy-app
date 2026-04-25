@@ -34,13 +34,19 @@ const ProfileAvatar = memo(({
   />
 ));
 
-const CONFIG_ITEMS = [
+const CONFIG_ITEMS: Array<{
+  id: ConfigSection;
+  Icon: typeof User;
+  label: string;
+  color: string;
+  configKey?: 'reservationEnabled';
+}> = [
   { id: 'dashboard', Icon: Database, label: 'Dashboard', color: colors.brand.dark },
   { id: 'profile', Icon: User, label: 'Mon compte', color: colors.brand.dark },
   { id: 'notifications', Icon: Bell, label: 'Notifications', color: colors.brand.dark },
   { id: 'security', Icon: ShieldCheck, label: 'Sécurité', color: colors.brand.dark },
   { id: 'configuration', Icon: Settings, label: 'Configuration', color: colors.brand.dark },
-  { id: 'reservation', Icon: CalendarCheck, label: 'Réservations', color: colors.brand.dark },
+  { id: 'reservation', Icon: CalendarCheck, label: 'Réservations', color: colors.brand.dark, configKey: 'reservationEnabled' },
 ];
 
 // Configuration des breakpoints de hauteur - Extraite pour performance
@@ -120,9 +126,14 @@ type ConfigSidebarProps = {
 };
 
 export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebarProps) {
-  const { user } = useSelector((state: RootState) => state.session);
+  const { user, accountConfig } = useSelector((state: RootState) => state.session);
   const router = useRouter();
   const { pickImage, isUploading } = useProfileImageUpload();
+
+  const visibleConfigItems = useMemo(
+    () => CONFIG_ITEMS.filter((item) => !item.configKey || accountConfig?.[item.configKey] === true),
+    [accountConfig]
+  );
 
   // État pour gérer les dimensions et les breakpoints
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
@@ -274,7 +285,7 @@ export function ConfigSidebar({ currentSection, onSectionChange }: ConfigSidebar
       </View>
 
       <View style={dynamicStyles.menuSection}>
-        {CONFIG_ITEMS.map(({ id, Icon, label, color }) => {
+        {visibleConfigItems.map(({ id, Icon, label, color }) => {
           const isActive = currentSection === id;
           return (
             <Pressable

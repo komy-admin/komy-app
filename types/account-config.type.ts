@@ -7,6 +7,7 @@ export type AccountConfig = {
   kitchenEnabled: boolean;
   barEnabled: boolean;
   roomEnabled: boolean;
+  reservationEnabled: boolean;
   // 2FA
   twoFactorEnabled: boolean;
   twoFactorMethod: string | null;

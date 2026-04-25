@@ -63,7 +63,6 @@ function getToastForEvent(event: ReservationWebSocketEvent): { message: string; 
 }
 
 interface ReservationState {
-  isActivated: boolean;
   isLoading: boolean;
   token: string | null;
   professionalId: string | null;
@@ -85,7 +84,6 @@ export const useReservation = () => {
   const socketContext = useContext(SocketContext);
 
   const [state, setState] = useState<ReservationState>({
-    isActivated: false,
     isLoading: true,
     token: null,
     professionalId: null,
@@ -114,7 +112,6 @@ export const useReservation = () => {
         reservationApiService.setToken(tokenData.token);
         setState(prev => ({
           ...prev,
-          isActivated: true,
           token: tokenData.token,
           professionalId: tokenData.professionalId,
           slug: tokenData.slug,
@@ -123,7 +120,6 @@ export const useReservation = () => {
       } else {
         setState(prev => ({
           ...prev,
-          isActivated: false,
           token: null,
           professionalId: null,
           slug: null,
@@ -141,20 +137,6 @@ export const useReservation = () => {
       initialize();
     }
   }, [initialize, restaurantId, sessionToken]);
-
-  // === ACTIVATION ===
-
-  const activate = useCallback(async () => {
-    if (!restaurantId) return;
-    setState(prev => ({ ...prev, isLoading: true }));
-    try {
-      await reservationBridgeApiService.activate(restaurantId);
-      await initialize();
-    } catch (error) {
-      setState(prev => ({ ...prev, isLoading: false }));
-      throw error;
-    }
-  }, [restaurantId, initialize]);
 
   // === PROFILE ===
 
@@ -469,9 +451,6 @@ export const useReservation = () => {
 
     // Initialization
     initialize,
-
-    // Activation
-    activate,
 
     // Profile
     loadProfile,

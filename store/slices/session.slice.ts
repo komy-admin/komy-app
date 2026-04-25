@@ -13,6 +13,7 @@ interface AccountConfigPayload {
   kitchenEnabled: boolean;
   barEnabled: boolean;
   roomEnabled: boolean;
+  reservationEnabled: boolean;
   // 2FA
   twoFactorEnabled: boolean;
   twoFactorMethod: string | null;
@@ -79,6 +80,7 @@ export interface SessionState {
     kitchenEnabled: boolean;
     barEnabled: boolean;
     roomEnabled: boolean;
+    reservationEnabled: boolean;
     twoFactorEnabled: boolean;
     twoFactorMethod: string | null;
   } | null;

@@ -16,7 +16,7 @@ const ServiceIcon = ({ size, color, style }: { size: number; color: string; styl
 
 const NAV_ITEMS = [
   { href: '/service', icon: ServiceIcon, label: 'Service', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
-  { href: '/reservation', icon: CalendarDays, label: 'Réservations', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
+  { href: '/reservation', icon: CalendarDays, label: 'Réservations', configKey: 'reservationEnabled' as const, roles: ['superadmin', 'admin', 'manager'] },
   { href: '/payments', icon: CreditCard, label: 'Paiements', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
   { href: '/room/edition-mode', icon: LayoutDashboard, label: 'Salles', configKey: 'roomEnabled' as const, roles: ['superadmin', 'admin', 'manager'] },
   { href: '/menu', icon: NotebookText, label: 'Menu', configKey: null, roles: ['superadmin', 'admin', 'manager'] },
