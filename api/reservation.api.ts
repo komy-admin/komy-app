@@ -124,6 +124,14 @@ class ReservationApiService {
     return response.data.data;
   }
 
+  async toggleBookingEnabled(bookingEnabled: boolean): Promise<{ bookingEnabled: boolean }> {
+    const response = await this.axiosInstance.put<ReservationApiResponse<{ bookingEnabled: boolean }>>(
+      '/professionals/me/booking-enabled',
+      { bookingEnabled }
+    );
+    return response.data.data;
+  }
+
   // === Services ===
 
   async getServices(): Promise<ReservationService[]> {

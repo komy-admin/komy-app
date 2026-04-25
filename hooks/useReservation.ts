@@ -175,6 +175,15 @@ export const useReservation = () => {
     return profile;
   }, []);
 
+  const toggleBookingEnabled = useCallback(async (bookingEnabled: boolean) => {
+    const result = await reservationApiService.toggleBookingEnabled(bookingEnabled);
+    setState(prev => ({
+      ...prev,
+      profile: prev.profile ? { ...prev.profile, bookingEnabled: result.bookingEnabled } : prev.profile,
+    }));
+    return result;
+  }, []);
+
   // === SERVICES ===
 
   const loadServices = useCallback(async () => {
@@ -467,6 +476,7 @@ export const useReservation = () => {
     // Profile
     loadProfile,
     updateProfile,
+    toggleBookingEnabled,
 
     // Services
     loadServices,
