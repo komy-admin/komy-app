@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Switch, ActivityIndicator, Platform, ScrollView, useWindowDimensions, Linking } from 'react-native';
-import { Store, Settings, Bell, Mail, Info, Link2, Shield, ChevronDown, Copy, ExternalLink } from 'lucide-react-native';
+import { Store, Settings, Bell, Mail, Info, Link2, Shield, ChevronDown, Copy, ExternalLink, Globe, PauseCircle } from 'lucide-react-native';
 import { Picker } from '@react-native-picker/picker';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from '~/components/ToastProvider';
@@ -13,6 +13,7 @@ interface ReservationSettingsPageProps {
     loadProfile: () => Promise<ReservationProfessionalProfile>;
     updateProfile: (data: { businessName?: string; email?: string; phone?: string; address?: string }) => Promise<ReservationProfessionalProfile>;
     updateSettings: (data: UpdateReservationSettingsDto) => Promise<ReservationProfessionalProfile>;
+    toggleBookingEnabled: (bookingEnabled: boolean) => Promise<{ bookingEnabled: boolean }>;
     loadStripeStatus: () => Promise<StripeConnectStatus>;
     getStripeConnectLink: (returnUrl: string) => Promise<{ url: string }>;
     getStripeDashboardLink: () => Promise<{ url: string }>;
@@ -74,6 +75,7 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
   const [hasChanges, setHasChanges] = useState(false);
   const [visibleTooltip, setVisibleTooltip] = useState<string | null>(null);
   const [isStripeActionLoading, setIsStripeActionLoading] = useState(false);
+  const [isTogglingBooking, setIsTogglingBooking] = useState(false);
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isNarrow = width < 720;
@@ -237,6 +239,24 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
     }
   };
 
+  const handleToggleBooking = async (next: boolean) => {
+    if (isTogglingBooking) return;
+    setIsTogglingBooking(true);
+    try {
+      await reservation.toggleBookingEnabled(next);
+      showToast(
+        next ? 'Réservations en ligne activées' : 'Réservations en ligne désactivées',
+        next ? 'success' : 'info'
+      );
+    } catch (error: any) {
+      const apiError = error?.response?.data?.error;
+      const message = typeof apiError === 'string' ? apiError : apiError?.message || 'Erreur';
+      showToast(message, 'error');
+    } finally {
+      setIsTogglingBooking(false);
+    }
+  };
+
   const handleOpenBookingUrl = async () => {
     if (!bookingUrl) return;
     try {
@@ -331,31 +351,14 @@ export function ReservationSettingsPage({ reservation }: ReservationSettingsPage
               </View>
 
               {bookingUrl && (
-                <View>
-                  <Text style={styles.fieldLabel}>Lien de votre page de réservation</Text>
-                  <View style={styles.bookingUrlRow}>
-                    <Text style={styles.bookingUrlText} numberOfLines={1} selectable>
-                      {bookingUrl}
-                    </Text>
-                    <Pressable
-                      style={styles.bookingUrlIconBtn}
-                      onPress={handleCopyBookingUrl}
-                      accessibilityLabel="Copier le lien"
-                    >
-                      <Copy size={16} color="#475569" />
-                    </Pressable>
-                    <Pressable
-                      style={styles.bookingUrlIconBtn}
-                      onPress={handleOpenBookingUrl}
-                      accessibilityLabel="Ouvrir le lien"
-                    >
-                      <ExternalLink size={16} color="#475569" />
-                    </Pressable>
-                  </View>
-                  <Text style={styles.helpText}>
-                    Partagez ce lien avec vos clients pour qu'ils réservent en ligne.
-                  </Text>
-                </View>
+                <BookingLinkPanel
+                  url={bookingUrl}
+                  enabled={!!reservation.profile?.bookingEnabled}
+                  isToggling={isTogglingBooking}
+                  onToggle={handleToggleBooking}
+                  onCopy={handleCopyBookingUrl}
+                  onOpen={handleOpenBookingUrl}
+                />
               )}
             </View>
           </View>
@@ -695,6 +698,177 @@ function formatRequirements(keys: string[]): string {
 
 // === Sub-components ===
 
+interface BookingLinkPanelProps {
+  url: string;
+  enabled: boolean;
+  isToggling: boolean;
+  onToggle: (next: boolean) => void;
+  onCopy: () => void;
+  onOpen: () => void;
+}
+
+function BookingLinkPanel({ url, enabled, isToggling, onToggle, onCopy, onOpen }: BookingLinkPanelProps) {
+  const accent = enabled ? '#10B981' : '#F59E0B';
+  const accentSoft = enabled ? '#F0FDF4' : '#FFFBEB';
+  const accentBorder = enabled ? '#BBF7D0' : '#FDE68A';
+
+  return (
+    <View style={[bookingLinkStyles.root, { borderColor: accentBorder, backgroundColor: accentSoft }]}>
+      <View style={bookingLinkStyles.header}>
+        <View style={[bookingLinkStyles.iconWrap, { backgroundColor: '#FFFFFF', borderColor: accentBorder }]}>
+          {enabled ? <Globe size={18} color={accent} /> : <PauseCircle size={18} color={accent} />}
+        </View>
+        <View style={bookingLinkStyles.headerText}>
+          <View style={bookingLinkStyles.statusRow}>
+            <Text style={bookingLinkStyles.title}>Page de réservation publique</Text>
+            <View style={[bookingLinkStyles.pill, { backgroundColor: '#FFFFFF', borderColor: accentBorder }]}>
+              <View style={[bookingLinkStyles.pillDot, { backgroundColor: accent }]} />
+              <Text style={[bookingLinkStyles.pillText, { color: accent }]}>
+                {enabled ? 'Active' : 'Suspendue'}
+              </Text>
+            </View>
+          </View>
+          <Text style={bookingLinkStyles.description}>
+            {enabled
+              ? 'Vos clients peuvent réserver en ligne via ce lien.'
+              : 'Le lien renvoie une page d\'indisponibilité — les réservations existantes restent gérables.'}
+          </Text>
+        </View>
+        {isToggling ? (
+          <ActivityIndicator size="small" color={accent} />
+        ) : (
+          <Switch
+            value={enabled}
+            onValueChange={onToggle}
+            trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+            thumbColor={enabled ? '#FFFFFF' : '#F3F4F6'}
+          />
+        )}
+      </View>
+
+      <View style={[bookingLinkStyles.urlRow, !enabled && bookingLinkStyles.urlRowDisabled]}>
+        <Text
+          style={[bookingLinkStyles.urlText, !enabled && bookingLinkStyles.urlTextDisabled]}
+          numberOfLines={1}
+          selectable
+        >
+          {url}
+        </Text>
+        <Pressable
+          style={({ hovered, pressed }: any) => [
+            bookingLinkStyles.iconBtn,
+            (hovered || pressed) && bookingLinkStyles.iconBtnHover,
+          ]}
+          onPress={onCopy}
+          accessibilityLabel="Copier le lien"
+        >
+          <Copy size={15} color="#475569" />
+        </Pressable>
+        <Pressable
+          style={({ hovered, pressed }: any) => [
+            bookingLinkStyles.iconBtn,
+            (hovered || pressed) && bookingLinkStyles.iconBtnHover,
+          ]}
+          onPress={onOpen}
+          accessibilityLabel="Ouvrir le lien"
+        >
+          <ExternalLink size={15} color="#475569" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const bookingLinkStyles = StyleSheet.create({
+  root: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    gap: 12,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerText: { flex: 1, minWidth: 0, gap: 4 },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  pillDot: { width: 6, height: 6, borderRadius: 3 },
+  pillText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
+  description: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 17,
+  },
+  urlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  urlRowDisabled: {
+    backgroundColor: '#FAFAF9',
+  },
+  urlText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    color: '#1E293B',
+    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
+  },
+  urlTextDisabled: {
+    color: '#94A3B8',
+    textDecorationLine: 'line-through',
+  },
+  iconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
+  },
+  iconBtnHover: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+  },
+});
+
 interface SelectOption { label: string; value: string; }
 
 function StyledSelect({ value, onChange, options, disabled }: { value: string; onChange: (v: string) => void; options: SelectOption[]; disabled?: boolean }) {
@@ -964,37 +1138,6 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
 
-  // ── Booking URL row ───────────────────────────────────────────────────
-  bookingUrlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 6,
-  },
-  bookingUrlText: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 13,
-    color: '#1E293B',
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-  },
-  bookingUrlIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    ...(Platform.OS === 'web' && { cursor: 'pointer' }),
-  },
 
   // ── Amount input wrapper ──────────────────────────────────────────────
   inputWrapper: {
